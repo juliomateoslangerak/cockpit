@@ -101,8 +101,8 @@ class CockpitApp(wx.App):
             # list.
             import gui.valueLogger
             gui.valueLogger.makeWindow(frame)
-            from util import intensity
-            intensity.makeWindow(frame)
+#             from util import intensity
+#             intensity.makeWindow(frame)
             # All secondary windows created.
             self.secondaryWindows = [w for w in wx.GetTopLevelWindows() if w not in self.primaryWindows]
 

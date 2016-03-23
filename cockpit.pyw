@@ -3,7 +3,7 @@
 # Python on it to start the program. It initializes everything and creates
 # the GUI.
 
-import os
+import os, sys
 import threading
 import traceback
 import wx

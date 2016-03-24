@@ -105,7 +105,9 @@ class SIExperiment(experiment.Experiment):
         if self.slmHandler is not None:
             # Add a first trigger of the SLM to get first new image.
             table.addAction(curTime, self.slmHandler, 0)
-        
+            # Wait a few ms for any necessary SLM triggers.
+            curTime = decimal.Decimal('5e-3')
+
         for angle, phase, z in self.genSIPositions():
             delayBeforeImaging = 0
             # Figure out which positions changed. They need to be held flat
@@ -113,12 +115,11 @@ class SIExperiment(experiment.Experiment):
             # then have some time to stabilize. Or, if we have an SLM, then we
             # need to trigger it and then wait for it to stabilize.
             # Ensure we truly are doing this after all exposure events are done.
-            curTime = table.getFirstAndLastActionTimes()[1] + decimal.Decimal('1e-6')
+            curTime = max(curTime, 
+                          table.getFirstAndLastActionTimes()[1] + decimal.Decimal('1e-6'))
             if angle != prevAngle and prevAngle is not None:
                 if self.angleHandler is not None:
                     motionTime, stabilizationTime = self.angleHandler.getMovementTime(prevAngle, angle)
-                    # Hold flat.
-                    table.addAction(curTime, self.angleHandler, prevAngle)
                     # Move to the next position.
                     table.addAction(curTime + motionTime, 
                             self.angleHandler, angle)
@@ -181,8 +182,7 @@ class SIExperiment(experiment.Experiment):
         table.addAction(curTime + finalWaitTime, self.zPositioner, 0)
 
         if self.angleHandler is not None:
-            # Ramp down angle        
-            table.addAction(curTime, self.angleHandler, prevAngle)
+            # Ramp down angle
             motionTime, stabilizationTime = self.angleHandler.getMovementTime(
                     prevAngle, 0)
             table.addAction(curTime + motionTime, self.angleHandler, 0)
@@ -195,8 +195,6 @@ class SIExperiment(experiment.Experiment):
             table.addAction(curTime + motionTime, self.phaseHandler, 0)
             finalWaitTime = max(finalWaitTime, motionTime + stabilizationTime)
         
- 
-
         return table
 
 
@@ -217,17 +215,17 @@ class SIExperiment(experiment.Experiment):
         for light, tExp in lightTimePairs:
             # SIM wavelength
             longestWavelength = max(longestWavelength, light.wavelength)
+            if longestWavelength in ['Ambient', 'ambient']:
+                # SoftWorx uses -50 to represent transmitted light.
+                longestWavelength = -50
             # Bleaching compensation
             tExpNew = tExp * (1 + decimal.Decimal(self.handlerToBleachCompensation[light]) * angle)
             newPairs.append((light, tExpNew))
             # SLM trigger
         if self.slmHandler is not None:
-           ## Add SLM event ot set pattern for phase, angle and longestWavelength.
-           # The SLM handler will add triggering and settling delays when it 
-           # examines the action table by pushing back all subsequent events.
-           table.addAction(curTime, self.slmHandler, (angle, phase, longestWavelength))
-           # Add a small delay so that the exposure falls after the SLM event.
-           curTime += decimal.Decimal('1e-6')
+            ## Add SLM event ot set pattern for phase, angle and longestWavelength.
+            table.addAction(curTime, self.slmHandler, (angle, phase, longestWavelength))
+            curTime += self.slmHandler.callbacks['getMovementTime']()
         return experiment.Experiment.expose(self, curTime, cameras, newPairs, table)
 
 

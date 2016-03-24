@@ -2,20 +2,7 @@
 # -*- coding: UTF8   -*-
 """ This module makes a BNS SLM  device available to Cockpit.
 
-Mick Phillips, University of Oxford, 2014.
-Historically, a single CameraDevice was used to address multiple
-cameras, using a number of dictionaries to map the camera name to
-its settings and methods.  Here, instead I have used a single
-CameraManager to keep track of one or more CameraDevices, which
-means that inheritance can be used for different camera types.
-
-All the handler functions are called with (self, name, *args...).
-Since we make calls to instance methods here, we don't need 'name',
-but it is left in the call so that we can continue to use camera
-modules that rely on dictionaries.
-
-Cockpit uses lowerCamelCase function names.
-Functions names as lower_case are remote camera object methods.
+Mick Phillips, University of Oxford, 2014-2015.
 """
 
 from collections import OrderedDict
@@ -31,8 +18,10 @@ import gui.device
 import gui.guiUtils
 import gui.toggleButton
 import handlers
+import time
 import util
 from config import config
+from experiment import actionTable
 
 CLASS_NAME = 'BoulderSLMDevice'
 CONFIG_NAME = 'slm'
@@ -52,7 +41,8 @@ class BoulderSLMDevice(device.Device):
         self.executor = None
         self.order = None
         self.position = None
-        self.settlingTime = decimal.Decimal('0.01')
+        self.wasPowered = None
+        self.settlingTime = decimal.Decimal('0.1')
         self.slmTimeout = int(config.get(CONFIG_NAME, 'timeout', default=10))
         self.slmRetryLimit = int(config.get(CONFIG_NAME, 'retryLimit', default=3))
         self.lastParms = None
@@ -75,11 +65,42 @@ class BoulderSLMDevice(device.Device):
 
     def disable(self):
         self.connection.stop()
+        if self.elements.get('triggerButton'):
+            self.elements['triggerButton'].Disable()
 
 
     def enable(self):
+        """Enable the SLM.
+
+        Often, after calling connection.run(), the SLM pattern and the image
+        index reported are not synchronised until a few triggers have been
+        sent, so we need to compensate for this. We do the best we can,
+        but any other trigger-device activity during this call can mean that
+        we miss the target frame by +/- 1.
+        """
+        # A function to trigger now.
+        triggerNow = self.getTriggerFunction()
+        # Target position
+        if self.lastParms == self.connection.get_sequence_parameters():
+            # Hardware and software sequences match
+            targetPosition = self.position
+        else:
+            targetPosition = 0
+        # Enable the hardware.
         self.connection.run()
-        self.position = self.getCurrentPosition()
+        # Send a few triggers to clear synch. errors.
+        for i in xrange(3):
+            triggerNow()
+            time.sleep(0.01)
+        # Cycle to the target position.
+        pos = self.getCurrentPosition()
+        delta = (targetPosition - pos) + (targetPosition < pos) * len(self.lastParms)
+        for i in xrange(delta):
+            triggerNow()
+            time.sleep(0.01)
+        # Update the display.
+        if self.elements.get('triggerButton'):
+            self.elements['triggerButton'].Enable()
 
 
     def examineActions(self, name, table):
@@ -106,46 +127,68 @@ class BoulderSLMDevice(device.Device):
 
         # Step through the table and replace this handler with triggers.
         # Identify the SLM trigger(provided elsewhere, e.g. by DSP)
-        triggerHandler = depot.getHandlerWithName(CONFIG_NAME + ' trigger')
+        triggerHandler = self.getTriggerHandler()
 
         # Track sequence index set by last set of triggers.
         lastIndex = 0
-        for i, (time, handler, action) in enumerate(table.actions):
+        for i, (t, handler, action) in enumerate(table.actions):
             if handler is not self.executor:
                 # Nothing to do
                 continue
             # Action specifies a target frame in the sequence.
             # Remove original event.
             table[i] = None
-            table.clearBadEntries()
             # How many triggers?
             if type(action) is tuple and action != sequence[lastIndex]:
                 # Next pattern does not match last, so step one pattern.
                     numTriggers = 1
             elif type(action) is int:
-                if action > lastIndex:
+                if action >= lastIndex:
                     numTriggers = action - lastIndex
                 else:
                     numTriggers = sequenceLength - lastIndex - action
             else:
                 numTriggers = 0
+            """
+            Used to calculate time to execute triggers and settle here, 
+            then push back all later events, but that leads to very long
+            delays before the experiment starts. For now, comment out
+            this code, and rely on a fixed time passed back to the action
+            table generator (i.e. experiment class).
+
             # How long will the triggers take?
             # Time between triggers must be > table.toggleTime.
             dt = self.settlingTime + 2 * numTriggers * table.toggleTime
             ## Shift later table entries to allow for triggers and settling.
             table.shiftActionsBack(time, dt)
             for trig in xrange(numTriggers):
-                time = table.addToggle(time, triggerHandler)
-                time += table.toggleTime
-            # Update index tracker.
+                t = table.addToggle(t, triggerHandler)
+                t += table.toggleTime
+            """
+            for trig in xrange(numTriggers):
+                t = table.addToggle(t, triggerHandler)
+                t += table.toggleTime
+
             lastIndex += numTriggers
             if lastIndex >= sequenceLength:
                 lastIndex = lastIndex % sequenceLength
+        table.clearBadEntries()
         # Wait until SLM has finished generating and loading patterns.
         self.wait(asyncResult, "SLM is generating pattern sequence.")
         # Store the parameters used to generate the sequence.
         self.lastParms = sequence
         self.connection.run()
+        # Fire several triggers to ensure that the sequence is loaded.
+        triggerNow = self.getTriggerHandler().callbacks.get('triggerNow')
+        for i in range(12):
+            triggerNow()
+            time.sleep(0.01)
+        # Ensure that we're at position 0.
+        self.position = self.getCurrentPosition()
+        while self.position != 0:
+            triggerNow()
+            time.sleep(0.01)
+            self.position = self.getCurrentPosition()
 
 
     ## Run some lines from the table.
@@ -175,6 +218,7 @@ class BoulderSLMDevice(device.Device):
                     'getNumRunnableLines': self.getNumRunnableLines,
                     'executeTable': self.executeTable,
                     'makeUI': self.makeUI})
+        self.executor.callbacks['getMovementTime'] = self.getMovementTime
         result.append(self.executor)
         return result
 
@@ -186,6 +230,45 @@ class BoulderSLMDevice(device.Device):
             if handler is not self.executor:
                 return total
             total += 1
+
+
+    def getTriggerHandler(self):
+        return depot.getHandlerWithName(CONFIG_NAME + ' trigger')
+
+
+    def getTriggerFunction(self, button=None):
+        """Returns a function to step the SLM, or None."""
+        triggerHandler = self.getTriggerHandler()
+        if not triggerHandler:
+            return None
+        triggerFunc = triggerHandler.callbacks.get('triggerNow' or None)
+        if not triggerFunc:
+            return None
+
+        def func(event=None):
+            """Trigger the SLM once, flashing a toggle button if provided."""
+            # Minimun time to flash the button.
+            dtMin = 0.1
+            # Button is found in outer scope.
+            if button:
+                button.activate()
+                button.Update()
+                # Store the current time.
+                t0 = time.time()
+            # Fire the trigger.
+            triggerFunc()
+            if button:
+                # Ensure the button was lit long enough to be seen.
+                dt = time.time() - t0
+                if dt < dtMin:
+                    time.sleep(dtMin - dt)
+                button.deactivate()
+
+        return func
+
+
+    def getMovementTime(self):
+        return self.settlingTime + 2 * actionTable.ActionTable.toggleTime
 
 
     ### UI functions ###
@@ -207,6 +290,16 @@ class BoulderSLMDevice(device.Device):
                 parent=self.panel,
                 size=gui.device.DEFAULT_SIZE)
         self.elements['powerButton'] = powerButton
+        # Add a trigger button if we can trigger the SLM on demand.
+        triggerButton = gui.toggleButton.ToggleButton(
+                label='step',
+                parent=self.panel,
+                size=gui.device.DEFAULT_SIZE)
+        triggerFunc = self.getTriggerFunction(triggerButton)
+        if triggerFunc:
+            triggerButton.Bind(wx.EVT_LEFT_DOWN, triggerFunc)
+            self.elements['triggerButton'] = triggerButton
+            triggerButton.Disable()
         # Add a position display.
         posDisplay = gui.device.MultilineDisplay(parent=self.panel, numLines=3)
         posDisplay.Bind(wx.EVT_TIMER,
@@ -229,9 +322,27 @@ class BoulderSLMDevice(device.Device):
 
     def updatePositionDisplay(self, event):
         baseStr = 'angle:\t%d\nphase:\t%d\nwavel.:\t%d'
-        display = event.GetEventObject().GetOwner()
-        if self.position is not None and self.lastParms:
-            display.SetLabel(baseStr % self.lastParms[self.position])
+        # Get the display object. It seems there is variation between
+        # wx versions. With some versions, the display is obtained by
+        #    event.GetEventObject().
+        # With others, it is
+        #    event.GetEventObject().GetOwner()
+        display = event.GetEventObject()
+        if not hasattr(display, 'SetLabel'):
+            display = display.GetOwner()
+        try:
+            parms = self.lastParms[self.position]
+        except (IndexError, TypeError):
+            # SLM parms updated since last position fetched, or lastParms is None.
+            parms = None
+        if parms:
+            display.SetLabel(baseStr % parms)
+        isPowered = self.connection.get_power()
+        self.elements['powerButton'].updateState(isPowered)
+        if isPowered:
+            self.elements['triggerButton'].Enable()
+        else:
+            self.elements['triggerButton'].Disable()
         # Dispatch a call in new thread to fetch new values for next time
         self.updatePosition()
 
@@ -245,13 +356,24 @@ class BoulderSLMDevice(device.Device):
 
     def onPrepareForExperiment(self, *args):
         self.position = self.getCurrentPosition()
+        if 'powerButton' in self.elements:
+            self.wasPowered = self.elements['powerButton'].isActive
+
+
+    def cleanupAfterExperiment(self, *args):
+        powerButton = self.elements['powerButton']
+        if not self.wasPowered:
+            # SLM was not active prior to experiment.
+            if 'powerButton' in self.elements:
+                self.elements['powerButton'].deactivate()
+            else:
+                self.disable()
 
 
     def performSubscriptions(self):
         #events.subscribe('user abort', self.onAbort)
         events.subscribe('prepare for experiment', self.onPrepareForExperiment)
-        #events.subscribe('cleanup after experiment',
-        #        self.cleanupAfterExperiment)
+        events.subscribe('cleanup after experiment', self.cleanupAfterExperiment)
 
 
     def wait(self, asyncResult, message):

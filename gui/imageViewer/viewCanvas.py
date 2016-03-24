@@ -42,6 +42,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # error spew.
         self.shouldDraw = True
 
+        ## Should we show a crosshair (used for alignment)?
+        self.showCrosshair = False
+
         ## Edge length of one tile.
         self.tileSize = tileSize
 
@@ -340,6 +343,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
                 self.drawHistogram()
 
+                if self.showCrosshair:
+                    self.drawCrosshair()
+
             glFlush()
             self.SwapBuffers()
             self.drawEvent.set()
@@ -347,6 +353,16 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             print "Error drawing view canvas:",e
             traceback.print_stack()
             self.shouldDraw = False
+
+
+    def drawCrosshair(self):
+        glColor3f(0, 255, 255)
+        glBegin(GL_LINES)
+        glVertex2f(0, HISTOGRAM_HEIGHT + 0.5 * (self.h - HISTOGRAM_HEIGHT) )
+        glVertex2f(self.w, HISTOGRAM_HEIGHT + 0.5 * (self.h - HISTOGRAM_HEIGHT) )
+        glVertex2f(0.5 * self.w, HISTOGRAM_HEIGHT)
+        glVertex2f(0.5 * self.w, self.h)
+        glEnd()
 
 
     ## Draw the histogram of our data. 
@@ -474,7 +490,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
     def getMenuActions(self):
         return [('Reset view', self.resetView),
                 ('Fill viewer', lambda: self.resetView(True)),
-                ('Set histogram parameters', self.onSetHistogram)]
+                ('Set histogram parameters', self.onSetHistogram),
+                ('Toggle alignment crosshair', self.toggleCrosshair)]
 
 
     ## Let the user specify the blackpoint and whitepoint for image scaling.
@@ -491,6 +508,10 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         self.changeHistScale(shouldRefresh = True)
 
 
+    def toggleCrosshair(self, event=None):
+        self.showCrosshair = not(self.showCrosshair)
+
+
     ## Display information on the pixel under the mouse at the given
     # position.
     def updateMouseInfo(self, x, y):
@@ -504,9 +525,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         coords[0] = self.GetClientSize()[1] - coords[0] - HISTOGRAM_HEIGHT
         # Apply zoom
         shape = numpy.array(self.imageShape)
-        coords -= shape / 2.0
+        coords = coords - ( shape / 2.0)
         coords /= self.zoom
-        coords += shape / 2.0
+        coords = coords + (shape / 2.0)
         # Apply pan
         coords -= [self.panY, self.panX]
         if numpy.all(coords < shape) and numpy.all(coords >= 0):

@@ -53,7 +53,7 @@ class ToggleButton(wx.StaticText):
         # Realign the label using our custom version of the function
         self.SetLabel(self.GetLabel())
         self.Bind(wx.EVT_LEFT_DOWN, lambda event: self.toggle())
-        self.Bind(wx.EVT_RIGHT_DOWN, lambda event: self.toggle())
+        #self.Bind(wx.EVT_RIGHT_DOWN, lambda event: self.toggle())
 
 
     ## Override of normal StaticText SetLabel, to try to vertically
@@ -67,6 +67,22 @@ class ToggleButton(wx.StaticText):
         lineBuffer = (maxLines - numLinesUsed) / 2 - 1
         newText = ("\n" * lineBuffer) + text + ("\n" * lineBuffer)
         wx.StaticText.SetLabel(self, newText, *args, **kwargs)
+
+
+    ## Update the button to match known state.
+    def updateState(self, isActive):
+        if isActive == self.isActive:
+            # Do nothing if state is correct.
+            return
+        if isActive:
+            color = self.activeColor
+            label = self.activeLabel or self.baseLabel
+        else:
+            color = self.inactiveColor
+            label = self.inactiveLabel or self.baseLabel
+        self.SetBackgroundColour(color)
+        self.SetLabel(label)
+        self.Refresh()
 
 
     ## Activate or deactivate based on the passed-in boolean

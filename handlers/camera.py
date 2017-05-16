@@ -1,9 +1,11 @@
 import decimal
 import wx
+import gui
 
 import depot
 import deviceHandler
 import events
+import interfaces.imager
 
 
 ## Available trigger modes for triggering the camera.
@@ -84,6 +86,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
 
 
     ## Invoke our callback, and let everyone know that a new camera is online.
+    @interfaces.imager.pauseVideo
     @reset_cache
     def setEnabled(self, shouldEnable = True):
         self.callbacks['setEnabled'](self.name, shouldEnable)
@@ -91,6 +94,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
         # Subscribe / unsubscribe to the prepare-for-experiment event.
         func = [events.unsubscribe, events.subscribe][shouldEnable]
         func('prepare for experiment', self.prepareForExperiment)
+        events.publish('camera enable', self, self.isEnabled)
 
 
     ## Return self.isEnabled.
@@ -159,4 +163,22 @@ class CameraHandler(deviceHandler.DeviceHandler):
     def getExposureMode(self):
         return self.exposureMode
 
- 
+
+    def makeUI(self, parent):
+        self.panel = wx.Panel(parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # Remove the word 'camera' to shorten labels.
+        name = self.name.replace('camera', '').replace('  ', ' ')
+        label = gui.device.Label(
+                parent=self.panel, label=name)
+        button = gui.device.EnableButton(label='Off', parent=self.panel, leftAction=self.toggleState)
+        sizer.Add(label)
+        sizer.Add(button)
+        if self.callbacks.get('makeUI', None):
+            sizer.Add(self.callbacks['makeUI'](self.panel))
+
+        self.panel.SetSizerAndFit(sizer)
+
+        self.hasUI = True
+        self.addListener(button)
+        return self.panel

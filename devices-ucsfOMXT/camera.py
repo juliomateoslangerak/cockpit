@@ -58,7 +58,7 @@ class CameraManager(device.Device):
         """Aggregate and return handlers from managed cameras."""
         result = []
         for camera in self.cameras:
-            result.append(camera.getHandlers)
+            result.append(camera.getHandlers())
         return result
 
 

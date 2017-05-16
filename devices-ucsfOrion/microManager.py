@@ -92,7 +92,7 @@ class MMDevice(device.Device):
     def getHandlers(self):
         result = []
         for device in self.subDevices:
-            result.extend(device.getHandlers)
+            result.extend(device.getHandlers())
         self.nameToHandler = dict([(handler.name, handler) for handler in result])
         return result
 

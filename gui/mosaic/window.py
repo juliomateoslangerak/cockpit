@@ -47,6 +47,7 @@ BeadSite = collections.namedtuple('BeadSite', ['pos', 'size', 'intensity'])
 class MosaicWindow(wx.Frame):
     def __init__(self, *args, **kwargs):
         wx.Frame.__init__(self, *args, **kwargs)
+        self.SetWindowStyle(self.GetWindowStyle() | wx.FRAME_TOOL_WINDOW)
         self.panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -218,8 +219,9 @@ class MosaicWindow(wx.Frame):
         objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
         self.crosshairBoxSize = 512 * objective.getPixelSize()
         self.offset = objective.getOffset()
+        scale = (1/objective.getPixelSize())*0.5
         self.canvas.zoomTo(-curPosition[0]+self.offset[0],
-                           curPosition[1]-self.offset[1], 1)
+                           curPosition[1]-self.offset[1], scale)
 
 
     ## Resize our canvas.
@@ -283,6 +285,9 @@ class MosaicWindow(wx.Frame):
                 currentTarget = self.canvas.mapScreenToCanvas(mousePos)
                 newTarget = (currentTarget[0] + self.offset[0],
                              currentTarget[1] + self.offset[1])
+                #Stop mosaic if we are running one.
+                if self.amGeneratingMosaic:
+                    self.onAbort()
                 self.goTo(newTarget)
             elif event.LeftIsDown() and not event.LeftDown():
                 # Dragging the mouse with the left mouse button: drag or
@@ -349,8 +354,7 @@ class MosaicWindow(wx.Frame):
         for site in interfaces.stageMover.getAllSites():
             # Draw a crude circle.
             x, y = site.position[:2]
-            x = -x + self.offset[0]
-            y = y -self.offset[1]
+            x = -x
             # Set line width based on zoom factor.
             lineWidth = max(1, self.canvas.scale * 1.5)
             glLineWidth(lineWidth)
@@ -370,7 +374,8 @@ class MosaicWindow(wx.Frame):
             self.font.Render(str(site.uniqueID))
             glPopMatrix()
 
-        self.drawCrosshairs(interfaces.stageMover.getPosition()[:2], (1, 0, 0))
+        self.drawCrosshairs(interfaces.stageMover.getPosition()[:2], (1, 0, 0),
+                            offset=True)
 
         # If we're selecting tiles, draw the box the user is selecting.
         if self.selectTilesFunc is not None and self.lastClickPos is not None:
@@ -386,7 +391,8 @@ class MosaicWindow(wx.Frame):
 
         # Highlight selected sites with crosshairs.
         for site in self.selectedSites:
-            self.drawCrosshairs(site.position[:2], (0, 0, 1), 10000)
+            self.drawCrosshairs(site.position[:2], (0, 0, 1), 10000,
+                                offset=False)
 
         # Draw the soft and hard stage motion limits
         glEnable(GL_LINE_STIPPLE)
@@ -398,6 +404,7 @@ class MosaicWindow(wx.Frame):
             x1, x2 = safeties[0]
             y1, y2 = safeties[1]
             if hasattr (self, 'offset'):
+                #once again consistancy of offset calculations.
                 x1 -=  self.offset[0]
                 x2 -=  self.offset[0]
                 y1 -=  self.offset[1]
@@ -507,15 +514,18 @@ class MosaicWindow(wx.Frame):
         glEnd()
     # Draw a crosshairs at the specified position with the specified color.
     # By default make the size of the crosshairs be really big.
-    def drawCrosshairs(self, position, color, size = None):
+    def drawCrosshairs(self, position, color, size = None, offset=False):
         xSize = ySize = size
         if size is None:
             xSize = ySize = 100000
         x, y = position
-        #if no offset defined we can't apply it!
-        if hasattr(self, 'offset'):
-            x = x-self.offset[0]
-            y = y-self.offset[1]
+        #offset applied for stage position but not marks!
+        if offset:
+            #if no offset defined we can't apply it!
+            if hasattr(self, 'offset'):
+                #sign consistancy! Here we have -(x-offset) = -x + offset!
+                x = x-self.offset[0]
+                y = y-self.offset[1]
 
         # Draw the crosshairs
         glColor3f(*color)
@@ -576,6 +586,7 @@ class MosaicWindow(wx.Frame):
     # such suspended thread is allowed to be active at a time.
     def generateMosaic2(self, camera):
         # Acquire the mosaic lock so no other mosaics can run.
+        events.publish('mosaic start')
         if not self.mosaicGenerationLock.acquire(False):
             # Do not block. Otherwise, multiple calls to generateMosaic
             # can result in multiple threads waiting here for the lock.
@@ -592,7 +603,7 @@ class MosaicWindow(wx.Frame):
         pos=interfaces.stageMover.getPosition()
 #IMD 20150303 always work in shifted coords in mosaic
         centerX=pos[0]-self.offset[0]
-        centerY=pos[1]-self.offset[1]
+        centerY=pos[1]+self.offset[1]
         curZ=pos[2]-self.offset[2]
 #        centerX, centerY, curZ) = interfaces.stageMover.getPosition()+self.offset
         prevPosition = (centerX, centerY)
@@ -641,7 +652,7 @@ class MosaicWindow(wx.Frame):
                     shouldRefresh = True)
             # Move to the next position in shifted coords.
             target = (centerX +self.offset[0]+ dx * width,
-                      centerY +self.offset[1]+ dy * height)
+                      centerY -self.offset[1]+ dy * height)
             try:
                 self.goTo(target, True)
             except:
@@ -718,14 +729,15 @@ class MosaicWindow(wx.Frame):
         util.userConfig.setValue('mosaicDrawPrimitives',self.drawPrimitives,
                                  isGlobal=False)
         self.Refresh()
-
-
     ## Save the current stage position as a new site with the specified
     # color (or our currently-selected color if none is provided).
     def saveSite(self, color = None):
         if color is None:
             color = self.siteColor
         position = interfaces.stageMover.getPosition()
+        position[0]=position[0]-self.offset[0]
+        position[1]=position[1]-self.offset[1]
+        position[2]=position[2]-self.offset[2]
         interfaces.stageMover.saveSite(
                 interfaces.stageMover.Site(position, None, color,
                         size = self.crosshairBoxSize))
@@ -963,6 +975,7 @@ class MosaicWindow(wx.Frame):
         self.shouldPauseMosaic = False
         self.amGeneratingMosaic = True
         self.nameToButton['Run mosaic'].SetLabel('Stop mosaic')
+        events.publish('mosaic start')
 
 
     ## Generate a menu where the user can select a camera to use to perform
@@ -1211,6 +1224,7 @@ class MosaicWindow(wx.Frame):
     def onAbort(self, *args):
         if self.amGeneratingMosaic:
             self.shouldPauseMosaic = True
+        events.publish('mosaic stop')
         self.nameToButton['Run mosaic'].SetLabel('Run mosaic')
         # Stop deleting tiles, while we're at it.
         self.onDeleteTiles(shouldForceStop = True)

@@ -19,10 +19,15 @@ Class definitions for labels and value displays with default formatting.
 """
 
 
+from collections import OrderedDict
 import wx
+import wx.propgrid
 import gui.guiUtils
 from handlers.deviceHandler import STATES
 from toggleButton import ACTIVE_COLOR, INACTIVE_COLOR
+from util import userConfig
+import gui.loggingWindow as log
+import events
 
 ## @package gui.device
 # Defines classes for common controls used by cockpit devices.
@@ -31,6 +36,8 @@ from toggleButton import ACTIVE_COLOR, INACTIVE_COLOR
 DEFAULT_SIZE = (120, 24)
 ## Small size
 SMALL_SIZE = (60, 18)
+## Tall size
+TALL_SIZE = (DEFAULT_SIZE[0], 64)
 ## Default font
 DEFAULT_FONT = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
 ## Small font
@@ -40,6 +47,7 @@ BACKGROUND = (128, 128, 128)
 
 
 class Button(wx.StaticText):
+    """A generic button for devices."""
     def __init__(self,
                  tooltip = '', textSize = 12, isBold = True,
                  leftAction = None, rightAction = None,
@@ -62,6 +70,18 @@ class Button(wx.StaticText):
             self.Bind(wx.EVT_LEFT_UP, lambda event: leftAction(event))
         if rightAction:
             self.Bind(wx.EVT_RIGHT_DOWN, lambda event: rightAction(event))
+
+
+    def update(self, value=None):
+        """Update the label.
+
+        self.value may be a function or a string."""
+        if value is not None:
+            self.value = value
+        if callable(self.value):
+            self.SetLabel(self.value())
+        else:
+            self.SetLabel(self.value)
 
 
     ## Override of normal StaticText SetLabel, to try to vertically
@@ -93,6 +113,7 @@ class Label(wx.StaticText):
 
 
 class ValueDisplay(wx.BoxSizer):
+    """A simple value display for devices."""
     def __init__(self, parent, label, value='', formatStr=None, unitStr=None):
         super(ValueDisplay, self).__init__(wx.HORIZONTAL)
         self.value = value
@@ -123,15 +144,20 @@ class ValueDisplay(wx.BoxSizer):
         return self.valDisplay.Enable()
 
 
-    def updateValue(self, value=None):
+    def update(self, value=None):
+        """Update the displayed value.
+
+        self.value may be a function or a string."""
         if value is not None:
-            if self.value == value:
-                return
             self.value = value
+        if callable(self.value):
+            self.valDisplay.SetLabel(self.formatStr % self.value())
+        else:
         self.valDisplay.SetLabel(self.formatStr % self.value)
 
 
 class MultilineDisplay(wx.StaticText):
+    """A multi-line display for devices."""
     def __init__(self, *args, **kwargs):
         if 'style' not in kwargs:
             kwargs['style'] = wx.ALIGN_CENTRE | wx.ST_NO_AUTORESIZE
@@ -145,12 +171,11 @@ class MultilineDisplay(wx.StaticText):
 class Menu(wx.Menu):
     def __init__(self, menuItems, menuCallback):
         """Initialise a menu of menuItems that are handled by menuCallback."""
-        ## Call wx.Menu.__init__(self)
         super(Menu, self).__init__()
         for i, item in enumerate(menuItems):
             if len(item):
                 self.Append(i, item, '')
-                wx.EVT_MENU(self, i, lambda event, item=item:menuCallback(item))
+                wx.EVT_MENU(self, i, lambda event, index=i, item=item:menuCallback(index, item))
             else:
                 self.AppendSeparator()
 
@@ -159,6 +184,7 @@ class Menu(wx.Menu):
 
 
 class EnableButton(Button):
+    """A button to enable/disable devices."""
     def enable(self, which):
         if which is False:
             self.Disable()
@@ -184,3 +210,180 @@ class EnableButton(Button):
             self.enable(True)
             self.SetLabel("ERROR")
         self.Refresh()
+
+
+
+class SettingsEditor(wx.Frame):
+    _SETTINGS_TO_PROPTYPES = {'int': wx.propgrid.IntProperty,
+                             'float': wx.propgrid.FloatProperty,
+                             'bool': wx.propgrid.BoolProperty,
+                             'enum': wx.propgrid.EnumProperty,
+                             'str': wx.propgrid.StringProperty,
+                             str(int): wx.propgrid.IntProperty,
+                             str(float): wx.propgrid.FloatProperty,
+                             str(bool): wx.propgrid.BoolProperty,
+                             str(str): wx.propgrid.StringProperty, }
+
+
+    def __init__(self, device, handler=None):
+        wx.Frame.__init__(self, None, wx.ID_ANY, style=wx.DEFAULT_FRAME_STYLE & ~wx.CLOSE_BOX)
+        self.device = device
+        self.SetTitle("Settings for %s." % device.name)
+        self.settings = None
+        self.handler = handler
+        self.handler.addListener(self)
+        #self.panel = wx.Panel(self, wx.ID_ANY, style=wx.WANTS_CHARS)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.grid = wx.propgrid.PropertyGrid(self,
+                                             style=wx.propgrid.PG_SPLITTER_AUTO_CENTER)
+        self.grid.SetColumnProportion(0, 2)
+        self.grid.SetColumnProportion(1, 1)
+        self.populateGrid()
+        self.Bind(wx.propgrid.EVT_PG_CHANGED, self.onPropertyChange)
+        sizer.Add(self.grid, 1, wx.EXPAND | wx.ALIGN_LEFT | wx.ALIGN_TOP)
+
+        sizer.AddSpacer(2)
+        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        #saveButton = wx.Button(self, id=wx.ID_SAVE)
+        #saveButton.SetToolTipString("Save current settings as defaults.")
+        #saveButton.Bind(wx.EVT_BUTTON, self.onSave)
+        #buttonSizer.Add(saveButton, 0, wx.ALIGN_RIGHT, 0, 0)
+
+        okButton = wx.Button(self, id=wx.ID_OK)
+        okButton.Bind(wx.EVT_BUTTON, self.onClose)
+        okButton.SetToolTipString("Apply settings and close this window.")
+        buttonSizer.Add(okButton, 0, wx.ALIGN_RIGHT)
+
+        cancelButton = wx.Button(self, id=wx.ID_CANCEL)
+        cancelButton.Bind(wx.EVT_BUTTON, self.onClose)
+        cancelButton.SetToolTipString("Close this window without applying settings.")
+        buttonSizer.Add(cancelButton, 0, wx.ALIGN_RIGHT)
+
+        applyButton = wx.Button(self, id=wx.ID_APPLY)
+        applyButton.SetToolTipString("Apply these settings.")
+        applyButton.Bind(wx.EVT_BUTTON, lambda evt: self.device.updateSettings(self.current))
+        buttonSizer.Add(applyButton, 0, wx.ALIGN_RIGHT)
+
+        sizer.Add(buttonSizer, 0, wx.ALIGN_CENTER, 0, 0)
+        self.SetSizerAndFit(sizer)
+        self.SetMinSize((256, -1))
+        #self.SetMaxSize((self.GetMinWidth(), -1))
+        events.subscribe("%s settings changed" % self.device, self.updateGrid)
+
+
+    def onEnabledEvent(self, evt):
+        if self.IsShown():
+            self.updateGrid()
+
+
+    def onClose(self, evt):
+        events.unsubscribe("%s settings changed" % self.device, self.updateGrid)
+        if evt.GetId() == wx.ID_OK:
+            self.device.updateSettings(self.current)
+        self.Close()
+        # Do stuff to update local device state.
+
+    def onPropertyChange(self, event):
+        prop = event.GetProperty()
+        name = event.GetPropertyName()
+        setting = self.settings[name]
+        # Fetch and validate the value.
+        if prop.ClassName == 'wxEnumProperty':
+            index = event.GetPropertyValue()
+            # Look up value as the original type, not as str from the wxProperty.
+            # setting['values'] only contains allowed values, so this also
+            # serves as validation for enums.
+            value = setting['values'][index]
+        elif setting['type'] in (str(int), str(float), 'int', 'float'):
+            value = event.GetPropertyValue()
+            # Bound to min/max.
+            lims = setting['values']
+            value = sorted(lims + (value,))[1]
+        elif setting['type'] in (str(str), 'str'):
+            # Limit string length.
+            value = value[0, setting['values']]
+        elif setting['type'] in (str(bool), 'bool'):
+            value = event.GetPropertyValue()
+        else:
+            raise Exception('Unsupported type.')
+
+        self.current[name] = value
+        if value != self.device.settings[name]:
+            prop.SetTextColour(wx.Colour(255, 0, 0))
+        else:
+            prop.SetTextColour(wx.Colour(0, 0, 0))
+        self.grid.SelectProperty(prop)
+
+
+    def onSave(self, event):
+        settings = self.grid.GetPropertyValues()
+        for name, value in settings.iteritems():
+            if self.settings[name]['type'] == 'enum':
+                settings[name] = self.settings[name]['values'][value]
+        userConfig.setValue(self.handler.getIdentifier() + '_SETTINGS',
+                            settings)
+
+
+    def updateGrid(self):
+        if not self.IsShown():
+            return
+        self.Freeze()
+        grid = self.grid
+        self.settings = OrderedDict(self.device.describe_settings())
+        self.current.update(self.device.settings)
+        # Update all values.
+        # grid.SetValues(current)
+        # Enable/disable
+        for prop in grid.Properties:
+            prop.SetTextColour(wx.Colour(0, 0, 0))
+            name = prop.GetName()
+            desc = self.settings[name]
+            if desc['type'] in ('enum'):
+                prop.SetChoices([str(v) for v in desc['values']],
+                                range(len(desc['values'])))
+                prop.SetValue(desc['values'].index(self.current[name]))
+            else:
+                value = self.current[name]
+                if type(value) is long:
+                    value = int(value)
+                prop.SetValue(value)
+            try:
+                prop.Enable(not self.settings[name]['readonly'])
+            except wx._core.PyAssertionError:
+                # Bug in wx in stc.EnsureCaretVisible, could not convert to a long.
+                pass
+        self.Thaw()
+
+
+    def populateGrid(self):
+        grid = self.grid
+        self.settings = OrderedDict(self.device.describe_settings())
+        self.current = self.device.get_all_settings()
+        for key, desc in self.settings.iteritems():
+            value = self.current[key]
+            # For some reason, a TypeError is thrown on creation of prop if value
+            # is a zero-length string.
+            if value == '':
+                value  = ' '
+            propType = SettingsEditor._SETTINGS_TO_PROPTYPES.get(desc['type'])
+            if propType is wx.propgrid.EnumProperty:
+                prop = wx.propgrid.EnumProperty(label=key, name=key,
+                                                labels=[str(v) for v in desc['values']],
+                                                values=range(len(desc['values'])),
+                                                value=desc['values'].index(value))
+            else:
+                try:
+                    prop = propType(label=key, name=key, value=(value or 0))
+                except OverflowError:
+                    # Int too large.
+                    prop = wx.propgrid.FloatProperty(label=key, name=key, value=str(value or 0))
+                except Exception as e:
+                    log.window.write(log.window.stdErr,
+                                     "populateGrid threw exception for key %s with value %s: %s" %
+                                     (key, value, e.message))
+                    continue
+
+            if desc['readonly']:
+                prop.Enable(False)
+            grid.Append(prop)

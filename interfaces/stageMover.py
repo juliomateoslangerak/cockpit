@@ -8,16 +8,16 @@ from collections import namedtuple
 
 ## Stage movement threshold (previously a hard-coded value).
 # There can be problems when this doesn't match a corresponding threshold
-# the stage device code.  
+# the stage device code.
 #TODO:  This should be defined in only one place, either here,
 # in the stage code, or in a config file.
 STAGE_MIN_MOVEMENT = 0.3
 
 ## This module handles general stage motion: "go to this position", "move by
-# this delta", "remember this position", "go to this remembered position", 
-# etc. The cockpit deals with this module instead of speaking direction to 
-# StagePositionerHandlers. 
-# Several of the functions in this module accept an "axis" parameter. The 
+# this delta", "remember this position", "go to this remembered position",
+# etc. The cockpit deals with this module instead of speaking direction to
+# StagePositionerHandlers.
+# Several of the functions in this module accept an "axis" parameter. The
 # mapping is 0: X; 1: Y; 2: Z.
 
 ## Auto-incrementing unique value to mark each Site instance.
@@ -25,7 +25,7 @@ uniqueSiteIndex = 0
 
 
 ## A Site is a simple container class that represents a saved location
-# on the stage. 
+# on the stage.
 class Site:
     ## \param position 3D location (Numpy vector) of the Site.
     # \param group String describing the group the Site belongs to.
@@ -72,10 +72,10 @@ Primitive = namedtuple('Primitive', ['device', 'type', 'data'])
 
 
 ## This class provides an interface between the rest of the UI and the Devices
-# that handle moving the stage. 
+# that handle moving the stage.
 class StageMover:
     def __init__(self):
-        ## Maps axis to the handlers for that axis, sorted by their range of 
+        ## Maps axis to the handlers for that axis, sorted by their range of
         # motion.
         self.axisToHandlers = depot.getSortedStageMovers()
         ## Indicates which stage handler is currently under control.
@@ -92,7 +92,7 @@ class StageMover:
         for h in depot.getHandlersOfType(depot.STAGE_POSITIONER):
             ps = h.getPrimitives()
             if ps:
-                self.primitives.update(ps) 
+                self.primitives.update(ps)
         self.primitives.discard(None)
 
 
@@ -112,7 +112,7 @@ class StageMover:
     ## Internal function to go to the specified location (specified as a list
     # of (axis, position) tuples). Wait for the axes to stop moving, if
     # shouldBlock is true.
-    # \todo Assumes that the target position is within the range of motion of 
+    # \todo Assumes that the target position is within the range of motion of
     # the current handler.
     def _goToAxes(self, position, shouldBlock = False):
         waiters = []
@@ -122,19 +122,21 @@ class StageMover:
             for i, handler in enumerate(self.axisToHandlers[axis]):
                 if i != self.curHandlerIndex:
                     offset += handler.getPosition()
-            handler = self.axisToHandlers[axis][self.curHandlerIndex]
-            # Check if we need to bother moving.
-            if abs(handler.getPosition() - (target - offset)) > STAGE_MIN_MOVEMENT:
-                event = threading.Event()
-                waiters.append(event)
-                self.nameToStoppedEvent[handler.name] = event
-                handler.moveAbsolute(target - offset)
-        if shouldBlock:
-            for event in waiters:
-                try:
-                    event.wait(30)
-                except Exception, e:
-                    print "Failed waiting for stage to stop after 30s"
+            #check if we have a mover on this axis at this level
+            if(self.curHandlerIndex < len(self.axisToHandlers[axis])):
+                handler = self.axisToHandlers[axis][self.curHandlerIndex]
+                # Check if we need to bother moving.
+                if abs(handler.getPosition() - (target - offset)) > STAGE_MIN_MOVEMENT:
+                    event = threading.Event()
+                    waiters.append(event)
+                    self.nameToStoppedEvent[handler.name] = event
+                    handler.moveAbsolute(target - offset)
+                if shouldBlock:
+                    for event in waiters:
+                        try:
+                            event.wait(30)
+                        except Exception, e:
+                            print "Failed waiting for stage to stop after 30s"
 
 
 
@@ -157,11 +159,11 @@ def makeInitialPublications():
         for isMax in [0, 1]:
             events.publish("soft safety limit", axis, limits[isMax],
                     bool(isMax))
-        events.publish("stage step size", axis, 
+        events.publish("stage step size", axis,
                 mover.axisToHandlers[axis][mover.curHandlerIndex].getStepSize())
 
 
-## Various module-global functions for interacting with the objects in the 
+## Various module-global functions for interacting with the objects in the
 # Mover.
 
 def addPrimitive(*args):
@@ -178,8 +180,8 @@ def removePrimitivesByDevice(device):
 
 
 ## Move one step with the current active handler in the specified direction(s).
-# \param direction A tuple/list of length equal to the number of axes of 
-#        motion, where each element is the number of steps (positive or 
+# \param direction A tuple/list of length equal to the number of axes of
+#        motion, where each element is the number of steps (positive or
 #        negative) to take along that axis.
 def step(direction):
     for axis, sign in enumerate(direction):
@@ -221,9 +223,9 @@ def recenterFineMotion():
             handler.moveAbsolute(target)
             totalDelta += target - curPosition
         handlers[0].moveRelative(-totalDelta)
-            
 
-## Move to the specified position using the current handler. 
+
+## Move to the specified position using the current handler.
 def goTo(position, shouldBlock = False):
     if len(position) != len(mover.axisToHandlers.keys()):
         raise RuntimeError("Asked to go to position with wrong number of axes (%d != %d)" % (len(position), len(mover.axisToHandlers.keys())))
@@ -262,7 +264,12 @@ def waitForStop(timeout = 5):
 ## Move to the specified site.
 def goToSite(uniqueID, shouldBlock = False):
     site = mover.idToSite[uniqueID]
-    goTo(site.position, shouldBlock)
+    objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
+    objOffset = objective.getOffset()
+    offsetPosition=site.position[:]
+    for i in range(len(offsetPosition)):
+        offsetPosition[i]=offsetPosition[i]+objOffset[i]
+    goTo(offsetPosition, shouldBlock)
     events.publish('arrive at site', site)
 
 
@@ -330,7 +337,7 @@ def loadSites(filename):
             saveSite(site)
 
 
-## Return the exact stage position, as the aggregate of all handlers' 
+## Return the exact stage position, as the aggregate of all handlers'
 # positions.
 def getPosition():
     result = []

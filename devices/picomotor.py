@@ -18,22 +18,7 @@ CONFIG_NAME = 'picomotor'
 #   ipAddress  - the IP address of the controller;
 #   port       - the port the controller listens on.
 
-
-## This module is for Physik Instrumente (PI) stage motion
-# devices. It controls the XY stage, and sets up but does not directly
-# control the Z piezo -- that is handled by the analog voltage signal from
-# the DSP device.
-
-# Z piezo notes:
-# The degree of motion of the piezo for a given voltage input is controlled
-# via offset and gain, parameters are 0x02000200 and 0x02000300 respectively.
-# Use SPA to set volatile memory and WPA to write volatile memory to nonvolatile
-# (so settings will be remembered on reboot). E.g. for offset 0 and gain 2,
-# do
-# % SPA 2 0x02000200 0
-# % SPA 2 0x02000300 2
-# (The first 2 refers to the input channel, which in this case is the analog
-# input line from the DSP).
+## This module is for the Newport picomotor controllers.
 
 #few commnads
 # pr - position relative

@@ -18,13 +18,14 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
     # - setObjective(name, objectiveName): Set the current objective to the
     #   named one. This is an optional callback; if not provided, nothing is
     #   done.
-    def __init__(self, name, groupName, nameToPixelSize, nameToTransform, nameToOffset, nameToLensID, curObjective,
+    def __init__(self, name, groupName, nameToPixelSize, nameToTransform, nameToOffset, nameToColour, nameToLensID, curObjective,
             callbacks = {}):
         deviceHandler.DeviceHandler.__init__(self, name, groupName, 
                 False, {}, depot.OBJECTIVE)
         self.nameToPixelSize = nameToPixelSize
         self.nameToTransform = nameToTransform
         self.nameToOffset = nameToOffset
+        self.nameToColour = nameToColour
         self.nameToLensID = nameToLensID
         self.curObjective = curObjective
         self.callbacks = callbacks
@@ -49,13 +50,16 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
     ## Generate a row of buttons, one for each possible objective.
     def makeUI(self, parent):
         frame = wx.Frame(parent, title = "Objectives",
-                style = wx.RESIZE_BORDER | wx.CAPTION)
+                style = wx.RESIZE_BORDER | wx.CAPTION | wx.FRAME_TOOL_WINDOW)
         panel = wx.Panel(frame)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         for name in sorted(self.nameToPixelSize.keys()):
+            colour = self.nameToColour.get(name)
+            colour= (colour[0]*255,colour[1]*255,colour[2]*255)
             button = gui.toggleButton.ToggleButton(
-                    label = name, parent = panel, 
-                    size = (80, 40))
+                activeColor = colour,
+                label = name, parent = panel,
+                size = (80, 40))
             button.Bind(wx.EVT_LEFT_DOWN, 
                     lambda event, name = name: self.changeObjective(name))
             sizer.Add(button)

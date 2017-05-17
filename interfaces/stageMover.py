@@ -358,7 +358,7 @@ def getPositionForAxis(axis):
 
 ## Return a list of (X, Y, Z) tuples indicating the positions for all
 # handlers we have. If there's an axis with more handlers than the others,
-# then those axes will have None instead of a position towards the 
+# then those axes will have None instead of a position towards the
 # end of the list.
 def getAllPositions():
     mostMovers = max(map(len, mover.axisToHandlers.values()))
@@ -370,7 +370,7 @@ def getAllPositions():
                 current[axis] = handlers[i].getPosition()
         result.append(tuple(current))
     return result
-    
+
 
 ## Return a (dX, dY, dZ) tuple of the current step sizes.
 # If there's no controller for a given axis under the current step index,
@@ -399,7 +399,7 @@ def getHardLimitsForAxis(axis):
         low, high = handler.getHardLimits()
         lowLimit += low
         highLimit += high
-    return (lowLimit, highLimit) 
+    return (lowLimit, highLimit)
 
 
 ## Repeat the above for each axis.
@@ -424,7 +424,7 @@ def getSoftLimitsForAxis(axis):
         low, high = handler.getSoftLimits()
         lowLimit += low
         highLimit += high
-    return (lowLimit, highLimit) 
+    return (lowLimit, highLimit)
 
 
 ## Repeat the above for each axis.
@@ -467,7 +467,7 @@ def setSoftMax(axis, value):
 # visit the selected sites (i.e. try to solve the Traveling Salesman problem).
 # This could, theoretically, behave worse than just taking the list in
 # its default order, so we do check the default list's travel time and
-# use it if it's superior, on the assumption that users will typically 
+# use it if it's superior, on the assumption that users will typically
 # select sites in some basically sane order.
 # \param baseOrder List of site IDs.
 def optimizeSiteOrder(baseOrder):
@@ -477,8 +477,8 @@ def optimizeSiteOrder(baseOrder):
     curPoint = baseOrder[0]
     remainingPoints = set(baseOrder)
 
-    # Calculate the travel time between two sites. Since we move 
-    # simultaneously in each axis, this is simply the maximum 
+    # Calculate the travel time between two sites. Since we move
+    # simultaneously in each axis, this is simply the maximum
     # distance along any given axis.
     def distance(a, b):
         p1 = mover.idToSite[a].position
@@ -506,7 +506,7 @@ def optimizeSiteOrder(baseOrder):
     simpleTourCost += distance(baseOrder[0], baseOrder[-1])
 
     if simpleTourCost < totalTourCost:
-        # Nearest-neighbor is worse than just going in the 
+        # Nearest-neighbor is worse than just going in the
         # user-specified order
         return baseOrder
     return pointsInOrder

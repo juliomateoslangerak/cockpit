@@ -283,18 +283,18 @@ class SIExperiment(experiment.Experiment):
             targetZMult = self.numPhases
             imagesPerW=self.numPhases*self.numZSlices*self.numAngles
             for w in xrange(self.numWavelengths):
-            for angle in xrange(self.numAngles):
-                for phase in xrange(self.numPhases):
-                    for z in xrange(self.numZSlices):
-                        source = angle * sourceAMult + phase * sourcePMult + z * sourceZMult
-                        target = angle * targetAMult + phase * targetPMult + z * targetZMult
+                for angle in xrange(self.numAngles):
+                    for phase in xrange(self.numPhases):
+                        for z in xrange(self.numZSlices):
+                            source = angle * sourceAMult + phase * sourcePMult + z * sourceZMult
+                            target = angle * targetAMult + phase * targetPMult + z * targetZMult
                             newData[ w, :, target] = doc.imageArray[w, :, source]
 
-                        if doc.imageHeader.next > 0:
-                            extTgt = target * extImgBytes
-                            extSrc = 1024 + source * extImgBytes
-                            newExt[extTgt:extTgt + extImgBytes] = oldExt[
-                                extSrc:extSrc + extImgBytes]
+                            if doc.imageHeader.next > 0:
+                                extTgt = target * extImgBytes
+                                extSrc = 1024 + source * extImgBytes
+                                newExt[extTgt:extTgt + extImgBytes] = oldExt[
+                                    extSrc:extSrc + extImgBytes]
 
             # Write the data out.
             header = util.datadoc.makeHeaderForShape(newData.shape,

@@ -163,7 +163,7 @@ class LaserPowerDevice(device.Device):
             self.nameToIsEnabled[label] = isEnabled
         self.hLock.release()
         return result
-                        
+
 
     ## Things to do when cockpit exits.
     def onExit(self):

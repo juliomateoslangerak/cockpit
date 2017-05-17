@@ -31,7 +31,7 @@ import gui.mosaic.window
 import gui.camera
 import depot
 
-#patch from David to stop it breaking when not on windows. 
+#patch from David to stop it breaking when not on windows.
 import os
 if os.name is 'nt':
     import _winreg as winreg

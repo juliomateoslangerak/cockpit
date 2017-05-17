@@ -462,9 +462,8 @@ class Experiment:
                 # Camera is a continuous-exposure/frame-transfer camera
                 # and therefore saw light it shouldn't have; invalidate it.
                 self.cameraToIsReady[camera] = False
-                
-        return exposureEndTime
 
+        return exposureEndTime
 
     ## Given a set of cameras and a time, trigger the cameras and record that
     # we want to throw away the resulting image. This blanks the camera
@@ -478,7 +477,8 @@ class Experiment:
             # maximum of the min exposure time and the current exposure time.
             # \todo Is it possible for getExposureTime() to be less than
             # getMinExposureTime()? That would be a bug, right?
-            minExposureTime = max(decimal.Decimal('.1'), 
+            minExposureTime = max(decimal.Decimal('.1'),
+
                     camera.getMinExposureTime(isExact = True),
                     camera.getExposureTime(isExact = True))
             exposureMode = camera.getExposureMode()
@@ -494,7 +494,6 @@ class Experiment:
             self.cameraToIgnoredImageIndices[camera].add(self.cameraToImageCount[camera])
             self.cameraToIsReady[camera] = True
         return resetEndTime + decimal.Decimal('1e-6')
-
 
     ## Given a camera handle, return the next time that it will be safe
     # to start an exposure with that camera, based on its last trigger time,

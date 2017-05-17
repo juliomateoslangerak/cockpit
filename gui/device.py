@@ -118,14 +118,14 @@ class ValueDisplay(wx.BoxSizer):
         super(ValueDisplay, self).__init__(wx.HORIZONTAL)
         self.value = value
         label = Label(
-                parent=parent, label=(' ' + label.strip(':') + ':'),
-                size=SMALL_SIZE, style=wx.ALIGN_LEFT)
+            parent=parent, label=(' ' + label.strip(':') + ':'),
+            size=SMALL_SIZE, style=wx.ALIGN_LEFT)
         label.SetFont(SMALL_FONT)
         self.label = label
         self.Add(label)
         self.valDisplay = Label(
-                parent=parent, label=str(value),
-                size=SMALL_SIZE, style=(wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE))
+            parent=parent, label=str(value),
+            size=SMALL_SIZE, style=(wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE))
         self.valDisplay.SetFont(SMALL_FONT)
         self.Add(self.valDisplay)
         self.formatStr = (formatStr or r'%.6s') + (unitStr or '') + ' '
@@ -153,7 +153,7 @@ class ValueDisplay(wx.BoxSizer):
         if callable(self.value):
             self.valDisplay.SetLabel(self.formatStr % self.value())
         else:
-        self.valDisplay.SetLabel(self.formatStr % self.value)
+            self.valDisplay.SetLabel(self.formatStr % self.value)
 
 
 class MultilineDisplay(wx.StaticText):

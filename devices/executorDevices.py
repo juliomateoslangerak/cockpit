@@ -78,18 +78,17 @@
 #  uri: PYRO:pyroDSP@somehost:8001
 
 
-
 import Pyro4
 import time
 
-import depot
+from cockpit import depot
 from . import device
-import events
-import handlers.executor
-import handlers.genericHandler
-import handlers.genericPositioner
-import handlers.imager
-import util.threads
+from cockpit import events
+import cockpit.handlers.executor
+import cockpit.handlers.genericHandler
+import cockpit.handlers.genericPositioner
+import cockpit.handlers.imager
+import cockpit.util.threads
 import numpy as np
 from itertools import chain
 
@@ -97,14 +96,15 @@ from itertools import chain
 class ExecutorDevice(device.Device):
     def __init__(self, name, config={}):
         device.Device.__init__(self, name, config)
-        ## Connection to the remote DSP computer
+        ## Connection to the Executor device
         self.connection = None
         ## Set of all handlers we control.
         self.handlers = set()
 
-
-    ## Connect to the DSP computer.
-    @util.threads.locked
+    ## Connect to the Executor device.
+    # We assume here that it is a Pyro4 connection to a remote,
+    # but it could be anything so override when necessary
+    @cockpit.util.threads.locked
     def initialize(self):
         self.connection = Pyro4.Proxy(self.uri)
         self.connection._pyroTimeout = 6
@@ -124,24 +124,22 @@ class ExecutorDevice(device.Device):
     ## User clicked the abort button.
     def onAbort(self):
         self.connection.Abort()
-        # Various threads could be waiting for a 'DSP done' event, preventing
-        # new DSP actions from starting after an abort.
+        # Various threads could be waiting for a 'Executor done' event, preventing
+        # new Executor actions from starting after an abort.
         events.publish(events.EXECUTOR_DONE % self.name)
 
-
-    @util.threads.locked
+    @cockpit.util.threads.locked
     def finalizeInitialization(self):
         # Tell the remote DSP computer how to talk to us.
         server = depot.getHandlersOfType(depot.SERVER)[0]
         self.receiveUri = server.register(self.receiveData)
         self.connection.receiveClient(self.receiveUri)
 
-
     ## We control which light sources are active, as well as a set of 
     # stage motion piezos. 
     def getHandlers(self):
         result = []
-        h = handlers.executor.AnalogDigitalExecutorHandler(
+        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
             self.name, "executor",
             {'examineActions': lambda *args: None,
              'executeTable': self.executeTable,
@@ -157,31 +155,27 @@ class ExecutorDevice(device.Device):
         # The takeImage behaviour is now on the handler. It might be better to
         # have hybrid handlers with multiple inheritance, but that would need
         # an overhaul of how depot determines handler types.
-        result.append(handlers.imager.ImagerHandler(
+        result.append(cockpit.handlers.imager.ImagerHandler(
             "%s imager" % (self.name), "imager",
             {'takeImage': h.takeImage}))
 
         self.handlers = set(result)
         return result
 
-
     ## Receive data from the executor remote.
     def receiveData(self, action, *args):
         if action.lower() in ['done', 'dsp done']:
             events.publish(events.EXECUTOR_DONE % self.name)
-
 
     def triggerNow(self, line, dt=0.01):
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
         time.sleep(dt)
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
 
-
     ## Prepare to run an experiment.
     def onPrepareForExperiment(self, *args):
         # Ensure remote has the correct URI set for sending data/notifications.
         self.connection.receiveClient(self.receiveUri)
-
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
@@ -191,23 +185,32 @@ class ExecutorDevice(device.Device):
         t0 = float(table[startIndex][0])
         actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
         # If there are repeats, add an extra action to wait until repDuration expired.
+        # TODO: This should not be generic. An executor can use this extra time to do something else:
+        # eg: move to a new position in a multi-site experiment, perform autofocus
+        # In the case of the cRIO it is the FPGA timing repetitions.
         if repDuration is not None:
             repDuration = float(repDuration)
             if actions[-1][0] < repDuration:
                 # Repeat the last event at t0 + repDuration
-                actions.append( (t0+repDuration,) + tuple(actions[-1][1:]) )
+                actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
+                # TODO: Else, notify somehow that there was not enough time to do the repetitions.
+        actions = self.adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                'Waiting for\nDSP to finish', (255, 255, 0))
+                'Waiting for\nExecutor to finish', (255, 255, 0))
+        # TODO: Should this call return a True if success so we can check for errors?
         self.connection.PrepareActions(actions, numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.RunActions)
         events.publish(events.EXPERIMENT_EXECUTION)
         return
 
+    def adaptActions(self, actions):
+        """Subclass this method to adapt the actions table to your specific device.
+        Return the modified version of action"""
+        return actions
 
         ## Debugging function: set the digital output for the DSP.
     def setDigital(self, value):
         self.connection.WriteDigital(value)
-
 
 
 class LegacyDSP(ExecutorDevice):
@@ -242,7 +245,6 @@ class LegacyDSP(ExecutorDevice):
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
 
-
     ## Receive data from the DSP computer.
     def receiveData(self, action, *args):
         if action.lower() == 'dsp done':
@@ -261,7 +263,7 @@ class LegacyDSP(ExecutorDevice):
     # stage motion piezos.
     def getHandlers(self):
         result = []
-        h = handlers.executor.AnalogDigitalExecutorHandler(
+        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
             self.name, "executor",
             {'examineActions': lambda *args: None,
              'executeTable': self.executeTable,
@@ -277,13 +279,12 @@ class LegacyDSP(ExecutorDevice):
         # The takeImage behaviour is now on the handler. It might be better to
         # have hybrid handlers with multiple inheritance, but that would need
         # an overhaul of how depot determines handler types.
-        result.append(handlers.imager.ImagerHandler(
+        result.append(cockpit.handlers.imager.ImagerHandler(
             "%s imager" % (self.name), "imager",
             {'takeImage': h.takeImage}))
 
         self.handlers = set(result)
         return result
-
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
@@ -350,8 +351,7 @@ class LegacyDSP(ExecutorDevice):
             # DSP uses offsets from value when the profile was loaded.
             offsets = map(lambda base, new: new - base, self._lastAnalogs, aargs)
             for offset, a in zip(offsets, analogs):
-                if ((len(a) == 0 and offset != 0) or
-                        (len(a) > 0 and offset != a[-1][1])):
+                if ( (len(a) == 0 ) or (len(a) > 0 and offset != a[-1][1])):
                     a.append((ticks, offset))
                     tLastA = t
 
@@ -393,3 +393,5 @@ class LegacyDSP(ExecutorDevice):
         self.connection.InitProfile(numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
+
+

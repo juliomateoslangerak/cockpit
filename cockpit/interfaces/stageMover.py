@@ -402,11 +402,10 @@ def loadSites(filename):
 ## Return the exact stage position, as the aggregate of all handlers'
 # positions.
 def getPosition():
-    result = []
+    result = 3 * [0]
     for axis, handlers in iteritems(mover.axisToHandlers):
-        result.append(0)
         for handler in handlers:
-            result[-1] += handler.getPosition()
+            result[axis] += handler.getPosition()
     return result
 
 
@@ -467,7 +466,7 @@ def getHardLimitsForAxis(axis):
 ## Repeat the above for each axis.
 def getHardLimits():
     result = []
-    for axis in mover.axisToHandlers.keys():
+    for axis in sorted(mover.axisToHandlers.keys()):
         result.append(getHardLimitsForAxis(axis))
     return result
 
@@ -492,7 +491,7 @@ def getSoftLimitsForAxis(axis):
 ## Repeat the above for each axis.
 def getSoftLimits():
     result = []
-    for axis in mover.axisToHandlers.keys():
+    for axis in sorted(mover.axisToHandlers.keys()):
         result.append(getSoftLimitsForAxis(axis))
     return result
 

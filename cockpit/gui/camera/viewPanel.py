@@ -58,6 +58,7 @@ import wx
 
 from cockpit import depot
 from cockpit import events
+import cockpit.util.threads
 import cockpit.gui.guiUtils
 import cockpit.gui.imageViewer.viewCanvas
 import cockpit.interfaces.stageMover
@@ -174,7 +175,6 @@ class ViewPanel(wx.Panel):
             # camera enabling failed.
             events.unsubscribe("new image %s" % self.curCamera.name, self.onImage)
             self.curCamera = None
-            self.canvas.clear()
         if self.canvas is not None:
             # Destroy the canvas.
             self.canvas.clear(shouldDestroy = True)
@@ -200,6 +200,7 @@ class ViewPanel(wx.Panel):
         events.subscribe("new image %s" % self.curCamera.name, self.onImage)
 
     ## React to the drawer changing, by updating our labels and colors.
+    @cockpit.util.threads.callInMainThread
     def onFilterChange(self):
         if self.getIsEnabled():
             self.selector.SetLabel(self.curCamera.descriptiveName)

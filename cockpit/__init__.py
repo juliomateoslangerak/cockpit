@@ -195,8 +195,7 @@ class CockpitApp(wx.App):
                 self.primaryWindows.remove(status)
             status.Destroy()
 
-            cockpit.util.user.login(frame)
-            cockpit.util.logger.log.debug("Login complete as %s", util.user.getUsername())
+            wx.CallAfter(self.doInitialLogin)
 
             #now loop over secondary windows open and closeing as needed.
             for w in self.secondaryWindows:
@@ -227,6 +226,12 @@ class CockpitApp(wx.App):
             cockpit.util.logger.log.error("Initialization failed: %s" % e)
             cockpit.util.logger.log.error(traceback.format_exc())
             return False
+
+
+    def doInitialLogin(self):
+        cockpit.util.user.login(wx.TopLevelWindow())
+        cockpit.util.logger.log.debug("Login complete as %s" % util.user.getUsername())
+
 
     def onActivateApp(self, event):
         if not event.Active:
@@ -264,6 +269,25 @@ class CockpitApp(wx.App):
                 dev.onExit()
             except:
                 pass
+        # The following cleanup code used to be in main(), after App.MainLoop(),
+        # where it was never reached.
+        # HACK: manually exit the program. If we don't do this, then there's a small
+        # possibility that non-daemonic threads (i.e. ones that don't exit when the
+        # main thread exits) will hang around uselessly, forcing the program to be
+        # manually shut down via Task Manager or equivalent. Why do we have non-daemonic
+        # threads? That's tricky to track down. Daemon status is inherited from the
+        # parent thread, and must be manually set otherwise. Since it's easy to get
+        # wrong, we'll just leave this here to catch any failures to set daemon
+        # status.
+        badThreads = []
+        for thread in threading.enumerate():
+            if not thread.daemon:
+                badThreads.append(thread)
+        if badThreads:
+            cockpit.util.logger.log.error("Still have non-daemon threads %s" % map(str, badThreads))
+            for thread in badThreads:
+                cockpit.util.logger.log.error(str(thread.__dict__))
+        os._exit(0)
 
 
 def main():
@@ -273,25 +297,7 @@ def main():
     cockpit.util.files.initialize()
     cockpit.util.files.ensureDirectoriesExist()
     cockpit.util.logger.makeLogger()
-
     CockpitApp(redirect = False).MainLoop()
-    # HACK: manually exit the program. If we don't do this, then there's a small
-    # possibility that non-daemonic threads (i.e. ones that don't exit when the
-    # main thread exits) will hang around uselessly, forcing the program to be
-    # manually shut down via Task Manager or equivalent. Why do we have non-daemonic
-    # threads? That's tricky to track down. Daemon status is inherited from the
-    # parent thread, and must be manually set otherwise. Since it's easy to get
-    # wrong, we'll just leave this here to catch any failures to set daemon
-    # status.
-    badThreads = []
-    for thread in threading.enumerate():
-        if not thread.daemon:
-            badThreads.append(thread)
-    if badThreads:
-        cockpit.util.logger.log.error("Still have non-daemon threads %s" % map(str, badThreads))
-        for thread in badThreads:
-            cockpit.util.logger.log.error(str(thread.__dict__))
-    os._exit(0)
 
 
 if __name__ == '__main__':

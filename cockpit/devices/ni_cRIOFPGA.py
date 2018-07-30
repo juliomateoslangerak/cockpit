@@ -104,7 +104,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         """
         self.connection = Connection(serviceName='cRIO', ipAddress=self.ipAddress, port=self.port, localIp=MASTER_IP)
         self.connection.connect()
-        self.connection.abort()
+        self.connection.Abort()
 
     @cockpit.util.threads.locked
     def finalizeInitialization(self):
@@ -131,7 +131,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         as entered in the analog config files.
         """
         line = 'Analogue ' + str(line)
-        return self.status.getStatus(line)
+        return self.connection.status.getStatus(line)
 
     def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
         """Set analog position in native units
@@ -1124,7 +1124,7 @@ class Connection:
         while self.status.getStatus('FPGA Main State') != FPGA_IDLE_STATE:
             time.sleep(0.1)
 
-    def abort(self):
+    def Abort(self):
         """Sends abort experiment command to FPGA
         """
         self.runCommand(self.commandDict['abort'])
@@ -1165,7 +1165,7 @@ class Connection:
         digitalsList = []
 
         for t, value in digitalsTable:
-            digitalsValue = int(numpy.binary_repr(t, 32) + numpy.binary_repr(value, 32), 2)
+            digitalsValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
             digitalsList.append(digitalsValue)
 
         # Send digitals after flushing the FPGA FIFOs
@@ -1180,7 +1180,7 @@ class Connection:
             analogueList = []
 
             for t, value in analogueTable:
-                analogueValue = int(numpy.binary_repr(t, 32) + numpy.binary_repr(value, 32), 2)
+                analogueValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
                 analogueList.append(analogueValue)
 
             command = int(self.commandDict['sendAnalogues']) + analogueChannel
@@ -1310,7 +1310,7 @@ class Connection:
         """Get the value of the current Digitals outputs as a 32bit integer.
         If digitalChannel is specified, a 0 or 1 is returned.
         """
-        value = numpy.binary_repr(self.status.getStatus('Digitals'))
+        value = np.binary_repr(self.status.getStatus('Digitals'))
 
         if digitalChannel is not None:
             return int(value[-digitalChannel])
@@ -1348,7 +1348,7 @@ class Connection:
         if lightTimePairs:
             # transform the times in FPGA time units
             lightTimePairs = [(light, int(time * actionsPerMillisecond)) for (light, time) in lightTimePairs]
-            cameraReadTime = int(numpy.ceil(cameraReadTime * actionsPerMillisecond))
+            cameraReadTime = int(np.ceil(cameraReadTime * actionsPerMillisecond))
 
             # Sort so that the longest exposure time comes last.
             lightTimePairs.sort(key = lambda a: a[1])
@@ -1380,7 +1380,7 @@ class Connection:
 
             for light, time in lightTimePairs:
                 # binarize and concatenate time and digital value
-                value = numpy.binary_repr(time, 32) + numpy.binary_repr(light, digitalsBitDepth)
+                value = np.binary_repr(time, 32) + np.binary_repr(light, digitalsBitDepth)
                 value = int(value, 2)
                 sendList.append(value)
 
@@ -1444,7 +1444,6 @@ class FPGAStatus(threading.Thread):
             datagramLength = int(self.socket.recvfrom(4)[0])
             datagram = self.socket.recvfrom(datagramLength)[0]
         except:
-            print('No datagram')
             return None
         # parse json datagram
         return json.loads(datagram)

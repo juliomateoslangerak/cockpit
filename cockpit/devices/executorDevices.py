@@ -76,6 +76,8 @@
 #  [dsp]
 #  type: LegacyDSP
 #  uri: PYRO:pyroDSP@somehost:8001
+#  nrDigitalLines: 16
+#  nrAnalogLines: 4
 
 
 import Pyro4
@@ -91,11 +93,14 @@ import cockpit.handlers.imager
 import cockpit.util.threads
 import numpy as np
 from itertools import chain
+from functools import reduce
 
 
 class ExecutorDevice(device.Device):
     def __init__(self, name, config={}):
         device.Device.__init__(self, name, config)
+        self.nrDigitalLines = config.get('nrDigitalLines', 16)
+        self.nrAnalogLines = config.get('nrAnalogLines', 4)
         ## Connection to the Executor device
         self.connection = None
         ## Set of all handlers we control.
@@ -148,7 +153,7 @@ class ExecutorDevice(device.Device):
              'getAnalog': self.connection.ReadPosition,
              'setAnalog': self.connection.MoveAbsolute,
              },
-            dlines=16, alines=4)
+            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
 
         result.append(h)
 
@@ -377,8 +382,8 @@ class LegacyDSP(ExecutorDevice):
 
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(zip(*digitals)[0],
-                                     *[(zip(*a) or [[None]])[0] for a in analogs]))
+        maxticks = reduce(max, chain(list(zip(*digitals))[0],
+                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
         description = {}
         description['count'] = maxticks
         description['clock'] = 1000. / float(self.tickrate)

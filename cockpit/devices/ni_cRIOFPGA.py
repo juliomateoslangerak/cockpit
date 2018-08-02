@@ -50,6 +50,7 @@ import socket
 import time
 import numpy as np
 from itertools import chain
+from functools import reduce
 
 from cockpit import depot, events
 import cockpit.gui.toggleButton
@@ -68,10 +69,8 @@ from six import iteritems
 
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4
-FPGA_UPDATE_RATE = .1 # At which rate is the FPGA sending update status signals
+FPGA_UPDATE_RATE = .1  # At which rate is the FPGA sending update status signals
 MASTER_IP = '10.6.19.11'
-FPGA_NR_OF_DIGITALS = 24
-FPGA_NR_OF_ANALOGS = 4
 
 
 class NIcRIO(executorDevices.ExecutorDevice):
@@ -102,7 +101,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def initialize(self):
         """Connect to ni's RT-ipAddress computer. Overrides ExecutorDevice's initialize.
         """
-        self.connection = Connection(serviceName='cRIO', ipAddress=self.ipAddress, port=self.port, localIp=MASTER_IP)
+        self.connection = Connection(serviceName=self.name, ipAddress=self.ipAddress, port=self.port, localIp=MASTER_IP)
         self.connection.connect()
         self.connection.Abort()
 
@@ -111,18 +110,18 @@ class NIcRIO(executorDevices.ExecutorDevice):
         server = depot.getHandlersOfType(depot.SERVER)[0]
         # TODO: Check
         self.receiveUri = server.register(self.receiveData)
-        for line in range(FPGA_NR_OF_ANALOGS):
-            self.setAnalog(line, 65536//2)
+        # for line in range(self.nrAnalogLines):
+        #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):
-        super(self.__class__, self).onPrepareForExperiment(*args)
+        # super(self.__class__, self).onPrepareForExperiment(*args)
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
 
     # TODO: We can add here all other callbacks
     def receiveData(self, action, *args):
         """Receive data from the RT-ipAddress computer."""
-        if action.lower() == 'ni-fpga done':
+        if action.lower() == 'done':
             events.publish(events.EXECUTOR_DONE % self.name)
 
     def getAnalog(self, line):
@@ -157,7 +156,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
              'getAnalog': self.getAnalog,
              'setAnalog': self.setAnalog,
              },
-            dlines=FPGA_NR_OF_DIGITALS, alines=FPGA_NR_OF_ANALOGS)
+            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
 
         result.append(h)
 
@@ -179,7 +178,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         - generate a structure that describes the profile
         """
         # Profiles
-        analogs = [[] for x in range(FPGA_NR_OF_ANALOGS)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
+        analogs = [[] for x in range(self.nrAnalogLines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = []  # A list of tuples (ticks, digital state)
         # Need to track time of last analog events
         t_last_analog = None
@@ -232,8 +231,9 @@ class NIcRIO(executorDevices.ExecutorDevice):
         analogsArr = [np.array(a, dtype=np.uint32).reshape(-1, 2) for a in analogs]
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(zip(*digitals)[0],
-                                     *[(zip(*a) or [[None]])[0] for a in analogs]))
+        maxticks = reduce(max, chain(list(zip(*digitals))[0],
+                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
+
         description = {}
         description['count'] = maxticks
         description['clock'] = 1000. / float(self.tickrate)
@@ -261,7 +261,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         # Start time
         t0 = float(table[startIndex][0])
         # Profiles
-        analogs = [[] for x in range(FPGA_NR_OF_ANALOGS)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
+        analogs = [[] for x in range(self.nrAnalogLines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = []  # A list of tuples (ticks, digital state)
         # Need to track time of last analog events to workaround a
         # DSP bug later. Also used to detect when events exceed timing
@@ -982,29 +982,31 @@ class Connection:
         # that should operate at any moment.
         # Starting with 4 are synchronous commands that can only operate when the
         # FPGA is idle.
-        self.commandDict = {'sendDigitals' : 100,
-                            'sendAnalogues' : 200,
-                            'abort' : 301,
-                            'reInit' : 302,
-                            'reInitHost' : 303,
-                            'reInitFPGA' : 304,
-                            'updateNrReps' : 405,
-                            'sendStartStopIndexes' : 406,
-                            'initProfile' : 407,
-                            'triggerExperiment' : 408,
+        self.commandDict = {'sendDigitals': 100,
+                            'sendAnalogues': 200,
+                            'abort': 301,
+                            'reInit': 302,
+                            'reInitHost': 303,
+                            'reInitFPGA': 304,
+                            'updateNrReps': 405,
+                            'sendStartStopIndexes': 406,
+                            'initProfile': 407,
+                            'triggerExperiment': 408,
                             'flushFIFOs': 409,
-                            'writeDigitals' : 410,
-                            'writeAnalogue' : 411,
-                            'takeImage' : 413,
+                            'writeDigitals': 410,
+                            'writeAnalogue': 411,
+                            'takeImage': 413,
                             }
-        self.errorCodes = {'0' : None, # TODO: verify this
-                           '1' : 'Could not create socket',
-                           '2' : 'Could not create socket connection',
-                           '3' : 'Send error'}
+        self.errorCodes = {'0': None,  # TODO: verify this
+                           '1': 'Could not create socket',
+                           '2': 'Could not create socket connection',
+                           '3': 'Send error'}
         self.status = None
 
-    def connect(self, timeout=5):
+    def connect(self, timeout=40):
         self.connection = self.createSendSocket(self.ipAddress, self.port[0])
+        # Set  atimeout for the socket
+        self.connection.settimeout(timeout)
         # server = depot.getHandlersOfType(depot.SERVER)[0]
         ## Create a status instance to query the FPGA status and run it in a separate thread
         self.status = FPGAStatus(self, self.localIp, self.port[1])
@@ -1052,7 +1054,7 @@ class Connection:
         """For debugging"""
         pass
 
-    def runCommand(self, command, args = [], msgLength=20):
+    def runCommand(self, command, args=[], msgLength=20):
         """This method sends to the RT-ipAddress a Json command message in the following way
         - three numbers representing the command
         - if there are arguments to send:
@@ -1068,6 +1070,7 @@ class Connection:
         Error Status, Error code and Error Description
         """
         # Transform args into a list of strings of msgLength chars
+        error = False
         sendArgs = []
         for arg in args:
             if type(arg) == str and len(arg) <= msgLength:
@@ -1107,12 +1110,21 @@ class Connection:
         try:
             ## receive confirmation error
             errorLength = self.connection.recv(4)
-            error = self.connection.recv(int(errorLength))
-            return error
+            try:
+                error = self.connection.recv(int(errorLength))
+            except ValueError:
+                errorLength.append(self.connection.recv(4096))
+                error = errorLength
+            if error == b'0':
+                error = False
         except socket.error as msg:
             #Send failed
             print('Receiving error.\n', msg)
-            return 1, '3'
+        finally:
+            if error: print(f'This is the error: {error}')
+
+        return
+
 
     def writeParameter(self, parameter, value):
         """Writes parameter value to RT-ipAddress
@@ -1227,7 +1239,7 @@ class Connection:
         """Sends a actions table to the cRIO and programs the execution of a number of repetitions.
         It does not trigger the execution"""
         # We upload the tables to the cRIO
-        self.connection.sendTables(digitalsTable = actions[1], analogueTables = actions[2])
+        self.sendTables(digitalsTable=actions[1], analogueTables=actions[2])
 
         # Now we can send the Indexes.
         # The indexes will tell the FPGA where the table starts and ends.
@@ -1235,17 +1247,17 @@ class Connection:
         # one experiment per table and just execute different parts of it.
         analoguesStartIndexes = [1 for x in actions[2]]
         analoguesStopIndexes = [len(x) for x in actions[2]]
-        self.connection.writeIndexes(indexSet=0,
-                                     digitalsStartIndex=1,
-                                     digitalsStopIndex=len(actions[1]),
-                                     analoguesStartIndexes=analoguesStartIndexes,
-                                     analoguesStopIndexes=analoguesStopIndexes,
-                                     msgLength=20)
+        self.writeIndexes(indexSet=0,
+                          digitalsStartIndex=1,
+                          digitalsStopIndex=len(actions[1]),
+                          analoguesStartIndexes=analoguesStartIndexes,
+                          analoguesStopIndexes=analoguesStopIndexes,
+                          msgLength=20)
 
         # We initialize the profile. That is tell the cRIO how many repetitions to produce and the
         # interval.
         # TODO: Because the generic Executor is adding a last element in the table we put a 0 here. We have to change this
-        self.connection.initProfile(numReps=numReps, repDuration=0)
+        self.initProfile(numReps=numReps, repDuration=0)
 
         return True
 
@@ -1317,7 +1329,7 @@ class Connection:
         else:
             return int(value, 2)
 
-    def initProfile(self, numberReps, repDuration=0, msgLength=20):
+    def initProfile(self, numReps, repDuration=0, msgLength=20):
         """Prepare the FPGA to run the loaded profile.
         Send a certain number of parameters:
         numberReps and a repDuration
@@ -1326,7 +1338,7 @@ class Connection:
         repDuration -- the time interval between repetitions
         msgLength -- int indicating the length of numberReps and repDuration as decimal strings
         """
-        self.runCommand(self.commandDict['initProfile'], [numberReps, repDuration], msgLength)
+        self.runCommand(self.commandDict['initProfile'], [numReps, repDuration], msgLength)
 
     def getframedata(self):
         """Get the current frame"""
@@ -1420,7 +1432,7 @@ class FPGAStatus(threading.Thread):
 
         return s
 
-    def getStatus(self, key = None):
+    def getStatus(self, key=None):
         """Method to call from outside to get the status
         """
         if key and self.currentFPGAStatus is not None:
@@ -1454,9 +1466,9 @@ class FPGAStatus(threading.Thread):
         return the newStatus but with the status reset so not to publish multiple times
         """
         if newStatus['Event'] == 'FPGA done':
-            events.publish('DSP done')
+            events.publish(events.EXECUTOR_DONE, self.parent.serviceName)
+            print(newStatus['Event'])
             newStatus['Event'] = ''
-            print('FPGA done')
 
         return newStatus
 
@@ -1470,7 +1482,7 @@ class FPGAStatus(threading.Thread):
                 if newFPGAStatus is not None and newFPGAStatus != self.currentFPGAStatus:
 
                     # Publish any interesting change and update
-                    self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus = newFPGAStatus)
+                    self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus=newFPGAStatus)
 
             ## wait for a period of half the broadcasting rate of the FPGA
             time.sleep(FPGA_UPDATE_RATE / 2)

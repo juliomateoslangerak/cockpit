@@ -274,17 +274,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
                 # Repeat the last event at t0 + repDuration
                 actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
 
-        # # The DSP executes an analogue movement profile, which is defined using
-        # # offsets relative to a baseline at the time the profile was initialized.
-        # # These offsets are encoded as unsigned integers, so at profile
-        # # intialization, each analogue channel must be at or below the lowest
-        # # value it needs to reach in the profile.
-        # lowestAnalogs = [min(channel) for channel in zip(*zip(*zip(*actions)[1])[1])]
-        # for line, lowest in enumerate(lowestAnalogs):
-        #     if lowest < self._lastAnalogs[line]:
-        #         self._lastAnalogs[line] = lowest
-        #         self.setAnalog(line, lowest)
-
         for (t, (darg, aargs)) in actions:
             # Convert t to ticks as int while rounding up. The rounding is
             # necessary, otherwise e.g. 10.1 and 10.1999999... both result in 101.
@@ -352,241 +341,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
 
-# ====================================================================================
-#         profileStr, digitals, analogs = self.generateProfile(table[startIndex:stopIndex], repDuration)
-#
-#         # Update our positioning values in case we have to make a new profile
-#         # in this same experiment. The analog values are a bit tricky, since
-#         # they're deltas from the values we used to create the profile.
-#         self.lastDigitalVal = digitals[-1, 1]
-#         for aline in range(4):
-#             self.lastAnalogPositions[aline] = analogs[aline][-1][1] + self.lastAnalogPositions[aline]
-#
-#         # Apologies for the messiness here; basically we're checking if any
-#         # aspect of the experiment profile has changed compared to the last
-#         # experiment we ran, if any. If there are differences, then we must
-#         # upload the new profile; otherwise we can skip that step.
-#         if (self.prevProfileSettings is None or
-#                 profileStr != self.prevProfileSettings[0] or
-#                 numpy.any(digitals != self.prevProfileSettings[1]) or
-#                 sum([numpy.any(analogs[i] != self.prevProfileSettings[2][i]) for i in range(4)])):
-#             # We can't just re-use the already-loaded profile.
-#             self.connection.sendTables(digitalsTable = digitals, analogueTables = analogs)
-#             self.prevProfileSettings = (profileStr, digitals, analogs)
-#
-#             # Now we can send the Indexes.
-#             # The indexes will tell the FPGA where the table starts and ends.
-#
-#             # This allows for more flexibility in the future, as we can store more than
-#
-#             # one experiment per table and just execute different parts of it.
-#             analoguesStartIndexes = [1 for x in analogs]
-#             analoguesStopIndexes = [len(x) for x in analogs]
-#             self.connection.writeIndexes(indexSet=0,
-#
-#                                          digitalsStartIndex=1,
-#
-#                                          digitalsStopIndex=len(digitals),
-#
-#                                          analoguesStartIndexes=analoguesStartIndexes,
-#                                          analoguesStopIndexes=analoguesStopIndexes,
-#                                          msgLength=20)
-#
-#         events.publish('update status light', 'device waiting',
-#                 'Waiting for\nFPGA to finish', (255, 255, 0))
-#         # InitProfile will declare the current analog positions as a "basis"
-#         # and do all actions as offsets from those bases, so we need to
-#         # ensure that the variable retarder is zeroed out first.
-#         # TODO: verify if this is true for the FPGA
-#         retarderLine = self.handlerToAnalogLine[self.retarderHandler]
-#         self.setAnalog(retarderLine, 0)
-#
-#         self.connection.initProfile(numReps, repDuration)
-#         events.executeAndWaitFor("DSP done", self.connection.triggerExperiment)
-#
-#         events.publish('experiment execution')
-#         return
-#
-    # def performSubscriptions(self):
-    #     """
-    #     We care when cameras are enabled, since we control some of them
-    #
-    #     via external trigger. There are also some light sources that we don't
-    #     control directly that we need to know about.
-    #     """
-    #     events.subscribe('camera enable', self.toggleCamera)
-    #     events.subscribe('light source enable', self.toggleLightHandler)
-    #     events.subscribe('user abort', self.onAbort)
-    #     events.subscribe('prepare for experiment', self.onPrepareForExperiment)
-    #     events.subscribe('cleanup after experiment', self.cleanupAfterExperiment)
-    #
-    # def makeInitialPublications(self):
-    #     """
-    #     As a side-effect of setting our initial positions, we will also
-    #     publish them. We want the Z piezo to be in the middle of its range
-    #     of motion.
-    #     """
-    #     self.moveRetarderAbsolute(None, 0)
-    #
-    # def onAbort(self):
-    #     """
-    #     User clicked the abort button.
-    #     """
-    #     self.connection.abort()
-    #     events.publish("DSP done") # TODO: change this to a FPGA-done
-    #
-    # def toggleLight(self, lightName, isEnabled):
-    #     """
-    #     Enable/disable a specific light source
-    #     """
-    #     if isEnabled:
-    #         self.activeLights.add(lightName)
-    #     elif lightName in self.activeLights:
-    #         self.activeLights.remove(lightName)
-    #
-    # def triggerNow(self, line, dt=0.01):
-    #     self.connection.writeDigitals(self.connection.readDigitals() ^ line)
-    #     time.sleep(dt)
-    #     self.connection.writeDigitals(self.connection.readDigitals() ^ line)
-    #
-    # def toggleLightHandler(self, handler, isEnabled):
-    #     """
-    #     As toggleLight, but accepts a handler instead.
-    #     """
-    #     self.toggleLight(handler.name, isEnabled)
-    #
-    # def setExposureTime(self, name, value):
-    #     """
-    #     Update the exposure time for a specific light source.
-    #     """
-    #     self.lightToExposureTime[name] = value
-    #
-    # def getExposureTime(self, name):
-    #     """
-    #     Retrieve the exposure time for a specific light source.
-    #     """
-    #     return self.lightToExposureTime[name]
-    #
-    # def toggleCamera(self, camera, isEnabled):
-    #     """
-    #     Enable/disable a specific camera.
-    #     """
-    #     if not isEnabled and camera.name in self.activeCameras:
-    #         self.activeCameras.remove(camera.name)
-    #     else:
-    #         self.activeCameras.add(camera.name)
-    #
-    # def publishPiezoPosition(self, axis):
-    #     """
-    #     Report the new position of a piezo.
-    #     """
-    #     events.publish('stage mover', '%d piezo' % axis,
-    #
-    #             axis, self.curPosition[axis])
-    #
-    # def movePiezoAbsolute(self, axis, pos):
-    #     """
-    #     Move a stage piezo to a given position.
-    #     """
-    #     self.curPosition.update({axis: pos})
-    #     # Convert from microns to ADUs.
-    #     aline = self.axisMapper[axis]
-    #     aduPos = self.convertMicronsToADUs(aline, pos)
-    #     # TODO: sensitivity
-    #     self.connection.writeAnalogueADU(aline, aduPos)
-    #     self.publishPiezoPosition(axis)
-    #     # Assume piezo movements are instantaneous;
-    #
-    #     # TODO: we could establish a verification through the FPGA eg: connection.MoveAbsolute does not return until done
-    #     events.publish('stage stopped', '%d piezo' % axis)
-    #
-    # def movePiezoRelative(self, axis, delta):
-    #     """
-    #     Move the stage piezo by a given delta
-    #     """
-    #     self.movePiezoAbsolute(axis, self.curPosition[axis] + delta)
-    #
-    # def getPiezoPos(self, axis):
-    #     """
-    #     Get the current Piezo position.
-    #     """
-    #     return self.curPosition[axis]
-    #
-    # def getPiezoMovementTime(self, axis, start, end):
-    #     """
-    #     Get the amount of time it would take the piezo to move from the
-    #
-    #     initial position to the final position, as well
-    #     as the amount of time needed to stabilize after that point,
-    #
-    #     both in milliseconds. These numbers are both somewhat arbitrary;
-    #     we just say it takes 1ms per micron to stabilize and .1ms to move.
-    #     """
-    #     distance = abs(start - end)
-    #     return (decimal.Decimal('.1'), decimal.Decimal(distance * 1))
-    #
-    # def setSLMPattern(self, name, position):
-    #     """
-    #     Set the SLM's position to a specific value.
-    #
-    #     For now, do nothing; the only way we can change the SLM position is by
-    #
-    #     sending triggers so we have no absolute positioning.
-    #     """
-    #     pass
-    #
-    # def moveSLMPatternBy(self, name, delta):
-    #     """
-    #     Adjust the SLM's position by the specified offset. Again, do nothing.
-    #     """
-    #     pass
-    #
-    # def getCurSLMPattern(self, name):
-    #     """
-    #     Get the current SLM position, either angle or phase depending on the
-    #
-    #     caller. We have no idea, really.
-    #     """
-    #     return 0
-    #
-    # def getSLMStabilizationTime(self, name, prevPos, curPos):
-    #     """
-    #     Get the time to move to a new SLM position, and the stabilization time,
-    #
-    #     in milliseconds. Note we assume that this requires only one triggering
-    #     of the SLM.
-    #     """
-    #     return (1, 30)
-    #
-    # def moveRetarderAbsolute(self, name, pos):
-    #     """
-    #     Move the variable retarder to the specified voltage.
-    #     """
-    #     self.curRetarderVoltage = pos
-    #     handler = depot.getHandlerWithName('SI angle')
-    #     aline = self.handlerToAnalogLine[handler]
-    #     # Convert from volts to ADUs.
-    #     # TODO: add volts to ADUs in config files
-    #     self.connection.writeAnalogueADU(aline, int(pos * 3276.8))
-    #
-    # def moveRetarderRelative(self, name, delta):
-    #     """
-    #     Move the variable retarder by the specified voltage offset.
-    #     """
-    #     self.moveRetarderAbsolute(self.curRetarderVoltage + delta)
-    #
-    # def getRetarderPos(self, name):
-    #     """
-    #     Get the current variable retarder voltage
-    #     """
-    #     return self.curRetarderVoltage
-    #
-    # def getRetarderMovementTime(self, name, start, end):
-    #     """
-    #     Get the time needed for the variable retarder to move to a new value.
-    #     """
-    #     return (1, 1000)
-
     @cockpit.util.threads.locked
     def takeImage(self):
         """Take an image with the current light sources and active cameras.
@@ -611,8 +365,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
 
     @cockpit.util.threads.locked
     def takeBurst(self, frameCount = 10):
-        """
-        Use the internal triggering of the camera to take a burst of images
+        """Use the internal triggering of the camera to take a burst of images
 
         Experimental
         """
@@ -632,334 +385,11 @@ class NIcRIO(executorDevices.ExecutorDevice):
                 handler.setExposureTime(maxTime)
 
         sleep(5)
-    #
-    # def cleanupAfterExperiment(self, *args):
-    #     """
-    #     Cleanup after an experiment completes: restore our cached position.
-    #     """
-    #     for axis, position in iteritems(self.preExperimentPosition):
-    #         self.movePiezoAbsolute(axis, position)
-    #
-    # def getNumRunnableLines(self, name, table, index):
-    #     """
-    #     Get the number of actions from the provided table that we are
-    #     capable of executing.
-    #     """
-    #     # TODO: replace this method by a more sophisticated setup as the FPGA may
-    #     # control repetitions and the duration
-    #     count = 0
-    #     for time, handler, parameter in table[index:]:
-    #         # Check for analog and digital devices we control.
-    #         if (handler not in self.handlers and
-    #
-    #                 handler.name not in self.nameToDigitalLine):
-    #             # Found a device we don't control.
-    #             break
-    #         count += 1
-    #     return count
-    #
-    # def cleanupPiezo(self, axis, isCleanupFinal):
-    #     """
-    #     Clean up after the experiment is done
-    #     """
-    #     if isCleanupFinal:
-    #         # The DSP may complain about still being in collection mode
-    #         # even though it's told us it's done; wait a bit.
-    #         time.sleep(.25)
-    #         position = self.connection.getAnalog(self.axisMapper[axis])
-    #         self.curPosition.update({axis: position})
-    #         self.publishPiezoPosition(axis)
-    #         # Manually force all digital lines to 0, because for some reason the
-    #         # DSP isn't doing this on its own, even though our experiments end
-    #         # with an all-zeros entry.
-    #         self.connection.writeDigitals(0)
-    #         # Likewise, force the retarder back to 0.
-    #         retarderLine = self.handlerToAnalogLine[self.retarderHandler]
-    #         self.setAnalog(retarderLine, 0)
-    #
-    # def generateProfile(self, events, repDuration):
-    #     """
-    #     Given a list of (time, handle, action) tuples, generate several Numpy
-    #     arrays: one of digital actions, and one each for each analog output.
-    #     We also generate the "profile string" that is used to describe these
-    #     arrays.
-    #     """
-    #     # Maps digital lines to the most recent setting for that line.
-    #     digitalToLastVal = {}
-    #     # Maps analog lines to lists of (time, value) pairs.
-    #
-    #     analogToPosition = {}
-    #
-    #     # Expand out the timepoints so we can use integers to refer to
-    #
-    #     # sub-millisecond events, since the DSP table doesn't use
-    #     # floating point.
-    #     # Convert from decimal.Decimal instances to floating point.
-    #     times = [float(e[0] * self.actionsPerMillisecond) for e in events]
-    #     # Now convert to int while rounding. The rounding is necessary,
-    #     # otherwise e.g. 10.1 and 10.1999999... both result in 101.
-    #     times = [int(t + .5) for t in times]
-    #     times = sorted(list(set(times)))
-    #     baseTime = times[0]
-    #
-    #     # Take into account the desired rep duration
-    #
-    #     # If the desired repDuration is shorter than the time the
-    #
-    #     # experimental time, print a warning
-    #     if repDuration is not None:
-    #         repDuration *= self.actionsPerMillisecond
-    #         waitTime = repDuration - (times[-1] - baseTime)
-    #         if waitTime < 0:
-    #             print('WARNING!! The desired experiment timing does NOT')
-    #             print('fit into the requested repetition duration.')
-    #             print('OMX-T will acquire as fast as possible')
-    #     # HACK: ensure that there's at least 2 timesteps in the experiment,
-    #     # or else it won't run properly.
-    #     havePaddedDigitals = False
-    #     if len(times) == 1:
-    #         times.append(times[0] + 1)
-    #         havePaddedDigitals = True
-    #
-    #     digitals = numpy.zeros((len(times), 2), dtype = numpy.uint32)
-    #     digitals[:, 0] = times
-    #     # Rebase the times so that they start from 0.
-    #     digitals[:, 0] -= baseTime
-    #
-    #     # Construct lists of (time, value) pairs for the DSP's digital and
-    #     # analog outputs.
-    #     curDigitalValue = self.lastDigitalVal
-    #     alineToAnalogs = {}
-    #     for time, handler, action in events:
-    #         # Do the same "Decimal -> float -> rounded int" conversion
-    #         time = int(float(time * self.actionsPerMillisecond) + .5)
-    #         index = times.index(time)
-    #         # Ensure a valid (nonzero) digital value exists regardless of the
-    #         # type of action, e.g. so analog actions don't zero the digital
-    #         # output.
-    #         digitals[index, 1] = curDigitalValue
-    #         if handler in self.handlerToDigitalLine:
-    #             # Update curDigitalValue according to the value of the output
-    #             # line for this handler. Digital actions are either on or off,
-    #             # and they stay that way until told otherwise.
-    #             line = self.handlerToDigitalLine[handler]
-    #             if line not in digitalToLastVal or digitalToLastVal[line] != action:
-    #                 # Line has changed
-    #                 addend = line
-    #                 if not action:
-    #                     addend = -line
-    #                 if curDigitalValue + addend < 0:
-    #                     # This should never happen.
-    #                     raise RuntimeError("Negative current digital value from adding %s to %s" % (bin(addend), bin(curDigitalValue)))
-    #                 curDigitalValue += addend
-    #                 digitals[index, 1] = curDigitalValue
-    #             digitalToLastVal[line] = action
-    #         elif handler in self.handlerToAnalogLine:
-    #             # Analog lines step to the next position.
-    #
-    #             # HACK: the variable retarder shows up here too, and for it
-    #             # we set specific voltage values depending on position.
-    #             aline = self.handlerToAnalogLine[handler]
-    #             value = 0
-    #             if handler is self.retarderHandler:
-    #                 value = int(self.retarderVoltages[action] * 3276.8)
-    #             else:
-    #                 value = self.convertMicronsToADUs(aline, action)
-    #                 # Add the start position as the experiment is generating deltas
-    #                 value += self.convertMicronsToADUs(aline, self.lastAnalogPositions[aline])
-    #             # If we're in the
-    #             # middle of an experiment, then these values need to be
-    #             # re-baselined based on where we started from, since when the
-    #             # DSP treats all analog positions as offsets of where it was
-    #             # when it started executing the profile.
-    #             ## not needed for the FPGA
-    #             if aline not in alineToAnalogs:
-    #                 alineToAnalogs[aline] = []
-    #             alineToAnalogs[aline].append((time - baseTime, value))
-    #         else:
-    #             raise RuntimeError("Unhandled handler when generating FPGA profile: %s" % handler.name)
-    #
-    #     if havePaddedDigitals:
-    #         # We created a dummy digitals entry since there was only one
-    #         # timepoint, but that dummy entry has an output value of 0 instead
-    #         # of whatever the current output is, so replace it.
-    #         digitals[-1, 1] = curDigitalValue
-    #
-    #     # Convert the analog actions into Numpy arrays now that we know their
-    #     # lengths. Default to [0, 0], fill in a proper array for any axis where
-    #     # we actually do something.
-    #     analogs = [numpy.zeros((1, 2), dtype = numpy.uint32) for i in range(4)]
-    #     for aline, actions in iteritems(alineToAnalogs):
-    #         analogs[aline] = numpy.zeros((len(actions), 2), dtype = numpy.uint32)
-    #         for i, (time, value) in enumerate(actions):
-    #             analogs[aline][i] = (time, value)
-    #
-    #     # Generate the string that describes the profile we've created.
-    #     description = numpy.rec.array(None,
-    #             formats = "u4, f4, u4, u4, 4u4",
-    #             names = ('count', 'clock', 'InitDio', 'nDigital', 'nAnalog'),
-    #             aligned = True, shape = 1)
-    #
-    #     runtime = max(digitals[:, 0])
-    #     for aline in range(4):
-    #         runtime = max(runtime, max(analogs[aline][:, 0]))
-    #     clock = 1000 / float(self.actionsPerMillisecond)
-    #     description[0]['count'] = runtime
-    #     description[0]['clock'] = clock
-    #     description[0]['InitDio'] = self.lastDigitalVal
-    #     description[0]['nDigital'] = len(digitals)
-    #     description['nAnalog'] = [len(a) for a in analogs]
-    #
-    #     return description.tostring(), digitals, analogs
-    #
-    # def convertMicronsToADUs(self, aline, position):
-    #     """Given a target position for the specified axis, generate an
-    #
-    #     appropriate value for the NI-FPGA's analog system.
-    #     """
-    #     return long(position / self.alineToUnitsPerADU[aline])
 
     def setDigital(self, value):
         """Debugging function: set the digital output for the NI-FPGA."""
         self.connection.WriteDigital(value)
 
-    # def plotProfile(self):
-    #     """
-    #     Debugging function: plot the NI-FPGA profile we last used.
-    #     """
-    #     if not self.prevProfileSettings:
-    #         return
-    #     digitals = self.prevProfileSettings[1]
-    #     analogs = self.prevProfileSettings[2]
-    #
-    #     # Determine the X (time) axis
-    #     start = min([a[0][0] for a in analogs])
-    #     start = min(start, digitals[0,0])
-    #     end = max([a[-1][0] for a in analogs])
-    #     end = max(end, digitals[-1, 0])
-    #
-    #     # Determine the Y (voltage) axis. Voltage is arbitrary for digital
-    #     # values -- they're either on or off, but we want analogs to use the
-    #     # full viewing area.
-    #     minVoltage = None
-    #     maxVoltage = None
-    #     for axis, analog in enumerate(analogs):
-    #         for time, val in analog:
-    #             #TODO: integrate this conversion into the config files
-    #             converted = val / 3276.80 # Convert ADUs -> volts
-    #             if minVoltage is None or minVoltage > converted:
-    #                 minVoltage = converted
-    #             if maxVoltage is None or maxVoltage < converted:
-    #                 maxVoltage = converted
-    #     # Ensure some vaguely sane values
-    #     if minVoltage is None:
-    #         minVoltage = 0
-    #     if maxVoltage is None or maxVoltage == minVoltage:
-    #         maxVoltage = minVoltage + 1
-    #
-    #     figure = matplotlib.figure.Figure((6, 4),
-    #             dpi = 100, facecolor = (1, 1, 1))
-    #     axes = figure.add_subplot(1, 1, 1)
-    #     axes.set_axis_bgcolor('white')
-    #     axes.set_title('NI-FPGA profile plot')
-    #     axes.set_ylabel('Volts')
-    #     axes.set_xlabel('Time (tenths of ms)')
-    #     axes.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(25))
-    #
-    #     lines = []
-    #     labels = []
-    #     colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-    #     colorIndex = 0
-    #     for aline, analog in enumerate(analogs):
-    #         if numpy.any(analog) != 0:
-    #             xVals = [a[0] for a in analog]
-    #             # TODO: integrate this conversion into the config files
-    #             yVals = [a[1] / 3276.80 for a in analog]
-    #             lines.append(axes.plot(xVals, yVals, colors[colorIndex]))
-    #             colorIndex += 1
-    #             name = 'Line %d' % aline
-    #             labels.append(name)
-    #
-    #     # Currently-active handlers at this point
-    #     activeNames = set()
-    #     # Maps handler names to lists of (time, isActive) pairs
-    #     nameToVals = {}
-    #     for time, pattern in digitals:
-    #         for handler, line in iteritems(self.handlerToDigitalLine):
-    #             matches = line & pattern
-    #             if matches and handler.name not in activeNames:
-    #                 # We trigger this handler here
-    #                 activeNames.add(handler.name)
-    #                 if handler.name not in nameToVals:
-    #                     # Everyone starts at 0.
-    #                     nameToVals[handler.name] = [(start, 0)]
-    #                 nameToVals[handler.name].append((time - .00001, 0))
-    #                 nameToVals[handler.name].append((time, 1))
-    #             elif not matches and handler.name in activeNames:
-    #                 # We deactivate this handler here.
-    #                 activeNames.remove(handler.name)
-    #                 nameToVals[handler.name].append((time, 1))
-    #                 nameToVals[handler.name].append((time + .00001, 0))
-    #
-    #     for i, name in enumerate(sorted(nameToVals.keys())):
-    #         scale = float(i + 1) / len(nameToVals.keys()) / 2
-    #         xVals = []
-    #         yVals = []
-    #         for pair in nameToVals[name]:
-    #             xVals.append(pair[0])
-    #             scaledVal = minVoltage + pair[1] * scale * (maxVoltage - minVoltage)
-    #             yVals.append(scaledVal)
-    #         color = colors[colorIndex % len(colors)]
-    #         colorIndex += 1
-    #         lines.append(axes.plot(xVals, yVals, color))
-    #         labels.append(name)
-    #
-    #     figure.legend(lines, labels, loc = 'upper left')
-    #     frame = wx.Frame(None, title = 'NI-FPGA Profile Plot')
-    #     canvas = matplotlib.backends.backend_wxagg.FigureCanvasWxAgg(
-    #             frame, -1, figure)
-    #     canvas.draw()
-    #     frame.Show()
-    #
-    # def advanceSLM(self, count = 1):
-    #     """
-    #     Debugging function: advance the SLM.
-    #     """
-    #     handler = depot.getHandlerWithName('SI SLM')
-    #     line = self.handlerToDigitalLine[handler]
-    #     for i in range(count):
-    #         self.setDigital(line)
-    #         self.setDigital(0)
-    #         time.sleep(.1)
-    #
-    # def runProfile(self, digitals, analogs, numReps = 1, baseDigital = 0):
-    #     """
-    #     load and execute a profile.
-    #     """
-    #     description = numpy.rec.array(None,
-    #             formats = "u4, f4, u4, u4, 4u4",
-    #             names = ('count', 'clock', 'InitDio', 'nDigital', 'nAnalog'),
-    #             aligned = True, shape = 1)
-    #     # Only doing the max of the digitals or the Z analog piezo.
-    #     runtime = max(max(digitals[:,0]), max(analogs[1][:,0]))
-    #     clock = 1000 / float(self.actionsPerMillisecond)
-    #     description[0]['count'] = runtime
-    #     description[0]['clock'] = clock
-    #     description[0]['InitDio'] = baseDigital
-    #     description[0]['nDigital'] = len(digitals)
-    #     description['nAnalog'] = [len(a) for a in analogs]
-    #     profileStr = description.tostring()
-    #
-    #     self.connection.profileSet(profileStr, digitals, *analogs)
-    #     self.connection.DownloadProfile()
-    #     # InitProfile will declare the current analog positions as a "basis"
-    #     # and do all actions as offsets from those bases, so we need to
-    #     # ensure that the variable retarder is zeroed out first.
-    #     retarderLine = self.axisMapper[self.handlerToAnalogAxis[self.retarderHandler]]
-    #     self.setAnalog(retarderLine, 0)
-    #
-    #     self.connection.initProfile(numReps)
-    #     events.executeAndWaitFor("NI-FPGA done", self.connection.triggerExperiment)
 
 class Connection:
     """This class handles the connection with NI's RT-ipAddress computer."""
@@ -1009,12 +439,6 @@ class Connection:
         ## Create a status instance to query the FPGA status and run it in a separate thread
         self.status = FPGAStatus(self, self.localIp, self.port[1])
         self.status.start()
-        #        self.fn = fn
-        #        self.startCollectThread()
-        #        self.reInit()
-        #        self.clientConnection = None
-        #        self.MoveAbsolute(0, 10)
-        #        self.WriteShutter(255)
 
     ## Return whether or not our connection is active.
     def getIsConnected(self):
@@ -1167,7 +591,6 @@ class Connection:
         (0), (0,1), (0,1,2) or (0,1,2,3). If a table is missing a dummy table must be introduced
         msgLength is an int indicating the length of every digital table element as a decimal string
         """
-
         # Convert the digitals numpy table into a list of messages for the TCP
         digitalsList = []
 
@@ -1215,9 +638,7 @@ class Connection:
         # TODO: Verify that analogues lists are the same length
 
         # Merge everything in a single list to send. Note that we interlace the
-
         # analogue indexes (start, stop, start, stop,...) so in the future we can
-
         # put an arbitrary number.
         sendList = [indexSet, digitalsStartIndex, digitalsStopIndex]
 
@@ -1227,7 +648,6 @@ class Connection:
             sendList.append(index)
 
         # send indexes.
-
         self.runCommand(self.commandDict['sendStartStopIndexes'], sendList, msgLength)
 
     def PrepareActions(self, actions, numReps):
@@ -1386,11 +806,8 @@ class Connection:
             timingList[-1] = (timingList[-1][0] - cameras, timingList[-1][1])
 
             # Add a 0 at the end will stop the execution of the list
-
             timingList.append((0, 0))
-
             lightTimePairs = timingList
-
             sendList = []
 
             for light, time in lightTimePairs:
@@ -1401,18 +818,19 @@ class Connection:
 
             self.runCommand(self.commandDict['takeImage'], sendList, msgLength)
 
+
 class FPGAStatus(threading.Thread):
     def __init__(self, parent, host, port):
         threading.Thread.__init__(self)
         self.parent = parent
-        ## Create a dictionary to store the FPGA status and a lock to access it
+        # Create a dictionary to store the FPGA status and a lock to access it
         self.currentFPGAStatus = {}
         self.FPGAStatusLock = threading.Lock()
 
-        ## create a socket
+        # create a socket
         self.socket = self.createReceiveSocket(host, port)
 
-        ## Create a handle to stop the thread
+        # Create a handle to stop the thread
         self.shouldRun = True
 
     def createReceiveSocket(self, host, port):
@@ -1478,7 +896,6 @@ class FPGAStatus(threading.Thread):
     def run(self):
 
         self.currentFPGAStatus = self.getFPGAStatus()
-
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
             with self.FPGAStatusLock:

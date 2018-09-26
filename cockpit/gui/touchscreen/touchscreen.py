@@ -699,21 +699,21 @@ class TouchScreenWindow(wx.Frame):
             menuId = 1
             for label, color in SITE_COLORS:
                 menu.Append(menuId, "Mark site with %s marker" % label)
-                self.panel.Bind(wx.EVT_MENU,
-                                lambda event, color = color: self.saveSite(color), id= menuId)
+                wx.EVT_MENU(self.panel, menuId,
+                        lambda event, color = color: self.saveSite(color))
                 menuId += 1
             menu.AppendSeparator()
             menu.Append(menuId, "Set mosaic tile overlap")
-            self.panel.Bind(wx.EVT_MENU,
-                            lambda event: self.setTileOverlap(), id= menuId)
+            wx.EVT_MENU(self.panel, menuId,
+                        lambda event: self.setTileOverlap())
             menuId += 1
             menu.Append(menuId, "Toggle mosaic scale bar")
-            self.panel.Bind(wx.EVT_MENU,
-                            lambda event: self.togglescalebar(), id= menuId)
+            wx.EVT_MENU(self.panel, menuId,
+                        lambda event: self.togglescalebar())
             menuId += 1
             menu.Append(menuId, "Toggle draw primitives")
-            self.panel.Bind(wx.EVT_MENU,
-                            lambda event: self.toggleDrawPrimitives(), id= menuId)
+            wx.EVT_MENU(self.panel, menuId,
+                        lambda event: self.toggleDrawPrimitives())
 
             cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
 
@@ -990,8 +990,8 @@ class TouchScreenWindow(wx.Frame):
         menu = wx.Menu()
         for i, (label, color) in enumerate(SITE_COLORS):
             menu.Append(i + 1, "Mark sites in %s" % label)
-            self.panel.Bind(wx.EVT_MENU,
-                            lambda event, color = color: self.setSiteColor(color), id= i + 1)
+            wx.EVT_MENU(self.panel, i + 1,
+                    lambda event, color = color: self.setSiteColor(color))
         cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
 
 

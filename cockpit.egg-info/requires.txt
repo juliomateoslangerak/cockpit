@@ -1,0 +1,8 @@
+matplotlib
+numpy
+scipy
+wxPython
+Pyro4
+pyserial
+PyOpenGL
+six

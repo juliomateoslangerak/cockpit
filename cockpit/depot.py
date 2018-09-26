@@ -141,7 +141,7 @@ class DeviceDepot:
                 # Extract class definitions from the module
                 try:
                     classes = [c for c in ast.parse(f.read()).body
-                                    if isinstance(c, ast.ClassDef)]
+                               if isinstance(c, ast.ClassDef)]
                 except Exception as e:
                     raise Exception("Error parsing device module %s.\n%s" % (modname, e))
 

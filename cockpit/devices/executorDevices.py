@@ -76,6 +76,8 @@
 #  [dsp]
 #  type: LegacyDSP
 #  uri: PYRO:pyroDSP@somehost:8001
+#  nrDigitalLines: 16
+#  nrAnalogLines: 4
 
 
 import Pyro4
@@ -91,11 +93,14 @@ import cockpit.handlers.imager
 import cockpit.util.threads
 import numpy as np
 from itertools import chain
+from functools import reduce
 
 
 class ExecutorDevice(device.Device):
     def __init__(self, name, config={}):
         device.Device.__init__(self, name, config)
+        self.nrDigitalLines = config.get('nrDigitalLines', 16)
+        self.nrAnalogLines = config.get('nrAnalogLines', 4)
         ## Connection to the Executor device
         self.connection = None
         ## Set of all handlers we control.
@@ -135,8 +140,8 @@ class ExecutorDevice(device.Device):
         self.receiveUri = server.register(self.receiveData)
         self.connection.receiveClient(self.receiveUri)
 
-    ## We control which light sources are active, as well as a set of 
-    # stage motion piezos. 
+    ## We control which light sources are active, as well as a set of
+    # stage motion piezos.
     def getHandlers(self):
         result = []
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
@@ -148,7 +153,7 @@ class ExecutorDevice(device.Device):
              'getAnalog': self.connection.ReadPosition,
              'setAnalog': self.connection.MoveAbsolute,
              },
-            dlines=16, alines=4)
+            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
 
         result.append(h)
 
@@ -179,7 +184,7 @@ class ExecutorDevice(device.Device):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps, 
+    def executeTable(self, name, table, startIndex, stopIndex, numReps,
             repDuration):
         # Take time and arguments (i.e. omit handler) from table to generate actions.
         t0 = float(table[startIndex][0])
@@ -377,8 +382,8 @@ class LegacyDSP(ExecutorDevice):
 
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(zip(*digitals)[0],
-                                     *[(zip(*a) or [[None]])[0] for a in analogs]))
+        maxticks = reduce(max, chain(list(zip(*digitals))[0],
+                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
         description = {}
         description['count'] = maxticks
         description['clock'] = 1000. / float(self.tickrate)
@@ -393,5 +398,4 @@ class LegacyDSP(ExecutorDevice):
         self.connection.InitProfile(numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
-
 

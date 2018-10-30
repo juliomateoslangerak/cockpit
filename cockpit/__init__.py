@@ -73,6 +73,7 @@ if (distutils.version.LooseVersion(Pyro4.__version__) >=
     Pyro4.config.REQUIRE_EXPOSE = False
 
 import cockpit.depot
+import cockpit.util.user
 import cockpit.util.files
 import cockpit.util.logger
 
@@ -212,7 +213,7 @@ class CockpitApp(wx.App):
 
 
             depot.makeInitialPublications()
-            interfaces.makeInitialPublications()
+            cockpit.interfaces.makeInitialPublications()
             events.publish('cockpit initialization complete')
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
             return True
@@ -230,7 +231,7 @@ class CockpitApp(wx.App):
 
     def doInitialLogin(self):
         cockpit.util.user.login(wx.TopLevelWindow())
-        cockpit.util.logger.log.debug("Login complete as %s" % util.user.getUsername())
+        cockpit.util.logger.log.debug("Login complete as %s" % cockpit.util.user.getUsername())
 
 
     def onActivateApp(self, event):

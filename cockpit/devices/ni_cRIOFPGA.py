@@ -545,19 +545,16 @@ class Connection:
             # receive confirmation error
             errorLength = self.connection.recv(4)
             try:
-                error = self.connection.recv(int(errorLength))
+                datagram = self.connection.recv(int(errorLength))
             except ValueError:
                 errorLength.append(self.connection.recv(4096))
-                error = errorLength
-            if error == b'0':
-                error = False
+                datagram = errorLength
+            error = json.loads(datagram)
+            if error['status']:
+                print(f'There has been an FPGA error: {error}')
         except socket.error as msg:
             # Send failed
             print('Receiving error.\n', msg)
-        finally:
-            if error:
-                print(f'This is the error: {error}')
-
         return
 
     def writeParameter(self, parameter, value):

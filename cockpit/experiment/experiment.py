@@ -190,12 +190,13 @@ class Experiment:
     ## Run the experiment. We spin off the actual execution and cleanup
     # into separate threads.
     def run(self):
+        # Returns True to close config dialog box, False or None otherwise.
         # Check if the user is set to save to an already-existing file.
         if self.savePath and os.path.exists(self.savePath):
             if not guiUtils.getUserPermission(
                     ("The file:\n%s\nalready exists. " % self.savePath) +
                     "Are you sure you want to overwrite it?"):
-                return
+                return False
 
         global lastExperiment
         lastExperiment = self
@@ -215,7 +216,17 @@ class Experiment:
                 self.cameraToIsReady[camera] = False
 
         self.createValidActionTable()
+        if self.numReps > 1 and self.repDuration < self.table.lastActionTime / 1000:
+            warning = "Repeat duration is less than the time required to run " \
+                      "one repeat. Choose:" \
+                      "\n    'OK' to run repeats as fast as possible;" \
+                      "\n    'Cancel' to go back and change parameters."
+            if not guiUtils.getUserPermission(warning):
+                return False
 
+
+        # ToDo: check duration of action table against timelapse settings
+        # display appropriate warnings.
         self.lastMinuteActions()
 
         runThread = threading.Thread(target = self.execute)
@@ -233,7 +244,10 @@ class Experiment:
                 ## localisation where a lower wavelength is doing the
                 ## pumping while but excitation for fluorescence is
                 ## with the higher wavelength.
-                max_wavelength = max([l.wavelength for l,t in lightTimePairs])
+                if lightTimePairs:
+                    max_wavelength = max([l.wavelength for l,t in lightTimePairs])
+                else:
+                    max_wavelength = 0.0
                 for camera in cameras:
                     if camera not in self.cameras:
                         continue
@@ -254,6 +268,7 @@ class Experiment:
         runThread.start()
         # Start up a thread to clean up after the experiment finishes.
         threading.Thread(target = self.cleanup, args = [runThread, saveThread]).start()
+        return True
 
     ## Create an ActionTable by calling self.generateActions, and give our
     # Devices a chance to sign off on it.
@@ -459,8 +474,13 @@ class Experiment:
             for handler in handlers:
                 text = handler.getSavefileInfo()
                 if handler in self.lightToExposureTime and self.lightToExposureTime[handler]:
+                    text += ': ' + ','.join(["%.3fms" % t for t in sorted(self.lightToExposureTime[handler]) ])
                     # Record the exposure duration(s) of the light source.
-                    text += ': ' + ','.join(["%.3fms" % t for t in sorted(self.lightToExposureTime[handler])])
+                    # find associated power entries (if they have them)
+
+                    for hand in depot.getHandlersInGroup(handler.groupName):
+                        if hand.deviceType == 'light power':
+                            text += " %3.3f mW" % hand.lastPower
                 if text:
                     entries.append(text)
             if entries:

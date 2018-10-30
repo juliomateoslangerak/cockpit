@@ -28,7 +28,6 @@ import os
 import threading
 import wx
 from wx.lib.agw.shapedbutton import SBitmapButton,SBitmapToggleButton
-
 from cockpit.gui.toggleButton import ACTIVE_COLOR, INACTIVE_COLOR
 from cockpit.handlers.deviceHandler import STATES
 
@@ -347,7 +346,7 @@ class TouchScreenWindow(wx.Frame):
 
         #run sizer fitting on button panel
         self.buttonPanel.SetSizerAndFit(rightSideSizer)
-        sizer.Add(self.buttonPanel, 1, wx.EXPAND,wx.RAISED_BORDER)
+        sizer.Add(self.buttonPanel, 0, wx.EXPAND,wx.RAISED_BORDER)
 
         limits = cockpit.interfaces.stageMover.getHardLimits()[:2]
         ## start a slaveCanvas instance.
@@ -358,7 +357,7 @@ class TouchScreenWindow(wx.Frame):
         leftSizer= wx.BoxSizer(wx.VERTICAL)
         #add a macrostageXY overview section
         self.macroStageXY=slaveOverview.MacroStageXY(self.panel)
-        leftSizer.Add(self.macroStageXY,3, wx.EXPAND)
+        leftSizer.Add(self.macroStageXY,2, wx.EXPAND)
 
         ##start a TSmacrostageZ instance
         self.macroStageZ=slaveMacroStageZ.slaveMacroStageZ(self.panel)
@@ -374,7 +373,7 @@ class TouchScreenWindow(wx.Frame):
                       'plus.png',
                       "Increase Z step",(30,30))]:
             button = self.makeButton(self.panel, *args)
-            zButtonSizer.Add(button, 0, wx.EXPAND|wx.ALL,border=2)
+            zButtonSizer.Add(button, 1, wx.EXPAND|wx.ALL,border=2)
         ##Text of position and step size
         font=wx.Font(12,wx.FONTFAMILY_DEFAULT,wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         zPositionText = wx.StaticText(self.panel,-1,
@@ -409,13 +408,14 @@ class TouchScreenWindow(wx.Frame):
 
 
 
-        sizer.Add(leftSizer,1,wx.EXPAND)
+        sizer.Add(leftSizer,0,wx.EXPAND)
 
         self.panel.SetSizerAndFit(sizer)
         self.SetRect((0, 0, 1800, 1000))
 
         events.subscribe('stage position', self.onAxisRefresh)
         events.subscribe('stage step size', self.onAxisRefresh)
+        events.subscribe('stage step index', self.stageIndexChange)
         events.subscribe('soft safety limit', self.onAxisRefresh)
         events.subscribe('objective change', self.onObjectiveChange)
         events.subscribe('user abort', self.onAbort)
@@ -423,7 +423,6 @@ class TouchScreenWindow(wx.Frame):
         events.subscribe('mosaic start', self.mosaicStart)
         events.subscribe('mosaic stop', self.mosaicStop)
         events.subscribe('mosaic update', self.mosaicUpdate)
-        events.subscribe('light source enable', self.lightSourceEnable)
         events.subscribe('laser power update', self.laserPowerUpdate)
         events.subscribe('light exposure update', self.laserExpUpdate)
 
@@ -505,15 +504,6 @@ class TouchScreenWindow(wx.Frame):
             button.SetBackgroundColour(BACKGROUND_COLOUR)
             events.publish('light source enable', light, False)
 
-    def lightSourceEnable(self, light, state):
-        #check to see if there is a power handler
-        powerHandler=None
-        for handler in depot.getHandlersInGroup(light.groupName):
-            if handler is not light:
-                powerHandler=handler
-        #if there is a powerHandler set the colour of the active button
-        if powerHandler:
-            button.SetOwnBackgroundColour(powerHandler.color)
 
     def laserPowerUpdate(self, light):
         textString=self.nameToText[light.groupName+'power']
@@ -582,7 +572,7 @@ class TouchScreenWindow(wx.Frame):
         if (self.crosshairBoxSize == 0):
             self.crosshairBoxSize = 512 * objective.getPixelSize()
         self.offset = objective.getOffset()
-        scale = (1/objective.getPixelSize())*(10./self.crosshairBoxSize)
+        scale = (150./self.crosshairBoxSize)
         self.canvas.zoomTo(-curPosition[0]+self.offset[0],
                            curPosition[1]-self.offset[1], scale)
 
@@ -593,16 +583,16 @@ class TouchScreenWindow(wx.Frame):
         cockpit.interfaces.stageMover.step((0,0,-1))
     def zIncStep(self):
         cockpit.interfaces.stageMover.changeStepSize(1)
+        self.onAxisRefresh(2)
     def zDecStep(self):
         cockpit.interfaces.stageMover.changeStepSize(-1)
-
+        self.onAxisRefresh(2)
 
     ## Resize our canvas.
     def onSize(self, event):
-        size = self.GetClientSize()
-        self.panel.SetSize(size)
-        # Subtract off the pixels dedicated to the sidebar.
-        self.canvas.setSize((size[0] - SIDEBAR_WIDTH, size[1]))
+        csize = self.GetClientSize()
+        self.panel.SetClientSize((csize[0], csize[1]))
+
 
 
     ## User logged in, so we may well have changed size; adjust our zoom to
@@ -615,6 +605,11 @@ class TouchScreenWindow(wx.Frame):
                                                default = 0)
         self.drawPrimitives=cockpit.util.userConfig.getValue('mosaicDrawPrimitives',
                                             isGlobal = False, default = True)
+    ##Called when the stage handler index is chnaged. All we need
+    #to do is update the display
+    def stageIndexChange(self, *args):
+        #call on axis refresh to update the display
+        self.onAxisRefresh(2)
 
     ## Get updated about new stage position info or step size.
     # This requires redrawing the display, if the axis is the X or Y axes.
@@ -704,21 +699,21 @@ class TouchScreenWindow(wx.Frame):
             menuId = 1
             for label, color in SITE_COLORS:
                 menu.Append(menuId, "Mark site with %s marker" % label)
-                wx.EVT_MENU(self.panel, menuId,
-                        lambda event, color = color: self.saveSite(color))
+                self.panel.Bind(wx.EVT_MENU,
+                                lambda event, color = color: self.saveSite(color), id= menuId)
                 menuId += 1
             menu.AppendSeparator()
             menu.Append(menuId, "Set mosaic tile overlap")
-            wx.EVT_MENU(self.panel, menuId,
-                        lambda event: self.setTileOverlap())
+            self.panel.Bind(wx.EVT_MENU,
+                            lambda event: self.setTileOverlap(), id= menuId)
             menuId += 1
             menu.Append(menuId, "Toggle mosaic scale bar")
-            wx.EVT_MENU(self.panel, menuId,
-                        lambda event: self.togglescalebar())
+            self.panel.Bind(wx.EVT_MENU,
+                            lambda event: self.togglescalebar(), id= menuId)
             menuId += 1
             menu.Append(menuId, "Toggle draw primitives")
-            wx.EVT_MENU(self.panel, menuId,
-                        lambda event: self.toggleDrawPrimitives())
+            self.panel.Bind(wx.EVT_MENU,
+                            lambda event: self.toggleDrawPrimitives(), id= menuId)
 
             cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
 
@@ -995,8 +990,8 @@ class TouchScreenWindow(wx.Frame):
         menu = wx.Menu()
         for i, (label, color) in enumerate(SITE_COLORS):
             menu.Append(i + 1, "Mark sites in %s" % label)
-            wx.EVT_MENU(self.panel, i + 1,
-                    lambda event, color = color: self.setSiteColor(color))
+            self.panel.Bind(wx.EVT_MENU,
+                            lambda event, color = color: self.setSiteColor(color), id= i + 1)
         cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
 
 

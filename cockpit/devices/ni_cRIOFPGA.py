@@ -101,71 +101,69 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def initialize(self):
         """Connect to ni's RT-ipAddress computer. Overrides ExecutorDevice's initialize.
         """
-        self.connection = Connection(serviceName=self.name, ipAddress=self.ipAddress, port=self.port, localIp=MASTER_IP)
+        self.connection = Connection(parent=self, ipAddress=self.ipAddress, port=self.port, localIp=MASTER_IP)
         self.connection.connect()
         self.connection.Abort()
 
     @cockpit.util.threads.locked
     def finalizeInitialization(self):
         server = depot.getHandlersOfType(depot.SERVER)[0]
-        # TODO: Check
+        # TODO: Check this
         self.receiveUri = server.register(self.receiveData)
         # for line in range(self.nrAnalogLines):
         #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):
+        pass
         # super(self.__class__, self).onPrepareForExperiment(*args)
-        self._lastAnalogs = [line for line in self._currentAnalogs]
-        self._lastDigital = self.connection.ReadDigital()
+        # self._lastAnalogs = [line for line in self._currentAnalogs]
+        # self._lastDigital = self.connection.ReadDigital()
 
-    # TODO: We can add here all other callbacks
-    def receiveData(self, action, *args):
-        """Receive data from the RT-ipAddress computer."""
-        if action.lower() == 'done':
-            events.publish(events.EXECUTOR_DONE % self.name)
+    def experimentDone(self):
+        events.publish(events.EXECUTOR_DONE % self.name)
 
-    def getAnalog(self, line):
-        """Returns the current output value of the analog line in native units
-        line is an integer corresponding to the requested analog on the FPGA
-        as entered in the analog config files.
-        """
-        line = 'Analogue ' + str(line)
-        return self.connection.status.getStatus(line)
+    # def getAnalog(self, line):
+    #     """Returns the current output value of the analog line in native units
+    #     line is an integer corresponding to the requested analog on the FPGA
+    #     as entered in the analog config files.
+    #     """
+    #     line = 'Analogue ' + str(line)
+    #     return self.connection.status.getStatus(line)
 
-    def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
-        """Set analog position in native units
-        :param line: Analog line to change
-        :param target: target value
-        :return:
-        """
-        # TODO: verify what is native units
-        # adus = int(target * 3276.8)
-        ## TODO: sensitivity
-        return self.connection.MoveAbsolute(line, target)
+    # def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
+    #     """Set analog position in native units
+    #     :param line: Analog line to change
+    #     :param target: target value
+    #     :return:
+    #     """
+    #     # TODO: verify what is native units
+    #     # adus = int(target * 3276.8)
+    #     ## TODO: sensitivity
+    #     return self.connection.MoveAbsolute(line, target)
 
-    def getHandlers(self):
-        """We control which light sources are active, as well as a set of stage motion piezos.
-        """
-        result = []
-        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-            self.name, "executor",
-            {'examineActions': lambda *args: None,
-             'executeTable': self.executeTable,
-             'readDigital': self.connection.ReadDigital,
-             'writeDigital': self.connection.WriteDigital,
-             'getAnalog': self.getAnalog,
-             'setAnalog': self.setAnalog,
-             },
-            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
-
-        result.append(h)
-
-        result.append(cockpit.handlers.imager.ImagerHandler(
-            "%s imager" % self.name, "imager",
-            {'takeImage': h.takeImage}))
-
-        self.handlers = set(result)
-        return result
+    # def getHandlers(self):
+    #     """We control which light sources are active, as well as a set of stage motion piezos.
+    #     """
+    #     result = []
+    #     h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
+    #         self.name, "executor",
+    #         {'examineActions': lambda *args: None,
+    #          'executeTable': self.executeTable,
+    #          'readDigital': self.connection.ReadDigital,
+    #          'writeDigital': self.connection.WriteDigital,
+    #          'getAnalog': self.getAnalog,
+    #          'setAnalog': self.setAnalog,
+    #          },
+    #         dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
+    #
+    #     result.append(h)
+    #
+    #     result.append(cockpit.handlers.imager.ImagerHandler(
+    #         "%s imager" % self.name, "imager",
+    #         {'takeImage': h.takeImage}))
+    #
+    #     self.handlers = set(result)
+    #     return result
 
     def adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
@@ -396,15 +394,11 @@ class NIcRIO(executorDevices.ExecutorDevice):
 
         sleep(5)
 
-    def setDigital(self, value):
-        """Debugging function: set the digital output for the NI-FPGA."""
-        self.connection.WriteDigital(value)
-
 
 class Connection:
     """This class handles the connection with NI's RT-ipAddress computer."""
-    def __init__(self, serviceName, ipAddress, port, localIp):
-        self.serviceName = serviceName
+    def __init__(self, parent, ipAddress, port, localIp):
+        self.parent = parent
         self.ipAddress = ipAddress
         self.port = port
         # Local IP address to use for communication, in the event that this
@@ -449,15 +443,9 @@ class Connection:
         # Create a status instance to query the FPGA status and run it in a separate thread
         self.status = FPGAStatus(self, self.localIp, self.port[1])
         self.status.start()
-        #        self.fn = fn
-        #        self.startCollectThread()
-        #        self.reInit()
-        #        self.clientConnection = None
-        #        self.MoveAbsolute(0, 10)
-        #        self.WriteShutter(255)
 
-    # Return whether or not our connection is active.
     def getIsConnected(self):
+        '''Return whether or not our connection is active.'''
         return self.connection is not None
 
     def disconnect(self):
@@ -467,7 +455,7 @@ class Connection:
             try:
                 self.connection.close()
             except Exception as e:
-                print ("Couldn't disconnect from %s: %s" % (self.serviceName, e))
+                print("Couldn't disconnect from %s: %s" % (self.parent.name, e))
             self.connection = None
 
     def createSendSocket(self, host, port):
@@ -719,6 +707,14 @@ class Connection:
         """
         self.runCommand(self.commandDict['flushFIFOs'])
 
+    def ReadPosition(self, line):
+        """Returns the current output value of the analog line in native units
+        line is an integer corresponding to the requested analog on the FPGA
+        as entered in the analog config files.
+        """
+        line = 'Analogue ' + str(line)
+        return self.status.getStatus(line)
+
     def MoveAbsolute(self, analogueChannel, analogueValueADU, msgLength=20):
         """Changes an analogueChannel output to the specified analogueValue value
 
@@ -825,6 +821,7 @@ class Connection:
 
             self.runCommand(self.commandDict['takeImage'], sendList, msgLength)
 
+
 class FPGAStatus(threading.Thread):
     def __init__(self, parent, host, port):
         threading.Thread.__init__(self)
@@ -887,8 +884,9 @@ class FPGAStatus(threading.Thread):
 
         return the newStatus but with the status reset so not to publish multiple times
         """
-        if newStatus['Event'] == 'FPGA done':
-            events.publish(events.EXECUTOR_DONE, self.parent.serviceName)
+        if newStatus['Event'] in ['done', 'FPGA done']:
+            self.parent.parent.experimentDone()
+            # events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
             print(newStatus['Event'])
             newStatus['Event'] = ''
 

@@ -436,9 +436,7 @@ class Connection:
         self.status = None
 
     def connect(self, timeout=40):
-        self.connection = self.createSendSocket(self.ipAddress, self.port[0])
-        # Set a timeout for the socket
-        self.connection.settimeout(timeout)
+        self.connection = self.createSendSocket(self.ipAddress, self.port[0], timeout)
         # server = depot.getHandlersOfType(depot.SERVER)[0]
         # Create a status instance to query the FPGA status and run it in a separate thread
         self.status = FPGAStatus(self, self.localIp, self.port[1])
@@ -458,7 +456,7 @@ class Connection:
                 print("Couldn't disconnect from %s: %s" % (self.parent.name, e))
             self.connection = None
 
-    def createSendSocket(self, host, port):
+    def createSendSocket(self, host, port, timeout):
         """Creates a TCP socket meant to send commands to the RT-ipAddress
         Returns the connected socket
         """
@@ -469,6 +467,7 @@ class Connection:
             return 1, '1'
 
         try:
+            s.settimeout(timeout)
             s.connect((host, port))
         except socket.error as msg:
             print('Failed to establish connection.\n', msg)
@@ -591,7 +590,6 @@ class Connection:
         (0), (0,1), (0,1,2) or (0,1,2,3). If a table is missing a dummy table must be introduced
         msgLength is an int indicating the length of every digital table element as a decimal string
         """
-
         # Convert the digitals numpy table into a list of messages for the TCP
         digitalsList = []
 

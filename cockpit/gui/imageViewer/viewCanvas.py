@@ -346,13 +346,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         if self.imageData is None or len(self.tiles) == 0:
             # No image to operate on yet.
             return (None, None)
-        # Used to query image data for imageMin and imageMax, but could this
-        # occasionally hit an indexing error on the first image when images
-        # were arriving fast. Just do the simple arithmetic here.
-        #return (self.tiles[0][0].imageMin, self.tiles[0][0].imageMax)
-        imageRange = (self.imageMax - self.imageMin)
-        return (self.blackPoint * imageRange + self.imageMin,
-                self.whitePoint * imageRange + self.imageMin)
+        return (self.tiles[0][0].imageMin, self.tiles[0][0].imageMax)
 
 
     ## As above, but the values used to calculate them instead of the

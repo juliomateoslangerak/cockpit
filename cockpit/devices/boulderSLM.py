@@ -165,7 +165,8 @@ class BoulderSLM(device.Device):
                 break
         sequence = reducedParams[0:sequenceLength]
         ## Tell the SLM to prepare the pattern sequence.
-        asyncResult = self.asproxy.set_sim_sequence(sequence)
+        # asyncResult = self.asproxy.set_sim_sequence(sequence)
+        self.connection.set_sim_sequence(sequence)
 
 
         # Track sequence index set by last set of triggers.
@@ -216,20 +217,20 @@ class BoulderSLM(device.Device):
                 lastIndex = lastIndex % sequenceLength
         table.clearBadEntries()
         # Wait until SLM has finished generating and loading patterns.
-        self.wait(asyncResult, "SLM is generating pattern sequence.")
+        # self.wait(asyncResult, "SLM is generating pattern sequence.")
         # Store the parameters used to generate the sequence.
         self.lastParms = sequence
         self.connection.run()
         # Fire several triggers to ensure that the sequence is loaded.
-        for i in range(12):
-            self.handler.triggerNow()
-            time.sleep(0.01)
-        # Ensure that we're at position 0.
-        self.position = self.getCurrentPosition()
-        while self.position != 0:
-            self.handler.triggerNow()
-            time.sleep(0.01)
-            self.position = self.getCurrentPosition()
+        # for i in range(12):
+        #     self.handler.triggerNow()
+        #     time.sleep(0.01)
+        # # Ensure that we're at position 0.
+        # self.position = self.getCurrentPosition()
+        # while self.position != 0:
+        #     self.handler.triggerNow()
+        #     time.sleep(.2)
+        #     self.position = self.getCurrentPosition()
 
 
     def getCurrentPosition(self):
@@ -239,16 +240,17 @@ class BoulderSLM(device.Device):
     def getHandlers(self):
         trigsource = self.config.get('triggersource', None)
         trigline = self.config.get('triggerline', None)
-        dt = decimal.Decimal(self.config.get('settlingtime', 10))
+        dt = self.config.get('settlingtime', 10)
         result = []
-        self.handler = cockpit.handlers.executor.DelegateTrigger(
-            "slm", "slm group", True,
-            {'examineActions': self.examineActions,
-             'getMovementTime': lambda *args: dt,
-             'executeTable': self.executeTable})
-        self.handler.delegateTo(trigsource, trigline, 0, dt)
+        self.handler = cockpit.handlers.executor.DelegateTrigger("slm", "slm group",
+                                              trigsource, trigline,
+                                              self.examineActions, dt)
         result.append(self.handler)
         return result
+
+
+    # def getMovementTime(self):
+    #     return self.settlingTime + 2 * actionTable.ActionTable.toggleTime
 
 
     ### UI functions ###

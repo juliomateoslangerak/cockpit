@@ -65,30 +65,14 @@ import cockpit.util.datadoc
 import cockpit.util.logger
 import cockpit.util.threads
 import itertools
-from six.moves import queue
-import time
 
 ## Zoom level at which we switch from rendering megatiles to rendering tiles.
 ZOOM_SWITCHOVER = 1
-BUFFER_LENGTH = 32
 
 ## This class handles drawing the mosaic. Mosaics consist of collections of 
 # images from the cameras.
 class MosaicCanvas(wx.glcanvas.GLCanvas):
-    ## Tiles and context are shared amongst all instances, since all
-    # offer views of the same data.
-    # The first instance creates the context.
-    ## List of MegaTiles. These will be created in self.initGL.
-    megaTiles = []
-    ## List of Tiles. These are created as we receive new images from
-    # our parent.
-    tiles = []
-    ## Set of tiles that need to be rerendered in the next onPaint call.
-    tilesToRefresh = set()
-    ## WX rendering context
-    context = None
-
-    ## \param stageHardLimits An ((xMin, xMax), (yMin, yMax)) tuple
+    ## \param stageHardLimits An ((xMin, xMax), (yMin, yMax)) tuple 
     #         describing the limits of motion, in microns, of the stage.
     # \param overlayCallback Function to call, during rendering, to draw
     #        the overlay on top of the mosaic.
@@ -110,24 +94,24 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         ## Controls whether we rerender tiles during our onPaint.
         self.shouldRerender = True
         ## WX rendering context
-        if MosaicCanvas.context is None:
-            # This is the first (and master) instance.
-            MosaicCanvas.context = wx.glcanvas.GLContext(self)
-            # Hook up onIdle - only one instance needs to process new tiles.
-            self.Bind(wx.EVT_IDLE, self.onIdle)
+        self.context = wx.glcanvas.GLContext(self)
+
+        ## List of MegaTiles. These will be created in self.initGL.
+        self.megaTiles = []
+        ## List of Tiles. These are created as we receive new images from
+        # our parent.
+        self.tiles = []
+        ## Set of tiles that need to be rerendered in the next onPaint call.
+        self.tilesToRefresh = set()
 
         ## Error that occurred when rendering. If this happens, we prevent
         # further rendering to avoid error spew.
         self.renderError = None
 
-        ## A buffer of images waiting to be added to the mosaic.
-        self.pendingImages = queue.Queue(BUFFER_LENGTH)
-
         self.Bind(wx.EVT_PAINT, self.onPaint)
         self.Bind(wx.EVT_MOUSE_EVENTS, mouseCallback)
         # Do nothing on this event, to avoid flickering.
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: event)
-
 
 
     ## Now that OpenGL's ready to go, perform any necessary initialization.
@@ -282,32 +266,27 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         events.publish('mosaic update')
 
 
-    def onIdle(self, event):
-        if self.pendingImages.empty():# or not self.IsShownOnScreen():
-            return
-        # Draw as many images as possible in 50ms.
-        t = time.time()
-        newTiles = []
-        self.SetCurrent(self.context)
-        while not self.pendingImages.empty() and (time.time()-t < 0.05):
-            data, pos, size, scalings, layer = self.pendingImages.get()
-            newTiles.append(tile.Tile(data, pos, size, scalings, layer))
-        self.tiles.extend(newTiles)
-        for megaTile in self.megaTiles:
-            megaTile.prerenderTiles(newTiles, self)
-
-        self.tilesToRefresh.update(newTiles)
-
-        self.Refresh()
-        events.publish('mosaic update')
-        if not self.pendingImages.empty():
-            event.RequestMore()
-
-
     ## Add a new image to the mosaic.
-    #@cockpit.util.threads.callInMainThread
-    def addImage(self, data, pos, size, scalings=(None, None), layer=0):
-        self.pendingImages.put((data, pos, size, scalings, layer))
+    @cockpit.util.threads.callInMainThread
+    def addImage(self, data, pos, size, scalings = (None, None), 
+            layer = 0, shouldRefresh = False):
+
+        pos = numpy.asarray(pos)
+        size = numpy.asarray(size)
+
+        self.SetCurrent(self.context)
+
+        newTile = tile.Tile(data, pos, size, scalings, layer)
+        self.tiles.append(newTile)
+        for megaTile in self.megaTiles:
+            megaTile.prerenderTiles([newTile], self)
+
+        self.shouldRerender = True
+        self.tilesToRefresh.add(newTile)
+        if shouldRefresh:
+            self.Refresh()
+        events.publish('mosaic update')
+
 
 
     ## Rescale the tiles.
@@ -491,9 +470,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
     ## Load a text file describing a set of tiles, as well as the tile image
     # data. This is made a bit trickier by the fact that we want to display
     # a progress dialog that updates as new images are added, but addImage()
-    # must run in the main thread while we run in a different one ...
-    # although maybe not since MAP added a queue and a thread to process
-    # new tiles.
+    # must run in the main thread while we run in a different one. 
     @cockpit.util.threads.callInNewThread
     def loadTiles(self, filePath):
         with open(filePath, 'r') as handle:
@@ -505,7 +482,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 # X pixel size, Y pixel size, blackpoint, whitepoint, layer.
                 # We'll have to convert the pixel sizes and layer to
                 # ints later.
-                tileStats.append(list(map(float, line.strip().split(','))))
+                tileStats.append(map(float, line.strip().split(',')))
         numInitialTiles = len(self.tiles)
         try:
             doc = cockpit.util.datadoc.DataDoc(mrcPath)

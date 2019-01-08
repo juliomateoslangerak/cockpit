@@ -57,7 +57,10 @@ from cockpit import depot
 from . import deviceHandler
 
 from cockpit import events
-import re
+import cockpit.gui.guiUtils
+import cockpit.gui.keyboard
+import cockpit.gui.toggleButton
+
 
 ## This handler is responsible for tracking the current objective. 
 class ObjectiveHandler(deviceHandler.DeviceHandler):
@@ -85,10 +88,6 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
         events.subscribe('save exposure settings', self.onSaveSettings)
         events.subscribe('load exposure settings', self.onLoadSettings)
 
-    @property
-    def numObjectives(self):
-        return len(self.nameToPixelSize)
-
 
     ## Save our settings in the provided dict.
     def onSaveSettings(self, settings):
@@ -101,22 +100,10 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
             self.changeObjective(settings[self.name])
 
 
-    ## A list of objectives sorted by magnification.
-    @property
-    def sortedObjectives(self):
-        def parseMag(name):
-            m = re.search('[0-9.]+', name)
-            if m is None:
-                return None
-            else:
-                return float(m.group())
-        return sorted(self.nameToPixelSize.keys(), key=parseMag)
-
-
     ## Generate a row of buttons, one for each possible objective.
     def makeUI(self, parent):
         from cockpit.gui.device import OptionButtons
-        names = self.sortedObjectives
+        names = sorted(self.nameToPixelSize.keys())
         frame = OptionButtons(parent, label="Objective")
         frame.Show()
         frame.setOptions(map(lambda name: (name,
@@ -153,7 +140,3 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
     ## Get Current lensID for file metadata.
     def getLensID(self):
         return self.nameToLensID[self.curObjective]
-
-    ## Get Current lens colour.
-    def getColour(self):
-        return self.nameToColour[self.curObjective]

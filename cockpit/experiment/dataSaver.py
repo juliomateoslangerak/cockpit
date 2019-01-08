@@ -547,7 +547,6 @@ class StatusUpdateThread(threading.Thread):
         self.totals = totals
         ## Set to True to end the thread.
         self.shouldStop = False
-        self.name = "DataSaver-status"
 
 
     def run(self):

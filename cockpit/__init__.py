@@ -75,6 +75,7 @@ if (distutils.version.LooseVersion(Pyro4.__version__) >=
 import cockpit.depot
 import cockpit.util.files
 import cockpit.util.logger
+import cockpit.util.user
 
 from cockpit.config import config
 
@@ -168,6 +169,8 @@ class CockpitApp(wx.App):
             #                            isGlobal = True, default= 0) is 1):
             import cockpit.gui.touchscreen.touchscreen
             cockpit.gui.touchscreen.touchscreen.makeWindow(frame)
+            import cockpit.gui.valueLogger
+            cockpit.gui.valueLogger.makeWindow(frame)
             from cockpit.util import intensity
             intensity.makeWindow(frame)
             # All secondary windows created.
@@ -210,7 +213,7 @@ class CockpitApp(wx.App):
 
 
             depot.makeInitialPublications()
-            interfaces.makeInitialPublications()
+            cockpit.interfaces.makeInitialPublications()
             events.publish('cockpit initialization complete')
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
             return True
@@ -228,7 +231,7 @@ class CockpitApp(wx.App):
 
     def doInitialLogin(self):
         cockpit.util.user.login()
-        cockpit.util.logger.log.debug("Login complete as %s" % util.user.getUsername())
+        cockpit.util.logger.log.debug("Login complete as %s" % cockpit.util.user.getUsername())
 
 
     def onActivateApp(self, event):

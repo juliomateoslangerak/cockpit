@@ -129,6 +129,9 @@ def deserializeSite(line):
     result.uniqueID = id
     return result
 
+# A class to store data for drawing primitives on the macrostage.
+Primitive = namedtuple('Primitive', ['device', 'type', 'data'])
+
 
 ## This class provides an interface between the rest of the UI and the Devices
 # that handle moving the stage.
@@ -137,15 +140,6 @@ class StageMover:
         ## Maps axis to the handlers for that axis, sorted by their range of
         # motion.
         self.axisToHandlers = depot.getSortedStageMovers()
-
-        ## XXX: We have a single index for all axis, even though each
-        ## axis may have a different number of stages.  While we don't
-        ## refactor this assumption, we just make copies of the movers
-        ## with the most precise movement (issues #413 and #415)
-        self.n_stages = max([len(s) for s in self.axisToHandlers.values()])
-        for axis, stages in self.axisToHandlers.items():
-            stages.extend([stages[-1]] * (self.n_stages - len(stages)))
-
         ## Indicates which stage handler is currently under control.
         self.curHandlerIndex = 0
         ## Maps Site unique IDs to Site instances.
@@ -187,24 +181,25 @@ class StageMover:
         for axis, target in position:
             # Get the offset for the movers that aren't being adjusted.
             offset = 0
-            for handler in self.axisToHandlers[axis]:
-                if handler != self.axisToHandlers[axis][self.curHandlerIndex]:
+            for i, handler in enumerate(self.axisToHandlers[axis]):
+                if i != self.curHandlerIndex:
                     offset += handler.getPosition()
-
-            handler = self.axisToHandlers[axis][self.curHandlerIndex]
-            # Check if we need to bother moving.
-            if abs(handler.getPosition() - (target - offset)) > STAGE_MIN_MOVEMENT:
-                event = threading.Event()
-                waiters.append(event)
-                self.nameToStoppedEvent[handler.name] = event
-                handler.moveAbsolute(target - offset)
-            if shouldBlock:
-                for event in waiters:
-                    try:
-                        event.wait(30)
-                    except Exception as e:
-                        print ("Failed waiting for stage to stop after 30s")
-
+            #check if we have a mover on this axis at this level
+            if(self.curHandlerIndex < len(self.axisToHandlers[axis])):
+                handler = self.axisToHandlers[axis][self.curHandlerIndex]
+                # Check if we need to bother moving.
+                if abs(handler.getPosition() - (target - offset)) > STAGE_MIN_MOVEMENT:
+                    event = threading.Event()
+                    waiters.append(event)
+                    self.nameToStoppedEvent[handler.name] = event
+                    handler.moveAbsolute(target - offset)
+                if shouldBlock:
+                    for event in waiters:
+                        try:
+                            event.wait(30)
+                        except Exception as e:
+                            print ("Failed waiting for stage to stop after 30s")
+                            
 
 
 ## Global singleton.
@@ -252,17 +247,17 @@ def removePrimitivesByDevice(device):
 #        negative) to take along that axis.
 def step(direction):
     for axis, sign in enumerate(direction):
-        handler = mover.axisToHandlers[axis][mover.curHandlerIndex]
-
-        #IMD 20150414 don't need to move if sign==0.
-        # Prevents aerotech axis unlocking stage on every keyboard move.
-        if sign != 0:
-            handler.moveStep(sign)
+        if (axis in mover.axisToHandlers and
+                mover.curHandlerIndex < len(mover.axisToHandlers[axis])):
+            #IMD 20150414 don't need to move if sign==0.
+            # Prevents aerotech axis unlocking stage on every keyboard move.
+            if (sign !=0):
+                mover.axisToHandlers[axis][mover.curHandlerIndex].moveStep(sign)
 
 
 ## Change to the next handler.
 def changeMover():
-    newIndex = (mover.curHandlerIndex + 1) % mover.n_stages
+    newIndex = (mover.curHandlerIndex + 1) % max(map(len, mover.axisToHandlers.values()))
     if newIndex != mover.curHandlerIndex:
         mover.curHandlerIndex = newIndex
         events.publish("stage step index", mover.curHandlerIndex)
@@ -271,18 +266,15 @@ def changeMover():
 ## Change the step size for the current handlers.
 def changeStepSize(direction):
     for axis, handlers in iteritems(mover.axisToHandlers):
-        handlers[mover.curHandlerIndex].changeStepSize(direction)
-        events.publish("stage step size", axis,
-                       handlers[mover.curHandlerIndex].getStepSize())
+        if mover.curHandlerIndex < len(handlers):
+            handlers[mover.curHandlerIndex].changeStepSize(direction)
+            events.publish("stage step size", axis, handlers[mover.curHandlerIndex].getStepSize())
 
 
 ## Recenter the fine-motion devices by adjusting the large-scale motion
 # device.
 def recenterFineMotion():
     for axis, handlers in iteritems(mover.axisToHandlers):
-        if len(set(handlers)) < 2:
-            continue # Only makes sense if one has at least two stages
-
         totalDelta = 0
         for handler in handlers[1:]:
             # Assume that the fine-motion devices want to be in the center
@@ -412,7 +404,7 @@ def loadSites(filename):
 def getPosition():
     result = 3 * [0]
     for axis, handlers in iteritems(mover.axisToHandlers):
-        for handler in set(handlers):
+        for handler in handlers:
             result[axis] += handler.getPosition()
     return result
 
@@ -420,7 +412,7 @@ def getPosition():
 ## Return the exact stage position for the given axis.
 def getPositionForAxis(axis):
     result = 0
-    for handler in set(mover.axisToHandlers[axis]):
+    for handler in mover.axisToHandlers[axis]:
         result += handler.getPosition()
     return result
 
@@ -430,11 +422,13 @@ def getPositionForAxis(axis):
 # then those axes will have None instead of a position towards the
 # end of the list.
 def getAllPositions():
+    mostMovers = max(map(len, mover.axisToHandlers.values()))
     result = []
-    for i in range(mover.n_stages):
-        current = [None] * len(mover.axisToHandlers)
-        for axis, handlers in mover.axisToHandlers.items():
-            current[axis] = handlers[i].getPosition()
+    for i in range(mostMovers):
+        current = [None for axis in range(len(mover.axisToHandlers.keys()))]
+        for axis, handlers in iteritems(mover.axisToHandlers):
+            if i < len(handlers):
+                current[axis] = handlers[i].getPosition()
         result.append(tuple(current))
     return result
 
@@ -443,9 +437,12 @@ def getAllPositions():
 # If there's no controller for a given axis under the current step index,
 # then return None for that axis.
 def getCurStepSizes():
-    result = [None] * len(mover.axisToHandlers)
+    result = []
     for axis, handlers in iteritems(mover.axisToHandlers):
-        result[axis] = handlers[mover.curHandlerIndex].getStepSize()
+        if mover.curHandlerIndex < len(handlers):
+            result.append(handlers[mover.curHandlerIndex].getStepSize())
+        else:
+            result.append(None)
     return tuple(result)
 
 
@@ -459,7 +456,7 @@ def getCurHandlerIndex():
 def getHardLimitsForAxis(axis):
     lowLimit = 0
     highLimit = 0
-    for handler in set(mover.axisToHandlers[axis]):
+    for handler in mover.axisToHandlers[axis]:
         low, high = handler.getHardLimits()
         lowLimit += low
         highLimit += high
@@ -484,7 +481,7 @@ def getIndividualHardLimits(axis):
 def getSoftLimitsForAxis(axis):
     lowLimit = 0
     highLimit = 0
-    for handler in set(mover.axisToHandlers[axis]):
+    for handler in mover.axisToHandlers[axis]:
         low, high = handler.getSoftLimits()
         lowLimit += low
         highLimit += high
@@ -534,9 +531,7 @@ def setSoftMax(axis, value):
 # use it if it's superior, on the assumption that users will typically
 # select sites in some basically sane order.
 # \param baseOrder List of site IDs.
-def optimisedSiteOrder(baseOrder):
-    if len(baseOrder) == 0:
-        return []
+def optimizeSiteOrder(baseOrder):
     markedPoints = set()
     pointsInOrder = []
     totalTourCost = 0
@@ -574,5 +569,5 @@ def optimisedSiteOrder(baseOrder):
     if simpleTourCost < totalTourCost:
         # Nearest-neighbor is worse than just going in the
         # user-specified order
-        return baseOrder.copy()
+        return baseOrder
     return pointsInOrder

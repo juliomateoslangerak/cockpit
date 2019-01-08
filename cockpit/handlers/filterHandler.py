@@ -45,7 +45,7 @@ class Filter(object):
             self.label = args[0]
             self.value = args[1]
 
-
+            
     def __repr__(self):
         if self.value:
             return '%d: %s, %s' % (self.position, self.label, self.value)
@@ -79,7 +79,7 @@ class FilterHandler(deviceHandler.DeviceHandler):
         if self.name in settings:
             self.setFilter(settings[self.name])
 
-
+        
 
     ### UI functions ####
     def makeUI(self, parent):

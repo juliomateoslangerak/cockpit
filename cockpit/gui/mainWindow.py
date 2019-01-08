@@ -67,6 +67,7 @@ from cockpit import events
 import cockpit.experiment.experiment
 from . import fileViewerWindow
 import cockpit.interfaces.imager
+from . import joystick
 from . import keyboard
 from . import toggleButton
 import cockpit.util.user
@@ -93,7 +94,6 @@ class MainWindow(wx.Frame):
     # user interface; we assume that the devices have already been initialized.
     def __init__(self):
         wx.Frame.__init__(self, parent = None, title = "Cockpit program")
-
         # Find out what devices we have to work with.
         lightToggles = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
         lightToggles = sorted(lightToggles, key = lambda l: float(l.wavelength))
@@ -119,7 +119,7 @@ class MainWindow(wx.Frame):
         topPanel.SetBackgroundColour((170, 170, 170))
         self.topPanel=topPanel
         topSizer = wx.BoxSizer(wx.VERTICAL)
-
+ 
 
         # A row of buttons for various actions we know we can take.
         buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -153,7 +153,7 @@ class MainWindow(wx.Frame):
                 lambda event: cockpit.interfaces.imager.videoMode())
         buttonSizer.Add(self.videoButton)
         self.pathButton =  OptionButtons(parent= topPanel,size=(120, 80))
-
+        
         self.pathButton.setOptions (map(lambda name: (name,
                                                        lambda n=name:
                                                        self.setPath(n)),
@@ -312,6 +312,8 @@ class MainWindow(wx.Frame):
         self.SetSizerAndFit(mainSizer)
 
         keyboard.setKeyboardHandlers(self)
+        self.joystick = joystick.Joystick(self)
+            
         self.SetDropTarget(viewFileDropTarget.ViewFileDropTarget(self))
         self.Bind(wx.EVT_MOVE, self.onMove)
         self.Bind(wx.EVT_CLOSE, self.onClose)
@@ -382,7 +384,7 @@ class MainWindow(wx.Frame):
 
     def createNewPath(self):
         #get name for new mode
-        # abuse get value dialog which will also return a string.
+        # abuse get value dialog which will also return a string. 
         pathName = cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
             parent=self.topPanel, default='', title='New Path Name',
             prompt='Name', atMouse=True)
@@ -403,12 +405,12 @@ class MainWindow(wx.Frame):
                                                        lambda n=name:
                                                        self.setPath(n)),
                                          self.pathList))
-        #and set button value.
+        #and set button value. 
         self.pathButton.setOption(pathName)
         self.currentPath = pathName
 
-
-
+                       
+                
     ## User wants to save the current exposure settings; get a file path
     # to save to, collect exposure information via an event, and save it.
     def onSaveExposureSettings(self, name, event = None):
@@ -441,7 +443,7 @@ class MainWindow(wx.Frame):
         handle = open(dialog.GetPath(), 'r')
         modeName=os.path.splitext(os.path.basename(handle.name))[0]
         #get name for new mode
-        # abuse get value dialog which will also return a string.
+        # abuse get value dialog which will also return a string. 
         name = cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
             parent=self.topPanel, default=modeName, title='New Path Name',
             prompt='Name')
@@ -455,10 +457,10 @@ class MainWindow(wx.Frame):
                                                        lambda n=name:
                                                        self.setPath(n)),
                                          self.pathList))
-        #and set button value.
+        #and set button value. 
         self.pathButton.setOption(name)
         self.currentPath = name
-
+       
 
         # If we're using the listbox approach to show/hide light controls,
         # then make sure all enabled lights are shown and vice versa.

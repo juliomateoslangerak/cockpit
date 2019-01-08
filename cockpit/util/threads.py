@@ -41,7 +41,6 @@ import wx
 def callInNewThread(function):
     def wrappedFunc(*args, **kwargs):
         thread = threading.Thread(target = function, args = args, kwargs = kwargs)
-        thread.name = function.__name__
         # Ensure the thread will exit when the program does.
         thread.daemon = True
         thread.start()

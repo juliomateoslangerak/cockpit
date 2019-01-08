@@ -42,7 +42,6 @@ from . import stage
 import threading
 import cockpit.util.logger as logger
 import cockpit.util.threads
-from cockpit.util import valueLogger
 
 import time
 import wx
@@ -50,7 +49,7 @@ import re # to get regular expression parsing for config file
 
 LIMITS_PAT = r"(?P<limits>\(\s*\(\s*[-]?\d*\s*,\s*[-]?\d*\s*\)\s*,\s*\(\s*[-]?\d*\s*\,\s*[-]?\d*\s*\)\))"
 DEFAULT_LIMITS = ((0, 0), (11000, 3000))
-LOGGING_PERIOD = 30
+TEMPERATURE_LOGGING = False
 
 class LinkamStage(stage.StageDevice):
     def __init__(self, name, config={}):
@@ -73,9 +72,6 @@ class LinkamStage(stage.StageDevice):
         self.status = {}
         ## Flag to show UI has been built.
         self.hasUI = False
-        ## Log values to file.
-        ## Keys for status items that should be logged
-        self.logger = valueLogger.ValueLogger(name, keys=['dewarT', 'chamberT', 'bridgeT'])
         try :
             limitString = config.get('softlimits', '')
             parsed = re.search(LIMITS_PAT, limitString)
@@ -97,7 +93,6 @@ class LinkamStage(stage.StageDevice):
         events.subscribe('load exposure settings', self.onLoadSettings)
 
 
-
     ## Save our settings in the provided dict.
     def onSaveSettings(self, settings):
          #hack as no way to read state at the momnent. Need to FIX.
@@ -114,7 +109,7 @@ class LinkamStage(stage.StageDevice):
 
     def finalizeInitialization(self):
         """Finalize device initialization."""
-        self.statusThread = threading.Thread(target=self.pollStatus, name="Linkam-status")
+        self.statusThread = threading.Thread(target=self.pollStatus)
         events.subscribe('cockpit initialization complete', self.statusThread.start)
 
 
@@ -126,14 +121,11 @@ class LinkamStage(stage.StageDevice):
         was busy doing other things.
         """
         #create a fill timer
-        from operator import eq
         events.publish('new status light','Fill Timer','')
         self.lastFillCycle = 0
         self.lastFillTimer = 0
         self.timerbackground = (170, 170, 170)
-        lastTemps = [None]
-        lastTime = 0
-
+        
         while True:
             time.sleep(1)
             try:
@@ -148,6 +140,7 @@ class LinkamStage(stage.StageDevice):
                 self.status['connected'] = False
             else:
                 self.status.update(status)
+            events.publish("status update", __name__, self.status)
             self.sendPositionUpdates()
             self.updateUI()
             #update fill timer status light
@@ -168,16 +161,18 @@ class LinkamStage(stage.StageDevice):
                                 self.timerbackground)
                 self.lastFillTimer = timeSinceFill
 
-            tNow = time.time()
-            if tNow - lastTime > LOGGING_PERIOD:
-                newTemps = [status.get(k) for k in self.logger.keys]
-                if not all(map(eq, newTemps, lastTemps)):
-                    self.logger.log(newTemps)
-                    lastTemps = newTemps
-                lastTime = tNow
+            if not TEMPERATURE_LOGGING:
+                continue
 
-
-
+            newTemps = '%.1f\t%.1f\t%.1f' % (self.status.get('dewarT'),
+                                             self.status.get('chamberT'),
+                                             self.status.get('bridgeT'))
+            if not hasattr(self, 'lastTemps'):
+                self.lastTemps = ''
+            if self.lastTemps != newTemps:
+                with open('linkLog.txt', 'a') as f:
+                    f.write('%f\t%s\n' % (self.status.get('time'), newTemps))
+                self.lastTemps = newTemps
 
     def initialize(self):
         """Initialize the device."""

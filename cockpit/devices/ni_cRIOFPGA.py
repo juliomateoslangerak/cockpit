@@ -114,10 +114,10 @@ class NIcRIO(executorDevices.ExecutorDevice):
         #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):
-        pass
-        # super(self.__class__, self).onPrepareForExperiment(*args)
+        super(self.__class__, self).onPrepareForExperiment(*args)
+        self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self.nrAnalogLines)]
         # self._lastAnalogs = [line for line in self._currentAnalogs]
-        # self._lastDigital = self.connection.ReadDigital()
+        self._lastDigital = self.connection.ReadDigital()
 
     def experimentDone(self):
         events.publish(events.EXECUTOR_DONE % self.name)

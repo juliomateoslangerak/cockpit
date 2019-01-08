@@ -240,16 +240,17 @@ class BoulderSLM(device.Device):
     def getHandlers(self):
         trigsource = self.config.get('triggersource', None)
         trigline = self.config.get('triggerline', None)
-        dt = decimal.Decimal(self.config.get('settlingtime', 10))
+        dt = self.config.get('settlingtime', 10)
         result = []
-        self.handler = cockpit.handlers.executor.DelegateTrigger(
-            "slm", "slm group", True,
-            {'examineActions': self.examineActions,
-             'getMovementTime': lambda *args: dt,
-             'executeTable': self.executeTable})
-        self.handler.delegateTo(trigsource, trigline, 0, dt)
+        self.handler = cockpit.handlers.executor.DelegateTrigger("slm", "slm group",
+                                              trigsource, trigline,
+                                              self.examineActions, dt)
         result.append(self.handler)
         return result
+
+
+    # def getMovementTime(self):
+    #     return self.settlingTime + 2 * actionTable.ActionTable.toggleTime
 
 
     ### UI functions ###

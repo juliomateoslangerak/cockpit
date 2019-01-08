@@ -36,7 +36,7 @@ try:
 
 except:
     raise RuntimeError('Unable to load ftgl libary')
-        
+
 class _FTGLfont(ctypes.Structure):
     pass
 

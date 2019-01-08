@@ -229,7 +229,7 @@ class Experiment:
         # display appropriate warnings.
         self.lastMinuteActions()
 
-        runThread = threading.Thread(target=self.execute, name="Experiment-execute")
+        runThread = threading.Thread(target = self.execute)
         global _runThread
         _runThread = runThread
 
@@ -261,13 +261,13 @@ class Experiment:
                                         self.sliceHeight, self.generateTitles(),
                                         cameraToExcitation)
             saver.startCollecting()
-            saveThread = threading.Thread(target=saver.executeAndSave, name="Experiment-execute-save")
+            saveThread = threading.Thread(target=saver.executeAndSave)
             saveThread.start()
             generatedFilenames.append(saver.getFilenames())
 
         runThread.start()
         # Start up a thread to clean up after the experiment finishes.
-        threading.Thread(target=self.cleanup, args=[runThread, saveThread], name="Experiment-cleanup").start()
+        threading.Thread(target = self.cleanup, args = [runThread, saveThread]).start()
         return True
 
     ## Create an ActionTable by calling self.generateActions, and give our
@@ -477,7 +477,7 @@ class Experiment:
                     text += ': ' + ','.join(["%.3fms" % t for t in sorted(self.lightToExposureTime[handler]) ])
                     # Record the exposure duration(s) of the light source.
                     # find associated power entries (if they have them)
-                    
+
                     for hand in depot.getHandlersInGroup(handler.groupName):
                         if hand.deviceType == 'light power':
                             text += " %3.3f mW" % hand.lastPower

@@ -76,8 +76,7 @@
 #  [dsp]
 #  type: LegacyDSP
 #  uri: PYRO:pyroDSP@somehost:8001
-#  nrDigitalLines: 16
-#  nrAnalogLines: 4
+
 
 
 import Pyro4
@@ -133,12 +132,14 @@ class ExecutorDevice(device.Device):
         # new Executor actions from starting after an abort.
         events.publish(events.EXECUTOR_DONE % self.name)
 
+
     @cockpit.util.threads.locked
     def finalizeInitialization(self):
         # Tell the remote DSP computer how to talk to us.
         server = depot.getHandlersOfType(depot.SERVER)[0]
         self.receiveUri = server.register(self.receiveData)
         self.connection.receiveClient(self.receiveUri)
+
 
     ## We control which light sources are active, as well as a set of
     # stage motion piezos.
@@ -167,20 +168,24 @@ class ExecutorDevice(device.Device):
         self.handlers = set(result)
         return result
 
+
     ## Receive data from the executor remote.
     def receiveData(self, action, *args):
         if action.lower() in ['done', 'dsp done']:
             events.publish(events.EXECUTOR_DONE % self.name)
+
 
     def triggerNow(self, line, dt=0.01):
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
         time.sleep(dt)
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
 
+
     ## Prepare to run an experiment.
     def onPrepareForExperiment(self, *args):
         # Ensure remote has the correct URI set for sending data/notifications.
         self.connection.receiveClient(self.receiveUri)
+
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
@@ -218,6 +223,7 @@ class ExecutorDevice(device.Device):
         self.connection.WriteDigital(value)
 
 
+
 class LegacyDSP(ExecutorDevice):
     #        May need to wrap profile digitals and analogs in numpy object.
     def __init__(self, name, config):
@@ -249,6 +255,7 @@ class LegacyDSP(ExecutorDevice):
         super(self.__class__, self).onPrepareForExperiment(*args)
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
+
 
     ## Receive data from the DSP computer.
     def receiveData(self, action, *args):
@@ -290,6 +297,7 @@ class LegacyDSP(ExecutorDevice):
 
         self.handlers = set(result)
         return result
+
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
@@ -398,4 +406,3 @@ class LegacyDSP(ExecutorDevice):
         self.connection.InitProfile(numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
-

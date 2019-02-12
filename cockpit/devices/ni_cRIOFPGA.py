@@ -114,7 +114,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):
-        super(self.__class__, self).onPrepareForExperiment(*args)
+        # super(self.__class__, self).onPrepareForExperiment(*args)
         self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self.nrAnalogLines)]
         # self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
@@ -122,48 +122,48 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def experimentDone(self):
         events.publish(events.EXECUTOR_DONE % self.name)
 
-    # def getAnalog(self, line):
-    #     """Returns the current output value of the analog line in native units
-    #     line is an integer corresponding to the requested analog on the FPGA
-    #     as entered in the analog config files.
-    #     """
-    #     line = 'Analogue ' + str(line)
-    #     return self.connection.status.getStatus(line)
+    def getAnalog(self, line):
+        """Returns the current output value of the analog line in native units
+        line is an integer corresponding to the requested analog on the FPGA
+        as entered in the analog config files.
+        """
+        line = 'Analogue ' + str(line)
+        return self.connection.status.getStatus(line)
 
-    # def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
-    #     """Set analog position in native units
-    #     :param line: Analog line to change
-    #     :param target: target value
-    #     :return:
-    #     """
-    #     # TODO: verify what is native units
-    #     # adus = int(target * 3276.8)
-    #     ## TODO: sensitivity
-    #     return self.connection.MoveAbsolute(line, target)
+    def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
+        """Set analog position in native units
+        :param line: Analog line to change
+        :param target: target value
+        :return:
+        """
+        # TODO: verify what is native units
+        # adus = int(target * 3276.8)
+        ## TODO: sensitivity
+        return self.connection.MoveAbsolute(line, target)
 
-    # def getHandlers(self):
-    #     """We control which light sources are active, as well as a set of stage motion piezos.
-    #     """
-    #     result = []
-    #     h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-    #         self.name, "executor",
-    #         {'examineActions': lambda *args: None,
-    #          'executeTable': self.executeTable,
-    #          'readDigital': self.connection.ReadDigital,
-    #          'writeDigital': self.connection.WriteDigital,
-    #          'getAnalog': self.getAnalog,
-    #          'setAnalog': self.setAnalog,
-    #          },
-    #         dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
-    #
-    #     result.append(h)
-    #
-    #     result.append(cockpit.handlers.imager.ImagerHandler(
-    #         "%s imager" % self.name, "imager",
-    #         {'takeImage': h.takeImage}))
-    #
-    #     self.handlers = set(result)
-    #     return result
+    def getHandlers(self):
+        """We control which light sources are active, as well as a set of stage motion piezos.
+        """
+        result = []
+        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
+            self.name, "executor",
+            {'examineActions': lambda *args: None,
+             'executeTable': self.executeTable,
+             'readDigital': self.connection.ReadDigital,
+             'writeDigital': self.connection.WriteDigital,
+             'getAnalog': self.getAnalog,
+             'setAnalog': self.setAnalog,
+             },
+            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
+
+        result.append(h)
+
+        result.append(cockpit.handlers.imager.ImagerHandler(
+            "%s imager" % self.name, "imager",
+            {'takeImage': h.takeImage}))
+
+        self.handlers = set(result)
+        return result
 
     def adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
@@ -174,10 +174,10 @@ class NIcRIO(executorDevices.ExecutorDevice):
         # Profiles
         analogs = [[] for x in range(self.nrAnalogLines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = []  # A list of tuples (ticks, digital state)
-        # Need to track time of last analog events
-        t_last_analog = None
+        # # Need to track time of last analog events
+        # t_last_analog = None
 
-        for (t, (digital_args, analog_args)) in actions:
+        for t, (digital_args, analog_args) in actions:
             # Convert t to ticks as int while rounding up. The rounding is
             # necessary, otherwise e.g. 10.1 and 10.1999999... both result in 101.
             ticks = int(float(t) * self.tickrate + 0.5)
@@ -199,21 +199,30 @@ class NIcRIO(executorDevices.ExecutorDevice):
 
             # Analogue actions - only enter into profile on change.
             # NI-cRIO uses absolute values.
-            offsets = map(lambda base, new: new - base, self._lastAnalogs, analog_args)
-            for offset, aarg, a in zip(offsets, analog_args, analogs):
-                if (len(a) == 0) or (len(a) > 0 and offset != a[-1][1]):
-                    a.append((ticks, aarg))
-                    t_last_analog = t
+            for analog, analog_arg in zip(analogs, analog_args):
+                if len(analog) == 0:  # analogs list is empty
+                    analog.append((ticks, analog_arg))
+                elif analog[-1][1] != analog_arg:
+                    analog.append((ticks, analog_arg))
+                else:
+                    pass
 
-        # Work around some DSP bugs:
-        # * The action table needs at least two events to execute correctly.
-        # * Last action must be digital --- if the last analog action is at the same
-        #   time or after the last digital action, it will not be performed.
-        # Both can be avoided by adding a digital action that does nothing.
-        # TODO: test if can remove this
-        if len(digitals) == 1 or t_last_analog >= digitals[-1][0]:
-            # Just duplicate the last digital action, one tick later.
-            digitals.append((digitals[-1][0]+1, digitals[-1][1]))
+        #
+        #     offsets = map(lambda base, new: new - base, self._lastAnalogs, analog_args)
+        #     for offset, aarg, a in zip(offsets, analog_args, analogs):
+        #         if (len(a) == 0) or (len(a) > 0 and offset != a[-1][1]):
+        #             a.append((ticks, aarg))
+        #             t_last_analog = t
+        #
+        # # Work around some DSP bugs:
+        # # * The action table needs at least two events to execute correctly.
+        # # * Last action must be digital --- if the last analog action is at the same
+        # #   time or after the last digital action, it will not be performed.
+        # # Both can be avoided by adding a digital action that does nothing.
+        # # TODO: test if can remove this
+        # if len(digitals) == 1 or t_last_analog >= digitals[-1][0]:
+        #     # Just duplicate the last digital action, one tick later.
+        #     digitals.append((digitals[-1][0]+1, digitals[-1][1]))
 
         # Update records of last positions.
         self._lastDigital = digitals[-1][1]
@@ -518,6 +527,9 @@ class Connection:
             # Send the actual command
             self.connection.send(json.dumps(messageCluster).encode())
             self.connection.send(b'\r\n')
+            print('Issuing command: ', command)  # TODO: remove this
+            print('with arguments:')
+            print(args)
         except socket.error as msg:
             print('Send messageCluster failed.\n', msg)
 
@@ -530,15 +542,19 @@ class Connection:
 
         try:
             # receive confirmation error
-            errorLength = self.connection.recv(4)
+            # errorLength = int(self.connection.recv(4).decode())
+            # if errorLength:
             try:
-                datagram = self.connection.recv(int(errorLength))
-            except ValueError:
-                errorLength.append(self.connection.recv(4096))
-                datagram = errorLength
-            error = json.loads(datagram)
-            if error['status']:
-                print(f'There has been an FPGA error: {error}')
+                datagram = self.connection.recv(1024)
+                print('datagram: ', datagram)  # TODO: remove this
+                error = json.loads(datagram)
+                if error['status']:
+                    print(f'There has been an FPGA error: {error}')
+            except:
+                print('We received a TCP error when confirming command.')
+                # errorLength.append(self.connection.recv(4096))
+                # datagram = self.connection.recv(4096)
+
         except socket.error as msg:
             # Send failed
             print('Receiving error.\n', msg)
@@ -659,11 +675,16 @@ class Connection:
         # The indexes will tell the FPGA where the table starts and ends.
         # This allows for more flexibility in the future, as we can store more than
         # one experiment per table and just execute different parts of it.
+        # Memory addresses on the FPGA are 0 based. We, however, use 1 based indexing so we
+        # can initialize certain values on the 0 address of the FPGA, such as a safe state we can
+        # securely rely on.
+        digitalsStartIndex = 1
+        digitalsStopIndex = len(actions[1])
         analoguesStartIndexes = [1 for x in actions[2]]
         analoguesStopIndexes = [len(x) for x in actions[2]]
         self.writeIndexes(indexSet=0,
-                          digitalsStartIndex=1,
-                          digitalsStopIndex=len(actions[1]),
+                          digitalsStartIndex=digitalsStartIndex,
+                          digitalsStopIndex=digitalsStopIndex,
                           analoguesStartIndexes=analoguesStartIndexes,
                           analoguesStopIndexes=analoguesStopIndexes,
                           msgLength=20)
@@ -720,8 +741,9 @@ class Connection:
         analogueChannel is an integer corresponding to the analogue in the FPGA as specified in the config files
         msgLength is an int indicating the max length of the analogue as a decimal string
         """
-        analogue = [analogueChannel, analogueValueADU]
+        analogue = [analogueChannel, int(analogueValueADU)]
         self.runCommand(self.commandDict['writeAnalogue'], analogue, msgLength)
+        time.sleep(0.1)
 
     def writeAnalogueDelta(self, analogueDeltaValue, analogueChannel):
         """Changes an analogueChannel output to the specified analogueValue delta-value
@@ -845,7 +867,7 @@ class FPGAStatus(threading.Thread):
             print('Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1])
 
         try:
-            s.bind((host , port))
+            s.bind((host, port))
         except socket.error as msg:
             print('Failed to bind address.\n', msg)
 
@@ -856,8 +878,7 @@ class FPGAStatus(threading.Thread):
         """
         if key and self.currentFPGAStatus is not None:
             try:
-                with self.FPGAStatusLock:
-                    return self.currentFPGAStatus[key]
+                return self.currentFPGAStatus[key]
             except:
                 print('Key does not exist')
         else:
@@ -871,36 +892,44 @@ class FPGAStatus(threading.Thread):
         It will update the FPGAStatus dictionary.
         """
         try:
-            datagramLength = int(self.socket.recvfrom(4)[0])
-            datagram = self.socket.recvfrom(datagramLength)[0]
+            # datagramLength = int(self.socket.recvfrom(4)[0].decode())
+            datagram = self.socket.recvfrom(1024)[0]
         except:
-            return None
-        return json.loads(datagram)
+            print('Error receiving status datagram: ', datagram)
+
+        try:
+            status = json.loads(datagram)
+        except:
+            print('Could not serialize status datagram: ', datagram)
+            return
+
+        return status
 
     def publishFPGAStatusChanges(self, newStatus):
         """FInd interesting status or status changes in the FPGA and publish them
 
         return the newStatus but with the status reset so not to publish multiple times
         """
+        print(newStatus['Event'])
         if newStatus['Event'] in ['done', 'FPGA done']:
-            self.parent.parent.experimentDone()
-            # events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
-            print(newStatus['Event'])
-            newStatus['Event'] = ''
+            #self.parent.parent.experimentDone()
+            events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
+            # newStatus['Event'] = ''
 
         return newStatus
 
     def run(self):
-
         self.currentFPGAStatus = self.getFPGAStatus()
+        update_rate = FPGA_UPDATE_RATE / 2
 
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
-            with self.FPGAStatusLock:
-                if newFPGAStatus is not None and newFPGAStatus != self.currentFPGAStatus:
-
-                    # Publish any interesting change and update
-                    self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus=newFPGAStatus)
+            # with self.FPGAStatusLock:
+            if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and newFPGAStatus is not None:
+                # Publish any interesting events
+                self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus=newFPGAStatus)
+            else:
+                self.currentFPGAStatus = newFPGAStatus
 
             # wait for a period of half the broadcasting rate of the FPGA
-            time.sleep(FPGA_UPDATE_RATE / 2)
+            time.sleep(update_rate)

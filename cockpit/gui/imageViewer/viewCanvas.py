@@ -312,7 +312,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # Need a 1D array of integers for numpy.bincount
         temp = imageData.reshape(numpy.product(imageData.shape)).astype(numpy.int32)
         dataRange = temp.max() - temp.min()
-        numBins = min(dataRange, MAX_BINS)
+        numBins = min(dataRange + 1, MAX_BINS)
         self.binSizes = numpy.bincount(
             ((temp-temp.min()) * numBins / dataRange).astype(numpy.int32))
 
@@ -579,9 +579,10 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 parent = self, title = "Set histogram scale parameters",
                 prompts = ["Blackpoint", "Whitepoint"],
                 defaultValues = [self.tiles[0][0].imageMin, self.tiles[0][0].imageMax])
-        values = map(float, values)
+        values = [float(v) for v in values]
         # Convert from pixel intensity values to [0, 1] scale values.
         divisor = float(self.imageMax - self.imageMin)
+        divisor = max(divisor, 1.0)
         self.blackPoint = (values[0] - self.imageMin) / divisor
         self.whitePoint = (values[1] - self.imageMin) / divisor
         self.changeHistScale(shouldRefresh = True)

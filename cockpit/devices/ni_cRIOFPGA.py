@@ -113,7 +113,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         # for line in range(self.nrAnalogLines):
         #     self.setAnalog(line, 65536//2)
 
-    def onPrepareForExperiment(self, *args):
+    def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
         # super(self.__class__, self).onPrepareForExperiment(*args)
         self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self.nrAnalogLines)]
         # self._lastAnalogs = [line for line in self._currentAnalogs]
@@ -910,11 +910,11 @@ class FPGAStatus(threading.Thread):
 
         return the newStatus but with the status reset so not to publish multiple times
         """
-        print(newStatus['Event'])
         if newStatus['Event'] in ['done', 'FPGA done']:
-            #self.parent.parent.experimentDone()
-            events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
-            # newStatus['Event'] = ''
+            self.parent.parent.experimentDone()
+            # events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
+            print(newStatus['Event'])
+            newStatus['Event'] = ''
 
         return newStatus
 
@@ -925,7 +925,7 @@ class FPGAStatus(threading.Thread):
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
             # with self.FPGAStatusLock:
-            if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and newFPGAStatus is not None:
+            if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and newFPGAStatus['Event'] == 'done' and newFPGAStatus is not None:
                 # Publish any interesting events
                 self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus=newFPGAStatus)
             else:

@@ -121,18 +121,21 @@ class BoulderSLM(device.Device):
         # Enable the hardware.
         self.connection.run()
         # Send a few triggers to clear synch. errors.
-        for i in range(3):
-            self.handler.triggerNow()
-            time.sleep(0.01)
+        # for i in range(3):
+        #     self.handler.triggerNow()
+        #     time.sleep(0.1)
         # Cycle to the target position.
+        self.cycle_to_position(targetPosition)
+        # Update the display.
+        if self.elements.get('triggerButton'):
+            self.elements['triggerButton'].Enable()
+
+    def cycle_to_position(self, targetPosition):
         pos = self.getCurrentPosition()
         delta = (targetPosition - pos) + (targetPosition < pos) * len(self.lastParms)
         for i in range(delta):
             self.handler.triggerNow()
-            time.sleep(0.01)
-        # Update the display.
-        if self.elements.get('triggerButton'):
-            self.elements['triggerButton'].Enable()
+            time.sleep(0.1)
 
 
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
@@ -142,8 +145,7 @@ class BoulderSLM(device.Device):
             events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                            'SLM moving to\nindex %d' % args,
                            (255, 255, 0))
-            while (self.getCurrentPosition() != args):
-                self.handler.triggerNow()
+            self.cycle_to_position(args)
 
 
     def examineActions(self, table):
@@ -165,8 +167,8 @@ class BoulderSLM(device.Device):
                 break
         sequence = reducedParams[0:sequenceLength]
         ## Tell the SLM to prepare the pattern sequence.
-        # asyncResult = self.asproxy.set_sim_sequence(sequence)
         self.connection.set_sim_sequence(sequence)
+        # asyncResult = self.asproxy.set_sim_sequence(sequence)
 
 
         # Track sequence index set by last set of triggers.
@@ -224,13 +226,10 @@ class BoulderSLM(device.Device):
         # Fire several triggers to ensure that the sequence is loaded.
         # for i in range(12):
         #     self.handler.triggerNow()
-        #     time.sleep(0.01)
-        # # Ensure that we're at position 0.
-        # self.position = self.getCurrentPosition()
-        # while self.position != 0:
-        #     self.handler.triggerNow()
-        #     time.sleep(.2)
-        #     self.position = self.getCurrentPosition()
+        #     time.sleep(0.1)
+        # Ensure that we're at position 0.
+        self.cycle_to_position(0)
+        self.position = self.getCurrentPosition()
 
 
     def getCurrentPosition(self):
@@ -340,6 +339,7 @@ class BoulderSLM(device.Device):
         if not self.lastParms:
             self.lastParms = self.connection.get_sim_sequence()
         self.position = self.getCurrentPosition()
+        time.sleep(.01)
 
 
     def onPrepareForExperiment(self, *args):

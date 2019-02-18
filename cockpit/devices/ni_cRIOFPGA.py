@@ -504,9 +504,10 @@ class Connection:
         Error Status, Error code and Error Description
         """
         # Transform args into a list of strings of msgLength chars
-        error = False
         sendArgs = []
         for arg in args:
+            if type(arg) is float:
+                raise Exception('Arguments to send cannot be floats')
             if type(arg) == str and len(arg) <= msgLength:
                 sendArgs.append(arg.rjust(msgLength, '0'))
             elif type(arg) == int and len(str(arg)) <= msgLength:
@@ -527,9 +528,6 @@ class Connection:
             # Send the actual command
             self.connection.send(json.dumps(messageCluster).encode())
             self.connection.send(b'\r\n')
-            print('Issuing command: ', command)  # TODO: remove this
-            print('with arguments:')
-            print(args)
         except socket.error as msg:
             print('Send messageCluster failed.\n', msg)
 

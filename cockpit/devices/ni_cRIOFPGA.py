@@ -607,7 +607,7 @@ class Connection:
         # Convert the digitals numpy table into a list of messages for the TCP
         digitalsList = []
 
-        for t, value in digitalsTable:
+        for t, value in digitalsTable:  # TODO: Change this into a more efficient code
             digitalsValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
             digitalsList.append(digitalsValue)
 
@@ -622,7 +622,7 @@ class Connection:
             # Convert the analogues numpy table into a list of messages for the TCP
             analogueList = []
 
-            for t, value in analogueTable:
+            for t, value in analogueTable:  # TODO: optimize this
                 analogueValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
                 analogueList.append(analogueValue)
 

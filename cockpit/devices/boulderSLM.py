@@ -120,10 +120,10 @@ class BoulderSLM(device.Device):
             targetPosition = 0
         # Enable the hardware.
         self.connection.run()
-        # Send a few triggers to clear synch. errors.
-        # for i in range(3):
-        #     self.handler.triggerNow()
-        #     time.sleep(0.1)
+        # Send a trigger to load the first image.
+        for i in range(3):
+            self.handler.triggerNow()
+            time.sleep(0.1)
         # Cycle to the target position.
         self.cycle_to_position(targetPosition)
         # Update the display.

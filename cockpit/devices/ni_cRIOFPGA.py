@@ -69,7 +69,7 @@ from six import iteritems
 
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4
-FPGA_UPDATE_RATE = .1  # At which rate is the FPGA sending update status signals
+FPGA_HEARTBEAT_RATE = .1  # At which rate is the FPGA sending update status signals
 MASTER_IP = '10.6.19.11'
 
 
@@ -108,15 +108,14 @@ class NIcRIO(executorDevices.ExecutorDevice):
     @cockpit.util.threads.locked
     def finalizeInitialization(self):
         server = depot.getHandlersOfType(depot.SERVER)[0]
-        # TODO: Check this
         self.receiveUri = server.register(self.receiveData)
         # for line in range(self.nrAnalogLines):
         #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
-        # super(self.__class__, self).onPrepareForExperiment(*args)
+        super(self.__class__, self).onPrepareForExperiment(*args)
         self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self.nrAnalogLines)]
-        # self._lastAnalogs = [line for line in self._currentAnalogs]
+        self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
 
     def experimentDone(self):
@@ -130,15 +129,12 @@ class NIcRIO(executorDevices.ExecutorDevice):
         line = 'Analogue ' + str(line)
         return self.connection.status.getStatus(line)
 
-    def setAnalog(self, line, target):    # TODO: integrate this function into the configuration files
+    def setAnalog(self, line, target):
         """Set analog position in native units
         :param line: Analog line to change
         :param target: target value
         :return:
         """
-        # TODO: verify what is native units
-        # adus = int(target * 3276.8)
-        ## TODO: sensitivity
         return self.connection.MoveAbsolute(line, target)
 
     def getHandlers(self):
@@ -153,6 +149,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
              'writeDigital': self.connection.WriteDigital,
              'getAnalog': self.getAnalog,
              'setAnalog': self.setAnalog,
+             'runSequence': self.runSequence,
              },
             dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
 
@@ -207,23 +204,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
                 else:
                     pass
 
-        #
-        #     offsets = map(lambda base, new: new - base, self._lastAnalogs, analog_args)
-        #     for offset, aarg, a in zip(offsets, analog_args, analogs):
-        #         if (len(a) == 0) or (len(a) > 0 and offset != a[-1][1]):
-        #             a.append((ticks, aarg))
-        #             t_last_analog = t
-        #
-        # # Work around some DSP bugs:
-        # # * The action table needs at least two events to execute correctly.
-        # # * Last action must be digital --- if the last analog action is at the same
-        # #   time or after the last digital action, it will not be performed.
-        # # Both can be avoided by adding a digital action that does nothing.
-        # # TODO: test if can remove this
-        # if len(digitals) == 1 or t_last_analog >= digitals[-1][0]:
-        #     # Just duplicate the last digital action, one tick later.
-        #     digitals.append((digitals[-1][0]+1, digitals[-1][1]))
-
         # Update records of last positions.
         self._lastDigital = digitals[-1][1]
         self._lastAnalogs = map(lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs)
@@ -247,137 +227,12 @@ class NIcRIO(executorDevices.ExecutorDevice):
 
         return [description, digitalsArr, [*analogsArr]]
 
-    def legacyExecuteTable(self, name, table, startIndex, stopIndex, numReps, repDuration):
-        """Actually execute the events in an experiment ActionTable, starting at
-        startIndex and proceeding up to but not through stopIndex.
-        Convert the desired portion of the table into a "profile" for
-        the FPGA.
-        """
-        # Take time and arguments (i.e. omit handler) from table to generate actions.
-        # For NI-cRIO fpga, we also need to:
-        #  - convert float in ms to integer clock ticks and ensure digital
-        #    lines are not changed twice on the same tick;
-        #  - separate analogue and digital events into different lists;
-        #  - generate a structure that describes the profile.
-
-        # Start time
-        t0 = float(table[startIndex][0])
-        # Profiles
-        # A list of lists (one per channel) of tuples (ticks, (analog values))
-        analogs = [[] for x in range(self.nrAnalogLines)]
-        # A list of tuples (ticks, digital state)
-        digitals = []
-        # Need to track time of last analog events to workaround a
-        # DSP bug later. Also used to detect when events exceed timing
-        # resolution
-        tLastA = None
-
-        actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
-        # If there are repeats, add an extra action to wait until repDuration expired.
-        if repDuration is not None:
-            repDuration = float(repDuration)
-            if actions[-1][0] < repDuration:
-                # Repeat the last event at t0 + repDuration
-                actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
-
-        # # The DSP executes an analogue movement profile, which is defined using
-        # # offsets relative to a baseline at the time the profile was initialized.
-        # # These offsets are encoded as unsigned integers, so at profile
-        # # intialization, each analogue channel must be at or below the lowest
-        # # value it needs to reach in the profile.
-        # lowestAnalogs = [min(channel) for channel in zip(*zip(*zip(*actions)[1])[1])]
-        # for line, lowest in enumerate(lowestAnalogs):
-        #     if lowest < self._lastAnalogs[line]:
-        #         self._lastAnalogs[line] = lowest
-        #         self.setAnalog(line, lowest)
-
-        for (t, (darg, aargs)) in actions:
-            # Convert t to ticks as int while rounding up. The rounding is
-            # necessary, otherwise e.g. 10.1 and 10.1999999... both result in 101.
-            ticks = int(float(t) * self.tickrate + 0.5)
-
-            # Digital actions - one at every time point.
-            if len(digitals) == 0:
-                digitals.append((ticks, darg))
-            elif ticks == digitals[-1][0]:
-                # Used to check for conflicts here, but that's not so trivial.
-                # We need to allow several bits to change at the same time point, but
-                # they may show up as multiple events in the actionTable. For now, just
-                # take the most recent state.
-                if darg != digitals[-1][1]:
-                    digitals[-1] = (ticks, darg)
-                else:
-                    pass
-            else:
-                digitals.append((ticks, darg))
-
-            # Analogue actions - only enter into profile on change.
-            # NI-cRIO uses absolute values.
-            offsets = map(lambda base, new: new - base, self._lastAnalogs, aargs)
-            for offset, aarg, a in zip(offsets, aargs, analogs):
-                if (len(a) == 0) or (len(a) > 0 and offset != a[-1][1]):
-                    a.append((ticks, aarg))
-                    tLastA = t
-
-        # Work around some DSP bugs:
-        # * The action table needs at least two events to execute correctly.
-        # * Last action must be digital --- if the last analog action is at the same
-        #   time or after the last digital action, it will not be performed.
-        # Both can be avoided by adding a digital action that does nothing.
-        # TODO: test if can remove this
-        if len(digitals) == 1 or tLastA >= digitals[-1][0]:
-            # Just duplicate the last digital action, one tick later.
-            digitals.append((digitals[-1][0]+1, digitals[-1][1]))
-
-        # Update records of last positions.
-        self._lastDigital = digitals[-1][1]
-        self._lastAnalogs = map(lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs)
-
-        events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                       'Waiting for\nFPGA to finish', (255, 255, 0))
-        # Convert digitals to array of uints.
-        digitalsArr = np.array(digitals, dtype=np.uint32).reshape(-1, 2)
-        # Convert analogs to array of uints.
-        analogsArr = [np.array(a, dtype=np.uint32).reshape(-1, 2) for a in analogs]
-
-        # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(zip(*digitals)[0],
-                                     *[(zip(*a) or [[None]])[0] for a in analogs]))
-        description = {'count': maxticks,
-                       'clock': 1000. / float(self.tickrate),
-                       'InitDio': self._lastDigital,
-                       'nDigital': len(digitals),
-                       'nAnalog': [len(a) for a in analogs]}
-
-        self._lastProfile = (description, digitalsArr, analogsArr)
-
-        self.connection.profileSet(description, digitalsArr, *analogsArr)
-        self.connection.DownloadProfile()
-        self.connection.InitProfile(numReps)
-        events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
-        events.publish(events.EXPERIMENT_EXECUTION)
-
     @cockpit.util.threads.locked
-    def takeImage(self):
-        """Take an image with the current light sources and active cameras.
-        """
-        cameraMask = 0
-        lightTimePairs = []
-        maxTime = 0
-        cameraReadTime = 0
-        for handler, line in iteritems(self.handlerToDigitalLine):
-            if handler.name in self.activeLights:
-                maxTime = max(maxTime, handler.getExposureTime())
-                exposureTime = handler.getExposureTime()
-                lightTimePairs.append((line, exposureTime))
-                maxTime = max(maxTime, exposureTime)
-        for name, line in iteritems(self.nameToDigitalLine):
-            if name in self.activeCameras:
-                cameraMask += line
-                handler = depot.getHandlerWithName(name)
-                handler.setExposureTime(maxTime)
-                cameraReadTime = max(cameraReadTime, handler.getTimeBetweenExposures())
-        self.connection.takeImage(cameraMask, lightTimePairs, cameraReadTime)
+    def runSequence(self, sequence):
+        """Runs a sequence of times-digital pairs"""
+        # Convert the times into ticks
+        sequence = [(t * self.tickrate, d) for t, d in sequence]
+        self.connection.runSequence(sequence)
 
     @cockpit.util.threads.locked
     def takeBurst(self, frameCount=10):
@@ -436,9 +291,9 @@ class Connection:
                             'flushFIFOs': 409,
                             'writeDigitals': 410,
                             'writeAnalogue': 411,
-                            'takeImage': 413,
+                            'runSequence': 413,
                             }
-        self.errorCodes = {'0': None,  # TODO: verify this
+        self.errorCodes = {'0': None,
                            '1': 'Could not create socket',
                            '2': 'Could not create socket connection',
                            '3': 'Send error'}
@@ -452,7 +307,7 @@ class Connection:
         self.status.start()
 
     def getIsConnected(self):
-        '''Return whether or not our connection is active.'''
+        """Return whether or not our connection is active."""
         return self.connection is not None
 
     def disconnect(self):
@@ -488,7 +343,7 @@ class Connection:
         """For debugging"""
         pass
 
-    def runCommand(self, command, args=[], msgLength=20):
+    def runCommand(self, command, args=(), msgLength=20):
         """This method sends to the RT-ipAddress a Json command message in the following way
         - three numbers representing the command
         - if there are arguments to send:
@@ -513,10 +368,7 @@ class Connection:
             elif type(arg) == int and len(str(arg)) <= msgLength:
                 sendArgs.append(str(arg).rjust(msgLength, '0'))
             else:
-                try:
-                    sendArgs.append(str(arg).rjust(msgLength, '0'))
-                except:
-                    print('Cannot send arguments to the executing device')
+                sendArgs.append(str(arg).rjust(msgLength, '0'))
 
         # Create a dictionary to be flattened and sent as json string
         messageCluster = {'Command': command,
@@ -544,7 +396,6 @@ class Connection:
             # if errorLength:
             try:
                 datagram = self.connection.recv(1024)
-                print('datagram: ', datagram)  # TODO: remove this
                 error = json.loads(datagram)
                 if error['status']:
                     print(f'There has been an FPGA error: {error}')
@@ -553,8 +404,7 @@ class Connection:
                 # errorLength.append(self.connection.recv(4096))
                 # datagram = self.connection.recv(4096)
 
-        except socket.error as msg:
-            # Send failed
+        except socket.error as msg:  # Send failed
             print('Receiving error.\n', msg)
         return
 
@@ -573,7 +423,7 @@ class Connection:
         """
         self.runCommand(self.commandDict['abort'])
 
-    def reInit(self, unit = None):
+    def reInit(self, unit=None):
         """Restarts the RT-ipAddress and FPGA unless 'ipAddress' or 'fpga' is specified as unit
 
         Returns nothing
@@ -647,8 +497,8 @@ class Connection:
         NOT included in the execution or the experiment. list or tuple of integers up to u32bit
         msgLength is an int indicating the length of every element as a decimal string
         """
-        # TODO: Verify the value of indexSet is between 0 and 15
-        # TODO: Verify that analogues lists are the same length
+        # TODO: Validate the value of indexSet is between 0 and 15
+        # TODO: Validate that analogues lists are the same length
 
         # Merge everything in a single list to send. Note that we interlace the
         # analogue indexes (start, stop, start, stop,...) so in the future we can
@@ -688,7 +538,7 @@ class Connection:
                           msgLength=20)
 
         # We initialize the profile. That is tell the cRIO how many repetitions to produce and the interval.
-        # TODO: Because the generic Executor is adding a last element in the table we put a 0 here. We have to change this
+        # TODO: Because the generic Executor is adding a last element in the table we put a 0 here. Change this
         self.initProfile(numReps=numReps, repDuration=0)
 
         return True
@@ -741,7 +591,9 @@ class Connection:
         """
         analogue = [analogueChannel, int(analogueValueADU)]
         self.runCommand(self.commandDict['writeAnalogue'], analogue, msgLength)
-        time.sleep(0.1)
+        while self.ReadPosition(analogue[0]) != analogue[1]:
+            time.sleep(0.01)
+        return
 
     def writeAnalogueDelta(self, analogueDeltaValue, analogueChannel):
         """Changes an analogueChannel output to the specified analogueValue delta-value
@@ -789,55 +641,16 @@ class Connection:
         """Trigger the execution of an experiment."""
         self.runCommand(self.commandDict['triggerExperiment'])
 
-    def takeImage(self, cameras, lightTimePairs, cameraReadTime=0, actionsPerMillisecond=100, digitalsBitDepth=32, msgLength=20):
-        """Performs a snap with the selected cameras and light-time pairs
+    def runSequence(self, time_digital_sequence, digitalsBitDepth=32, msgLength=20):
+        """Runs a small sequence of digital outputs at determined times"""
+        sendList = []
+        for t, d in time_digital_sequence:
+            # binarize and concatenate time and digital value
+            value = np.binary_repr(t, 32) + np.binary_repr(d, digitalsBitDepth)
+            value = int(value, 2)
+            sendList.append(value)
 
-        Generates a list of times and digitals that is sent to the FPGA to be run
-
-        Trigger the camera and wait until all the pixels are exposed
-        Expose all lights at the start, then drop them out
-        as their exposure times come to an end.
-        """
-        if lightTimePairs:
-            # transform the times in FPGA time units
-            lightTimePairs = [(light, int(time * actionsPerMillisecond)) for (light, time) in lightTimePairs]
-            cameraReadTime = int(np.ceil(cameraReadTime * actionsPerMillisecond))
-
-            # Sort so that the longest exposure time comes last.
-            lightTimePairs.sort(key = lambda a: a[1])
-
-            # at time 0 all the cameras are triggered
-            timingList = [(cameras, 0)]
-
-            # the first timepoint: all cameras and lights are turned on and time is 0
-            timingList.append((cameras + sum([p[0] for p in lightTimePairs]), cameraReadTime))
-
-            # For similar exposure times, we just send the digitals values that turn off
-            # all the lights
-            for light, time in lightTimePairs:
-                if time == timingList[-1][1]:
-                    timingList[-1] = (timingList[-1][0] - light, time + cameraReadTime)
-                else:
-                    timingList.append((timingList[-1][0] - light, time + cameraReadTime))
-
-            # In the last time point also the cameras should be turned off
-            timingList[-1] = (timingList[-1][0] - cameras, timingList[-1][1])
-
-            # Add a 0 at the end will stop the execution of the list
-
-            timingList.append((0, 0))
-
-            lightTimePairs = timingList
-
-            sendList = []
-
-            for light, time in lightTimePairs:
-                # binarize and concatenate time and digital value
-                value = np.binary_repr(time, 32) + np.binary_repr(light, digitalsBitDepth)
-                value = int(value, 2)
-                sendList.append(value)
-
-            self.runCommand(self.commandDict['takeImage'], sendList, msgLength)
+        self.runCommand(self.commandDict['runSequence'], sendList, msgLength)
 
 
 class FPGAStatus(threading.Thread):
@@ -862,7 +675,7 @@ class FPGAStatus(threading.Thread):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         except socket.error as msg:
-            print('Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1])
+            print('Failed to create socket. Error code: ', msg)
 
         try:
             s.bind((host, port))
@@ -877,8 +690,8 @@ class FPGAStatus(threading.Thread):
         if key and self.currentFPGAStatus is not None:
             try:
                 return self.currentFPGAStatus[key]
-            except:
-                print('Key does not exist')
+            except KeyError as e:
+                print(e)
         else:
             with self.FPGAStatusLock:
                 return self.currentFPGAStatus
@@ -917,12 +730,14 @@ class FPGAStatus(threading.Thread):
 
     def run(self):
         self.currentFPGAStatus = self.getFPGAStatus()
-        update_rate = FPGA_UPDATE_RATE / 2
+        update_rate = FPGA_HEARTBEAT_RATE / 2
 
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
             # with self.FPGAStatusLock:
-            if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and newFPGAStatus['Event'] == 'done' and newFPGAStatus is not None:
+            if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and \
+                    newFPGAStatus['Event'] == 'done' and \
+                    newFPGAStatus is not None:
                 # Publish any interesting events
                 self.currentFPGAStatus = self.publishFPGAStatusChanges(newStatus=newFPGAStatus)
             else:

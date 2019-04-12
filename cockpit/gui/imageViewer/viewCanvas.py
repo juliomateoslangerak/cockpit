@@ -314,7 +314,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         dataRange = temp.max() - temp.min()
         numBins = min(dataRange + 1, MAX_BINS)
         self.binSizes = numpy.bincount(
-            ((temp-temp.min()) * numBins / dataRange).astype(numpy.int32))
+            ((temp-temp.min()) * numBins / dataRange).astype(numpy.uint32))
 
 
     ## Reset our blackpoint/whitepoint based on the image data.

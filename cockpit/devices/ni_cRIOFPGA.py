@@ -140,7 +140,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def getHandlers(self):
         """We control which light sources are active, as well as a set of stage motion piezos.
         """
-        result = []
+        result = list()
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
             self.name, "executor",
             {'examineActions': lambda *args: None,
@@ -170,7 +170,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         """
         # Profiles
         analogs = [[] for x in range(self.nrAnalogLines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
-        digitals = []  # A list of tuples (ticks, digital state)
+        digitals = list()  # A list of tuples (ticks, digital state)
         # # Need to track time of last analog events
         # t_last_analog = None
 
@@ -242,7 +242,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         Experimental
         """
         cameraMask = 0
-        lightTimePairs = []
+        lightTimePairs = list()
         maxTime = 0
         for handler, line in iteritems(self.handlerToDigitalLine):
             if handler.name in self.activeLights:
@@ -359,7 +359,7 @@ class Connection:
         Error Status, Error code and Error Description
         """
         # Transform args into a list of strings of msgLength chars
-        sendArgs = []
+        sendArgs = list()
         for arg in args:
             if type(arg) is float:
                 raise Exception('Arguments to send cannot be floats')
@@ -455,7 +455,7 @@ class Connection:
         msgLength is an int indicating the length of every digital table element as a decimal string
         """
         # Convert the digitals numpy table into a list of messages for the TCP
-        digitalsList = []
+        digitalsList = list()
 
         for t, value in digitalsTable:  # TODO: Change this into a more efficient code
             digitalsValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
@@ -470,7 +470,7 @@ class Connection:
         for analogueTable in analogueTables:
 
             # Convert the analogues numpy table into a list of messages for the TCP
-            analogueList = []
+            analogueList = list()
 
             for t, value in analogueTable:  # TODO: optimize this
                 analogueValue = int(np.binary_repr(t, 32) + np.binary_repr(value, 32), 2)
@@ -643,7 +643,7 @@ class Connection:
 
     def runSequence(self, time_digital_sequence, digitalsBitDepth=32, msgLength=20):
         """Runs a small sequence of digital outputs at determined times"""
-        sendList = []
+        sendList = list()
         for t, d in time_digital_sequence:
             # binarize and concatenate time and digital value
             value = np.binary_repr(t, 32) + np.binary_repr(d, digitalsBitDepth)

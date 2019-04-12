@@ -204,7 +204,7 @@ class ExecutorDevice(device.Device):
                 # Repeat the last event at t0 + repDuration
                 actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
                 # TODO: Else, notify somehow that there was not enough time to do the repetitions.
-        actions = self.adaptActions(actions)
+        actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                 'Waiting for\nExecutor to finish', (255, 255, 0))
         # TODO: Should this call return a True if success so we can check for errors?
@@ -213,7 +213,7 @@ class ExecutorDevice(device.Device):
         events.publish(events.EXPERIMENT_EXECUTION)
         return
 
-    def adaptActions(self, actions):
+    def _adaptActions(self, actions):
         """Subclass this method to adapt the actions table to your specific device.
         Return the modified version of action"""
         return actions

@@ -53,17 +53,12 @@
 from . import device
 import cockpit.handlers.lightSource
 
-CLASS_NAME = 'DummyLightsDevice'
-
-
 
 class DummyLights(device.Device):
     def __init__(self, name="dummy lights", config={}):
         device.Device.__init__(self, name, config)
         ## Maps lightsource names to their exposure times.
         self.nameToExposureTime = dict()
-        # Set priority to Inf to indicate that this is a dummy device.
-        self.priority = float('inf')        
         self.deviceType = 'light source'
 
 

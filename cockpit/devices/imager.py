@@ -59,14 +59,10 @@ from . import device
 from cockpit import events
 import cockpit.handlers.imager
 
-CLASS_NAME = 'DummyImagerDevice'
-
 
 class DummyImagerDevice(device.Device):
-    def __init__(self):
-        device.Device.__init__(self, 'imager')
-        # Set priority to Inf to indicate that this is a dummy device.
-        self.priority = float('inf')
+    def __init__(self, name='imager', config={}):
+        device.Device.__init__(self, name)
         self.deviceType = 'imager'
 
 

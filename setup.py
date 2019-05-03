@@ -9,14 +9,10 @@
 ## without any warranty.
 
 import os.path
-import sys
 
 import setuptools
 import setuptools.command.sdist
 
-extra_requires = []
-if sys.version_info < (3,2):
-    extra_requires += ['futures'] # for concurrent.futures
 
 ## Modify the sdist command class to include extra files in the source
 ## distribution.  We could also have a MANIFEST file but we'd rather
@@ -61,17 +57,16 @@ setuptools.setup(
         ],
     },
 
+    python_requires = '>=3.5',
     install_requires = [
         'matplotlib',
         'numpy',
         'scipy',
         'wxPython',
         'Pyro4',
-        'Pillow', # temporary until wxPython 4.0.4 release (issue #319)
         'pyserial',
         'PyOpenGL',
-        'six',
-    ] + extra_requires,
+    ],
 
     test_suite = 'cockpit.testsuite',
 

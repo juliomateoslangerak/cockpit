@@ -30,14 +30,11 @@ from cockpit import events
 from . import device
 from cockpit import depot
 import cockpit.gui.device
-import cockpit.gui.guiUtils
-import cockpit.gui.toggleButton
 import cockpit.handlers.deviceHandler
 import cockpit.handlers.filterHandler
 import cockpit.handlers.lightPower
 import cockpit.handlers.lightSource
 import cockpit.util.colors
-import cockpit.util.listener
 import cockpit.util.userConfig
 import cockpit.util.threads
 from cockpit.gui.device import SettingsEditor
@@ -45,9 +42,6 @@ import re
 
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
-
-# Device types.
-(UGENERIC, USWITCHABLE, UDATA, UCAMERA, ULASER, UFILTER) = range(6)
 
 class MicroscopeBase(device.Device):
     """A class to communicate with the UniversalDevice interface."""
@@ -67,6 +61,9 @@ class MicroscopeBase(device.Device):
         self.set_setting = self._proxy.set_setting
         self.describe_settings = self._proxy.describe_settings
 
+    def finalizeInitialization(self):
+        super(MicroscopeBase, self).finalizeInitialization()
+        self._readUserConfig()
 
     def getHandlers(self):
         """Return device handlers. Derived classes may override this."""
@@ -85,10 +82,17 @@ class MicroscopeBase(device.Device):
             # editor needs the describe/get/set settings functions from the
             # proxy, but it also needs to be able to invalidate the cache
             # on the handler. The handler should probably expose the
-            # settings interface. UniversalCamera is starting to look
-            # more and more like an interface translation.
+            # settings interface.
             self.setAnyDefaults()
-            self.settings_editor = SettingsEditor(self, handler=self.handlers[0])
+            import collections.abc
+            if self.handlers and isinstance(self.handlers, collections.abc.Sequence):
+                h = self.handlers[0]
+            elif self.handlers:
+                h = self.handlers
+            else:
+                h = None
+            parent = evt.EventObject.Parent
+            self.settings_editor = SettingsEditor(self, parent, handler=h)
             self.settings_editor.Show()
         self.settings_editor.SetPosition(wx.GetMousePosition())
         self.settings_editor.Raise()
@@ -114,24 +118,15 @@ class MicroscopeBase(device.Device):
             self.defaults = DEFAULTS_SENT
 
 
-    def onUserLogin(self, username):
-        # Apply user defaults on login.
+    def _readUserConfig(self):
         idstr = self.name + '_SETTINGS'
-        defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=False)
-        if defaults is None:
-            defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=True)
+        defaults = cockpit.util.userConfig.getValue(idstr)
         if defaults is None:
             self.defaults = DEFAULTS_NONE
             return
         self.settings.update(defaults)
         self.defaults = DEFAULTS_PENDING
         self.setAnyDefaults()
-
-
-    def performSubscriptions(self):
-        """Perform subscriptions for this camera."""
-        events.subscribe('user login',
-                self.onUserLogin)
 
 
     def prepareForExperiment(self, name, experiment):
@@ -260,9 +255,18 @@ class MicroscopeLaser(MicroscopeBase):
 
 
     def finalizeInitialization(self):
+        # This should probably work the other way around:
+        # after init, the handlers should query for the current state,
+        # rather than the device pushing state info to the handlers as
+        # we currently do here.
+        #
         # Query the remote to update max power on handler.
         ph = self.handlers[0] # powerhandler
         ph.setMaxPower(self._proxy.get_max_power_mw())
+        ph.powerSetPoint = self._proxy.get_set_power_mw()
+        # Set lightHandler to enabled if light source is on.
+        lh = self.handlers[-1]
+        lh.state = int(self._proxy.get_is_on())
 
 
 class MicroscopeFilter(MicroscopeBase):
@@ -320,13 +324,3 @@ class MicroscopeFilter(MicroscopeBase):
 
     def getFilters(self):
         return self.filters
-
-
-# Type maps.
-ENUM_TO_CLASS = {
-    UGENERIC: MicroscopeGenericDevice,
-    USWITCHABLE: MicroscopeSwitchableDevice,
-    UDATA: None,
-    UCAMERA: None,
-    ULASER: None,
-    UFILTER: MicroscopeFilter,}

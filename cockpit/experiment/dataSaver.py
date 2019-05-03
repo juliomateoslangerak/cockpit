@@ -58,11 +58,10 @@ import cockpit.util.logger
 import cockpit.util.threads
 
 import numpy
-from six.moves import queue
+import queue
 import threading
 import time
 
-from six import iteritems
 
 ## Unique ID for identifying saver instances
 uniqueID = 0
@@ -113,12 +112,6 @@ class DataSaver:
         # The default of a googol megabytes ought to be enough to avoid
         # splitting files if no cap is specified. :)
         self.maxFilesize = 10**100
-        config = depot.getHandlersOfType(depot.CONFIGURATOR)[0]
-        try:
-            self.maxFilesize = config.getValue('maxFilesizeMegabytes')
-        except KeyError:
-            # No max filesize specified; leave it as-is.
-            pass
 
         global uniqueID
         ## Unique ID for our instance
@@ -166,7 +159,7 @@ class DataSaver:
 
         ## Maps ints to cameras; the ints represent the order in which the
         # images are stored.
-        self.indexToCamera = {v: k for k, v in iteritems(self.cameraToIndex)}
+        self.indexToCamera = {v: k for k, v in self.cameraToIndex.items()}
         ## Timestamp of the first image we receive.
         # We need this so we can rebase the timestamps of images to
         # to be relative to the beginning of the experiment -- Python

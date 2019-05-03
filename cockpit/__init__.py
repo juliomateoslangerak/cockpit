@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2018 Mick Phillips <mick.phillips@gmail.com>
+## Copyright (C) 2018-2019 Mick Phillips <mick.phillips@gmail.com>
 ## Copyright (C) 2018 Ian Dobbie <ian.dobbie@bioch.ox.ac.uk>
 ## Copyright (C) 2018 Julio Mateos Langerak <julio.mateos-langerak@igh.cnrs.fr>
 ## Copyright (C) 2018 David Pinto <david.pinto@bioch.ox.ac.uk>
@@ -72,15 +72,29 @@ if (distutils.version.LooseVersion(Pyro4.__version__) >=
     Pyro4.config.SERIALIZER = 'pickle'
     Pyro4.config.REQUIRE_EXPOSE = False
 
+import cockpit.config
 import cockpit.depot
+import cockpit.interfaces.imager
+import cockpit.interfaces.stageMover
 import cockpit.util.files
 import cockpit.util.logger
-import cockpit.util.user
-
-from cockpit.config import config
 
 
 class CockpitApp(wx.App):
+    """
+    Args:
+        config (:class:`cockpit.config.CockpitConfig`):
+    """
+    def __init__(self, config):
+        ## OnInit() will make use of config, and wx.App.__init__()
+        ## calls OnInit().  So we need to assign this before super().
+        self._config = config
+        super(CockpitApp, self).__init__(redirect=False)
+
+    @property
+    def Config(self):
+        return self._config
+
     def OnInit(self):
         try:
             # Allow subsequent actions to abort startup by publishing
@@ -99,7 +113,9 @@ class CockpitApp(wx.App):
             from cockpit import util
             from cockpit import depot
 
-            numDevices = len(config.sections()) + 1 # + 1 is for dummy devs.
+            depot_config = self.Config.depot_config
+            depot.initialize(depot_config)
+            numDevices = len(depot_config.sections()) + 1 # + 1 is for dummy devs.
             numNonDevices = 15
             status = wx.ProgressDialog(parent = None,
                     title = "Initializing OMX Cockpit",
@@ -117,24 +133,23 @@ class CockpitApp(wx.App):
             import cockpit.gui.mosaic.window
             import cockpit.gui.shellWindow
             import cockpit.gui.statusLightsWindow
-            import cockpit.interfaces
-            import cockpit.util.user
             import cockpit.util.userConfig
 
             updateNum=1
             status.Update(updateNum, "Initializing config...")
             updateNum+=1
-            cockpit.util.userConfig.initialize()
+            cockpit.util.userConfig.initialize(self.Config)
 
             status.Update(updateNum, "Initializing devices...")
             updateNum+=1
-            for i, device in enumerate(depot.initialize(config)):
+            for i, device in enumerate(depot.initialize(depot_config)):
                 status.Update(updateNum, "Initializing devices...\n%s" % device)
                 updateNum+=1
-            #depot.initialize(config)
+            #depot.initialize(depot_config)
             status.Update(updateNum, "Initializing device interfaces...")
             updateNum+=1
-            cockpit.interfaces.initialize()
+            cockpit.interfaces.imager.initialize()
+            cockpit.interfaces.stageMover.initialize()
 
             status.Update(updateNum, "Initializing user interface...")
             updateNum+=1
@@ -150,7 +165,6 @@ class CockpitApp(wx.App):
             status.Update(updateNum, " ... macrostage window")
             updateNum+=1
             cockpit.gui.macroStage.macroStageWindow.makeWindow(frame)
-            status.Update(updateNum, " ... shell window")
             updateNum+=1
             cockpit.gui.statusLightsWindow.makeWindow(frame)
 
@@ -164,11 +178,8 @@ class CockpitApp(wx.App):
             cockpit.gui.shellWindow.makeWindow(frame)
             status.Update(updateNum, " ... statuslights window")
             updateNum+=1
-            #start touchscreen only if enableds.
-            #if(util.userConfig.getValue('touchScreen',
-            #                            isGlobal = True, default= 0) is 1):
-            import cockpit.gui.touchscreen.touchscreen
-            cockpit.gui.touchscreen.touchscreen.makeWindow(frame)
+            import cockpit.gui.touchscreen
+            cockpit.gui.touchscreen.makeWindow(frame)
             from cockpit.util import intensity
             intensity.makeWindow(frame)
             # All secondary windows created.
@@ -181,7 +192,6 @@ class CockpitApp(wx.App):
                 title=w.GetTitle()
                 windowstate=cockpit.util.userConfig.getValue(
                                                 'windowState'+title,
-                                                isGlobal = False,
                                                 default= 0)
                 #if they were hidden then return them to hidden
                 if (windowstate is 0):
@@ -194,7 +204,7 @@ class CockpitApp(wx.App):
                 self.primaryWindows.remove(status)
             status.Destroy()
 
-            wx.CallAfter(self.doInitialLogin)
+            self.SetWindowPositions()
 
             #now loop over secondary windows open and closeing as needed.
             for w in self.secondaryWindows:
@@ -202,7 +212,6 @@ class CockpitApp(wx.App):
                 title=w.GetTitle()
                 windowstate=cockpit.util.userConfig.getValue(
                                                 'windowState'+title,
-                                                isGlobal = False,
                                                 default= 0)
                 #if they were hidden then return them to hidden
                 if (windowstate is 0):
@@ -211,9 +220,12 @@ class CockpitApp(wx.App):
 
 
             depot.makeInitialPublications()
-            cockpit.interfaces.makeInitialPublications()
+            cockpit.interfaces.imager.makeInitialPublications()
+            cockpit.interfaces.stageMover.makeInitialPublications()
+
             events.publish('cockpit initialization complete')
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
+
             return True
         except Exception as e:
             wx.MessageDialog(None,
@@ -226,20 +238,32 @@ class CockpitApp(wx.App):
             cockpit.util.logger.log.error(traceback.format_exc())
             return False
 
-
-    def doInitialLogin(self):
-        cockpit.util.user.login()
-        cockpit.util.logger.log.debug("Login complete as %s" % cockpit.util.user.getUsername())
-
-
     def onActivateApp(self, event):
+        # If we move to another app then back to cockpit, only MainWindow is
+        # raised - our other windows can remain hidden by the other app, so
+        # we need to raise all our top-level windows.
         if not event.Active:
             return
+
         top = wx.GetApp().GetTopWindow()
-        windows = top.GetChildren()
-        for w in windows:
-            if w.IsShown(): w.Raise()
-        top.Raise()
+        # wx.Choice controls cause emission of wxEVT_ACTIVATE_APP events for
+        # some reason. We don't want to re-raise windows just because the user
+        # clicked a wx.Choice. The only way I can find to discriminate these
+        # events from those we want to respond to is to look at top.FindFocus().
+        # This returns None if the event is a result of using a wx.Choice, or
+        # a reference to a control or window otherwise.
+        focussed = top.FindFocus()
+        if focussed is None:
+            return
+        for w in top.GetChildren():
+            if isinstance(w, wx.TopLevelWindow) and w.IsShown():
+                w.Raise()
+        uppermost = focussed.GetTopLevelParent()
+        # Ensure focussed item's window is at top of Z-stack.
+        uppermost.Raise()
+        # Ensure main window is raised.
+        if top is not uppermost:
+            top.Raise()
 
     ## Startup failed; log the failure information and exit.
     def onStartupFail(self, *args):
@@ -250,8 +274,17 @@ class CockpitApp(wx.App):
     # Do anything we need to do to shut down cleanly. At this point UI
     # objects still exist, but they won't by the time we're done.
     def onExit(self):
-        import cockpit.util.user
-        cockpit.util.user.logout(shouldLoginAgain = False)
+        self._SaveWindowPositions()
+
+        try:
+            events.publish("user abort")
+        except Exception as e:
+            cockpit.util.logger.log.error("Error during logout: %s" % e)
+            cockpit.util.logger.log.error(traceback.format_exc())
+
+        import cockpit.gui.loggingWindow
+        cockpit.gui.loggingWindow.window.WriteToLogger(cockpit.util.logger.log)
+
         # Manually clear out any parent-less windows that still exist. This
         # can catch some windows that are spawned by WX and then abandoned,
         # typically because of bugs in the program. If we don't do this, then
@@ -263,7 +296,7 @@ class CockpitApp(wx.App):
 
         # Call any deviec onExit code to, for example, close shutters and
         # switch of lasers.
-        for dev in depot.getAllDevices():
+        for dev in cockpit.depot.getAllDevices():
             try:
                 dev.onExit()
             except:
@@ -289,6 +322,36 @@ class CockpitApp(wx.App):
         os._exit(0)
 
 
+    def SetWindowPositions(self):
+        """Place the windows in the position defined in userConfig.
+
+        This should probably be a private method, or at least a method
+        that would take the positions dict as argument.
+        """
+        positions = cockpit.util.userConfig.getValue('WindowPositions',
+                                                     default={})
+        for window in wx.GetTopLevelWindows():
+            if window.Title in positions:
+                window.SetPosition(positions[window.Title])
+
+
+    def _SaveWindowPositions(self):
+        positions = {w.Title : tuple(w.Position)
+                     for w in wx.GetTopLevelWindows()}
+
+        ## XXX: the camera window uses the title to include pixel info
+        ## so fix the title so we can use it as ID later.
+        camera_window_title = None
+        for title in positions.keys():
+            if title.startswith('Camera views '):
+                camera_window_title = title
+                break
+        if camera_window_title is not None:
+            positions['Camera views'] = positions.pop(camera_window_title)
+
+        cockpit.util.userConfig.setValue('WindowPositions', positions)
+
+
 def main():
     ## wxglcanvas (used in the mosaic windows) does not work with
     ## wayland (see https://trac.wxwidgets.org/ticket/17702).  The
@@ -297,14 +360,14 @@ def main():
     if wx.Platform == '__WXGTK__' and 'GDK_BACKEND' not in os.environ:
         os.environ['GDK_BACKEND'] = 'x11'
 
-    ## We need these first to ensure that we can log failures during
-    ## startup.
-    cockpit.depot.loadConfig()
-    cockpit.util.files.initialize()
-    cockpit.util.files.ensureDirectoriesExist()
-    cockpit.util.logger.makeLogger()
+    ## TODO: have this in a try, and show a window (would probably
+    ## need to be different wx.App), with the error if it fails.
+    config = cockpit.config.CockpitConfig(sys.argv)
+    cockpit.util.logger.makeLogger(config['log'])
+    cockpit.util.files.initialize(config)
 
-    CockpitApp(redirect = False).MainLoop()
+    app = CockpitApp(config=config)
+    app.MainLoop()
 
 
 if __name__ == '__main__':

@@ -67,6 +67,8 @@ from . import executorDevices
 
 from six import iteritems
 
+from cockpit.config import config, LIGHTS, CAMERAS, AOUTS
+COCKPIT_AXES = {'x': 0, 'y': 1, 'z': 2, 'SI angle': -1}
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4
 FPGA_HEARTBEAT_RATE = .1  # At which rate is the FPGA sending update status signals

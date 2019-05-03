@@ -62,12 +62,14 @@ import traceback
 
 ## Define common event strings here. This way, they're here for reference,
 # and can be used elsewhere to avoid errors due to typos.
+DEVICE_STATUS = 'device status'
 EXPERIMENT_EXECUTION = 'experiment execution'
 EXPERIMENT_COMPLETE = 'experiment complete'
 UPDATE_STATUS_LIGHT = 'update status light'
 PREPARE_FOR_EXPERIMENT = 'prepare for experiment'
 CLEANUP_AFTER_EXPERIMENT = 'cleanup after experiment'
 LIGHT_SOURCE_ENABLE = 'light source enable'
+CAMERA_ENABLE = 'camera enable'
 STAGE_POSITION = 'stage position'
 STAGE_MOVER = 'stage mover'
 STAGE_STOPPED = 'stage stopped'
@@ -76,11 +78,11 @@ MOSAIC_UPDATE = 'mosaic update'
 NEW_IMAGE = 'new image %s' # must be suffixed with image source
 SETTINGS_CHANGED = 'settings changed %s' # must be suffixed with device/handler name
 EXECUTOR_DONE = 'executor done %s' # must be sufficed with device/handler name
+VIDEO_MODE_TOGGLE = 'video mode toggle'
 ## TODO - make changes throughout to use the string variables defined above.
 
-## Maps event types to lists of (priority, function) tuples to call when
-# those events occur.
-eventToSubscriberMap = {}
+## Maps event types to lists of callers for when those events occur.
+eventToSubscriberMap = {} # type: Dict[str, Sequence[Callable[..., None]]]
 
 ## As eventToSubscriberMap, except that these subscribers only care about the
 # next event (i.e. they unsubscribe as soon as the event happens once).
@@ -91,7 +93,7 @@ subscriberLock = threading.Lock()
 
 ## Pass the given event to all subscribers.
 def publish(eventType, *args, **kwargs):
-    for priority, subscribeFunc in eventToSubscriberMap.get(eventType, []):
+    for subscribeFunc in eventToSubscriberMap.get(eventType, []):
         try:
             subscribeFunc(*args, **kwargs)
         except:
@@ -117,14 +119,11 @@ def publish(eventType, *args, **kwargs):
 
 
 ## Add a new function to the list of those to call when the event occurs.
-# \param priority Determines what order functions are called in when the event
-#        occurs. Lower numbers go sooner.
-def subscribe(eventType, func, priority = 100):
+def subscribe(eventType, func):
     with subscriberLock:
         if eventType not in eventToSubscriberMap:
             eventToSubscriberMap[eventType] = []
-        eventToSubscriberMap[eventType].append((priority, func))
-        eventToSubscriberMap[eventType].sort(key=lambda x: x[0])
+        eventToSubscriberMap[eventType].append(func)
 
 
 ## Add a new function to do a one-shot subscription.
@@ -139,7 +138,7 @@ def oneShotSubscribe(eventType, func):
 def unsubscribe(eventType, func):
     with subscriberLock:
         curSubscribers = eventToSubscriberMap.get(eventType, [])
-        for i, (priority, subscriberFunc) in enumerate(curSubscribers):
+        for i, subscriberFunc in enumerate(curSubscribers):
             if func == subscriberFunc:
                 del curSubscribers[i]
                 return

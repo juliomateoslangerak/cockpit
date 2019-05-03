@@ -56,7 +56,6 @@ from . import stage
 from cockpit import events
 import cockpit.handlers.stagePositioner
 
-CLASS_NAME = 'DummyMoverDevice'
 
 class DummyMover(stage.StageDevice):
     def __init__(self, name="dummy XY stage", config={}):
@@ -69,8 +68,6 @@ class DummyMover(stage.StageDevice):
         # List of 2 doubles indicating our X/Y position.
         self.curPosition = [1000, 1000]
         events.subscribe('user abort', self.onAbort)
-        # Set priority to Inf to indicate that this is a dummy device.
-        self.priority = float('inf')
         # Is this device in use?
         self.active = False
         self.deviceType = "stage positioner"

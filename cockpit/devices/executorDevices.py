@@ -78,7 +78,6 @@
 #  uri: PYRO:pyroDSP@somehost:8001
 
 
-
 import Pyro4
 import time
 
@@ -92,7 +91,6 @@ import cockpit.handlers.imager
 import cockpit.util.threads
 import numpy as np
 from itertools import chain
-from functools import reduce
 
 
 class ExecutorDevice(device.Device):
@@ -223,7 +221,6 @@ class ExecutorDevice(device.Device):
         self.connection.WriteDigital(value)
 
 
-
 class LegacyDSP(ExecutorDevice):
     #        May need to wrap profile digitals and analogs in numpy object.
     def __init__(self, name, config):
@@ -311,8 +308,8 @@ class LegacyDSP(ExecutorDevice):
         #  - separate analogue and digital events into different lists;
         #  - generate a structure that describes the profile.
 
-        # Start time
-        t0 = float(table[startIndex][0])
+        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+
         # Profiles
         analogs = [ [], [], [], [] ] # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = [] # A list of tuples (ticks, digital state)
@@ -321,20 +318,13 @@ class LegacyDSP(ExecutorDevice):
         # resolution
         tLastA = None
 
-        actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
-        # If there are repeats, add an extra action to wait until repDuration expired.
-        if repDuration is not None:
-            repDuration = float(repDuration)
-            if actions[-1][0] < repDuration:
-                # Repeat the last event at t0 + repDuration
-                actions.append( (t0+repDuration,) + tuple(actions[-1][1:]) )
 
         # The DSP executes an analogue movement profile, which is defined using
         # offsets relative to a baseline at the time the profile was initialized.
         # These offsets are encoded as unsigned integers, so at profile
         # intialization, each analogue channel must be at or below the lowest
         # value it needs to reach in the profile.
-        lowestAnalogs = [min(channel) for channel in zip(*zip(*zip(*actions)[1])[1])]
+        lowestAnalogs = list(np.amin([x[1][1] for x in actions], axis=0))
         for line, lowest in enumerate(lowestAnalogs):
             if lowest < self._lastAnalogs[line]:
                 self._lastAnalogs[line] = lowest
@@ -390,8 +380,8 @@ class LegacyDSP(ExecutorDevice):
 
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(list(zip(*digitals))[0],
-                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
+        maxticks = max(chain([d[0] for d in digitals],
+                             [a[0] for a in chain.from_iterable(analogs)]))
         description = {}
         description['count'] = maxticks
         description['clock'] = 1000. / float(self.tickrate)
@@ -406,3 +396,20 @@ class LegacyDSP(ExecutorDevice):
         self.connection.InitProfile(numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
+
+
+def actions_from_table(table, startIndex, stopIndex, repDuration):
+    ## Take time and arguments (i.e. omit handler) from table to
+    ## generate actions.
+    t0 = float(table[startIndex][0])
+    actions = [(float(row[0])-t0,) + tuple(row[2:])
+               for row in table[startIndex:stopIndex]]
+
+    ## If there are repeats, add an extra action to wait until
+    ## repDuration expired.
+    if repDuration is not None:
+        repDuration = float(repDuration)
+        if actions[-1][0] < repDuration:
+            ## Repeat the last event at t0 + repDuration
+            actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
+    return actions

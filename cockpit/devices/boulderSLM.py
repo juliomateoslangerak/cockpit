@@ -157,7 +157,7 @@ class BoulderSLM(device.Device):
 
     def cycle_to_position(self, targetPosition):
         pos = self.getCurrentPosition()
-        delta = (targetPosition - pos) + (targetPosition < pos) * len(self.lastParms)
+        delta = (targetPosition - pos) + (targetPosition < pos) * len(self.last.params)
         for i in range(delta):
             self.handler.triggerNow()
             time.sleep(0.01)

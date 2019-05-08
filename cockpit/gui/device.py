@@ -433,7 +433,7 @@ class SettingsEditor(wx.Frame):
         self.settings = OrderedDict(self.device.describe_settings())
         for key, desc in self.settings.items():
             propType = SettingsEditor._SETTINGS_TO_PROPTYPES.get(desc['type'])
-            if propType is wx.propgrid.IntProperty:
+            if propType is wx.propgrid.IntProperty:  # and None not in desc['values']:
                 # Use a float if integer may exceed IntProperty representation.
                 # The representation is dependent on whether or not  wx was compiled
                 # with wxUSE_LONG_LONG defined. I can't find a way to easily figure

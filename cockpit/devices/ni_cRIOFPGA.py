@@ -230,7 +230,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def runSequence(self, sequence):
         """Runs a sequence of times-digital pairs"""
         # Convert the times into ticks
-        sequence = [(t * self.tickrate, d) for t, d in sequence]
+        sequence = [(int(t * self.tickrate), d) for t, d in sequence]
         self.connection.runSequence(sequence)
 
     @cockpit.util.threads.locked

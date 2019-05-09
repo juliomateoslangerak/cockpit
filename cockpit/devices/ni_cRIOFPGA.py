@@ -161,7 +161,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self.handlers = set(result)
         return result
 
-    def adaptActions(self, actions):
+    def _adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
         - convert float in ms to integer clock ticks
         - separate analogue and digital events into different lists
@@ -297,6 +297,9 @@ class Connection:
                            '2': 'Could not create socket connection',
                            '3': 'Send error'}
         self.status = None
+
+    def receiveClient(self, URI):
+        pass
 
     def connect(self, timeout=40):
         self.connection = self.createSendSocket(self.ipAddress, self.port[0], timeout)

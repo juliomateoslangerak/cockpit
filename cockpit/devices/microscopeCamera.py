@@ -70,7 +70,6 @@ class MicroscopeCamera(MicroscopeBase, camera.CameraDevice):
         self.describe_settings = self.proxy.describe_settings
         try:
             self.updateSettings()
-
         except:
             pass
         if 'readout mode' in self.settings:
@@ -83,7 +82,7 @@ class MicroscopeCamera(MicroscopeBase, camera.CameraDevice):
     def _modenames(self):
         # Modes are a descriptive string of the form
         # [amp-type] [freq] [channel]
-        if not self.modes:  # or self.modes[0] == 'default':
+        if not self.modes:
             return ['default']
         import re
         channels = set()

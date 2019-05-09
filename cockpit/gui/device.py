@@ -433,12 +433,14 @@ class SettingsEditor(wx.Frame):
         self.settings = OrderedDict(self.device.describe_settings())
         for key, desc in self.settings.items():
             propType = SettingsEditor._SETTINGS_TO_PROPTYPES.get(desc['type'])
-            if propType is wx.propgrid.IntProperty:  # and None not in desc['values']:
+            if propType is wx.propgrid.IntProperty:
                 # Use a float if integer may exceed IntProperty representation.
                 # The representation is dependent on whether or not  wx was compiled
                 # with wxUSE_LONG_LONG defined. I can't find a way to easily figure
                 # this out from python, so we go for the safer limit.
-                if max(desc['values']) > wx.INT32_MAX:
+                # Read-only ints may have a desc['values'] of (None, None), so avoid
+                # the max() comparison in that case.
+                if None in desc['values'] or max(desc['values']) > wx.INT32_MAX:
                     propType = wx.propgrid.FloatProperty
             try:
                 prop = propType(label=key, name=key)

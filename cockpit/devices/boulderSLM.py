@@ -245,7 +245,7 @@ class BoulderSLM(device.Device):
         self.last.params = sequence
         self.connection.run()
         # Fire several triggers to ensure that the sequence is loaded.
-        for i in range(3):
+        for i in range(12):
             self.handler.triggerNow()
             time.sleep(0.01)
         # Ensure that we're at position 0.

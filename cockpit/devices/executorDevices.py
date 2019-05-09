@@ -189,19 +189,9 @@ class ExecutorDevice(device.Device):
     # startIndex and proceeding up to but not through stopIndex.
     def executeTable(self, name, table, startIndex, stopIndex, numReps,
             repDuration):
-        # Take time and arguments (i.e. omit handler) from table to generate actions.
-        t0 = float(table[startIndex][0])
-        actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
-        # If there are repeats, add an extra action to wait until repDuration expired.
-        # TODO: This should not be generic. An executor can use this extra time to do something else:
-        # eg: move to a new position in a multi-site experiment, perform autofocus
-        # In the case of the cRIO it is the FPGA timing repetitions.
-        if repDuration is not None:
-            repDuration = float(repDuration)
-            if actions[-1][0] < repDuration:
-                # Repeat the last event at t0 + repDuration
-                actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
-                # TODO: Else, notify somehow that there was not enough time to do the repetitions.
+
+        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+
         actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                 'Waiting for\nExecutor to finish', (255, 255, 0))

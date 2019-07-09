@@ -156,5 +156,5 @@ offset: 0.0
 siVoltages:
   488: 2.180, 3.560, 2.604
   561: 1.860, 3.150, 2.290
-  647: 1.700, 2.700, 2.050  # Not experimentally calibrated
+  647: 1.700, 2.700, 2.050
 idleVoltage: 1.0

@@ -80,6 +80,7 @@ class ZStackExperiment(experiment.Experiment):
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
                 motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevAltitude, zTarget)
+                stabilizationTime = stabilizationTime * 1000
             curTime += motionTime
             table.addAction(curTime, self.zPositioner, zTarget)
             curTime += stabilizationTime

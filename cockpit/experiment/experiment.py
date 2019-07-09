@@ -519,7 +519,6 @@ class Experiment:
                pseudoGlobalExposure=False, previousMovementTime=0):
         # First, determine which cameras are not ready to be exposed, because
         # they may have seen light they weren't supposed to see (due to
-
         # bleedthrough from other cameras' exposures). These need
         # to be triggered (and we need to record that we want to throw away
         # those images) before we can proceed with the real exposure.
@@ -548,16 +547,16 @@ class Experiment:
         # ready to be triggered.
         maxExposureTime = 0
         if lightTimePairs:
-            maxExposureTime = max(lightTimePairs, key = lambda a: a[1])[1]
+            maxExposureTime = max(lightTimePairs, key=lambda a: a[1])[1]
+
         # Check cameras to see if they have minimum exposure times; take them
         # into account for when the exposure can end. Additionally, if they
         # are frame-transfer cameras, then we need to adjust maxExposureTime
         # to ensure that our triggering of the camera does not come too soon
         # (while it is still reading out the previous frame).
-
         for camera in cameras:
             maxExposureTime = max(maxExposureTime,
-                    camera.getMinExposureTime(isExact = True))
+                    camera.getMinExposureTime(isExact=True))
             if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
                 nextReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
                 # Ensure camera is exposing for long enough to finish reading
@@ -571,7 +570,7 @@ class Experiment:
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name is not 'ambient': # i.e. not ambient light
+            if light is not None and light.name is not 'ambient':  # i.e. not ambient light
                 # Center the light exposure.
                 timeSlop = maxExposureTime - exposureTime
                 offset = timeSlop / 2
@@ -584,7 +583,6 @@ class Experiment:
         # Trigger the cameras. Keep track of which cameras we *aren't* using
         # here; if they are continuous-exposure cameras, then they may have
         # seen light that they shouldn't have, and need to be invalidated.
-
         usedCams = set()
         for camera in cameras:
             usedCams.add(camera)

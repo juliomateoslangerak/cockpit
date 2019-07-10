@@ -150,12 +150,12 @@ class BoulderSLM(device.Device):
                 self.handler.triggerNow()
                 time.sleep(0.01)
             # Cycle to the target position.
-            self.cycle_to_position(targetPosition)
+            self.cycleToPosition(targetPosition)
         else:
             # Disable the SLM.
             self.connection.stop()
 
-    def cycle_to_position(self, targetPosition):
+    def cycleToPosition(self, targetPosition):
         pos = self.getCurrentPosition()
         delta = (targetPosition - pos) + (targetPosition < pos) * len(self.last.params)
         for i in range(delta):
@@ -169,7 +169,7 @@ class BoulderSLM(device.Device):
             events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                            'SLM moving to\nindex %d' % args,
                            (255, 255, 0))
-            self.cycle_to_position(args)
+            self.cycleToPosition(args)
 
     def examineActions(self, table):
         # Extract pattern parameters from the table.
@@ -249,7 +249,7 @@ class BoulderSLM(device.Device):
             self.handler.triggerNow()
             time.sleep(0.01)
         # Ensure that we're at position 0.
-        self.cycle_to_position(0)
+        self.cycleToPosition(0)
         self.position = self.getCurrentPosition()
 
 

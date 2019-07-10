@@ -94,18 +94,19 @@ from itertools import chain
 
 
 class ExecutorDevice(device.Device):
+    _config_types = {
+        'alines' : int,
+        'dlines' : int,
+    }
+
     def __init__(self, name, config={}):
         device.Device.__init__(self, name, config)
-        self.nrDigitalLines = config.get('nrDigitalLines', 16)
-        self.nrAnalogLines = config.get('nrAnalogLines', 4)
-        ## Connection to the Executor device
+        ## Connection to the remote DSP computer
         self.connection = None
         ## Set of all handlers we control.
         self.handlers = set()
 
-    ## Connect to the Executor device.
-    # We assume here that it is a Pyro4 connection to a remote,
-    # but it could be anything so override when necessary
+    ## Connect to the DSP computer.
     @cockpit.util.threads.locked
     def initialize(self):
         self.connection = Pyro4.Proxy(self.uri)
@@ -152,7 +153,8 @@ class ExecutorDevice(device.Device):
              'getAnalog': self.connection.ReadPosition,
              'setAnalog': self.connection.MoveAbsolute,
              },
-            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
+            dlines=self.config.get('dlines', 16),
+            alines=self.config.get('alines', 4))
 
         result.append(h)
 
@@ -187,15 +189,13 @@ class ExecutorDevice(device.Device):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps,
-            repDuration):
+    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
 
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
         actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                 'Waiting for\nExecutor to finish', (255, 255, 0))
-        # TODO: Should this call return a True if success so we can check for errors?
         self.connection.PrepareActions(actions, numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.RunActions)
         events.publish(events.EXPERIMENT_EXECUTION)
@@ -288,8 +288,7 @@ class LegacyDSP(ExecutorDevice):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps,
-            repDuration):
+    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
         # Take time and arguments (i.e. omit handler) from table to generate actions.
         # For the UCSF m6x DSP device, we also need to:
         #  - make the analogue values offsets from the current position;
@@ -392,7 +391,7 @@ def actions_from_table(table, startIndex, stopIndex, repDuration):
     ## Take time and arguments (i.e. omit handler) from table to
     ## generate actions.
     t0 = float(table[startIndex][0])
-    actions = [(float(row[0])-t0,) + tuple(row[2:])
+    actions = [(float(row[0])-t0,) + tuple(row[1:])
                for row in table[startIndex:stopIndex]]
 
     ## If there are repeats, add an extra action to wait until

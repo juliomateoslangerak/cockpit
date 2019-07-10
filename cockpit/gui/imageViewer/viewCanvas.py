@@ -141,20 +141,24 @@ class Image(BaseGL):
         gl_Position = vec4(zoom * (vXY + pan), 1., 1.);
     }
     """
-    # Fragment shader glsl source
+    # Fragment shader glsl source.
     _FS = """
     #version 120
     uniform sampler2D tex;
     uniform float scale;
     uniform float offset;
+    uniform bool show_clip;
 
     void main()
     {
         vec4 lum = clamp(offset + texture2D(tex, gl_TexCoord[0].st) / scale, 0., 1.);
-        gl_FragColor = vec4(0., 0., lum.r == 0, 1.) + vec4(1., lum.r < 1., 1., 1.) * lum.r;
+        if (show_clip) {
+            gl_FragColor = vec4(0., 0., lum.r == 0, 1.) + vec4(1., lum.r < 1., 1., 1.) * lum.r;
+        } else {
+            gl_FragColor = vec4(lum.r, lum.r, lum.r, 1.);
+        }
     }
     """
-
     def __init__(self):
         # Maximum texture edge size
         self._maxTexEdge = glGetInteger(GL_MAX_TEXTURE_SIZE)
@@ -164,6 +168,8 @@ class Image(BaseGL):
         self._update = False
         # Geometry as number of textures along each axis.
         self.shape = (0, 0)
+        ## Should we use colour to indicate range clipping?
+        self.clipHighlight = False
         # Data
         self._data = None
         # Minimum and maximum data value - used for setting greyscale range.
@@ -205,6 +211,9 @@ class Image(BaseGL):
     def setData(self, data):
         self._data = data
         self._update = True
+
+    def toggleClipHighlight(self, event=None):
+        self.clipHighlight = not self.clipHighlight
 
     def _createTextures(self):
         """Convert data to textures.
@@ -263,11 +272,14 @@ class Image(BaseGL):
             self._createTextures()
         shader = self.getShader()
         glUseProgram(shader)
+        # Vertical and horizontal modifiers for non-square images.
+        hlim = self._data.shape[1] / max(self._data.shape)
+        vlim = self._data.shape[0] / max(self._data.shape)
+        # Number of x and y textures.
         nx, ny = self.shape
-        dx = 2 / nx
-        dy = 2 / ny
-        xcorr = ycorr = 0
-        zoomcorr = 1
+        # Quad dimensions for one texture.
+        dx = 2 * hlim / nx
+        dy = 2 * vlim / ny
         if len(self._textures) > 1:
             tx = ty = self._maxTexEdge
             # xy & zoom correction for incompletely-filled textures at upper & right edges.
@@ -283,6 +295,7 @@ class Image(BaseGL):
         glUniform1f(glGetUniformLocation(shader, "scale"), self.scale)
         glUniform1f(glGetUniformLocation(shader, "offset"), self.offset)
         glUniform1f(glGetUniformLocation(shader, "zoom"), zoom)
+        glUniform1i(glGetUniformLocation(shader, "show_clip"), self.clipHighlight)
         # Render
         glEnable(GL_TEXTURE_2D)
         glEnableClientState(GL_VERTEX_ARRAY)
@@ -301,10 +314,13 @@ class Image(BaseGL):
                     ii = self._data.shape[1] / self._maxTexEdge
                 else:
                     ii = i+1
-                glVertexPointerf( [(-1 + i*dx, -1 + j*dy),
-                                   (-1 + ii*dx, -1 + j*dy),
-                                   (-1 + ii*dx, -1 + jj*dy),
-                                   (-1 + i*dx, -1 + jj*dy)] )
+                # Arrays used to create textures have top left at [0,0].
+                # GL co-ords run *bottom* left to top right, so need to invert
+                # vertical co-ords.
+                glVertexPointerf( [(-hlim + i*dx, -vlim + jj*dy),
+                                   (-hlim + ii*dx, -vlim + jj*dy),
+                                   (-hlim + ii*dx, -vlim + j*dy),
+                                   (-hlim + i*dx, -vlim + j*dy)] )
                 glTexCoordPointer(2, GL_FLOAT, 0,
                                   [(0, 0), (ii%1 or 1, 0), (ii%1 or 1, jj%1 or 1), (0, jj%1 or 1)])
                 glBindTexture(GL_TEXTURE_2D, self._textures[j*nx + i])
@@ -399,6 +415,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
         self.image = Image()
         self.histogram = Histogram()
+
+        # Canvas geometry - will be set by InitGL, or setSize.
+        self.w, self.h = None, None
 
         ## We set this to false if there's an error, to prevent OpenGL
         # error spew.
@@ -699,7 +718,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
     def getMenuActions(self):
         return [('Reset view', self.resetView),
                 ('Set histogram parameters', self.onSetHistogram),
-                ('Toggle alignment crosshair', self.toggleCrosshair)]
+                ('Toggle alignment crosshair', self.toggleCrosshair),
+                ('Toggle clip highlighting', self.image.toggleClipHighlight),]
 
 
     ## Let the user specify the blackpoint and whitepoint for image scaling.
@@ -741,11 +761,13 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
     ## Display information on the pixel under the mouse at the given
     # position.
     def updateMouseInfo(self, x, y):
-        if self.imageData is None or self.imageShape is None:
-            # Not ready to get mouse info yet.
+        # Test that all required values have been populated. Use any(...),
+        # because ```if None in [...]:``` will throw an exception when an
+        # element in the list is an array with more than one element.
+        if any(req is None for req in [self.imageData, self.imageShape,
+                                       self.w, self.h]):
             return
-        # First we have to convert from screen coordinates to data
-        # coordinates.
+        # First we have to convert from screen- to data-coordinates.
         coords = numpy.array(self.canvasToIndices(x, y), dtype=np.uint)
         shape = numpy.array(self.imageShape, dtype=np.uint)
         if (coords < shape).all() and (coords >= 0).all():

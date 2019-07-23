@@ -80,8 +80,10 @@ class ZStackExperiment(experiment.Experiment):
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
                 motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevAltitude, zTarget)
-            curTime += motionTime
+                motionTime *= 1000
+                stabilizationTime *= 1000
             table.addAction(curTime, self.zPositioner, zTarget)
+            curTime += motionTime
             curTime += stabilizationTime
             prevAltitude = zTarget
 
@@ -92,13 +94,16 @@ class ZStackExperiment(experiment.Experiment):
                 # are strictly ordered.
                 curTime += decimal.Decimal('1e-10')
             # Hold the Z motion flat during the exposure.
-            table.addAction(curTime, self.zPositioner, zTarget)
+            # table.addAction(curTime, self.zPositioner, zTarget)
 
         # Move back to the start so we're ready for the next rep.
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
                 self.zHeight, 0)
-        curTime += motionTime
+        motionTime *= 1000
+        stabilizationTime *= 1000
         table.addAction(curTime, self.zPositioner, self.zStart)
+        curTime += motionTime
+        curTime += stabilizationTime
         # Hold flat for the stabilization time, and any time needed for
         # the cameras to be ready. Only needed if we're doing multiple
         # reps, so we can proceed immediately to the next one.
@@ -107,9 +112,9 @@ class ZStackExperiment(experiment.Experiment):
             for cameras, lightTimePairs in self.exposureSettings:
                 for camera in cameras:
                     cameraReadyTime = max(cameraReadyTime,
-                            self.getTimeWhenCameraCanExpose(table, camera))
-        table.addAction(max(curTime + stabilizationTime, cameraReadyTime),
-                self.zPositioner, self.zStart)
+                                          self.getTimeWhenCameraCanExpose(table, camera))
+        table.addAction(max(curTime, cameraReadyTime),
+                        self.zPositioner, self.zStart)
 
         return table
 

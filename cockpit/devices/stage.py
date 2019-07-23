@@ -135,7 +135,7 @@ class SimplePiezo(StageDevice):
         # Create handler without movement callbacks.
         handler = stagePositioner.PositionerHandler(
             "%d %s" % (axis, self.name), "%d stage motion" % axis, True,
-            {'getMovementTime': lambda x, start, delta: (Decimal(0.05), Decimal(0.05)) ,
+            {'getMovementTime': lambda x, start, delta: (Decimal(0.02), Decimal(0.02)),
              'cleanupAfterExperiment': None,
              'setSafety': self.setSafety},
             axis, stepSizes, min(4, len(stepSizes)),

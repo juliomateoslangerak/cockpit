@@ -274,7 +274,7 @@ class MicroscopeCamera(MicroscopeBase, camera.CameraDevice):
         This is the time that must pass after stopping one exposure
         before another can be started, in milliseconds."""
         # Camera uses time in s; cockpit uses ms.
-        t = self.proxy.get_cycle_time() * 1000.0
+        t = (self.proxy.get_cycle_time() - self.proxy.get_exposure_time()) * 1000.0
         if isExact:
             result = decimal.Decimal(t)
         else:

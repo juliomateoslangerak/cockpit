@@ -82,8 +82,8 @@ class ZStackExperiment(experiment.Experiment):
                 motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevAltitude, zTarget)
                 motionTime *= 1000
                 stabilizationTime *= 1000
-            table.addAction(curTime, self.zPositioner, zTarget)
             curTime += motionTime
+            table.addAction(curTime, self.zPositioner, zTarget)
             curTime += stabilizationTime
             prevAltitude = zTarget
 
@@ -94,16 +94,15 @@ class ZStackExperiment(experiment.Experiment):
                 # are strictly ordered.
                 curTime += decimal.Decimal('1e-10')
             # Hold the Z motion flat during the exposure.
-            # table.addAction(curTime, self.zPositioner, zTarget)
+            table.addAction(curTime, self.zPositioner, zTarget)
 
         # Move back to the start so we're ready for the next rep.
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
                 self.zHeight, 0)
         motionTime *= 1000
         stabilizationTime *= 1000
-        table.addAction(curTime, self.zPositioner, self.zStart)
         curTime += motionTime
-        curTime += stabilizationTime
+        table.addAction(curTime, self.zPositioner, self.zStart)
         # Hold flat for the stabilization time, and any time needed for
         # the cameras to be ready. Only needed if we're doing multiple
         # reps, so we can proceed immediately to the next one.

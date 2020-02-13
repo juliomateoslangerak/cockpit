@@ -93,23 +93,23 @@ class IntensityProfiler(object):
             nPhases = self._phases
             nz, ny, nx = self._data.shape
             if not self._halfWidth:
-                self.setHalfWidth(min(nx//10, ny//10))
-            halfWidth = int(self.getHalfWidth())
-            peakx, peaky = self.getBeadCentre()
+                self.setHalfWidth(min(nx/10, ny/10))
+            halfWidth = self.getHalfWidth()
+            peakx, peaky = self._beadCentre
             # Use a the fifth of the data around the bead, or to edge of dataset.
             dataSubset = self._data[:,
                               max(0, peaky-halfWidth):min(ny, peaky+halfWidth),
                               max(0, peakx-halfWidth):min(nx, peakx+halfWidth)]
             # Estimate background from image corners.
-            bkg = np.min([np.mean(self._data[:,:nx//10,:ny//10]),
-                          np.mean(self._data[:,:-nx//10,:ny//10]),
-                          np.mean(self._data[:,:-nx//10,:-ny//10]),
-                          np.mean(self._data[:,:nx//10,:-ny//10])])
+            bkg = np.min([np.mean(self._data[:,:nx/10,:ny/10]),
+                          np.mean(self._data[:,:-nx/10,:ny/10]),
+                          np.mean(self._data[:,:-nx/10,:-ny/10]),
+                          np.mean(self._data[:,:nx/10,:-ny/10])])
             phaseArr = np.sum(np.sum(dataSubset - bkg, axis=2), axis=1)
             phaseArr = np.reshape(phaseArr, (-1, nPhases)).astype(np.float32)
             sepArr = np.dot(self.sepmatrix(), phaseArr.transpose())
-            mag = np.zeros((nPhases//2 + 1, nz//nPhases)).astype(np.float32)
-            phi = np.zeros((nPhases//2 + 1, nz//nPhases)).astype(np.float32)
+            mag = np.zeros((nPhases/2 + 1, nz/nPhases)).astype(np.float32)
+            phi = np.zeros((nPhases/2 + 1, nz/nPhases)).astype(np.float32)
             mag[0] = sepArr[0]
 
             for order in range (1,3):
@@ -161,22 +161,22 @@ class IntensityProfiler(object):
             if self._beadCentre is None or not refine:
                 # Search around centre of dataset.
                 middle = self._data[:,
-                                    3*ny // 8 : 5*ny // 8,
-                                    3*nx // 8 : 5*nx // 8]
+                                    3*ny / 8 : 5*ny / 8,
+                                    3*nx / 8 : 5*nx / 8]
                 xOffset = nx/2 - middle.shape[-1]/2
                 yOffset = ny/2 - middle.shape[-2]/2
             else:
                 # Search around current _beadCentre.
                 n = 24
-                x0, y0 = self.getBeadCentre()
+                x0, y0 = self._beadCentre
                 middle = self._data[:,
-                                    y0 - n//2 : y0 + n//2,
-                                    x0 - n//2 : x0 + n//2]
+                                    y0 - n/2 : y0 + n/2,
+                                    x0 - n/2 : x0 + n/2]
                 xOffset = x0 - n/2
                 yOffset = y0 - n/2
             peakPosition = np.argmax(middle)
             (z, y, x) = np.unravel_index(peakPosition, middle.shape)
-            self.setBeadCentre((x + xOffset, y + yOffset))
+            self._beadCentre = (x + xOffset, y + yOffset)
             return self._beadCentre
 
 
@@ -185,8 +185,8 @@ class IntensityProfiler(object):
         if self._projection is None:
             with self.openData():
                 nz = self._data.shape[0]
-                dz = min(100, nz // 3)
-                subset = self._data[nz//2 - dz : nz//2 + dz, :, :].copy()
+                dz = min(100, nz / 3)
+                subset = self._data[nz/2 - dz : nz/2 + dz, :, :].copy()
             # Single step np.mean leaves open refs to self._data, for some reason.
             #self._projection = np.mean(subset, axis=0)
             # Create empty array and use indexed mean to avoid stray refs.
@@ -206,7 +206,7 @@ class IntensityProfiler(object):
         Depends on self._phases."""
         nphases = self._phases
         sepmat = np.zeros((nphases,nphases)).astype(np.float32)
-        norders = (nphases+1)//2
+        norders = (nphases+1)/2
         phi = 2*np.pi / nphases
         for j in range(nphases):
             sepmat[0, j] = 1.0/nphases
@@ -223,7 +223,7 @@ class IntensityProfiler(object):
 
     def setBeadCentre(self, pos):
         """Set the bead centre to a client-provided value."""
-        self._beadCentre = (int(pos[0]), int(pos[1]))
+        self._beadCentre = pos
 
 
     def getHalfWidth(self):
@@ -233,7 +233,7 @@ class IntensityProfiler(object):
 
     def setHalfWidth(self, val):
         """Set the box half width."""
-        self._halfWidth = int(val)
+        self._halfWidth = val
 
 
     def setPhases(self, n):
@@ -367,22 +367,22 @@ class IntensityProfilerFrame(wx.Frame):
         # Raw intensity at one point in XY.
         peakY = self.profiler.results['peak'][1:]
         peakX = np.arange(len(peakY)) * (self.profiler.zDelta or 1)
-        peak = plot.PolyLine(list(zip(peakX, peakY)), colour='red')
+        peak = plot.PolyLine(zip(peakX, peakY), colour='red')
         # Average intensity over a few XY points around the peak.
         # The raw intensity plot can vary greatly when the z-profile is taken
         # just one pixel away; this average plot can help show if a dip in the
         # raw data is a feature of the bead, or due to noise.
         avgY = self.profiler.results['avg'][1:]
         avgX = np.arange(len(avgY)) * (self.profiler.zDelta or 1)
-        avg = plot.PolyLine(list(zip(avgX, avgY)), colour='red', style=wx.DOT)
+        avg = plot.PolyLine(zip(avgX, avgY), colour='red', style=wx.DOT)
         # First order.
         firstY = self.profiler.results['mag'][1,1:]
         firstX = np.arange(len(firstY)) * (self.profiler.zDelta or 1)
-        first = plot.PolyLine(list(zip(firstX, firstY)), colour='green')
+        first = plot.PolyLine(zip(firstX, firstY), colour='green')
         # Second order.
         secondY = self.profiler.results['mag'][2,1:]
         secondX = np.arange(len(secondY)) * (self.profiler.zDelta or 1)
-        second = plot.PolyLine(list(zip(secondX, secondY)), colour='blue')
+        second = plot.PolyLine(zip(secondX, secondY), colour='blue')
         # Add line graphs to a graphics context.
         if self.profiler.zDelta is None:
             xLabel = 'Z slice'
@@ -422,7 +422,7 @@ class IntensityProfilerFrame(wx.Frame):
         proj -= np.min(proj)
         proj /= np.max(proj)
         proj = (proj * 255).astype(np.uint8)
-        # d = range(-10,-3) + range(3, 10)
+        d = range(-10,-3) + range(3, 10)
         img = np.dstack((proj, proj, proj))
         nx, ny = proj.shape
         self.bitmap.Bitmap.SetSize((nx,ny))

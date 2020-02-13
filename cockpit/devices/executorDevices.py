@@ -106,7 +106,9 @@ class ExecutorDevice(device.Device):
         ## Set of all handlers we control.
         self.handlers = set()
 
-    ## Connect to the DSP computer.
+    ## Connect to the Executor device.
+    # We assume here that it is a Pyro4 connection to a remote,
+    # but it could be anything so override when necessary
     @cockpit.util.threads.locked
     def initialize(self):
         self.connection = Pyro4.Proxy(self.uri)
@@ -140,8 +142,8 @@ class ExecutorDevice(device.Device):
         self.connection.receiveClient(self.receiveUri)
 
 
-    ## We control which light sources are active, as well as a set of 
-    # stage motion piezos. 
+    ## We control which light sources are active, as well as a set of
+    # stage motion piezos.
     def getHandlers(self):
         result = []
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
@@ -189,10 +191,12 @@ class ExecutorDevice(device.Device):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+    def executeTable(self, name, table, startIndex, stopIndex, numReps,
+            repDuration):
 
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
+        actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                 'Waiting for\nDSP to finish', (255, 255, 0))
         self.connection.PrepareActions(actions, numReps)
@@ -200,6 +204,10 @@ class ExecutorDevice(device.Device):
         events.publish(events.EXPERIMENT_EXECUTION)
         return
 
+    def _adaptActions(self, actions):
+        """Subclass this method to adapt the actions table to your specific device.
+        Return the modified version of action"""
+        return actions
 
         ## Debugging function: set the digital output for the DSP.
     def setDigital(self, value):
@@ -386,7 +394,7 @@ def actions_from_table(table, startIndex, stopIndex, repDuration):
     ## Take time and arguments (i.e. omit handler) from table to
     ## generate actions.
     t0 = float(table[startIndex][0])
-    actions = [(float(row[0])-t0,) + tuple(row[1:])
+    actions = [(float(row[0])-t0,) + tuple(row[2:])
                for row in table[startIndex:stopIndex]]
 
     ## If there are repeats, add an extra action to wait until

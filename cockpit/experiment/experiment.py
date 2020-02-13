@@ -67,9 +67,6 @@ import threading
 import time
 import wx
 
-from six import iteritems
-
-TIME_FORMAT_STR = '%Y-%m-%d %H:%M:%S'
 
 ## Purely for debugging purposes, a copy of the last Experiment that was
 # executed.
@@ -80,13 +77,13 @@ lastExperiment = None
 # multiple files.
 generatedFilenames = []
 
-_runThread = None
-
 def isRunning():
-    if _runThread is None:
+    """Is an experiment running?
+    """
+    if lastExperiment is None:
         return False
     else:
-        return _runThread.is_alive()
+        return lastExperiment.is_running()
 
 
 ## This class is the root class for generating and running experiments.
@@ -134,6 +131,9 @@ class Experiment:
         self.otherHandlers = list(otherHandlers)
         self.metadata = metadata
         self.savePath = savePath
+
+        self._run_thread = None
+
         # Check for save paths that don't actually have a final filename
         # (i.e. just point to a directory); those aren't valid.
         if not os.path.basename(self.savePath):
@@ -205,7 +205,7 @@ class Experiment:
 
         self.cameraToReadoutTime = {c: c.getTimeBetweenExposures(isExact = True)
                                     for c in self.cameras}
-        for camera, readTime in iteritems(self.cameraToReadoutTime):
+        for camera, readTime in self.cameraToReadoutTime.items():
             if type(readTime) is not decimal.Decimal:
                 raise RuntimeError("Camera %s did not provide an exact (decimal.Decimal) readout time"
                                    % camera.name)
@@ -229,9 +229,9 @@ class Experiment:
         # display appropriate warnings.
         self.lastMinuteActions()
 
-        runThread = threading.Thread(target=self.execute, name="Experiment-execute")
-        global _runThread
-        _runThread = runThread
+        self._run_thread = threading.Thread(target=self.execute,
+                                            name="Experiment-execute")
+        self._run_thread.start()
 
         saveThread = None
         if self.savePath and max(self.cameraToImageCount.values()):
@@ -257,17 +257,19 @@ class Experiment:
             saver = dataSaver.DataSaver(self.cameras, self.numReps,
                                         self.cameraToImageCount,
                                         self.cameraToIgnoredImageIndices,
-                                        runThread, self.savePath,
+                                        self._run_thread, self.savePath,
                                         self.sliceHeight, self.generateTitles(),
                                         cameraToExcitation)
             saver.startCollecting()
-            saveThread = threading.Thread(target=saver.executeAndSave, name="Experiment-execute-save")
+            saveThread = threading.Thread(target=saver.executeAndSave,
+                                          name="Experiment-execute-save")
             saveThread.start()
             generatedFilenames.append(saver.getFilenames())
 
-        runThread.start()
-        # Start up a thread to clean up after the experiment finishes.
-        threading.Thread(target=self.cleanup, args=[runThread, saveThread], name="Experiment-cleanup").start()
+        cleanup_thread = threading.Thread(target=self.cleanup,
+                                          args=[self._run_thread, saveThread],
+                                          name="Experiment-cleanup")
+        cleanup_thread.start()
         return True
 
     ## Create an ActionTable by calling self.generateActions, and give our
@@ -468,7 +470,7 @@ class Experiment:
             if substring:
                 titles.append(substring)
 
-        for deviceType, handlers in iteritems(typeToHandlers):
+        for deviceType, handlers in typeToHandlers.items():
             handlers = sorted(handlers, key = lambda a: a.name)
             entries = []
             for handler in handlers:
@@ -547,16 +549,16 @@ class Experiment:
         # ready to be triggered.
         maxExposureTime = 0
         if lightTimePairs:
-            maxExposureTime = max(lightTimePairs, key=lambda a: a[1])[1]
-
+            maxExposureTime = max(lightTimePairs, key = lambda a: a[1])[1]
         # Check cameras to see if they have minimum exposure times; take them
         # into account for when the exposure can end. Additionally, if they
         # are frame-transfer cameras, then we need to adjust maxExposureTime
         # to ensure that our triggering of the camera does not come too soon
         # (while it is still reading out the previous frame).
+
         for camera in cameras:
             maxExposureTime = max(maxExposureTime,
-                    camera.getMinExposureTime(isExact=True))
+                    camera.getMinExposureTime(isExact = True))
             if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
                 nextReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
                 # Ensure camera is exposing for long enough to finish reading
@@ -570,7 +572,7 @@ class Experiment:
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name is not 'ambient':  # i.e. not ambient light
+            if light is not None and light.name != 'ambient': # i.e. not ambient light
                 # Center the light exposure.
                 timeSlop = maxExposureTime - exposureTime
                 offset = timeSlop / 2
@@ -583,6 +585,7 @@ class Experiment:
         # Trigger the cameras. Keep track of which cameras we *aren't* using
         # here; if they are continuous-exposure cameras, then they may have
         # seen light that they shouldn't have, and need to be invalidated.
+
         usedCams = set()
         for camera in cameras:
             usedCams.add(camera)
@@ -682,6 +685,15 @@ class Experiment:
             if camera in cameras and lightTimePairs:
                 exposureTime = max(exposureTime, max(lightTimePairs, key = lambda a: a[1])[1])
         return exposureTime
+
+    def is_running(self):
+        """Is this experiment running?
+        """
+        if self._run_thread is None:
+            return False
+        else:
+            return self._run_thread.is_alive()
+
 
 ## Return a list of the files generated by the most recent experiment.
 def getLastFilenames():

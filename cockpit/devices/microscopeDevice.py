@@ -23,6 +23,24 @@
 
    Supports devices that implement the interface defined in
    microscope.devices
+
+For a direct connection::
+
+    [device]
+    type: cockpit.devices.a_module.SomeClass
+    uri: PYRO:SomeDevice@host.port
+
+For connection via a controller::
+
+    [device]
+    type: cockpit.devices.a_module.SomeClass
+    controller: some_controller
+    controller.name: remote_device    # optional
+
+    [some_controller]
+    type: cockpit.devices.another_module.AnotherClass
+    uri: PYRO:SomeControler@host.port
+
 """
 import Pyro4
 import wx
@@ -30,14 +48,11 @@ from cockpit import events
 from . import device
 from cockpit import depot
 import cockpit.gui.device
-import cockpit.gui.guiUtils
-import cockpit.gui.toggleButton
 import cockpit.handlers.deviceHandler
 import cockpit.handlers.filterHandler
 import cockpit.handlers.lightPower
 import cockpit.handlers.lightSource
 import cockpit.util.colors
-import cockpit.util.listener
 import cockpit.util.userConfig
 import cockpit.util.threads
 from cockpit.gui.device import SettingsEditor
@@ -46,9 +61,6 @@ import re
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
 
-# Device types.
-(UGENERIC, USWITCHABLE, UDATA, UCAMERA, ULASER, UFILTER) = range(6)
-
 class MicroscopeBase(device.Device):
     """A class to communicate with the UniversalDevice interface."""
     def __init__(self, name, config):
@@ -56,16 +68,85 @@ class MicroscopeBase(device.Device):
         self.handlers = []
         self.panel = None
         # Pyro proxy
-        self._proxy = Pyro4.Proxy(config.get('uri'))
+        self._proxy = None
         self.settings = {}
         self.cached_settings={}
         self.settings_editor = None
         self.defaults = DEFAULTS_NONE
         self.enabled = True
+        # Placeholders for methods deferred to proxy.
+        self.get_all_settings = None
+        self.get_setting = None
+        self.set_setting = None
+        self.describe_setting = None
+        self.describe_settings = None
+
+    def initialize(self):
+        super().initialize()
+        # Connect to the proxy.
+        if 'controller' not in self.config:
+            self._proxy = Pyro4.Proxy(self.uri)
+        else:
+            c = depot.getDeviceWithName(self.config['controller'])
+            c_name = self.config.get('controller.name', None)
+            if c_name is not None:
+                try:
+                    self._proxy = c._proxy.devices[c_name]
+                except:
+                    raise Exception("%s: device not found on controller '%s'." % (self.name, c.name))
+            elif len(c._proxy.devices) == 0:
+                raise Exception("%s: no devices found on controller." % self.name)
+            elif len(c._proxy.devices) == 1:
+                    self._proxy = next(iter(c._proxy.devices.values()))
+            else:
+                 raise Exception("%s: More than one device found on controller, "\
+                                 "so must specify controller.name." % self.name)
         self.get_all_settings = self._proxy.get_all_settings
         self.get_setting = self._proxy.get_setting
         self.set_setting = self._proxy.set_setting
+        self.describe_setting = self._proxy.describe_setting
         self.describe_settings = self._proxy.describe_settings
+
+    def finalizeInitialization(self):
+        super(MicroscopeBase, self).finalizeInitialization()
+        # Set default settings on remote device. These will be over-
+        # ridden by any defaults in userConfig, later.
+        # Currently, settings are an 'advanced' feature --- the remote
+        # interface relies on us to send it valid data, so we have to
+        # convert our strings to the appropriate type here.
+        ss = self.config.get('settings')
+        settings = {}
+        if ss:
+            settings.update(([m.groups() for kv in ss.split('\n')
+                             for m in [re.match(r'(.*)\s*[:=]\s*(.*)', kv)] if m]))
+        for k,v in settings.items():
+            try:
+                desc = self.describe_setting(k)
+            except:
+                print ("%s ingoring unknown setting '%s'." % (self.name, k))
+                continue
+            if desc['type'] == 'str':
+                pass
+            elif desc['type'] == 'int':
+                v = int(v)
+            elif desc['type'] == 'float':
+                v = float(v)
+            elif desc['type'] == 'bool':
+                v = v.lower() in ['1', 'true']
+            elif desc['type'] == 'tuple':
+                print ("%s ignoring tuple setting '%s' - not yet supported." % (self.name, k))
+                continue
+            elif desc['type'] == 'enum':
+                if v.isdigit():
+                    v = int(v)
+                else:
+                    vmap = dict((k,v) for v,k in desc['values'])
+                    v = vmap.get(v, None)
+                if v is None:
+                    print ("%s ignoring enum setting '%s' with unrecognised value." % (self.name, k))
+                    continue
+            self.set_setting(k, v)
+        self._readUserConfig()
 
 
     def getHandlers(self):
@@ -85,10 +166,17 @@ class MicroscopeBase(device.Device):
             # editor needs the describe/get/set settings functions from the
             # proxy, but it also needs to be able to invalidate the cache
             # on the handler. The handler should probably expose the
-            # settings interface. UniversalCamera is starting to look
-            # more and more like an interface translation.
+            # settings interface.
             self.setAnyDefaults()
-            self.settings_editor = SettingsEditor(self, handler=self.handlers[0])
+            import collections.abc
+            if self.handlers and isinstance(self.handlers, collections.abc.Sequence):
+                h = self.handlers[0]
+            elif self.handlers:
+                h = self.handlers
+            else:
+                h = None
+            parent = evt.EventObject.Parent
+            self.settings_editor = SettingsEditor(self, parent, handler=h)
             self.settings_editor.Show()
         self.settings_editor.SetPosition(wx.GetMousePosition())
         self.settings_editor.Raise()
@@ -98,7 +186,7 @@ class MicroscopeBase(device.Device):
         if settings is not None:
             self._proxy.update_settings(settings)
         self.settings.update(self._proxy.get_all_settings())
-        events.publish("%s settings changed" % str(self))
+        events.publish(events.SETTINGS_CHANGED % str(self))
 
 
     def setAnyDefaults(self):
@@ -114,24 +202,15 @@ class MicroscopeBase(device.Device):
             self.defaults = DEFAULTS_SENT
 
 
-    def onUserLogin(self, username):
-        # Apply user defaults on login.
+    def _readUserConfig(self):
         idstr = self.name + '_SETTINGS'
-        defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=False)
-        if defaults is None:
-            defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=True)
+        defaults = cockpit.util.userConfig.getValue(idstr)
         if defaults is None:
             self.defaults = DEFAULTS_NONE
             return
         self.settings.update(defaults)
         self.defaults = DEFAULTS_PENDING
         self.setAnyDefaults()
-
-
-    def performSubscriptions(self):
-        """Perform subscriptions for this camera."""
-        events.subscribe('user login',
-                self.onUserLogin)
 
 
     def prepareForExperiment(self, name, experiment):
@@ -260,9 +339,18 @@ class MicroscopeLaser(MicroscopeBase):
 
 
     def finalizeInitialization(self):
+        # This should probably work the other way around:
+        # after init, the handlers should query for the current state,
+        # rather than the device pushing state info to the handlers as
+        # we currently do here.
+        #
         # Query the remote to update max power on handler.
         ph = self.handlers[0] # powerhandler
         ph.setMaxPower(self._proxy.get_max_power_mw())
+        ph.powerSetPoint = self._proxy.get_set_power_mw()
+        # Set lightHandler to enabled if light source is on.
+        lh = self.handlers[-1]
+        lh.state = int(self._proxy.get_is_on())
 
 
 class MicroscopeFilter(MicroscopeBase):
@@ -320,13 +408,3 @@ class MicroscopeFilter(MicroscopeBase):
 
     def getFilters(self):
         return self.filters
-
-
-# Type maps.
-ENUM_TO_CLASS = {
-    UGENERIC: MicroscopeGenericDevice,
-    USWITCHABLE: MicroscopeSwitchableDevice,
-    UDATA: None,
-    UCAMERA: None,
-    ULASER: None,
-    UFILTER: MicroscopeFilter,}

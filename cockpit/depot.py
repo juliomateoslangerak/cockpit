@@ -54,17 +54,14 @@
 # are initialized and registered from here, and if a part of the UI wants to 
 # interact with a specific kind of device, they can find it through the depot.
 
-import ast
-import importlib
+import configparser
 import os
 
-from six import string_types, iteritems
 from cockpit.handlers.deviceHandler import DeviceHandler
 
 ## Different eligible device handler types. These correspond 1-to-1 to
 # subclasses of the DeviceHandler class.
 CAMERA = "camera"
-CONFIGURATOR = "configurator"
 DRAWER = "drawer"
 EXECUTOR = "experiment executor"
 GENERIC_DEVICE = "generic device"
@@ -78,20 +75,11 @@ POWER_CONTROL = "power control"
 SERVER = "server"
 STAGE_POSITIONER = "stage positioner"
 
-_DEVICE_DIR_FPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'devices'
-)
-
 SKIP_CONFIG = ['objectives', 'server']
 
 class DeviceDepot:
-    ## Initialize the Depot. Find all the other modules in the "devices" 
-    # directory and initialize them.
+    ## Initialize the Depot.
     def __init__(self):
-        self._configurator = None
-        ## Maps device classes to their module
-        self.classToModule = {}
         ## Maps config section names to device
         self.nameToDevice = {}
         ## Maps devices to their handlers.
@@ -109,51 +97,21 @@ class DeviceDepot:
         ## Maps group name to handlers.
         self.groupNameToHandlers = {}
 
-    ## HACK: load any Configurator device that may be stored in a
-    # "configurator.py" module. This is needed because config must be loaded
-    # before any other Device, so that logfiles can be stored properly.
-    def loadConfig(self):
-        if self._configurator:
-            return
-        try:
-            from cockpit.devices.configurator import Configurator
-        except ModuleNotFoundError:
-            pass
-        else:
-            self._configurator = Configurator()
-            self.initDevice(self._configurator)
-
 
     ## Call the initialize() method for each registered device, then get
     # the device's Handler instances and insert them into our various
-    # containers. Yield the names of the modules holding the Devices as we go.
+    # containers.  Yield the device names as we go.
     def initialize(self, config):
-        import inspect
+        ## TODO: we will want to remove this print statements when
+        ## we're done refactoring the location of the log and config
+        ## files (issue #320)
         print("Cockpit is running from %s" % os.path.split(os.path.abspath(__file__))[0])
-        print("depot is using config from %s" %
-          os.path.split(os.path.abspath(inspect.getfile(config.__class__)))[0])
-        # Parse device files to map classes to their module.
-        for modfile in os.listdir(_DEVICE_DIR_FPATH):
-            if not modfile.endswith('.py'):
-                continue
-            modname = modfile[0:-3] # Strip .py extension
-            with open(os.path.join(_DEVICE_DIR_FPATH, modfile), 'r') as f:
-                # Extract class definitions from the module
-                try:
-                    classes = [c for c in ast.parse(f.read()).body
-                                    if isinstance(c, ast.ClassDef)]
-                except Exception as e:
-                    raise Exception("Error parsing device module %s.\n%s" % (modname, e))
-
-            for c in classes:
-                if c.name in self.classToModule.keys():
-                    raise Exception('Duplicate class definition for %s in %s and %s' %
-                                    (c.name, self.classToModule[c.name], modname))
-                else:
-                    self.classToModule[c.name] = modname
 
         # Create our server
         from cockpit.devices.server import CockpitServer
+
+        ## TODO remove special case by having fallback empty section?
+        ## Or fallback to the defaults in the class?
         if config.has_section('server'):
             sconf = dict(config.items('server'))
         else:
@@ -165,20 +123,17 @@ class DeviceDepot:
         for name in config.sections():
             if name in SKIP_CONFIG:
                 continue
-            classname = config.get(name, 'type')
-            modname = self.classToModule.get(classname, None)
-            if not modname:
-                raise Exception("No module found for device with name %s." % name)
             try:
-                mod = importlib.import_module('cockpit.devices.' + modname)
+                cls = config.gettype(name, 'type')
+            except configparser.NoOptionError:
+                raise RuntimeError("Missing 'type' key for device '%s'" % name)
+
+            device_config = dict(config.items(name))
+            try:
+                device = cls(name, device_config)
             except Exception as e:
-                print("Importing %s failed with %s" % (modname, e))
-            else:
-                cls = getattr(mod, classname)
-                try:
-                    self.nameToDevice[name] = cls(name, dict(config.items(name)))
-                except Exception as e:
-                    raise Exception("In device %s" % name, e)
+                raise RuntimeError("Failed to construct device '%s'" % name, e)
+            self.nameToDevice[name] = device
 
         # Initialize devices in order of dependence
         # Convert to list - python3 dict_values has no pop method.
@@ -188,20 +143,20 @@ class DeviceDepot:
             # TODO - catch circular dependencies.
             d = devices.pop(0)
             depends = []
-            for dependency in ['triggersource', 'analogsource']:
+            for dependency in ['triggersource', 'analogsource', 'controller']:
                 other = d.config.get(dependency)
                 if other:
                     if other not in self.nameToDevice:
-                        raise Exception("Device %s depends on non-existent device %s." %
-                                        (d, other))
+                        raise Exception("Device %s depends on non-existent device '%s'." %
+                                        (d.name, other))
                     depends.append(other)
 
             if any([other not in done for other in depends]):
                 devices.append(d)
                 continue
+            yield d.name
             self.initDevice(d)
             done.append(d.name)
-            yield d.name
 
         # Add dummy devices as required.
         dummies = []
@@ -316,7 +271,7 @@ class DeviceDepot:
                 axisToMovers[mover.axis] = []
             axisToMovers[mover.axis].append(mover)
 
-        for axis, handlers in iteritems(axisToMovers):
+        for axis, handlers in axisToMovers.items():
             handlers.sort(reverse = True,
                     key = lambda a: a.getHardLimits()[1] - a.getHardLimits()[0]
             )
@@ -324,22 +279,14 @@ class DeviceDepot:
 
 
 
-## Global singleton
-deviceDepot = DeviceDepot()
-
-
-## Simple passthrough
-def loadConfig():
-    deviceDepot.loadConfig()
-
-
-## Simple passthrough.
-def getNumModules():
-    return deviceDepot.getNumModules()
+## XXX: Global singleton
+deviceDepot = None
 
 
 ## Simple passthrough.
 def initialize(config):
+    global deviceDepot
+    deviceDepot = DeviceDepot()
     for device in deviceDepot.initialize(config):
         yield device
 
@@ -408,7 +355,7 @@ def getHandler(nameOrDevice, handlerType):
     if isinstance(nameOrDevice, DeviceHandler):
         if nameOrDevice.deviceType == handlerType:
             return nameOrDevice
-    if isinstance(nameOrDevice, string_types):
+    if isinstance(nameOrDevice, str):
         dev = getDeviceWithName(nameOrDevice)
     else:
         dev = nameOrDevice
@@ -422,29 +369,3 @@ def getHandler(nameOrDevice, handlerType):
         return handlers.pop()
     else:
         return list(handlers)
-
-
-## Sort handlers in order of abstraction
-def getSortedHandlers():
-    h = getAllHandlers()
-
-## Get the Device instance associated with the given module.
-#def getDevice(module):
-#    return deviceDepot.moduleToDevice[module]
-
-
-## Debugging function: reload the specified module to pick up any changes to 
-# the code. This requires us to cleanly shut down the associated Device and 
-# then re-create it without disturbing the associated Handlers (which may be
-# referred to in any number of places in the rest of the code). Most Devices
-# won't support this (reflected by the base Device class's shutdown() function
-# raising an exception). 
-# def reloadModule(module):
-#     device = deviceDepot.moduleToDevice[module]
-#     handlers = deviceDepot.deviceToHandlers[device]
-#     device.shutdown()
-#     reload(module)
-#     newDevice = module.__dict__[module.CLASS_NAME]()
-#     newDevice.initFromOldDevice(device, handlers)
-
-

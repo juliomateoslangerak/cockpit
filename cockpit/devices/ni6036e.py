@@ -78,9 +78,6 @@ class NI6036e(device.Device):
         self.makeOutputWindow = makeOutputWindow
         self.buttonName='ni6036e'
 
-        # We want to delay initialization until after the power buttons system
-        # is active.
-        self.priority = 50
         ## Pyro4.Proxy for the "NI" portion of the program (mirror flips and
         # a few utility functions).
         self.niConnection = None
@@ -338,7 +335,7 @@ class niOutputWindow(wx.Frame):
     ## One of our buttons was clicked; update the DSP's output.
     def toggle(self):
         output = 0
-        for button, line in iteritems(self.buttonToLine):
+        for button, line in self.buttonToLine.items():
             if button.getIsActive():
                 self.nicard.niConnection.flipDownUp(line, 1)
             else:

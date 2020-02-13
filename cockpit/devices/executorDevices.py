@@ -78,7 +78,6 @@
 #  uri: PYRO:pyroDSP@somehost:8001
 
 
-
 import Pyro4
 import time
 
@@ -92,22 +91,22 @@ import cockpit.handlers.imager
 import cockpit.util.threads
 import numpy as np
 from itertools import chain
-from functools import reduce
 
 
 class ExecutorDevice(device.Device):
+    _config_types = {
+        'alines' : int,
+        'dlines' : int,
+    }
+
     def __init__(self, name, config={}):
         device.Device.__init__(self, name, config)
-        self.nrDigitalLines = config.get('nrDigitalLines', 16)
-        self.nrAnalogLines = config.get('nrAnalogLines', 4)
-        ## Connection to the Executor device
+        ## Connection to the remote DSP computer
         self.connection = None
         ## Set of all handlers we control.
         self.handlers = set()
 
-    ## Connect to the Executor device.
-    # We assume here that it is a Pyro4 connection to a remote,
-    # but it could be anything so override when necessary
+    ## Connect to the DSP computer.
     @cockpit.util.threads.locked
     def initialize(self):
         self.connection = Pyro4.Proxy(self.uri)
@@ -128,8 +127,8 @@ class ExecutorDevice(device.Device):
     ## User clicked the abort button.
     def onAbort(self):
         self.connection.Abort()
-        # Various threads could be waiting for a 'Executor done' event, preventing
-        # new Executor actions from starting after an abort.
+        # Various threads could be waiting for a 'DSP done' event, preventing
+        # new DSP actions from starting after an abort.
         events.publish(events.EXECUTOR_DONE % self.name)
 
 
@@ -141,8 +140,8 @@ class ExecutorDevice(device.Device):
         self.connection.receiveClient(self.receiveUri)
 
 
-    ## We control which light sources are active, as well as a set of
-    # stage motion piezos.
+    ## We control which light sources are active, as well as a set of 
+    # stage motion piezos. 
     def getHandlers(self):
         result = []
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
@@ -154,7 +153,8 @@ class ExecutorDevice(device.Device):
              'getAnalog': self.connection.ReadPosition,
              'setAnalog': self.connection.MoveAbsolute,
              },
-            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
+            dlines=self.config.get('dlines', 16),
+            alines=self.config.get('alines', 4))
 
         result.append(h)
 
@@ -189,39 +189,21 @@ class ExecutorDevice(device.Device):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps,
-            repDuration):
-        # Take time and arguments (i.e. omit handler) from table to generate actions.
-        t0 = float(table[startIndex][0])
-        actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
-        # If there are repeats, add an extra action to wait until repDuration expired.
-        # TODO: This should not be generic. An executor can use this extra time to do something else:
-        # eg: move to a new position in a multi-site experiment, perform autofocus
-        # In the case of the cRIO it is the FPGA timing repetitions.
-        if repDuration is not None:
-            repDuration = float(repDuration)
-            if actions[-1][0] < repDuration:
-                # Repeat the last event at t0 + repDuration
-                actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
-                # TODO: Else, notify somehow that there was not enough time to do the repetitions.
-        actions = self._adaptActions(actions)
+    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+
+        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                'Waiting for\nExecutor to finish', (255, 255, 0))
-        # TODO: Should this call return a True if success so we can check for errors?
+                'Waiting for\nDSP to finish', (255, 255, 0))
         self.connection.PrepareActions(actions, numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.RunActions)
         events.publish(events.EXPERIMENT_EXECUTION)
         return
 
-    def _adaptActions(self, actions):
-        """Subclass this method to adapt the actions table to your specific device.
-        Return the modified version of action"""
-        return actions
 
         ## Debugging function: set the digital output for the DSP.
     def setDigital(self, value):
         self.connection.WriteDigital(value)
-
 
 
 class LegacyDSP(ExecutorDevice):
@@ -301,8 +283,7 @@ class LegacyDSP(ExecutorDevice):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps,
-            repDuration):
+    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
         # Take time and arguments (i.e. omit handler) from table to generate actions.
         # For the UCSF m6x DSP device, we also need to:
         #  - make the analogue values offsets from the current position;
@@ -311,8 +292,8 @@ class LegacyDSP(ExecutorDevice):
         #  - separate analogue and digital events into different lists;
         #  - generate a structure that describes the profile.
 
-        # Start time
-        t0 = float(table[startIndex][0])
+        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+
         # Profiles
         analogs = [ [], [], [], [] ] # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = [] # A list of tuples (ticks, digital state)
@@ -321,20 +302,13 @@ class LegacyDSP(ExecutorDevice):
         # resolution
         tLastA = None
 
-        actions = [(float(row[0])-t0,) + tuple(row[2:]) for row in table[startIndex:stopIndex]]
-        # If there are repeats, add an extra action to wait until repDuration expired.
-        if repDuration is not None:
-            repDuration = float(repDuration)
-            if actions[-1][0] < repDuration:
-                # Repeat the last event at t0 + repDuration
-                actions.append( (t0+repDuration,) + tuple(actions[-1][1:]) )
 
         # The DSP executes an analogue movement profile, which is defined using
         # offsets relative to a baseline at the time the profile was initialized.
         # These offsets are encoded as unsigned integers, so at profile
         # intialization, each analogue channel must be at or below the lowest
         # value it needs to reach in the profile.
-        lowestAnalogs = [min(channel) for channel in zip(*zip(*zip(*actions)[1])[1])]
+        lowestAnalogs = list(np.amin([x[1][1] for x in actions], axis=0))
         for line, lowest in enumerate(lowestAnalogs):
             if lowest < self._lastAnalogs[line]:
                 self._lastAnalogs[line] = lowest
@@ -379,7 +353,7 @@ class LegacyDSP(ExecutorDevice):
 
         # Update records of last positions.
         self._lastDigital = digitals[-1][1]
-        self._lastAnalogs = map(lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs)
+        self._lastAnalogs = list(map(lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs))
 
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
                        'Waiting for\nDSP to finish', (255, 255, 0))
@@ -390,8 +364,8 @@ class LegacyDSP(ExecutorDevice):
 
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(list(zip(*digitals))[0],
-                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
+        maxticks = max(chain([d[0] for d in digitals],
+                             [a[0] for a in chain.from_iterable(analogs)]))
         description = {}
         description['count'] = maxticks
         description['clock'] = 1000. / float(self.tickrate)
@@ -406,3 +380,20 @@ class LegacyDSP(ExecutorDevice):
         self.connection.InitProfile(numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.trigCollect)
         events.publish(events.EXPERIMENT_EXECUTION)
+
+
+def actions_from_table(table, startIndex, stopIndex, repDuration):
+    ## Take time and arguments (i.e. omit handler) from table to
+    ## generate actions.
+    t0 = float(table[startIndex][0])
+    actions = [(float(row[0])-t0,) + tuple(row[1:])
+               for row in table[startIndex:stopIndex]]
+
+    ## If there are repeats, add an extra action to wait until
+    ## repDuration expired.
+    if repDuration is not None:
+        repDuration = float(repDuration)
+        if actions[-1][0] < repDuration:
+            ## Repeat the last event at t0 + repDuration
+            actions.append((t0+repDuration,) + tuple(actions[-1][1:]))
+    return actions

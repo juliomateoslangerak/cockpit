@@ -18,20 +18,20 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """ A simple device status script for cockpit.
 
 This script examines cockpit config. files, then reports
 the host and port status for each remote device.
 """
+
 import os
 import platform
 import re
 import socket
-# Import device definitions from the config module.
-from cockpit.config import config
+import sys
 
-from six import iteritems
+import cockpit.config
+
 
 # Strings used for IP address and port in config. files.
 IPSTR = 'ipaddress' # ConfigParser makes keys lower case
@@ -75,6 +75,8 @@ devicesUp = {}
 
 skipped = []
 
+config = cockpit.config.CockpitConfig(sys.argv).depot_config
+
 # Iterate over config sections.
 for s in config.sections():
     # Skip special devices.
@@ -104,7 +106,7 @@ for s in config.sections():
 
 
 # Iterate over the mappings to query host and port status.
-for device, host in iteritems(deviceToHost):
+for device, host in deviceToHost.items():
     port = deviceToPort[device]
     if host not in hostsUp.keys():
         hostsUp[host] = 'up' if ping(host) else 'down'

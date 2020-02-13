@@ -63,7 +63,6 @@ import numpy
 import scipy.ndimage
 import wx
 
-from six import iteritems
 
 ## Maps dimensional axes to their labels.
 DIMENSION_LABELS = ['Wavelength', 'Time', 'Z', 'Y', 'X']
@@ -221,7 +220,7 @@ class DataDoc:
             dialog.Destroy()
             # Slice through data per our axes parameter.
             slice = [Ellipsis] * 4
-            for axis, position in iteritems(axes):
+            for axis, position in axes.items():
                 if axis != 1:
                     slice[axis - 1] = position
                     return data[slice]
@@ -688,15 +687,14 @@ def writeMrcHeader(header, filehandle):
 # dimensions it will be augmented with dimensions of size 1 starting from
 # the left (e.g. a 512x512 array becomes a 1x1x1x512x512 array).
 def writeDataAsMrc(data, filename, XYSize = None, ZSize = None, wavelengths = []):
-    while len(data.shape) < 5:
-        # Fill in missing dimensions in the data.
-        data.shape = [1] + list(data.shape)
-    header = makeHeaderFor(data, XYSize = XYSize, ZSize = ZSize,
+    shape = (5 - len(data.shape)) * [1] + list(data.shape)
+    data_out = data.reshape(shape)
+    header = makeHeaderFor(data_out, XYSize = XYSize, ZSize = ZSize,
             wavelengths = wavelengths)
     handle = open(filename, 'wb')
     writeMrcHeader(header, handle)
     handle.seek(1024) # Seek to end of header
-    handle.write(data)
+    handle.write(data_out)
     handle.close()
 
 

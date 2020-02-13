@@ -73,7 +73,7 @@ import cockpit.gui.guiUtils
 import cockpit.gui.keyboard
 from cockpit.gui.primitive import Primitive
 import cockpit.interfaces.stageMover
-import cockpit.util.user
+import cockpit.util.files
 import cockpit.util.threads
 import cockpit.util.userConfig
 import math
@@ -356,7 +356,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.camera = None
 
         ## Mosaic tile overlap
-        self.overlap = 0.0
+        self.overlap = cockpit.util.userConfig.getValue('mosaicTileOverlap',
+                                                        default = 0.0)
 
         ## Size of the box to draw at the center of the crosshairs.
         self.crosshairBoxSize = 0
@@ -382,9 +383,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.scalefont.setFaceSize(18)
 
         #default scale bar size is Zero
-        self.scalebar = 0
+        self.scalebar = cockpit.util.userConfig.getValue('mosaicScaleBar',
+                                                         default= 0)
         #Default to drawing primitives
-        self.drawPrimitives = True
+        self.drawPrimitives = cockpit.util.userConfig.getValue('mosaicDrawPrimitives',
+                                                               default = True)
         ## Maps button names to wx.Button instances.
         self.nameToButton = {}
 
@@ -478,7 +481,6 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         events.subscribe('soft safety limit', self.onAxisRefresh)
         events.subscribe('objective change', self.onObjectiveChange)
         events.subscribe('user abort', self.onAbort)
-        events.subscribe('user login', self.onLogin)
 
         self.Bind(wx.EVT_SIZE, self.onSize)
         self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
@@ -523,24 +525,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # Subtract off the pixels dedicated to the sidebar.
         self.canvas.SetClientSize((size[0] - SIDEBAR_WIDTH, size[1]))
 
-
-    ## User logged in, so we may well have changed size; adjust our zoom to
-    # suit.
-    def onLogin(self, *args):
-        self.centerCanvas()
-        self.scalebar=cockpit.util.userConfig.getValue('mosaicScaleBar', isGlobal = False,
-                                               default= 0)
-        self.overlap=cockpit.util.userConfig.getValue('mosaicTileOverlap', isGlobal=False,
-                                               default = 0)
-        self.drawPrimitives=cockpit.util.userConfig.getValue('mosaicDrawPrimitives',
-                                            isGlobal = False, default = True)
-
     ## Get updated about new stage position info or step size.
     # This requires redrawing the display, if the axis is the X or Y axes.
     def onAxisRefresh(self, axis, *args):
         if axis in [0, 1]:
             # Only care about the X and Y axes.
-            wx.CallAfter(self.Refresh)
+            wx.CallAfter(self.canvas.Refresh)
 
 
     ## User changed the objective in use; resize our crosshair box to suit.
@@ -721,7 +711,6 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 if not self.shouldRestart and target is not None:
                     self.goTo(target, True)
 
-
             if self.shouldRestart:
                 # Start a new spiral about current stage position.
                 stepper = self.mosaicStepper()
@@ -802,7 +791,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     self.overlap,
                     atMouse=True)
         self.overlap = float(value)
-        cockpit.util.userConfig.setValue('mosaicTileOverlap', self.overlap, isGlobal=False)
+        cockpit.util.userConfig.setValue('mosaicTileOverlap', self.overlap)
 
 
     ## Transfer an image from the active camera (or first camera) to the
@@ -836,7 +825,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         else:
             self.scalebar = 1
         #store current state for future.
-        cockpit.util.userConfig.setValue('mosaicScaleBar',self.scalebar, isGlobal=False)
+        cockpit.util.userConfig.setValue('mosaicScaleBar',self.scalebar)
         self.Refresh()
 
     def toggleDrawPrimitives(self):
@@ -846,8 +835,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         else:
             self.drawPrimitives = True
         #store current state for future.
-        cockpit.util.userConfig.setValue('mosaicDrawPrimitives',self.drawPrimitives,
-                                 isGlobal=False)
+        cockpit.util.userConfig.setValue('mosaicDrawPrimitives',
+                                         self.drawPrimitives)
         self.Refresh()
     ## Save the current stage position as a new site with the specified
     # color (or our currently-selected color if none is provided).
@@ -1020,7 +1009,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def saveSitesToFile(self, event = None):
         dialog = wx.FileDialog(self, style = wx.FD_SAVE, wildcard = '*.txt',
                 message = "Please select where to save the file.",
-                defaultDir = cockpit.util.user.getUserSaveDir())
+                defaultDir = cockpit.util.files.getUserSaveDir())
         if dialog.ShowModal() != wx.ID_OK:
             return
         cockpit.interfaces.stageMover.writeSitesToFile(dialog.GetPath())
@@ -1030,7 +1019,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def loadSavedSites(self, event = None):
         dialog = wx.FileDialog(self, style = wx.FD_OPEN, wildcard = '*.txt',
                 message = "Please select the file to load.",
-                defaultDir = cockpit.util.user.getUserSaveDir())
+                defaultDir = cockpit.util.files.getUserSaveDir())
         if dialog.ShowModal() != wx.ID_OK:
             return
         cockpit.interfaces.stageMover.loadSites(dialog.GetPath())
@@ -1083,10 +1072,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     # \param text String template to use for entries in the menu.
     # \param action Function to call with the selected camera as a parameter.
     def showCameraMenu(self, text, action):
-        cameras = []
-        for camera in depot.getHandlersOfType(depot.CAMERA):
-            if camera.getIsEnabled():
-                cameras.append(camera)
+        cameras = depot.getActiveCameras()
         if len(cameras) == 1:
             action(cameras[0])
         else:
@@ -1154,7 +1140,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def saveMosaic(self, event = None):
         dialog = wx.FileDialog(self, style = wx.FD_SAVE, wildcard = '*.txt',
                 message = "Please select where to save the file.",
-                defaultDir = cockpit.util.user.getUserSaveDir())
+                defaultDir = cockpit.util.files.getUserSaveDir())
         if dialog.ShowModal() != wx.ID_OK:
             return
         self.canvas.saveTiles(dialog.GetPath())
@@ -1327,10 +1313,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     ## Handle the user clicking the abort button.
     def onAbort(self, *args):
-        if self.amGeneratingMosaic:
-            self.shouldContinue.clear()
-        events.publish('mosaic stop')
-        self.nameToButton['Run mosaic'].SetLabel('Run mosaic')
+        self.shouldContinue.clear()
         # Stop deleting tiles, while we're at it.
         self.onDeleteTiles(shouldForceStop = True)
 

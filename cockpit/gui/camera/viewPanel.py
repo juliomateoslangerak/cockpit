@@ -50,12 +50,7 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-
-import numpy
-import time
-import traceback
 import wx
-
 from cockpit import depot
 from cockpit import events
 import cockpit.util.threads
@@ -78,6 +73,8 @@ class ViewPanel(wx.Panel):
 
         ## Handle of the current camera we're controlling.
         self.curCamera = None
+        ## Position of the currently displayed image - only updated on dbl-click.
+        self.imagePos = None
 
         columnSizer = wx.BoxSizer(wx.VERTICAL)
         ## Clickable text box showing the name of the currently-selected
@@ -102,32 +99,26 @@ class ViewPanel(wx.Panel):
         self.canvas = None
 
         self.disable()
-        # We need to respond to this event after the cameras do, since we
-        # need them to have gotten their new names.
-        events.subscribe("filter change", self.onFilterChange, priority = 1000)
 
+        events.subscribe("filter change", self.onFilterChange)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.onMouse)
 
-    ## User interacted with our current image; on double-clicks we center
-    # the display on the mouse.
+    ## User interacted with our current image.
+    # On double-click, we move the stage to centre the feature under the mouse.
     def onMouse(self, event):
         if event.LeftDClick():
+            if self.imagePos is None:
+                self.imagePos = cockpit.interfaces.stageMover.getPosition()
             x, y = event.GetPosition()
-            sizeX, sizeY = self.canvas.GetSize()
-            sizeY -= cockpit.gui.imageViewer.viewCanvas.HISTOGRAM_HEIGHT
             pixelSize = depot.getHandlersOfType(depot.OBJECTIVE)[0].getPixelSize()
-            dx = ((sizeX / 2) - x) * pixelSize
-            dy = ((sizeY / 2) - y) * pixelSize
-            #Need to see if the current movers have xy capbility
-            positions = cockpit.interfaces.stageMover.getAllPositions()
-            handler = cockpit.interfaces.stageMover.mover.curHandlerIndex
-            if ((positions[handler][0] == None) or ( positions[handler][1] == None)):
-                #We dont have an x or y axis so use the main handler
-                originalMover= cockpit.interfaces.stageMover.mover.curHandlerIndex
-                cockpit.interfaces.stageMover.mover.curHandlerIndex = 0
-                cockpit.interfaces.stageMover.moveRelative((dx, dy, 0))
-                cockpit.interfaces.stageMover.mover.curHandlerIndex = originalMover
-            else:
-               cockpit.interfaces.stageMover.moveRelative((dx, dy, 0))
+            x0, y0 = self.canvas.glToIndices(0, 0)
+            dy, dx = self.canvas.canvasToIndices(x, y)
+            dx -= x0
+            dy -= y0
+            dx *= pixelSize
+            dy *= pixelSize
+            target = (self.imagePos[0]-dx, self.imagePos[1]+dy)
+            cockpit.interfaces.stageMover.goToXY(target)
         else:
             event.Skip()
 
@@ -137,17 +128,13 @@ class ViewPanel(wx.Panel):
     # We also let them set the camera's readout size here, if a camera is
     # active.
     def onSelector(self, event):
+        ## TODO: fix focus issue so that key bindings work immediately after camera enable.
+        ## Currently, have to mouse-over the bitmap area, or click in another window.
         menu = wx.Menu()
         if self.curCamera is not None:
             item = menu.Append(-1, "Disable %s" % self.curCamera.descriptiveName)
-            self.Bind(wx.EVT_MENU, lambda event: self.curCamera.setEnabled(False), item)
+            self.Bind(wx.EVT_MENU, lambda event: self.curCamera.toggleState(), item)
             menu.InsertSeparator(1)
-            items = self.canvas.getMenuActions()
-            for label, action in items:
-                item = menu.Append(-1, label)
-                self.Bind(wx.EVT_MENU,
-                        lambda event, action = action: action(), item)
-            menu.InsertSeparator(len(items) + 2)
             for size in self.curCamera.getImageSizes():
                 item = menu.Append(-1, "Set image size to %s" % str(size))
                 self.Bind(wx.EVT_MENU,
@@ -161,7 +148,7 @@ class ViewPanel(wx.Panel):
                 if not camera.getIsEnabled():
                     item = menu.Append(-1, "Enable %s" % camera.descriptiveName)
                     self.Bind(wx.EVT_MENU, 
-                            lambda event, cam=camera: cam.setEnabled(True), item)
+                            lambda event, cam=camera: cam.toggleState(), item)
         cockpit.gui.guiUtils.placeMenuAtMouse(self, menu)
 
 
@@ -191,8 +178,7 @@ class ViewPanel(wx.Panel):
         # NB the 512 here is the largest texture size our graphics card can
         # gracefully handle.
         self.canvas = cockpit.gui.imageViewer.viewCanvas.ViewCanvas(self.canvasPanel,
-                512, size = (VIEW_WIDTH, VIEW_HEIGHT),
-                mouseHandler = self.onMouse)
+        size = (VIEW_WIDTH, VIEW_HEIGHT))
         self.canvas.SetSize((VIEW_WIDTH, VIEW_HEIGHT))
         self.canvas.resetView()
 
@@ -211,6 +197,7 @@ class ViewPanel(wx.Panel):
     ## Receive a new image and send it to our canvas.
     def onImage(self, data, *args):
         self.canvas.setImage(data)
+        self.imagePos = None
 
 
     ## Return True if we currently display a camera.
@@ -231,7 +218,6 @@ class ViewPanel(wx.Panel):
     ## Get the current pixel data for the view.
     def getPixelData(self):
         return self.canvas.imageData
-
 
     ## Debugging: convert to string.
     def __repr__(self):

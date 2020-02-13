@@ -65,8 +65,7 @@ import cockpit.util.threads
 import cockpit.util.connection
 from . import executorDevices
 
-from six import iteritems
-
+COCKPIT_AXES = {'x': 0, 'y': 1, 'z': 2, 'SI angle': -1}
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4
 FPGA_HEARTBEAT_RATE = .1  # At which rate is the FPGA sending update status signals
@@ -214,8 +213,8 @@ class NIcRIO(executorDevices.ExecutorDevice):
         analogsArr = [np.array(a, dtype=np.uint32).reshape(-1, 2) for a in analogs]
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = reduce(max, chain(list(zip(*digitals))[0],
-                                     *[(list(zip(*a)) or [[None]])[0] for a in analogs]))
+        maxticks = max(chain([d[0] for d in digitals],
+                             [a[0] for a in chain.from_iterable(analogs)]))
 
         description = {'count': maxticks,
                        'clock': 1000. / float(self.tickrate),
@@ -231,7 +230,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
     def runSequence(self, sequence):
         """Runs a sequence of times-digital pairs"""
         # Convert the times into ticks
-        sequence = [(t * self.tickrate, d) for t, d in sequence]
+        sequence = [(int(t * self.tickrate), d) for t, d in sequence]
         self.connection.runSequence(sequence)
 
     @cockpit.util.threads.locked
@@ -244,13 +243,13 @@ class NIcRIO(executorDevices.ExecutorDevice):
         cameraMask = 0
         lightTimePairs = list()
         maxTime = 0
-        for handler, line in iteritems(self.handlerToDigitalLine):
+        for handler, line in self.handlerToDigitalLine.items():
             if handler.name in self.activeLights:
                 maxTime = max(maxTime, handler.getExposureTime())
                 exposureTime = handler.getExposureTime()
                 lightTimePairs.append((line, exposureTime))
                 maxTime = max(maxTime, exposureTime)
-        for name, line in iteritems(self.nameToDigitalLine):
+        for name, line in self.nameToDigitalLine.items():
             if name in self.activeCameras:
                 cameraMask += line
                 handler = depot.getHandlerWithName(name)

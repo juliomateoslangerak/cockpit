@@ -80,6 +80,9 @@ class LoggingWindow(wx.Frame):
         ## Cached text, awaiting addition to the logs. If we just log everything
         # as it comes in, then we get tons of newlines we don't want.
         self.textCache = ''
+        # Need a lock on the cache to prevent segfaults due to concurrent access.
+        import threading
+        self.cacheLock = threading.Lock()
 
         # HACK: enforce that writing to these controls only happens in the
         # main thread.
@@ -91,7 +94,8 @@ class LoggingWindow(wx.Frame):
 
         self.auiManager.AddPane(self.stdErr, wx.aui.AuiPaneInfo().Caption("Standard error").CloseButton(False).Top().MinSize((-1, 194)))
         self.auiManager.AddPane(self.stdOut, wx.aui.AuiPaneInfo().Caption("Standard out").CloseButton(False).Center().MinSize((-1, 194)))
-
+        self.stdOut.write('Device configuration read from: %s\n'
+                          % wx.GetApp().Config.depot_config.files)
         self.auiManager.Update()
 
         self.SetSize((600, 460))
@@ -99,35 +103,33 @@ class LoggingWindow(wx.Frame):
 
     ## Send text to one of our output boxes, and also log that text.
     def write(self, target, *args):
-        #wx.CallAfter(target.AppendText, *args)
-        target.AppendText(*args)
-        self.textCache += ' '.join(map(str, args))
-        if '\n' in self.textCache:
-            # Ended a line; send the text to the logs, minus any trailing
-            # whitespace (since the logs add their own trailing newline.
-            # We strip any unicode with filter to prevent a cascade of
-            # ---Logging Error--- messages.
-            if target is self.stdOut:
-                cockpit.util.logger.log.debug(filter(lambda c: ord(c) < 128, self.textCache))
-            else:
-                cockpit.util.logger.log.error(filter(lambda c: ord(c) < 128, self.textCache))
-            self.textCache = ''
+        wx.CallAfter(target.AppendText, *args)
+        with self.cacheLock:
+            self.textCache += ' '.join(map(str, args))
+            if '\n' in self.textCache:
+                # Ended a line; send the text to the logs, minus any trailing
+                # whitespace (since the logs add their own trailing newline.
+                # We strip any unicode with filter to prevent a cascade of
+                # ---Logging Error--- messages.
+                if target is self.stdOut:
+                    cockpit.util.logger.log.debug(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
+                else:
+                    cockpit.util.logger.log.error(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
+                self.textCache = ''
 
+    def WriteToLogger(self, logger):
+        """Write the content of the windows to a logger.
+        """
+        logger.debug("  *** STANDARD OUTPUT FOLLOWS ***")
+        logger.debug(self.stdOut.GetValue())
+        logger.debug("  *** STANDARD ERROR FOLLOWS ***")
+        logger.debug(self.stdErr.GetValue())
 
 
 ## Global singleton
 window = None
 
-
 def makeWindow(parent):
     global window
     window = LoggingWindow(parent)
     window.Show()
-
-## Retrieve the contents of the stdout control.
-def getStdOut():
-    return window.stdOut.GetValue()
-
-## Retrieve the contents of the stderr control.
-def getStdErr():
-    return window.stdErr.GetValue()

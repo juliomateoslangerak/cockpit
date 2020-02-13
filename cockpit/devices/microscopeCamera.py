@@ -28,48 +28,42 @@ import decimal
 import Pyro4
 import wx
 
-from . import camera
 from cockpit import depot
 import numpy as np
 from cockpit import events
 import cockpit.gui.device
 import cockpit.gui.guiUtils
-import cockpit.gui.toggleButton
 import cockpit.handlers.camera
 import cockpit.util.listener
+import cockpit.util.logger
 import cockpit.util.threads
 import cockpit.util.userConfig
-import re
-from cockpit.gui.device import SettingsEditor
+from cockpit.devices.microscopeDevice import MicroscopeBase
+from cockpit.devices.camera import CameraDevice
 from cockpit.interfaces.imager import pauseVideo
+from microscope.devices import ROI, Binning
 
 # The following must be defined as in handlers/camera.py
 (TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT, TRIGGER_DURATION_PSEUDOGLOBAL) = range(5)
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
 
-class MicroscopeCamera(camera.CameraDevice):
+
+class MicroscopeCamera(MicroscopeBase, CameraDevice):
     """A class to control remote python microscope cameras."""
-    def __init__(self, name, cam_config):
+    def __init__(self, name, config):
         # camConfig is a dict with containing configuration parameters.
-        super(self.__class__, self).__init__(name, cam_config)
-        self.handler = None        
+        super().__init__(name, config)
         self.enabled = False
         self.panel = None
-        self.config = cam_config
-        # Pyro proxy
+        self.modes = []
 
-        self.proxy = Pyro4.Proxy(self.uri)
-        self.listener = cockpit.util.listener.Listener(self.proxy,
+    def initialize(self):
+        # Parent class will connect to proxy
+        super().initialize()
+        # Lister to receive data
+        self.listener = cockpit.util.listener.Listener(self._proxy,
                                                lambda *args: self.receiveData(*args))
-        self.cached_settings={}
-        self.settings_editor = None
-        self.defaults = DEFAULTS_NONE
-        self.get_all_settings = self.proxy.get_all_settings
-        self.get_setting = self.proxy.get_setting
-        self.set_setting = self.proxy.set_setting
-        self.describe_setting = self.proxy.describe_setting
-        self.describe_settings = self.proxy.describe_settings
         try:
             self.updateSettings()
         except:
@@ -77,11 +71,32 @@ class MicroscopeCamera(camera.CameraDevice):
         if 'readout mode' in self.settings:
             self.modes = self.describe_setting('readout mode')['values']
         else:
-            self.modes = None
+            self.modes = []
 
+    @property
+    def _modenames(self):
+        # Modes are a descriptive string of the form
+        # [amp-type] [freq] [channel]
+        if not self.modes:
+            return ['default']
+        import re
+        channels = set()
+        chre = re.compile(r' CH([0-9]+)', re.IGNORECASE)
+        ampre = re.compile(r'CONVENTIONAL ', re.IGNORECASE)
+        modes = []
+        for i, m in self.modes:
+            modes.append(ampre.sub('CONV ', m))
+            match = chre.search(m)
+            if match:
+                channels.union(match.groups())
+
+        if len(channels) < 2:
+            modes = [chre.sub('', m) for m in modes]
+        return modes
 
     def finalizeInitialization(self):
         super(MicroscopeCamera, self).finalizeInitialization()
+        self._readUserConfig()
         # Decorate updateSettings. Can't do this from the outset, as camera
         # is initialized before interfaces.imager.
         self.updateSettings = pauseVideo(self.updateSettings)
@@ -89,43 +104,23 @@ class MicroscopeCamera(camera.CameraDevice):
 
     def updateSettings(self, settings=None):
         if settings is not None:
-            self.proxy.update_settings(settings)
-        self.settings.update(self.proxy.get_all_settings())
-        events.publish("%s settings changed" % str(self))
+            self._proxy.update_settings(settings)
+        self.settings.update(self._proxy.get_all_settings())
+        events.publish(events.SETTINGS_CHANGED % str(self))
 
 
-    def parseMode(self):
-        mode_str = self.settings.get('readout mode', None)
-        if mode_str is None:
-            return '???'
-        mode_re = r'(^|.*[^a-zA-Z0-9])(EM)|((M|m)ult)'
-        bit_re = r'([0-9]+[- ]?bit)'
-        rate_re = r'([0-9]*\.?[0-9]+ ?[MkG]?Hz).*'
-
-        if re.match(mode_re, mode_str):
-            out_str = 'EM'
-        else:
-            out_str = 'Conv'
-
-        match = re.search(bit_re, mode_str)
-        if match:
-            out_str += '\n%s' % match.group(1)
-
-        match = re.search(rate_re, mode_str)
-        if match:
-            out_str += '\n%s' % match.group(1)
-
-        return out_str
-
+    def _setTransform(self, tr):
+        self._proxy.set_transform(tr)
+        self.updateSettings()
 
 
     def cleanupAfterExperiment(self):
         """Restore settings as they were prior to experiment."""
         if self.enabled:
             self.updateSettings(self.cached_settings)
-            #self.proxy.update_settings(self.settings)
-            self.proxy.enable()
-        self.handler.exposureMode = self.proxy.get_trigger_type()
+            #self._proxy.update_settings(self.settings)
+            self._proxy.enable()
+        self.handlers[0].exposureMode = self._proxy.get_trigger_type()
 
 
     def performSubscriptions(self):
@@ -134,15 +129,10 @@ class MicroscopeCamera(camera.CameraDevice):
                 self.cleanupAfterExperiment)
         events.subscribe('objective change',
                 self.onObjectiveChange)
-        events.subscribe('user login',
-                self.onUserLogin)
 
 
     def onObjectiveChange(self, name, pixelSize, transform, offset):
-        self.updateSettings({'pathTransform': transform})
-        # Apply the change now if the camera is enabled.
-        if self.enabled:
-            self.proxy.update_settings(self.settings)
+        self.updateTransform(transform)
 
 
     def setAnyDefaults(self):
@@ -152,19 +142,16 @@ class MicroscopeCamera(camera.CameraDevice):
             # notrhing to do
             return
         try:
-            self.proxy.update_settings(self.settings)
+            self._proxy.update_settings(self.settings)
         except Exception as e:
             print (e)
         else:
             self.defaults = DEFAULTS_SENT
 
 
-    def onUserLogin(self, username):
-        # Apply user defaults on login.
-        idstr = self.handler.getIdentifier() + '_SETTINGS'
-        defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=False)
-        if defaults is None:
-            defaults = cockpit.util.userConfig.getValue(idstr, isGlobal=True)
+    def _readUserConfig(self):
+        idstr = self.handlers[0].getIdentifier() + '_SETTINGS'
+        defaults = cockpit.util.userConfig.getValue(idstr)
         if defaults is None:
             self.defaults = DEFAULTS_NONE
             return
@@ -195,11 +182,11 @@ class MicroscopeCamera(camera.CameraDevice):
                  'getSavefileInfo': self.getSavefileInfo,
                  'makeUI': self.makeUI,
                  'softTrigger': self.softTrigger},
-            TRIGGER_SOFT,
+            cockpit.handlers.camera.TRIGGER_SOFT,
             trighandler,
             trigline)
         # will be set with value from hardware later
-        self.handler = result
+        self.handlers = [result]
         return [result]
 
 
@@ -210,8 +197,8 @@ class MicroscopeCamera(camera.CameraDevice):
             # Disable the camera, if it is enabled.
             if self.enabled:
                 self.enabled = False
-                self.proxy.disable()
-                self.proxy.make_safe()
+                self._proxy.disable()
+                self._proxy.make_safe()
                 self.listener.disconnect()
                 return self.enabled
 
@@ -220,18 +207,18 @@ class MicroscopeCamera(camera.CameraDevice):
             # Nothing to do.
             return
         self.setAnyDefaults()
-        self.updateSettings()
         # Use async call to allow hardware time to respond.
         # Pyro4.async API changed - now modifies original rather than returning
         # a copy. This workaround from Pyro4 maintainer.
-        asproxy = Pyro4.Proxy(self.proxy._pyroUri)
+        asproxy = Pyro4.Proxy(self._proxy._pyroUri)
         asproxy._pyroAsync()
         result = asproxy.enable()
         result.wait(timeout=10)
-        #raise Exception("Problem enabling %s." % self.name)
-        self.enabled = True
-        self.handler.exposureMode = self.proxy.get_trigger_type()
-        self.listener.connect()
+        self.enabled = result.value
+        if self.enabled:
+            self.handlers[0].exposureMode = self._proxy.get_trigger_type()
+            self.listener.connect()
+        self.updateSettings()
         return self.enabled
 
 
@@ -243,7 +230,7 @@ class MicroscopeCamera(camera.CameraDevice):
     def getExposureTime(self, name=None, isExact=False):
         """Read the real exposure time from the camera."""
         # Camera uses times in s; cockpit uses ms.
-        t = self.proxy.get_exposure_time()
+        t = self._proxy.get_exposure_time()
         if isExact:
             return decimal.Decimal(t) * (decimal.Decimal(1000.0))
         else:
@@ -252,8 +239,15 @@ class MicroscopeCamera(camera.CameraDevice):
 
     def getImageSize(self, name):
         """Read the image size from the camera."""
-        rect = self.proxy.get_roi()
-        return rect[-2:]
+        roi = self._proxy.get_roi()  # left, bottom, right, top
+        if not isinstance(roi, ROI):
+            cockpit.util.logger.log.warning("%s returned tuple not ROI()" % self.name)
+            roi = ROI(*roi)
+        binning = self._proxy.get_binning()
+        if not isinstance(binning, Binning):
+            cockpit.util.logger.log.warning("%s returned tuple not Binning()" % self.name)
+            binning = Binning(*binning)
+        return (roi.width//binning.h, roi.height//binning.v)
 
 
     def getImageSizes(self, name):
@@ -273,7 +267,10 @@ class MicroscopeCamera(camera.CameraDevice):
         This is the time that must pass after stopping one exposure
         before another can be started, in milliseconds."""
         # Camera uses time in s; cockpit uses ms.
-        t = self.proxy.get_cycle_time() * 1000.0
+        #Note cycle time is exposure+Readout!
+        t_cyc = self._proxy.get_cycle_time() * 1000.0
+        t_exp = self._proxy.get_exposure_time() * 1000.0
+        t = t_cyc - t_exp
         if isExact:
             result = decimal.Decimal(t)
         else:
@@ -296,7 +293,7 @@ class MicroscopeCamera(camera.CameraDevice):
             # size. Use the handler to fetch the size, as this will use a cached value,
             # if available.
             events.publish('new image %s' % self.name,
-                           np.zeros(self.handler.getImageSize(), dtype=np.int16),
+                           np.zeros(self.handlers[0].getImageSize(), dtype=np.int16),
                            timestamp)
             raise image
 
@@ -304,7 +301,7 @@ class MicroscopeCamera(camera.CameraDevice):
     def setExposureTime(self, name, exposureTime):
         """Set the exposure time."""
         # Camera uses times in s; cockpit uses ms.
-        self.proxy.set_exposure_time(exposureTime / 1000.0)
+        self._proxy.set_exposure_time(exposureTime / 1000.0)
 
 
     def setImageSize(self, name, imageSize):
@@ -313,7 +310,8 @@ class MicroscopeCamera(camera.CameraDevice):
 
 
     def softTrigger(self, name=None):
-        self.proxy.soft_trigger()
+        if self.enabled:
+            self._proxy.soft_trigger()
 
 
     ### UI functions ###
@@ -321,34 +319,37 @@ class MicroscopeCamera(camera.CameraDevice):
         # TODO - this should probably live in a base deviceHandler.
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        modeButton = cockpit.gui.device.Button(parent=self.panel,
-                                            label=self.parseMode(),
-                                            leftAction=self.onModeButton,
-                                            rightAction=None,
-                                            size=cockpit.gui.device.TALL_SIZE)
-        modeButton.update(self.parseMode)
-        events.subscribe("%s settings changed" % self, modeButton.update)
-        sizer.Add(modeButton)
-
-        gainButton = cockpit.gui.device.Button(parent=self.panel,
-                                              label='Gain',
-                                              leftAction=self.onGainButton,
-                                              rightAction=None
-                                        )
-        gainButton.update(lambda: 'Gain:\t%s' % self.settings.get('gain', None))
-        events.subscribe("%s settings changed" % self, gainButton.update)
-        sizer.Add(gainButton)
-
-        adv_button = cockpit.gui.device.Button(parent=self.panel,
-                                       label='settings',
-                                       leftAction=self.showSettings)
+        # Readout mode control
+        sizer.Add(wx.StaticText(self.panel, label="Readout mode"))
+        modeButton = wx.Choice(self.panel, choices=self._modenames)
+        sizer.Add(modeButton, flag=wx.EXPAND)
+        events.subscribe(events.SETTINGS_CHANGED % self,
+                         lambda: self.updateModeButton(modeButton))
+        modeButton.Bind(wx.EVT_CHOICE, lambda evt: self.setReadoutMode(evt.GetSelection()))
+        sizer.AddSpacer(4)
+        # Gain control
+        sizer.Add(wx.StaticText(self.panel, label="Gain"))
+        gainButton = wx.Button(self.panel)
+        gainButton.Bind(wx.EVT_LEFT_UP, self.onGainButton)
+        sizer.Add(gainButton, flag=wx.EXPAND)
+        events.subscribe(events.SETTINGS_CHANGED % self,
+                         lambda: gainButton.SetLabel("%s" % self.settings.get('gain', None)))
+        sizer.AddSpacer(4)
+        # Settings button
+        adv_button = wx.Button(parent=self.panel, label='settings')
+        adv_button.Bind(wx.EVT_LEFT_UP, self.showSettings)
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)
         return self.panel
 
 
+    def updateModeButton(self, button):
+        button.Set(self._modenames)
+        button.SetSelection(self.settings.get('readout mode', 0))
+
+
     def onGainButton(self, evt):
-        if not self.settings.get('gain', False):
+        if 'gain' not in self.settings:
             return
         desc = self.describe_setting('gain')
         mingain, maxgain = desc['values']
@@ -370,22 +371,17 @@ class MicroscopeCamera(camera.CameraDevice):
             for index, mode in enumerate(self.modes):
                 menu.Append(menuID, mode)
                 self.panel.Bind(wx.EVT_MENU,
-                                lambda event, m=index: self.setReadoutModeByIndex(m),
+                                lambda event, m=index: self.setReadoutMode(m),
                                 id=menuID)
                 menuID += 1
         cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
 
 
     @pauseVideo
-    def setReadoutModeByIndex(self, index):
-        self.proxy.set_readout_mode(self.modes[index])
+    def setReadoutMode(self, index):
+        if len(self.modes) <= 1:
+            # Only one mode - nothing to do.
+            return
+        self.set_setting('readout mode', self.modes[index][0])
         self.updateSettings()
 
-
-    def showSettings(self, evt):
-        click_pos = wx.GetMousePosition()
-        if not self.settings_editor:
-            self.settings_editor = SettingsEditor(self, handler=self.handler)
-            self.settings_editor.Show()
-        self.settings_editor.SetPosition(click_pos)
-        self.settings_editor.Raise()

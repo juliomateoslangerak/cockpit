@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2018 Mick Phillips <mick.phillips@gmail.com>
+## Copyright (C) 2018-2019 Mick Phillips <mick.phillips@gmail.com>
 ## Copyright (C) 2018 Ian Dobbie <ian.dobbie@bioch.ox.ac.uk>
 ##
 ## This file is part of Cockpit.
@@ -22,9 +22,9 @@
 import collections
 from cockpit.util import ftgl
 import numpy
-import os
+import os, sys
 import wx
-from wx.lib.agw.shapedbutton import SBitmapButton,SBitmapToggleButton
+from wx.lib.agw.shapedbutton import SButton, SBitmapButton,SBitmapToggleButton
 from cockpit.gui.toggleButton import ACTIVE_COLOR, INACTIVE_COLOR
 from cockpit.handlers.deviceHandler import STATES
 
@@ -43,7 +43,6 @@ import cockpit.gui.mosaic.window as mosaic
 import cockpit.gui.mosaic.canvas
 import cockpit.interfaces.stageMover
 import cockpit.util.colors
-import cockpit.util.user
 import cockpit.util.threads
 import cockpit.util.userConfig
 from cockpit.gui.saveTopBottomPanel import moveZCheckMoverLimits
@@ -66,6 +65,59 @@ PI = 3.141592654
 
 ## Simple structure for marking potential beads.
 BeadSite = collections.namedtuple('BeadSite', ['pos', 'size', 'intensity'])
+
+
+class SetVariable(wx.Window):
+    def __init__(self, parent):
+        super().__init__(parent, wx.ID_ANY)
+        self._value = 0.
+        self._units = ''
+        self.Sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # Create decrement and increment buttons.
+        decButton = SButton(self, -1, '-')
+        incButton = SButton(self, -1, '+')
+        bfont = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        for b in (incButton, decButton):
+            b.SetFont(bfont)
+            # GetBestSize produces a size that is 3 times wider than it needs to be,
+            # so set size to the smaller dimension.
+            s = b.DoGetBestSize()
+            b.SetSize(min(s), min(s))
+        decButton.Bind(wx.EVT_BUTTON, lambda evt: self._spin(-1))
+        incButton.Bind(wx.EVT_BUTTON, lambda evt: self._spin(1))
+        # Create a text display of width to fit text like "00.000 uuu"
+        self._text = wx.StaticText(self, -1, label="00.000 uuu", style=wx.ST_NO_AUTORESIZE | wx.ALIGN_CENTER)
+        self._text.SetFont(wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.NORMAL))
+        # Add text to its own sizer with stretch spacers to centre vertically.
+        tsizer = wx.BoxSizer(wx.VERTICAL)
+        tsizer.AddStretchSpacer()
+        tsizer.Add(self._text, 0, wx.EXPAND)
+        tsizer.AddStretchSpacer()
+        # Pack into sizer as " -  00.000 uu  + "
+        self.Sizer.Add(decButton, 0, wx.FIXED_MINSIZE, 0)
+        self.Sizer.Add(tsizer, 1, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        self.Sizer.Add(incButton, 0, wx.FIXED_MINSIZE, 0)
+        self.Fit()
+
+    def _spin(self, direction):
+        if direction not in (-1, 1):
+            raise Exception("Expected +1 or -1.")
+        evt = wx.SpinDoubleEvent(wx.wxEVT_SPINCTRLDOUBLE)
+        evt.SetValue(self._value * (1 + 0.1*direction))
+        evt.SetEventObject(self)
+        wx.PostEvent(self, evt)
+
+    def SetValue(self, value):
+        self._value = value
+        self.Refresh()
+
+    def SetUnits(self, units):
+        self._units = units
+        self.Refresh()
+
+    def Refresh(self):
+        self._text.SetLabel("%5.2f %s" % (self._value, self._units) )
+        super().Refresh()
 
 
 ## This class handles the UI of the mosaic.
@@ -118,9 +170,12 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         self.scalefont.setFaceSize(18)
 
         #default scale bar size is Zero
-        self.scalebar = 0
+        self.scalebar = cockpit.util.userConfig.getValue('mosaicScaleBar',
+                                                         default=0)
         #Default to drawing primitives
-        self.drawPrimitives = True
+        self.drawPrimitives = cockpit.util.userConfig.getValue('mosaicDrawPrimitives',
+                                                               default = True)
+
         ##define text strings to change status strings.
         self.sampleStateText=None
         ## Maps button names to wx.Button instances.
@@ -221,87 +276,42 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
             mosaicButtonSizer.Add(button, 0, wx.EXPAND|wx.ALL,border=2)
 
         ## laserSizer in middle of rightSideSizer for laser stuff
-
-
+        lightsSizer = wx.BoxSizer(wx.VERTICAL)
         # Find out light devices we have to work with.
-        lightToggles = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
-        lightToggles = sorted(lightToggles, key = lambda l: l.wavelength)
-        laserSizer=wx.BoxSizer(wx.VERTICAL)
-        font=wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        lightToggles = sorted(depot.getHandlersOfType(depot.LIGHT_TOGGLE),
+                              key=lambda l: l.wavelength)
+        lightPowers = depot.getHandlersOfType(depot.LIGHT_POWER)
+        # Create light controls
         for light in lightToggles:
-            lineSizer=wx.BoxSizer(wx.HORIZONTAL)
+            # Enable/disable button
             button = LightToggleButton(self.buttonPanel, light)
-            lineSizer.Add(button, 0, wx.EXPAND|wx.ALL, border=2)
-            laserPowerSizer=wx.BoxSizer(wx.VERTICAL)
-            #To get powers we need to:
-            lightHandlers=depot.getHandlersInGroup(light.groupName)
-            laserPSizer=wx.BoxSizer(wx.HORIZONTAL)
-            if len(lightHandlers) >1:
-                #this is a laser and should have a power level
-                for handler in depot.getHandlersInGroup(light.groupName):
-                    if handler is not light:
-                        powerHandler=handler
-                #power down button, current power, power up button
-                laserMinusButton=self.makeButton(self.buttonPanel,
-                                                 light.name+'-10%',
-                                     lambda myPowerHandler=powerHandler: self.decreaseLaserPower(myPowerHandler),
-                                             None, 'minus.png',
-                                             'Decrease laser power by 10%',
-                                             size=(30,30))
-
-                laserPowerText = wx.StaticText(self.buttonPanel,-1,
-                                               style=wx.ALIGN_CENTER)
-                laserPowerText.SetFont(font)
-                #need to read actual power and then export the object in
-                #self. so that we can change it at a later date
-                label = '%5.1f %s'%(powerHandler.lastPower,powerHandler.units)
-                laserPowerText.SetLabel(label.rjust(10))
-                self.nameToText[light.groupName+'power']=laserPowerText
-                laserPlusButton=self.makeButton(self.buttonPanel,
-                                                 light.name+'-10%',
-                                    lambda myPowerHandler=powerHandler: self.increaseLaserPower(myPowerHandler),
-                                             None, 'plus.png',
-                                             'Increase laser power by 10%',
-                                             size=(30,30))
-                laserPSizer.Add(laserMinusButton,0, wx.EXPAND|wx.ALL)
-                laserPSizer.Add(laserPowerText,0, wx.EXPAND|wx.ALL, border=3)
-                laserPSizer.Add(laserPlusButton,0, wx.EXPAND|wx.ALL)
-            else:
-                #add and empty text box to keep sizing the same
-                laserPowerText=wx.StaticText(self.buttonPanel,-1,
-                                             style=wx.ALIGN_CENTER)
-                laserPSizer.Add(laserPowerText, 0, wx.EXPAND|wx.ALL)
-
-            laserPowerSizer.Add(laserPSizer, 0, wx.EXPAND|wx.ALL)
-            #exposure times go with lights...
-            #have minus button on left and plus button on right....
-            laserExpSizer=wx.BoxSizer(wx.HORIZONTAL)
-            laserMinusButton=self.makeButton(self.buttonPanel,light.name+'-10%',
-                                    lambda mylight=light: self.decreaseLaserExp(mylight),
-                                             None, 'minus.png',
-                                             'Decrease exposure by 10%',
-                                             size=(30,30))
-            laserExpText = wx.StaticText(self.buttonPanel,-1,
-                                               style=wx.ALIGN_CENTER)
-            laserExpText.SetFont(font)
-            #Read current exposure time and store pointer in
-            #self. so that we can change it at a later date
-            label = '%5d ms'%(light.getExposureTime())
-            laserExpText.SetLabel(label.rjust(10))
-            self.nameToText[light.groupName+'exp']=laserExpText
-            laserPlusButton=self.makeButton(self.buttonPanel,light.name+'+10%',
-                                    lambda mylight=light: self.increaseLaserExp(mylight),
-                                             None, 'plus.png',
-                                             'Increase exposure by 10%',
-                                             size=(30,30))
-
-
-            laserExpSizer.Add(laserMinusButton,0, wx.EXPAND|wx.ALL)
-            laserExpSizer.Add(laserExpText,0, wx.EXPAND|wx.ALL,border=3)
-            laserExpSizer.Add(laserPlusButton,0, wx.EXPAND|wx.ALL)
-            laserPowerSizer.Add(laserExpSizer, 0, wx.CENTRE|wx.ALL,border=2)
-            lineSizer.Add(laserPowerSizer, 0, wx.EXPAND|wx.ALL,border=2)
-            laserSizer.Add(lineSizer,0,wx.EXPAND|wx.ALL,border=2)
+            # Power control
+            powerHandler = next(filter(lambda p: p.groupName == light.groupName, lightPowers), None)
+            if powerHandler is not None:
+                powerctrl = SetVariable(self.buttonPanel)
+                powerctrl.SetBackgroundColour(BACKGROUND_COLOUR)
+                powerctrl.SetUnits(powerHandler.units)
+                powerctrl.SetValue(powerHandler.powerSetPoint)
+                powerctrl.Bind(wx.EVT_SPINCTRLDOUBLE, lambda evt, h=powerHandler: h.setPower(evt.Value) )
+                powerHandler.addWatch('powerSetPoint', powerctrl.SetValue)
+            # Exposure control
+            expctrl = SetVariable(self.buttonPanel)
+            expctrl.SetBackgroundColour(BACKGROUND_COLOUR)
+            expctrl.SetUnits('ms')
+            expctrl.SetValue(light.exposureTime)
+            expctrl.Bind(wx.EVT_SPINCTRLDOUBLE, lambda evt, h=light: h.setExposureTime(evt.Value) )
+            light.addWatch('exposureTime', expctrl.SetValue)
+            # Layout the controls
+            rowsizer = wx.BoxSizer(wx.HORIZONTAL)
+            ctrlsizer = wx.BoxSizer(wx.VERTICAL)
+            rowsizer.Add(button, 0, wx.ALL, border=2)  # AddSizer?
+            rowsizer.Add(ctrlsizer, 1, wx.EXPAND | wx.LEFT, 12)
+            ctrlsizer.AddStretchSpacer()
+            if powerHandler is not None:
+                ctrlsizer.Add(powerctrl, 0, wx.EXPAND)
+            ctrlsizer.Add(expctrl, 0, wx.EXPAND)
+            ctrlsizer.AddStretchSpacer()
+            lightsSizer.Add(rowsizer,0,wx.EXPAND|wx.ALL,border=2)
 
         cameraSizer=wx.GridSizer(cols=2, vgap=1, hgap=1)
         cameraVSizer=[None]*len(depot.getHandlersOfType(depot.CAMERA))
@@ -313,10 +323,7 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
             name = camera.name.replace('camera', '').replace('  ', ' ')
             label = cockpit.gui.device.Label(
                 parent=self.buttonPanel, label=name)
-            self.camButton[i] = cockpit.gui.device.EnableButton(label='Off',
-                                             parent=self.buttonPanel,
-                                                        leftAction=camera.toggleState)
-            camera.addListener(self.camButton[i])
+            self.camButton[i] = cockpit.gui.device.EnableButton(self.buttonPanel, camera)
             cameraVSizer[i].Add(label)
             cameraVSizer[i].Add(self.camButton[i])
             cameraSizer.Add(cameraVSizer[i],0,wx.CENTRE|wx.ALL,border=5)
@@ -328,7 +335,7 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         rightSideSizer.Add(mosaicButtonSizer,0,wx.EXPAND,wx.RAISED_BORDER)
         rightSideSizer.Add(wx.StaticLine(self.buttonPanel),
                            0, wx.ALL|wx.EXPAND, 5)
-        rightSideSizer.Add(laserSizer,0,wx.EXPAND)
+        rightSideSizer.Add(lightsSizer,0,wx.EXPAND)
         rightSideSizer.Add(wx.StaticLine(self.buttonPanel),
                            0, wx.ALL|wx.EXPAND, 5)
         rightSideSizer.Add(cameraSizer,0,wx.EXPAND)
@@ -407,18 +414,29 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         events.subscribe('stage step index', self.stageIndexChange)
         events.subscribe('soft safety limit', self.onAxisRefresh)
         events.subscribe('objective change', self.onObjectiveChange)
-        events.subscribe('user login', self.onLogin)
         events.subscribe('mosaic start', self.mosaicStart)
         events.subscribe('mosaic stop', self.mosaicStop)
         events.subscribe('mosaic update', self.mosaicUpdate)
-        events.subscribe('laser power update', self.laserPowerUpdate)
-        events.subscribe('light exposure update', self.laserExpUpdate)
+
 
 
         self.Bind(wx.EVT_SIZE, self.onSize)
         self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
         for item in [self, self.panel, self.canvas]:
             cockpit.gui.keyboard.setKeyboardHandlers(item)
+
+    def Refresh(self, *args, **kwargs):
+        """Refresh, with explicit refresh of glCanvases on Mac.
+
+        Refresh is supposed to be called recursively on child objects,
+        but is not always called for our glCanvases on the Mac. This may
+        be due to the canvases not having any invalid regions, but I see
+        no way to invalidate a region on demand."""
+        super().Refresh(*args, **kwargs)
+        if sys.platform == 'darwin':
+            wx.CallAfter(self.canvas.Refresh)
+            wx.CallAfter(self.macroStageXY.Refresh)
+            wx.CallAfter(self.macroStageZ.Refresh)
 
     ##function ot check if a bitmpa exists or return a generic missing
     ##file bitmap
@@ -465,9 +483,7 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         #check that we have a camera and light source
         cams=0
         lights=0
-        for camera in depot.getHandlersOfType(depot.CAMERA):
-            if camera.getIsEnabled():
-                cams=cams+1
+        cams = len(depot.getActiveCameras())
         for light in depot.getHandlersOfType(depot.LIGHT_TOGGLE):
             if light.getIsEnabled():
                 lights=lights+1
@@ -486,11 +502,11 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
     def laserToggle(self, event, light, button):
         if event.GetIsDown():
             light.setEnabled(True)
-            events.publish('light source enable', light, True)
+            events.publish(events.LIGHT_SOURCE_ENABLE, light, True)
         else:
             light.setEnabled(False)
             button.SetBackgroundColour(BACKGROUND_COLOUR)
-            events.publish('light source enable', light, False)
+            events.publish(events.LIGHT_SOURCE_ENABLE, light, False)
 
 
     def laserPowerUpdate(self, light):
@@ -581,16 +597,6 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         csize = self.GetClientSize()
         self.panel.SetClientSize((csize[0], csize[1]))
 
-
-
-    ## User logged in, so we may well have changed size; adjust our zoom to
-    # suit.
-    def onLogin(self, *args):
-        self.centerCanvas()
-        self.scalebar=cockpit.util.userConfig.getValue('mosaicScaleBar', isGlobal = False,
-                                               default= 0)
-        self.drawPrimitives=cockpit.util.userConfig.getValue('mosaicDrawPrimitives',
-                                            isGlobal = False, default = True)
     ##Called when the stage handler index is chnaged. All we need
     #to do is update the display
     def stageIndexChange(self, *args):
@@ -719,7 +725,7 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         else:
             self.scalebar = 1
         #store current state for future.
-        cockpit.util.userConfig.setValue('mosaicScaleBar',self.scalebar, isGlobal=False)
+        cockpit.util.userConfig.setValue('mosaicScaleBar',self.scalebar)
         self.Refresh()
 
     def toggleDrawPrimitives(self):
@@ -729,8 +735,8 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
         else:
             self.drawPrimitives = True
         #store current state for future.
-        cockpit.util.userConfig.setValue('mosaicDrawPrimitives',self.drawPrimitives,
-                                 isGlobal=False)
+        cockpit.util.userConfig.setValue('mosaicDrawPrimitives',
+                                         self.drawPrimitives)
         self.Refresh()
 
 
@@ -793,13 +799,11 @@ class TouchScreenWindow(wx.Frame, mosaic.MosaicCommon):
     ##Function to load/unload objective
     def loadUnload(self):
         #toggle to load or unload the sample
-        configurator = depot.getHandlersOfType(depot.CONFIGURATOR)[0]
-        currentZ=cockpit.interfaces.stageMover.getPosition()[2]
+        config = wx.GetApp().config
+        loadPosition = config['stage'].getfloat('loadPosition')
+        unloadPosition = config['stage'].getfloat('unloadPosition')
 
-        if not configurator.has('loadPosition', 'unloadPosition'):
-            raise Exception("Missing loadPosition and/or unloadPositions in config.")
-        loadPosition=configurator.getValue('loadPosition')
-        unloadPosition=configurator.getValue('unloadPosition')
+        currentZ=cockpit.interfaces.stageMover.getPosition()[2]
         if (currentZ < loadPosition):
             #move with the smalled possible mover
             moveZCheckMoverLimits(loadPosition)
@@ -876,10 +880,10 @@ class LightToggleButton(SBitmapToggleButton):
     mask = wx.Mask(_bmp)
     del _bmp
 
+
     def __init__(self, parent, light, **kwargs):
         size = (LightToggleButton.size, LightToggleButton.size)
         self.light = light
-        light.addListener(self)
         if light.wavelength:
             label = str(int(light.wavelength))
             colour = cockpit.util.colors.wavelengthToColor(light.wavelength)
@@ -918,26 +922,26 @@ class LightToggleButton(SBitmapToggleButton):
         self.SetBitmapDisabled(bmpOff)
         self.SetBitmapSelected(bmpOn)
         self.Bind(wx.EVT_LEFT_DOWN, lambda evt: self.light.toggleState())
+        from cockpit.gui import EvtEmitter, EVT_COCKPIT
+        from cockpit.events import DEVICE_STATUS
+        listener = EvtEmitter(self, DEVICE_STATUS)
+        listener.Bind(EVT_COCKPIT, self.onStatusEvent)
 
 
-    def onEnabledEvent(self, state):
+    def onStatusEvent(self, evt):
+        device, state = evt.EventData
+        if device != self.light:
+            return
         # Disable response to clicks while waiting for light state change.
         if state is STATES.enabling:
             self.Enable(False)
         else:
             self.Enable(True)
 
-        if state is STATES.enabled:
-            self.SetToggle(True)
-        elif state is STATES.constant:
-            self.SetToggle(True)
-        elif state is STATES.disabled:
-            self.SetToggle(False)
-        elif state is STATES.enabling:
-            self.SetToggle(False)
-        elif state is STATES.error:
-            self.SetToggle(True)
-        self.Refresh()
+        toggle = state in [STATES.enabled, STATES.constant]
+
+        self.SetToggle(toggle)
+        wx.CallAfter(self.Refresh)
 
 
 
@@ -951,8 +955,11 @@ def makeWindow(parent):
                                  style = wx.CAPTION| wx.RESIZE_BORDER |
                                  wx.MINIMIZE_BOX | wx.CLOSE_BOX)
     TSwindow.SetSize((1500,1000))
-    TSwindow.Show()
-    TSwindow.centerCanvas()
+    # TODO - determine if we need to Show the touchscreen or not.
+    # TODO - if the touchscreen is shown, ensure it is shown *on screen* ...
+    # otherwise, it suddenly appears when raised on re-activating the app.
+    #TSwindow.Show()
+    #TSwindow.centerCanvas()
 
 
 ## Transfer a camera image to the mosaic.

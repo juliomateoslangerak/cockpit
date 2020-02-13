@@ -44,8 +44,6 @@ Sample config entry:
 from . import shutter
 import telnetlib
 
-CLASS_NAME = 'StanfordShutterDevice'
-CONFIG_NAME = 'sr470'
 
 class StanfordShutter(shutter.ShutterDevice):
     def __init__(self, name, config={}):
@@ -57,7 +55,7 @@ class StanfordShutter(shutter.ShutterDevice):
     def initialize(self):
         """ Open telnet connection and enable response to triggers. """
         self.connection = telnetlib.Telnet(self.ipAddress, self.port, timeout=5)
-        self.connection.read_until('SR470 Telnet Session:')
+        self.connection.read_until(('SR470 Telnet Session:').encode())
         # Read out any trailing whitespace, e.g. newlines.
         print(self.connection.read_eager())
         self.enableTrigger()
@@ -111,5 +109,5 @@ class StanfordShutter(shutter.ShutterDevice):
 
 
     def send(self, command):
-        self.connection.write(command + '\n')
-        return self.connection.read_until('\n', 0.05)
+        self.connection.write( (command + '\n').encode() )
+        return self.connection.read_until('\n'.encode(), 0.05)

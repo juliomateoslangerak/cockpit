@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+## Copyright (C) 2019 David Miguel Susano Pinto <david.pinto@bioch.ox.ac.uk>
+##
+## This file is part of Cockpit.
+##
+## Cockpit is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## Cockpit is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
+
 ## Copyright 2013, The Regents of University of California
 ##
 ## Redistribution and use in source and binary forms, with or without
@@ -33,11 +50,10 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-import cockpit.util.files
-
+import enum
 import logging
 import os
-import sys
+import os.path
 import time
 
 ## @package logger
@@ -47,43 +63,40 @@ import time
 ## Logger instance
 log = None
 
-## Generate a filename to store logs in; specific to the specified username.
-def generateLogFileName(user = ''):
-    filename = 'MUI_'
-    filename = os.path.join(cockpit.util.files.getLogDir(), filename)
-    filename += time.strftime("%Y%m%d_%a-%H%M")
-    if user:
-        filename += '_%s' % user
-    filename += '.log'
-    return filename
+
+class Level(enum.Enum):
+    critical = logging.CRITICAL
+    error = logging.ERROR
+    warning = logging.WARNING
+    info = logging.INFO
+    debug = logging.DEBUG
 
 
-## Global current log handle.
-curLogHandle = None
+def makeLogger(config):
+    """Create the logger and instantiate the ``log`` singleton.
 
-## Start logging under the specified username (or none if no user is available
-# yet).
-def makeLogger(user = ''):
+    Args:
+        logging_config (``configparser.SectionProxy``): the config
+            section for the logger.
+    """
+
+    log_dir = config.getpath('dir')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    filename = time.strftime(config.get('filename-template'))
+    filepath = os.path.join(log_dir, filename)
+
+    level = Level[config.get('level')].value
+
     global log
     log = logging.getLogger()
-    log.setLevel(logging.DEBUG)
+    log.setLevel(level)
 
-    filename = generateLogFileName(user)
-
-    global curLogHandle
-    curLogHandle = logging.FileHandler(filename, mode = "a")
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(module)10s:%(lineno)4d  %(message)s')
-    curLogHandle.setFormatter(formatter)
-    curLogHandle.setLevel(logging.DEBUG)
-    log.addHandler(curLogHandle)
-
-
-## Switch from the current logfile to a new one, presumably because the user
-# has now logged in.
-def changeFile(newFilename):
-    log.debug("close logging file, open newfile '%s'", newFilename)
-    curLogHandle.stream.close()
-    curLogHandle.baseFilename = newFilename
-    curLogHandle.stream = open(newFilename, curLogHandle.mode)
-    
-
+    log_handler = logging.FileHandler(filepath, mode = "a")
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s'
+                                  + ' %(module)10s:%(lineno)4d'
+                                  + '  %(message)s')
+    log_handler.setFormatter(formatter)
+    log_handler.setLevel(level)
+    log.addHandler(log_handler)

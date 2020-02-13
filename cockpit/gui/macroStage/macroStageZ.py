@@ -57,7 +57,6 @@ from OpenGL.GL import *
 import traceback
 import wx
 
-from cockpit import depot
 from cockpit import events
 import cockpit.interfaces.stageMover
 import cockpit.util.logger
@@ -184,7 +183,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
     # based on self.experimentAltitudes
     def calculateHistogram(self):
         self.experimentAltitudes = list(cockpit.util.userConfig.getValue('experimentAltitudes', 
-                default = [], isGlobal = True))
+                                                                         default=[]))
         ## Set of buckets, by altitude, of the experiments
         self.altitudeBuckets = [0 for i in range(int(self.minY),
                 int(self.maxY + 1), ALTITUDE_BUCKET_SIZE)]
@@ -205,10 +204,10 @@ class MacroStageZ(macroStageBase.MacroStageBase):
     def onExperimentComplete(self, *args):
         # Update histogram data
         self.experimentAltitudes = list(
-                cockpit.util.userConfig.getValue('experimentAltitudes', default = [], isGlobal = True)
+                cockpit.util.userConfig.getValue('experimentAltitudes', default=[])
         )
         self.experimentAltitudes.append(self.curStagePosition[2])
-        cockpit.util.userConfig.setValue('experimentAltitudes', self.experimentAltitudes, isGlobal=True)
+        cockpit.util.userConfig.setValue('experimentAltitudes', self.experimentAltitudes)
         self.calculateHistogram()
 
 
@@ -355,11 +354,11 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             glLineWidth(HEIGHT_LINE_WIDTH)
 
             # Draw spikes for the histogram peaks.
-            configurator = depot.getHandlersOfType(depot.CONFIGURATOR)[0]
+            config = wx.GetApp().Config
             spikeHeight = self.stageExtent * .02
             spikeLength = self.stageExtent * .2
-            for altitude in [configurator.getValue('slidealtitude'), 
-                    configurator.getValue('dishaltitude')]:
+            for altitude in (config['stage'].getfloat('slideAltitude'),
+                             config['stage'].getfloat('dishAltitude')):
                 glColor3f(0, 0, 0)
                 glBegin(GL_POLYGON)
                 self.scaledVertex(scaleX, altitude - spikeHeight / 2)

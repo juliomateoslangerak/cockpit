@@ -521,6 +521,7 @@ class Experiment:
                pseudoGlobalExposure=False, previousMovementTime=0):
         # First, determine which cameras are not ready to be exposed, because
         # they may have seen light they weren't supposed to see (due to
+
         # bleedthrough from other cameras' exposures). These need
         # to be triggered (and we need to record that we want to throw away
         # those images) before we can proceed with the real exposure.

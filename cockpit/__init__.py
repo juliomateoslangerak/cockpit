@@ -74,13 +74,9 @@ if (distutils.version.LooseVersion(Pyro4.__version__) >=
     Pyro4.config.REQUIRE_EXPOSE = False
 
 import cockpit.config
-import cockpit.depot
-import cockpit.events
-import cockpit.interfaces.imager
-import cockpit.interfaces.stageMover
-import cockpit.util.files
-import cockpit.util.logger
-import cockpit.util.userConfig
+from cockpit import events, depot, gui
+from cockpit.interfaces import imager, stageMover
+from cockpit.util import files, logger, userConfig
 
 
 class CockpitApp(wx.App):
@@ -117,13 +113,13 @@ class CockpitApp(wx.App):
             status.Show()
 
             # Do this early so we can see output while initializing.
-            from cockpit.gui import loggingWindow
+            from gui import loggingWindow
             loggingWindow.makeWindow(None)
 
             updateNum=1
             status.Update(updateNum, "Initializing config...")
             updateNum+=1
-            cockpit.util.userConfig.initialize(self.Config)
+            userConfig.initialize(self.Config)
 
             status.Update(updateNum, "Initializing devices...")
             updateNum+=1
@@ -132,13 +128,13 @@ class CockpitApp(wx.App):
                 updateNum+=1
             status.Update(updateNum, "Initializing device interfaces...")
             updateNum+=1
-            cockpit.interfaces.imager.initialize()
-            cockpit.interfaces.stageMover.initialize()
+            imager.initialize()
+            stageMover.initialize()
 
             status.Update(updateNum, "Initializing user interface...")
             updateNum+=1
 
-            from cockpit.gui import mainWindow
+            from gui import mainWindow
             frame = mainWindow.makeWindow()
             self.SetTopWindow(frame)
 
@@ -172,7 +168,7 @@ class CockpitApp(wx.App):
                 w.Bind(wx.EVT_CLOSE, lambda event, w=w: w.Hide())
                 # get saved state of secondary windows.
                 title=w.GetTitle()
-                windowstate=cockpit.util.userConfig.getValue(
+                windowstate=userConfig.getValue(
                                                 'windowState'+title,
                                                 default= 0)
                 #if they were hidden then return them to hidden
@@ -192,7 +188,7 @@ class CockpitApp(wx.App):
             for w in self.secondaryWindows:
                 # get saved state of secondary windows.
                 title=w.GetTitle()
-                windowstate=cockpit.util.userConfig.getValue(
+                windowstate=userConfig.getValue(
                                                 'windowState'+title,
                                                 default= 0)
                 #if they were hidden then return them to hidden
@@ -201,18 +197,18 @@ class CockpitApp(wx.App):
                     w.Hide()
 
 
-            cockpit.depot.makeInitialPublications()
-            cockpit.interfaces.imager.makeInitialPublications()
-            cockpit.interfaces.stageMover.makeInitialPublications()
+            depot.makeInitialPublications()
+            imager.makeInitialPublications()
+            stageMover.makeInitialPublications()
 
             events.publish('cockpit initialization complete')
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
 
             return True
         except Exception as e:
-            cockpit.gui.ExceptionBox(caption='Failed to initialise cockpit')
-            cockpit.util.logger.log.error("Initialization failed: %s" % e)
-            cockpit.util.logger.log.error(traceback.format_exc())
+            gui.ExceptionBox(caption='Failed to initialise cockpit')
+            logger.log.error("Initialization failed: %s" % e)
+            logger.log.error(traceback.format_exc())
             return False
 
     def onActivateApp(self, event):
@@ -244,7 +240,7 @@ class CockpitApp(wx.App):
 
     ## Startup failed; log the failure information and exit.
     def onStartupFail(self, *args):
-        cockpit.util.logger.log.error("Startup failed: %s" % args)
+        logger.log.error("Startup failed: %s" % args)
         sys.exit()
 
 
@@ -256,11 +252,11 @@ class CockpitApp(wx.App):
         try:
             events.publish("user abort")
         except Exception as e:
-            cockpit.util.logger.log.error("Error during logout: %s" % e)
-            cockpit.util.logger.log.error(traceback.format_exc())
+            logger.log.error("Error during logout: %s" % e)
+            logger.log.error(traceback.format_exc())
 
-        import cockpit.gui.loggingWindow
-        cockpit.gui.loggingWindow.window.WriteToLogger(cockpit.util.logger.log)
+        from gui import loggingWindow
+        loggingWindow.window.WriteToLogger(logger.log)
 
         # Manually clear out any parent-less windows that still exist. This
         # can catch some windows that are spawned by WX and then abandoned,
@@ -268,12 +264,12 @@ class CockpitApp(wx.App):
         # sometimes the program will continue running, invisibly, and must
         # be killed via Task Manager.
         for window in wx.GetTopLevelWindows():
-            cockpit.util.logger.log.error("Destroying %s" % window)
+            logger.log.error("Destroying %s" % window)
             window.Destroy()
 
         # Call any deviec onExit code to, for example, close shutters and
         # switch of lasers.
-        for dev in cockpit.depot.getAllDevices():
+        for dev in depot.getAllDevices():
             try:
                 dev.onExit()
             except:
@@ -293,9 +289,9 @@ class CockpitApp(wx.App):
             if not thread.daemon:
                 badThreads.append(thread)
         if badThreads:
-            cockpit.util.logger.log.error("Still have non-daemon threads %s" % map(str, badThreads))
+            logger.log.error("Still have non-daemon threads %s" % map(str, badThreads))
             for thread in badThreads:
-                cockpit.util.logger.log.error(str(thread.__dict__))
+                logger.log.error(str(thread.__dict__))
         os._exit(0)
 
 
@@ -305,7 +301,7 @@ class CockpitApp(wx.App):
         This should probably be a private method, or at least a method
         that would take the positions dict as argument.
         """
-        positions = cockpit.util.userConfig.getValue('WindowPositions',
+        positions = userConfig.getValue('WindowPositions',
                                                      default={})
         for window in wx.GetTopLevelWindows():
             if window.Title in positions:
@@ -326,7 +322,7 @@ class CockpitApp(wx.App):
         if camera_window_title is not None:
             positions['Camera views'] = positions.pop(camera_window_title)
 
-        cockpit.util.userConfig.setValue('WindowPositions', positions)
+        userConfig.setValue('WindowPositions', positions)
 
 
 def main():
@@ -340,8 +336,8 @@ def main():
     ## TODO: have this in a try, and show a window (would probably
     ## need to be different wx.App), with the error if it fails.
     config = cockpit.config.CockpitConfig(sys.argv)
-    cockpit.util.logger.makeLogger(config['log'])
-    cockpit.util.files.initialize(config)
+    logger.makeLogger(config['log'])
+    files.initialize(config)
 
     app = CockpitApp(config=config)
     app.MainLoop()

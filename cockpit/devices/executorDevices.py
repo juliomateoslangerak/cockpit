@@ -106,6 +106,7 @@ class ExecutorDevice(device.Device):
         ## Set of all handlers we control.
         self.handlers = set()
 
+    ## Connect to the DSP computer.
     ## Connect to the Executor device.
     # We assume here that it is a Pyro4 connection to a remote,
     # but it could be anything so override when necessary
@@ -191,14 +192,13 @@ class ExecutorDevice(device.Device):
 
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
-    def executeTable(self, name, table, startIndex, stopIndex, numReps,
-            repDuration):
+    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
 
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
         actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                'Waiting for\nDSP to finish', (255, 255, 0))
+                'Waiting for\nExecutor to finish', (255, 255, 0))
         self.connection.PrepareActions(actions, numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.RunActions)
         events.publish(events.EXPERIMENT_EXECUTION)
@@ -394,7 +394,7 @@ def actions_from_table(table, startIndex, stopIndex, repDuration):
     ## Take time and arguments (i.e. omit handler) from table to
     ## generate actions.
     t0 = float(table[startIndex][0])
-    actions = [(float(row[0])-t0,) + tuple(row[2:])
+    actions = [(float(row[0])-t0,) + tuple(row[1:])
                for row in table[startIndex:stopIndex]]
 
     ## If there are repeats, add an extra action to wait until

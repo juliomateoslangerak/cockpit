@@ -77,6 +77,8 @@ class NIcRIO(executorDevices.ExecutorDevice):
         'ipaddress': str,
         'sendport': int,
         'receiveport': int,
+        'alines': int,
+        'dlines': int,
     }
 
     def __init__(self, name, config):
@@ -89,7 +91,9 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self.sendPort = config.get('sendport')
         self.receivePort = config.get('receiveport')
         self.port = [self.sendPort, self.receivePort]
-        self._currentAnalogs = 4*[0]
+        self._dlines = self.config.get('dlines', 16),
+        self._alines = self.config.get('alines', 4)
+        self._currentAnalogs = self._alines * [0]
         # Absolute positions prior to the start of the experiment.
         self._lastAnalogs = 4*[0]
         # Store last movement profile for debugging
@@ -113,7 +117,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
 
     def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
         super(self.__class__, self).onPrepareForExperiment(*args)
-        self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self.nrAnalogLines)]
+        self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self._alines)]
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
 
@@ -136,30 +140,30 @@ class NIcRIO(executorDevices.ExecutorDevice):
         """
         return self.connection.MoveAbsolute(line, target)
 
-    def getHandlers(self):
-        """We control which light sources are active, as well as a set of stage motion piezos.
-        """
-        result = list()
-        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-            self.name, "executor",
-            {'examineActions': lambda *args: None,
-             'executeTable': self.executeTable,
-             'readDigital': self.connection.ReadDigital,
-             'writeDigital': self.connection.WriteDigital,
-             'getAnalog': self.getAnalog,
-             'setAnalog': self.setAnalog,
-             'runSequence': self.runSequence,
-             },
-            dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
-
-        result.append(h)
-
-        result.append(cockpit.handlers.imager.ImagerHandler(
-            "%s imager" % self.name, "imager",
-            {'takeImage': h.takeImage}))
-
-        self.handlers = set(result)
-        return result
+    # def getHandlers(self):
+    #     """We control which light sources are active, as well as a set of stage motion piezos.
+    #     """
+    #     result = list()
+    #     h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
+    #         self.name, "executor",
+    #         {'examineActions': lambda *args: None,
+    #          'executeTable': self.executeTable,
+    #          'readDigital': self.connection.ReadDigital,
+    #          'writeDigital': self.connection.WriteDigital,
+    #          'getAnalog': self.getAnalog,
+    #          'setAnalog': self.setAnalog,
+    #          'runSequence': self.runSequence,
+    #          },
+    #         dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
+    #
+    #     result.append(h)
+    #
+    #     result.append(cockpit.handlers.imager.ImagerHandler(
+    #         "%s imager" % self.name, "imager",
+    #         {'takeImage': h.takeImage}))
+    #
+    #     self.handlers = set(result)
+    #     return result
 
     def _adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
@@ -168,7 +172,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         - generate a structure that describes the profile
         """
         # Profiles
-        analogs = [[] for x in range(self.nrAnalogLines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
+        analogs = [[] for x in range(self._alines)]  # A list of lists (one per channel) of tuples (ticks, (analog values))
         digitals = list()  # A list of tuples (ticks, digital state)
         # # Need to track time of last analog events
         # t_last_analog = None

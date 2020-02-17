@@ -80,7 +80,8 @@ class ZStackExperiment(experiment.Experiment):
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
                 motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevAltitude, zTarget)
-                stabilizationTime = stabilizationTime * 1000
+                motionTime *= 1000
+                stabilizationTime *= 1000
             curTime += motionTime
             table.addAction(curTime, self.zPositioner, zTarget)
             curTime += stabilizationTime
@@ -98,6 +99,8 @@ class ZStackExperiment(experiment.Experiment):
         # Move back to the start so we're ready for the next rep.
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
                 self.zHeight, 0)
+        motionTime *= 1000
+        stabilizationTime *= 1000
         curTime += motionTime
         table.addAction(curTime, self.zPositioner, self.zStart)
         # Hold flat for the stabilization time, and any time needed for
@@ -108,9 +111,9 @@ class ZStackExperiment(experiment.Experiment):
             for cameras, lightTimePairs in self.exposureSettings:
                 for camera in cameras:
                     cameraReadyTime = max(cameraReadyTime,
-                            self.getTimeWhenCameraCanExpose(table, camera))
-        table.addAction(max(curTime + stabilizationTime, cameraReadyTime),
-                self.zPositioner, self.zStart)
+                                          self.getTimeWhenCameraCanExpose(table, camera))
+        table.addAction(max(curTime, cameraReadyTime),
+                        self.zPositioner, self.zStart)
 
         return table
 

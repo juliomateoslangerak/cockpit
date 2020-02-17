@@ -30,7 +30,7 @@ as part of another wx app.
 from contextlib import contextmanager
 import gc
 from itertools import chain
-import Mrc
+from cockpit.util import Mrc
 import numpy as np
 from operator import add
 import wx

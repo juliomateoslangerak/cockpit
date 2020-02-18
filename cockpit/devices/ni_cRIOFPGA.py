@@ -50,16 +50,8 @@ import socket
 import time
 import numpy as np
 from itertools import chain
-from functools import reduce
 
 from cockpit import depot, events
-import cockpit.gui.toggleButton
-import cockpit.handlers.executor
-import cockpit.handlers.genericHandler
-import cockpit.handlers.genericPositioner
-import cockpit.handlers.imager
-import cockpit.handlers.lightSource
-import cockpit.handlers.stagePositioner
 import threading
 import cockpit.util.threads
 import cockpit.util.connection
@@ -139,31 +131,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
         :return:
         """
         return self.connection.MoveAbsolute(line, target)
-
-    # def getHandlers(self):
-    #     """We control which light sources are active, as well as a set of stage motion piezos.
-    #     """
-    #     result = list()
-    #     h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-    #         self.name, "executor",
-    #         {'examineActions': lambda *args: None,
-    #          'executeTable': self.executeTable,
-    #          'readDigital': self.connection.ReadDigital,
-    #          'writeDigital': self.connection.WriteDigital,
-    #          'getAnalog': self.getAnalog,
-    #          'setAnalog': self.setAnalog,
-    #          'runSequence': self.runSequence,
-    #          },
-    #         dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
-    #
-    #     result.append(h)
-    #
-    #     result.append(cockpit.handlers.imager.ImagerHandler(
-    #         "%s imager" % self.name, "imager",
-    #         {'takeImage': h.takeImage}))
-    #
-    #     self.handlers = set(result)
-    #     return result
 
     def _adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
@@ -287,6 +254,7 @@ class Connection:
                             'reInit': 302,
                             'reInitHost': 303,
                             'reInitFPGA': 304,
+                            'ping': 305,
                             'updateNrReps': 405,
                             'sendStartStopIndexes': 406,
                             'initProfile': 407,
@@ -305,9 +273,13 @@ class Connection:
     def receiveClient(self, URI):
         pass
 
-    def connect(self, timeout=40):
-        self.connection = self.createSendSocket(self.ipAddress, self.port[0], timeout)
-        # server = depot.getHandlersOfType(depot.SERVER)[0]
+    def connect(self, timeout=5):
+        try:
+            self.connection = self.createSendSocket(self.ipAddress, self.port[0], timeout)
+        except socket.error as e:
+            raise Exception('Cockpit could not create a connection with the Executor due to a socket error.')
+        except Exception as e:
+            raise e
         # Create a status instance to query the FPGA status and run it in a separate thread
         self.status = FPGAStatus(self, self.localIp, self.port[1])
         self.status.start()
@@ -336,14 +308,38 @@ class Connection:
             print('Failed to create socket.\n', msg)
             return 1, '1'
 
-        try:
+        try:  # TODO: shorten this prints
             s.settimeout(timeout)
+            # check and turn on TCP Keepalive
+            x = s.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
+            if x == 0:
+                print('Socket Keepalive off, turning on')
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                print('setsockopt=', x)
+            else:
+                print
+                'Socket Keepalive already on'
+
             s.connect((host, port))
         except socket.error as msg:
-            print('Failed to establish connection.\n', msg)
+            print('Failed to configure or establish connection.\n', msg)
             return 1, '2'
 
         return s
+
+    def retryConnection(self):
+        """Retries to connect if there was a problem during TCP communication.
+        """
+        # TODO: We could verify with a ping if the connection is still ok.
+        # We stop the status thread
+        self.status.shouldRun = False
+        self.status.join()
+
+        # We give it a few seconds to recover...
+        time.sleep(2)
+
+        # We recreate the connection
+        self.connect()
 
     def writeReply(self):
         """For debugging"""
@@ -359,60 +355,67 @@ class Connection:
 
         command is a 3 digits string obtained from commandDict
 
-        args is a list of strings containing the arguments associated.
+        args is an iterable (tuple, list, generator) of strings containing the arguments associated.
 
         Return a Dictionary with the error description:
         Error Status, Error code and Error Description
         """
-        # Transform args into a list of strings of msgLength chars
-        sendArgs = list()
-        for arg in args:
-            if type(arg) is float:
-                raise Exception('Arguments to send cannot be floats')
-            if type(arg) == str and len(arg) <= msgLength:
-                sendArgs.append(arg.rjust(msgLength, '0'))
-            elif type(arg) == int and len(str(arg)) <= msgLength:
-                sendArgs.append(str(arg).rjust(msgLength, '0'))
-            else:
-                sendArgs.append(str(arg).rjust(msgLength, '0'))
+        retries = 0
+        # We place the whole function into a loop to easily retry sending the commands
+        while True:
+            # We don't want to retry forever
+            retries += 1
+            if retries > 5:  # There is a more serious problem
+                raise Exception(f'Command to executor did not succeed to send after {retries} retries')
+                return False
+            # Transform args into a list of strings of msgLength chars
+            sendArgs = list()
+            for arg in args:
+                if type(arg) is float:
+                    raise Exception('Arguments to send cannot be floats')
+                if type(arg) == str and len(arg) <= msgLength:
+                    sendArgs.append(arg.rjust(msgLength, '0'))
+                elif type(arg) == int and len(str(arg)) <= msgLength:
+                    sendArgs.append(str(arg).rjust(msgLength, '0'))
+                else:
+                    sendArgs.append(str(arg).rjust(msgLength, '0'))
 
-        # Create a dictionary to be flattened and sent as json string
-        messageCluster = {'Command': command,
-                          'Message Length': msgLength,
-                          'Number of Messages': len(sendArgs)
-                          }
+            # Create a dictionary to be flattened and sent as json string
+            messageCluster = {'Command': command,
+                              'Message Length': msgLength,
+                              'Number of Messages': len(sendArgs)
+                              }
 
-        try:
-            # Send the actual command
-            self.connection.send(json.dumps(messageCluster).encode())
-            self.connection.send(b'\r\n')
-        except socket.error as msg:
-            print('Send messageCluster failed.\n', msg)
-
-        try:
-            # Send the actual messages buffer
-            buf = str('').join(sendArgs).encode()
-            self.connection.sendall(buf)
-        except socket.error as msg:
-            print('Send buffer failed.\n', msg)
-
-        try:
-            # receive confirmation error
-            # errorLength = int(self.connection.recv(4).decode())
-            # if errorLength:
             try:
-                datagram = self.connection.recv(1024)
+                # Send the actual command
+                self.connection.send(json.dumps(messageCluster).encode())
+                self.connection.send(b'\r\n')
+            except socket.error as msg:
+                raise Exception(f'Socket error. Send messageCluster failed. Retry {retries}\n{msg}')
+                self.retryConnection()
+                continue
+
+            try:
+                # Send the actual messages buffer
+                buf = str('').join(sendArgs).encode()
+                self.connection.sendall(buf)
+            except socket.error as msg:
+                raise Exception(f'Socket error. Send buffer failed. Retry {retries}\n{msg}')
+                self.retryConnection()
+                continue
+
+            try:
+                datagram = self.connection.recv(1024,)
                 error = json.loads(datagram)
                 if error['status']:
-                    print(f'There has been an FPGA error: {error}')
-            except:
-                print('We received a TCP error when confirming command.')
-                # errorLength.append(self.connection.recv(4096))
-                # datagram = self.connection.recv(4096)
+                    raise Exception(f'There has been an FPGA error: {error}')
+                    return False
+            except socket.error as msg:
+                raise Exception(f'Socket error. Error when confirming command. Retry {retries}\n{msg}')
+                self.retryConnection()
+                continue
 
-        except socket.error as msg:  # Send failed
-            print('Receiving error.\n', msg)
-        return
+            return True
 
     def writeParameter(self, parameter, value):
         """Writes parameter value to RT-ipAddress

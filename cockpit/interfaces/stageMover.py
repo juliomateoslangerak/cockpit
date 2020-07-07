@@ -51,13 +51,18 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+import typing
 
 from cockpit import depot
 from cockpit import events
+from cockpit.util import userConfig
 
 import numpy
 import threading
-from collections import namedtuple
+
+
+AxisLimits = typing.Tuple[float, float]
+StageLimits = typing.Tuple[AxisLimits, AxisLimits, AxisLimits]
 
 
 ## Stage movement threshold (previously a hard-coded value).
@@ -135,6 +140,12 @@ class StageMover:
         ## Maps axis to the handlers for that axis, sorted by their range of
         # motion.
         self.axisToHandlers = depot.getSortedStageMovers()
+        if set(self.axisToHandlers.keys()) != {0, 1, 2}:
+            raise ValueError('stage mover requires 3 axis: X, Y, and Z')
+
+        # FIXME: we should have sensible defaults.
+        self._saved_top = userConfig.getValue('savedTop', default=3010.0)
+        self._saved_bottom = userConfig.getValue('savedBottom', default=3000.0)
 
         ## XXX: We have a single index for all axis, even though each
         ## axis may have a different number of stages.  While we don't
@@ -148,24 +159,58 @@ class StageMover:
         self.curHandlerIndex = 0
         ## Maps Site unique IDs to Site instances.
         self.idToSite = {}
+
+        # Compute the hard motion limits for each axis as the
+        # summation of all limits for handlers on that axis.
+        hard_limits = [None] * 3
+        for axis in range(3):
+            lower = 0.0
+            upper = 0.0
+            # We need set() to avoid duplicated handlers, and we might
+            # have duplicated handlers because of the hack to meet
+            # cockpit requirements that all axis have the same number
+            # of handlers (see comments on issue #413).
+            for handler in set(self.axisToHandlers[axis]):
+                handler_limits = handler.getHardLimits()
+                lower += handler_limits[0]
+                upper += handler_limits[1]
+            hard_limits[axis] = (lower, upper)
+        # Use a tuple to prevent changes to it, and assemble it like
+        # this to enable static code analysis.
+        self._hard_limits = (hard_limits[0], hard_limits[1], hard_limits[2])
+
         ## Maps handler names to events indicating if those handlers
         # have stopped moving.
         self.nameToStoppedEvent = {}
-        events.subscribe("stage mover", self.onMotion)
-        events.subscribe("stage stopped", self.onStop)
-        ## Device-speficic primitives to draw on the macrostage.
-        self.primitives = set()
-        for h in depot.getHandlersOfType(depot.STAGE_POSITIONER):
-            ps = h.getPrimitives()
-            if ps:
-                self.primitives.update(ps)
-        self.primitives.discard(None)
+        events.subscribe(events.STAGE_MOVER, self.onMotion)
+        events.subscribe(events.STAGE_STOPPED, self.onStop)
+
+
+    @property
+    def SavedTop(self) -> float:
+        return self._saved_top
+
+    @SavedTop.setter
+    def SavedTop(self, pos: float) -> None:
+        userConfig.setValue('savedTop', pos)
+        self._saved_top = pos
+        events.publish(events.STAGE_TOP_BOTTOM)
+
+    @property
+    def SavedBottom(self) -> float:
+        return self._saved_bottom
+
+    @SavedBottom.setter
+    def SavedBottom(self, pos: float) -> None:
+        userConfig.setValue('savedBottom', pos)
+        self._saved_bottom = pos
+        events.publish(events.STAGE_TOP_BOTTOM)
 
 
     ## Handle one of our devices moving. We just republish an abstracted
     # stage position for that axis.
-    def onMotion(self, deviceName, axis, position):
-        events.publish("stage position", axis, getPositionForAxis(axis))
+    def onMotion(self, axis):
+        events.publish(events.STAGE_POSITION, axis, getPositionForAxis(axis))
 
 
     ## Handle one of our devices stopping motion; this unblocks _goToAxes
@@ -196,12 +241,12 @@ class StageMover:
                 waiters.append(event)
                 self.nameToStoppedEvent[handler.name] = event
                 handler.moveAbsolute(target - offset)
-            if shouldBlock:
-                for event in waiters:
-                    try:
-                        event.wait(30)
-                    except Exception as e:
-                        print ("Failed waiting for stage to stop after 30s")
+        if shouldBlock:
+            for event in waiters:
+                try:
+                    event.wait(30)
+                except Exception as e:
+                    print ("Failed waiting for stage to stop after 30s")
 
 
 
@@ -219,30 +264,15 @@ def initialize():
 def makeInitialPublications():
     #for axis in range(3):
     for axis in mover.axisToHandlers.keys():
-        events.publish("stage position", axis, getPositionForAxis(axis))
+        events.publish(events.STAGE_POSITION, axis, getPositionForAxis(axis))
         limits = getSoftLimitsForAxis(axis)
         for isMax in [0, 1]:
             events.publish("soft safety limit", axis, limits[isMax],
                     bool(isMax))
-        events.publish("stage step size", axis,
-                mover.axisToHandlers[axis][mover.curHandlerIndex].getStepSize())
 
 
 ## Various module-global functions for interacting with the objects in the
 # Mover.
-
-def addPrimitive(*args):
-    mover.primitives.add(Primitive(*args))
-
-
-def getPrimitives():
-    return mover.primitives
-
-
-def removePrimitivesByDevice(device):
-    mover.primitives = set([m for m in mover.primitives
-                                    if m.device != device])
-
 
 ## Move one step with the current active handler in the specified direction(s).
 # \param direction A tuple/list of length equal to the number of axes of
@@ -260,10 +290,16 @@ def step(direction):
 
 ## Change to the next handler.
 def changeMover():
+    oldIndex = mover.curHandlerIndex
     newIndex = (mover.curHandlerIndex + 1) % mover.n_stages
-    if newIndex != mover.curHandlerIndex:
+    if newIndex != oldIndex:
         mover.curHandlerIndex = newIndex
         events.publish("stage step index", mover.curHandlerIndex)
+        for axis, handlers in mover.axisToHandlers.items():
+            old_step_size = handlers[oldIndex].getStepSize()
+            new_step_size = handlers[newIndex].getStepSize()
+            if old_step_size != new_step_size:
+                events.publish("stage step size", axis, new_step_size)
 
 
 ## Change the step size for the current handlers.
@@ -338,7 +374,6 @@ def goToSite(uniqueID, shouldBlock = False):
     for i in range(len(offsetPosition)):
         offsetPosition[i]=offsetPosition[i]+objOffset[i]
     goTo(offsetPosition, shouldBlock)
-    events.publish('arrive at site', site)
 
 
 ## Get a Site with a given ID.
@@ -454,22 +489,13 @@ def getCurHandlerIndex():
 
 ## Get the hard motion limits for a specific axis, as the summation of all
 # limits for movers on that axis.
-def getHardLimitsForAxis(axis):
-    lowLimit = 0
-    highLimit = 0
-    for handler in set(mover.axisToHandlers[axis]):
-        low, high = handler.getHardLimits()
-        lowLimit += low
-        highLimit += high
-    return (lowLimit, highLimit)
+def getHardLimitsForAxis(axis: int) -> AxisLimits:
+    return mover._hard_limits[axis]
 
 
 ## Repeat the above for each axis.
-def getHardLimits():
-    result = []
-    for axis in sorted(mover.axisToHandlers.keys()):
-        result.append(getHardLimitsForAxis(axis))
-    return result
+def getHardLimits() -> StageLimits:
+    return mover._hard_limits
 
 
 ## Returns a list of all hard motion limits for the given axis.
@@ -523,6 +549,37 @@ def setSoftMin(axis, value):
 
 def setSoftMax(axis, value):
     setSoftLimit(axis, value, True)
+
+
+def moveZCheckMoverLimits(target):
+    # Use the nanomover (and, optionally, also the stage piezo) to
+    # move to the target elevation.
+
+    # Need to check current mover limits, see if we exceed them and if
+    # so drop down to lower mover handler.
+    originalMover = mover.curHandlerIndex
+    limits = getIndividualSoftLimits(2)
+    offset = target - getPosition()[2]
+
+
+    # FIXME: IMD 2018-11-07 I think this test needs to be currentpos
+    # of the current mover not the overall pos.
+    while mover.curHandlerIndex >= 0:
+        handler = mover.curHandlerIndex
+        moverPos = getAllPositions()[handler][2]
+        if ((moverPos + offset) > limits[mover.curHandlerIndex][1]
+            or (moverPos + offset) < limits[mover.curHandlerIndex][0]):
+            # need to drop down a handler to see if next handler can do the move
+            mover.curHandlerIndex -= 1
+            if mover.curHandlerIndex < 0:
+                print ("Move too large for any Z mover.")
+
+        else:
+            goToZ(target)
+            break
+
+    # return to original active mover.
+    mover.curHandlerIndex = originalMover
 
 
 ## Use the nearest-neighbor algorithm to select the order in which to

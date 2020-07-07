@@ -30,19 +30,19 @@ as part of another wx app.
 from contextlib import contextmanager
 import gc
 from itertools import chain
-from cockpit.util import Mrc
+from cockpit.util.Mrc import Mrc
 import numpy as np
 from operator import add
 import wx
 from wx.lib.floatcanvas import FloatCanvas
 import wx.lib.plot as plot
-from distutils import version
+
 
 ICON_SIZE = (16,16)
 BITMAP_SIZE = (512,512)
 
 
-class IntensityProfiler(object):
+class IntensityProfiler:
     """A class to profile intensity and store calculation variables."""
     def __init__(self):
         self._data = None
@@ -67,9 +67,9 @@ class IntensityProfiler(object):
             isOutermostCall = self._data is None
             if isOutermostCall:
                 src = self._dataSource
-                self._data = Mrc.Mrc(src, 'r').data_withMrc(src)
+                self._data = Mrc(src, 'r').data_withMrc(src)
             yield
-        except IOError as e:
+        except IOError:
             dlg = wx.MessageDialog(wx.GetTopLevelWindows()[0],
                             "Could not open data file: it may have been moved or deleted.",
                             caption="IO Error",
@@ -157,8 +157,8 @@ class IntensityProfiler(object):
             if self._beadCentre is None or not refine:
                 # Search around centre of dataset.
                 middle = self._data[:,
-                                    3*ny // 8:5*ny // 8,
-                                    3*nx // 8:5*nx // 8]
+                                    3*ny // 8 : 5*ny // 8,
+                                    3*nx // 8 : 5*nx // 8]
                 xOffset = nx//2 - middle.shape[-1]//2
                 yOffset = ny//2 - middle.shape[-2]//2
             else:
@@ -231,25 +231,22 @@ class IntensityProfiler(object):
 
 class IntensityProfilerFrame(wx.Frame):
     """This class provides a UI for IntensityProfiler."""
+    SHOW_DEFAULT = False
     def __init__(self, parent=None):
-        super(IntensityProfilerFrame, self).__init__(parent, title="SIM intensity profile")
+        super().__init__(parent, title="SIM intensity profile")
         self.profiler = IntensityProfiler()
         # Outermost sizer.
         vbox = wx.BoxSizer(wx.VERTICAL)
 
         ## Toolbar
         toolbar = wx.ToolBar(self, -1)
-        # Choose a function to create tools for the toolbar.
-        if version.LooseVersion(wx.__version__) < version.LooseVersion('4'):
-            make_tool = toolbar.AddLabelTool
-        else:
-            make_tool = toolbar.AddTool
         # Open file
-        openTool = make_tool(
-                            wx.ID_ANY,
-                            "Open",
-                            wx.ArtProvider.GetBitmap(wx.ART_FILE_OPEN, wx.ART_TOOLBAR, ICON_SIZE),
-                            shortHelp="Open a dataset.")
+        openTool = toolbar.AddTool(wx.ID_ANY,
+                                   "Open",
+                                   wx.ArtProvider.GetBitmap(wx.ART_FILE_OPEN,
+                                                            wx.ART_TOOLBAR,
+                                                            ICON_SIZE),
+                                   shortHelp="Open a dataset.")
         toolbar.AddSeparator()
         # Number of phases
         phaseLabel = wx.StaticText(toolbar,
@@ -265,7 +262,7 @@ class IntensityProfilerFrame(wx.Frame):
                                  min=1,
                                  max=5,
                                  initial=5,
-                                 style = wx.SP_ARROW_KEYS | wx.TE_PROCESS_ENTER)
+                                 style=wx.SP_ARROW_KEYS|wx.TE_PROCESS_ENTER)
         phasesTool.Bind(wx.EVT_SPINCTRL,
                         lambda event: self.profiler.setPhases(event.GetInt()))
         phasesTool.Bind(wx.EVT_TEXT_ENTER,
@@ -295,10 +292,10 @@ class IntensityProfilerFrame(wx.Frame):
         self.boxTool = boxTool
         toolbar.AddSeparator()
         # Calculate profile.
-        goTool = make_tool(wx.ID_ANY,
-                           "Go",
-                           wx.ArtProvider.GetBitmap(wx.ART_TIP, wx.ART_TOOLBAR, ICON_SIZE),
-                           shortHelp="Evaluate intensity profile")
+        goTool = toolbar.AddTool(wx.ID_ANY,
+                                 "Go",
+                                 wx.ArtProvider.GetBitmap(wx.ART_TIP, wx.ART_TOOLBAR, ICON_SIZE),
+                                 shortHelp="Evaluate intensity profile")
         toolbar.Realize()
         self.Bind(wx.EVT_TOOL, self.loadFile, openTool)
         self.Bind(wx.EVT_TOOL, self.calculate, goTool)
@@ -310,10 +307,7 @@ class IntensityProfilerFrame(wx.Frame):
         self.canvas = FloatCanvas.FloatCanvas(self, size=(512,512),
                                               style = wx.WANTS_CHARS)
 
-        if version.LooseVersion(wx.__version__) < version.LooseVersion('4'):
-            img = wx.EmptyImage(BITMAP_SIZE[0], BITMAP_SIZE[1], clear=True)
-        else:
-            img = wx.Image(BITMAP_SIZE[0], BITMAP_SIZE[1], clear=True)
+        img = wx.Image(BITMAP_SIZE[0], BITMAP_SIZE[1], clear=True)
         self.bitmap = self.canvas.AddBitmap(img, (0,0), 'cc', False)
         self.circle = self.canvas.AddCircle((0,0), 10, '#ff0000')
         self.rectangle = self.canvas.AddRectangle((0,0), (20,20), '#ff0000')
@@ -321,7 +315,7 @@ class IntensityProfilerFrame(wx.Frame):
         hbox.Add(self.canvas)
         self.canvas.Bind(wx.EVT_CHAR, self.onKeys)
         # Plot canvas
-        self.plotCanvas = plot.PlotCanvas(self, wx.ID_ANY, pos=(-1,-1))
+        self.plotCanvas = plot.PlotCanvas(self, wx.ID_ANY)
         self.plotCanvas.canvas.Bind(wx.EVT_LEFT_UP, self.onClickPlotCanvas)
         self.plotCanvas.MinSize=(512,512)
         self.plotCanvas.SetSize((512,512))
@@ -408,7 +402,6 @@ class IntensityProfilerFrame(wx.Frame):
         proj -= np.min(proj)
         proj /= np.max(proj)
         proj = (proj * 255).astype(np.uint8)
-        # d = list(range(-10,-3)) + list(range(3, 10))
         img = np.dstack((proj, proj, proj))
         nx, ny = proj.shape
         self.bitmap.Bitmap.SetSize((nx,ny))
@@ -504,10 +497,7 @@ def main():
 
 def makeWindow(parent):
     """Call from another app to get a single window instance."""
-    global window
     window = IntensityProfilerFrame(parent)
-    #window.Bind(wx.EVT_CLOSE, lambda event: window.Hide())
-    #return window
 
 
 if __name__ == '__main__':

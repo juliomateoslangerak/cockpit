@@ -54,14 +54,15 @@
 
 from cockpit import events
 import cockpit.gui
+import cockpit.gui.freetype
 import cockpit.gui.guiUtils
+import cockpit.gui.dialogs.getNumberDialog
 import cockpit.util.datadoc
 import cockpit.util.threads
 
 from wx.glcanvas import GLCanvas
 from collections.abc import Iterable
 
-from cockpit.util import ftgl
 import numpy
 from OpenGL.GL import *
 import numpy as np
@@ -160,7 +161,7 @@ class Image(BaseGL):
     """
     def __init__(self):
         # Maximum texture edge size
-        self._maxTexEdge = glGetInteger(GL_MAX_TEXTURE_SIZE)
+        self._maxTexEdge = 0
         # Textures used to display this image.
         self._textures = []
         # New data flag
@@ -221,6 +222,7 @@ class Image(BaseGL):
         be called in the main thread."""
         if self._data is None:
             return
+        self._maxTexEdge = glGetInteger(GL_MAX_TEXTURE_SIZE)
         data = self._data
         glPixelStorei(GL_UNPACK_SWAP_BYTES, False)
         # Ensure the right number of textures available.
@@ -407,7 +409,7 @@ class Histogram(BaseGL):
 class ViewCanvas(wx.glcanvas.GLCanvas):
     ## Instantiate.
     def __init__(self, parent, *args, **kwargs):
-        wx.glcanvas.GLCanvas.__init__(self, parent, *args, **kwargs)
+        super().__init__(parent, *args, **kwargs)
 
         self.image = Image()
         self.histogram = Histogram()
@@ -473,8 +475,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         self.context = wx.glcanvas.GLContext(self)
 
         ## Font for text rendering
-        self.font = ftgl.TextureFont(cockpit.gui.FONT_PATH)
-        self.font.setFaceSize(18)
+        self.face = cockpit.gui.freetype.Face(18)
 
         self.Bind(wx.EVT_PAINT, self.onPaint)
         # Do nothing, to prevent flickering
@@ -635,7 +636,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             glOrtho (0, self.w, 0, self.h, 1., -1.)
             glTranslatef(0, HISTOGRAM_HEIGHT/2+2, 0)
             try:
-                self.font.render('%d [%-10d %10d] %d' %
+                self.face.render('%d [%-10d %10d] %d' %
                                  (self.image.dmin, self.histogram.lthresh,
                                   self.histogram.uthresh, self.image.dmin+self.image.dptp))
             except:

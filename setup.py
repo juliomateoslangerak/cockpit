@@ -59,13 +59,15 @@ setuptools.setup(
 
     python_requires = '>=3.5',
     install_requires = [
-        'matplotlib',
-        'numpy',
-        'scipy',
-        'wxPython',
-        'Pyro4',
-        'pyserial',
         'PyOpenGL',
+        'Pyro4',
+        'freetype-py',
+        'matplotlib',
+        'microscope',
+        'numpy',
+        'pyserial',
+        'scipy',
+        'wxPython>=4',
     ],
 
     test_suite = 'cockpit.testsuite',

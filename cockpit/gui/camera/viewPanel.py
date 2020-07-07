@@ -69,7 +69,7 @@ import cockpit.interfaces.imager
 # the image the camera sees, and a histogram at the bottom.
 class ViewPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
-        wx.Panel.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         ## Handle of the current camera we're controlling.
         self.curCamera = None
@@ -134,12 +134,6 @@ class ViewPanel(wx.Panel):
         if self.curCamera is not None:
             item = menu.Append(-1, "Disable %s" % self.curCamera.descriptiveName)
             self.Bind(wx.EVT_MENU, lambda event: self.curCamera.toggleState(), item)
-            menu.InsertSeparator(1)
-            for size in self.curCamera.getImageSizes():
-                item = menu.Append(-1, "Set image size to %s" % str(size))
-                self.Bind(wx.EVT_MENU,
-                        lambda event, size = size: self.curCamera.setImageSize(size),
-                        item)                
         else:
             # Get all inactive cameras.
             cameras = depot.getHandlersOfType(depot.CAMERA)
@@ -160,7 +154,7 @@ class ViewPanel(wx.Panel):
         if self.curCamera is not None:
             # Wrap this in a try/catch since it will fail if the initial
             # camera enabling failed.
-            events.unsubscribe("new image %s" % self.curCamera.name, self.onImage)
+            events.unsubscribe(events.NEW_IMAGE % self.curCamera.name, self.onImage)
             self.curCamera = None
         if self.canvas is not None:
             # Destroy the canvas.
@@ -183,7 +177,7 @@ class ViewPanel(wx.Panel):
         self.canvas.resetView()
 
         # Subscribe to new image events only after canvas is prepared.
-        events.subscribe("new image %s" % self.curCamera.name, self.onImage)
+        events.subscribe(events.NEW_IMAGE % self.curCamera.name, self.onImage)
 
     ## React to the drawer changing, by updating our labels and colors.
     @cockpit.util.threads.callInMainThread

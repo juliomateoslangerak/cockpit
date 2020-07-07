@@ -54,7 +54,7 @@
 import wx
 
 from cockpit import depot
-from . import deviceHandler
+from cockpit.handlers import deviceHandler
 from cockpit import events
 import time
 
@@ -66,7 +66,6 @@ class PositionerHandler(deviceHandler.DeviceHandler):
     # - moveRelative(axis, delta): Move the axis by the specified
     #   delta, in microns.
     # - getPosition(axis): Get the position for the specified axis.
-    # - setSafety(axis, value, isMax): Set the min or max soft safety limit.
     # Additionally, if the device is to be used in experiments, it must have:
     # - getMovementTime(axis, start, end): Get the amount of time it takes to 
     #   move from start to end and then stabilize.
@@ -87,9 +86,8 @@ class PositionerHandler(deviceHandler.DeviceHandler):
 
     def __init__(self, name, groupName, isEligibleForExperiments, callbacks, 
             axis, stepSizes, stepIndex, hardLimits, softLimits = None):
-        deviceHandler.DeviceHandler.__init__(self, name, groupName,
-                isEligibleForExperiments, callbacks, 
-                depot.STAGE_POSITIONER)
+        super().__init__(name, groupName, isEligibleForExperiments, callbacks,
+                         depot.STAGE_POSITIONER)
         self.axis = axis
         self.stepSizes = stepSizes
         self.stepIndex = stepIndex
@@ -139,13 +137,6 @@ class PositionerHandler(deviceHandler.DeviceHandler):
         self.stepIndex = min(len(self.stepSizes) - 1, max(0, newIndex))
 
 
-    ## Return list of primitives to draw on the macrostage.
-    def getPrimitives(self):
-        cb = self.callbacks.get('getPrimitives', None)
-        if cb:
-            return cb()
-
-
     ## Return the current step size.
     def getStepSize(self):
         return self.stepSizes[self.stepIndex]
@@ -172,7 +163,6 @@ class PositionerHandler(deviceHandler.DeviceHandler):
             raise RuntimeError("Attempted to set soft motion limit of %s, exceeding our hard motion limit of %s" % (value, self.hardLimits[1]))
         elif not isMax and value < self.hardLimits[0]:
             raise RuntimeError("Attempted to set soft motion limit of %s, lower than our hard motion limit of %s" % (value, self.hardLimits[0]))
-        self.callbacks['setSafety'](self.axis, value, isMax)
         self.softLimits[int(isMax)] = value
 
     
@@ -210,8 +200,8 @@ class PositionerHandler(deviceHandler.DeviceHandler):
             def call(x, arg):
                 f(arg)
                 time.sleep(sum(self.getMovementTime(0, arg)))
-                events.publish('stage mover', self.name, x, self.getPosition())
-                events.publish('stage stopped', self.name)
+                events.publish(events.STAGE_MOVER, x)
+                events.publish(events.STAGE_STOPPED, self.name)
             return call
 
         self.callbacks['moveAbsolute'] = wrapMoveFunc(h.moveAbsolute)

@@ -53,14 +53,13 @@
 import wx
 
 from cockpit import depot
-from . import deviceHandler
+from cockpit.handlers import deviceHandler
 
 from cockpit import events
 import cockpit.gui.guiUtils
 import cockpit.gui.keyboard
 import cockpit.gui.toggleButton
 
-from cockpit.util.colors import dyeToColor
 
 ## This handler is responsible for tracking what kinds of light each camera
 # receives, via the drawer system.
@@ -72,8 +71,7 @@ class DrawerHandler(deviceHandler.DeviceHandler):
     # \param settingIndex Index into settings list indicating the current mode.
     def __init__(self, name, groupName, settings = None, settingIndex = None,
                  callbacks = {}):
-        deviceHandler.DeviceHandler.__init__(self, name, groupName,
-                False, callbacks, depot.DRAWER)
+        super().__init__(name, groupName, False, callbacks, depot.DRAWER)
         self.settings = settings
         self.settingIndex = settingIndex
         ## List of ToggleButtons, one per setting.
@@ -101,7 +99,6 @@ class DrawerHandler(deviceHandler.DeviceHandler):
             self.buttons.append(button)
         panel.SetSizerAndFit(sizer)
         frame.SetClientSize(panel.GetSize())
-        frame.SetPosition((2400, 65))
         frame.Show()
         cockpit.gui.keyboard.setKeyboardHandlers(frame)
         return None

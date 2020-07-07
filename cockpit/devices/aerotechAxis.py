@@ -35,7 +35,7 @@ Sample config entry:
 """
 
 
-from . import device
+from cockpit.devices import device
 from cockpit import events
 import cockpit.handlers.stagePositioner
 import socket
@@ -67,7 +67,7 @@ RESPONSE_CHARS = {
 
 class AerotechZStage(device.Device):
     def __init__(self, name, config={}):
-        device.Device.__init__(self, name, config)
+        super().__init__(name, config)
         try :
             limitString = config.get('softlimits', '')
             parsed = re.search(LIMITS_PAT, limitString)
@@ -83,7 +83,7 @@ class AerotechZStage(device.Device):
             self.softlimits = (-30000,7000)
 
         # Subscribe to abort events.
-        events.subscribe('user abort', self.onAbort)
+        events.subscribe(events.USER_ABORT, self.onAbort)
         # The cockpit axis does this stage moves along.
         self.axis = int(config.get('axis', 2))
         # Socket used to communicate with controller.
@@ -153,8 +153,7 @@ class AerotechZStage(device.Device):
                 'moveRelative': self.moveRelative, 
                 'getPosition': self.getPosition, 
                 'getMovementTime': self.getMovementTime,
-                'cleanupAfterExperiment': self.cleanup,
-                'setSafety': self.setSafety},
+                'cleanupAfterExperiment': self.cleanup},
                 axis, [10, 50, 100, 500, 1000, 5000],
                 1, (minVal, maxVal), (minVal, maxVal))
         result.append(handler)
@@ -173,15 +172,14 @@ class AerotechZStage(device.Device):
     ## Publish our current position.
     def makeInitialPublications(self):
         axis = self.axis
-        events.publish('stage mover', '%d %s' % (axis, NAME_STRING), axis,
-                self.position)
+        events.publish(events.STAGE_MOVER, axis)
 
 
     ## User clicked the abort button; stop moving.
     def onAbort(self):
         self.command(b'ABORT')
         axis = self.axis
-        events.publish('stage stopped', '%d %s' % (axis, NAME_STRING))
+        events.publish(events.STAGE_STOPPED, '%d %s' % (axis, NAME_STRING))
 
 
     ## Move the stage to a given position.
@@ -189,13 +187,13 @@ class AerotechZStage(device.Device):
         self.command(b'ENABLE')
         self.command(b'MOVEABS D %f F %f'
                         % (pos / 1000.0, self.speed))
-        events.publish('stage mover', '%d %s' % (axis, NAME_STRING), axis, self.position)
+        events.publish(events.STAGE_MOVER, axis)
         # Wait until the move has finished - status bit 2 is InPosition.
         while not int(self.command(b'AXISSTATUS')) & (1 << 2):
             sleep(0.1)
         self.position = self.command(b'CMDPOS').decode()
-        events.publish('stage mover', '%d %s' % (axis, NAME_STRING), axis, self.position)
-        events.publish('stage stopped', '%d mover' % axis)
+        events.publish(events.STAGE_MOVER, axis)
+        events.publish(events.STAGE_STOPPED, '%d mover' % axis)
         self.command (b'DISABLE')
 
 
@@ -204,13 +202,13 @@ class AerotechZStage(device.Device):
         self.command(b'ENABLE')
         self.command(b'MOVEINC D %f F %f'
                         % (delta / 1000.0, self.speed))
-        events.publish('stage mover', '%d %s' % (axis, NAME_STRING), axis, self.position)
+        events.publish(events.STAGE_MOVER, axis)
         # Wait until the move has finished - status bit 2 is InPosition.
         while not int(self.command(b'AXISSTATUS')) & (1 << 2):
             sleep(0.1)
         self.position = self.command(b'CMDPOS').decode()
-        events.publish('stage mover', '%d %s' % (axis, NAME_STRING), axis, self.position)
-        events.publish('stage stopped', '%d %s' % (axis, NAME_STRING))
+        events.publish(events.STAGE_MOVER, axis)
+        events.publish(events.STAGE_STOPPED, '%d %s' % (axis, NAME_STRING))
         self.command (b'DISABLE')
 
 
@@ -254,14 +252,6 @@ class AerotechZStage(device.Device):
             self.socket.connect((self.ipAddress, self.port))
         except:
             raise
-
-
-    ## Set the soft motion safeties for one of the movers. Note that the 
-    # PositionerHandler provides its own soft safeties on the cockpit side; 
-    # this function just allows you to propagate safeties to device control
-    # code, if applicable.
-    def setSafety(self, axis, value, isMax):
-        pass
 
 
     ## Cleanup after an experiment. For a real mover, this would probably 

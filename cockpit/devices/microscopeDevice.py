@@ -45,7 +45,7 @@ For connection via a controller::
 import Pyro4
 import wx
 from cockpit import events
-from . import device
+from cockpit.devices import device
 from cockpit import depot
 import cockpit.gui.device
 import cockpit.handlers.deviceHandler
@@ -64,7 +64,7 @@ import re
 class MicroscopeBase(device.Device):
     """A class to communicate with the UniversalDevice interface."""
     def __init__(self, name, config):
-        super(MicroscopeBase, self).__init__(name, config)
+        super().__init__(name, config)
         self.handlers = []
         self.panel = None
         # Pyro proxy
@@ -108,7 +108,7 @@ class MicroscopeBase(device.Device):
         self.describe_settings = self._proxy.describe_settings
 
     def finalizeInitialization(self):
-        super(MicroscopeBase, self).finalizeInitialization()
+        super().finalizeInitialization()
         # Set default settings on remote device. These will be over-
         # ridden by any defaults in userConfig, later.
         # Currently, settings are an 'advanced' feature --- the remote
@@ -218,11 +218,6 @@ class MicroscopeBase(device.Device):
         self.cached_settings.update(self.settings)
 
 
-    def onPyroError(self, err, *args):
-        """Handle exceptions raised by async. proxy."""
-        raise err
-
-
 class MicroscopeGenericDevice(MicroscopeBase):
     def getHandlers(self):
         """Return device handlers."""
@@ -272,7 +267,7 @@ class MicroscopeSwitchableDevice(MicroscopeBase):
 
 
     def finalizeInitialization(self):
-        super(MicroscopeSwitchableDevice, self).finalizeInitialization()
+        super().finalizeInitialization()
         self.enabled = self._proxy.get_is_enabled()
 
 
@@ -298,11 +293,6 @@ class MicroscopeLaser(MicroscopeBase):
             self._proxy.disable()
 
     def getHandlers(self):
-        wl = self.config.get('wavelength', None)
-        if wl:
-            col = cockpit.util.colors.wavelengthToColor(wl, 0.8)
-        else:
-            col = '0xaaaaaa'
         """Return device handlers. Derived classes may override this."""
         # Querying remote for maxPower can cause delays, so set to None
         # and update later.
@@ -313,9 +303,8 @@ class MicroscopeLaser(MicroscopeBase):
                 'setPower': cockpit.util.threads.callInNewThread(self._proxy.set_power_mw),
                 'getPower': self._proxy.get_power_mw, # Synchronous - can hang threads.
             },
-            wl,# wavelength,
+            self.config.get('wavelength', None),
             0, None, 20, #minPower, maxPower, curPower,
-            col, #colour
             isEnabled=True))
         trigsource = self.config.get('triggersource', None)
         trigline = self.config.get('triggerline', None)
@@ -355,7 +344,7 @@ class MicroscopeLaser(MicroscopeBase):
 
 class MicroscopeFilter(MicroscopeBase):
     def __init__(self, *args, **kwargs):
-        super(MicroscopeFilter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # Cameras
         cdefs = self.config.get('cameras', None)
         if cdefs:

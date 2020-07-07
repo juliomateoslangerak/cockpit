@@ -53,17 +53,14 @@ from itertools import chain
 from functools import reduce
 
 from cockpit import depot, events
-import cockpit.gui.toggleButton
 import cockpit.handlers.executor
-import cockpit.handlers.genericHandler
-import cockpit.handlers.genericPositioner
 import cockpit.handlers.imager
 import cockpit.handlers.lightSource
 import cockpit.handlers.stagePositioner
 import threading
 import cockpit.util.threads
 import cockpit.util.connection
-from . import executorDevices
+from cockpit.devices import executorDevices
 
 COCKPIT_AXES = {'x': 0, 'y': 1, 'z': 2, 'SI angle': -1}
 FPGA_IDLE_STATE = 3
@@ -82,7 +79,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
     }
 
     def __init__(self, name, config):
-        super(self.__class__, self).__init__(name, config)
+        super().__init__(name, config)
         # TODO: tickrate should go into a config?
         self.tickrate = 100  # Number of ticks per ms. As of the resolution of the action table.
         # TODO: check
@@ -116,7 +113,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         #     self.setAnalog(line, 65536//2)
 
     def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
-        super(self.__class__, self).onPrepareForExperiment(*args)
+        super().onPrepareForExperiment(*args)
         self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self._alines)]
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()

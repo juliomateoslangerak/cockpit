@@ -95,7 +95,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         return modes
 
     def finalizeInitialization(self):
-        super(MicroscopeCamera, self).finalizeInitialization()
+        super().finalizeInitialization()
         self._readUserConfig()
         # Decorate updateSettings. Can't do this from the outset, as camera
         # is initialized before interfaces.imager.
@@ -125,7 +125,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def performSubscriptions(self):
         """Perform subscriptions for this camera."""
-        events.subscribe('cleanup after experiment',
+        events.subscribe(events.CLEANUP_AFTER_EXPERIMENT,
                 self.cleanupAfterExperiment)
         events.subscribe('objective change',
                 self.onObjectiveChange)
@@ -177,8 +177,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                  'prepareForExperiment': self.prepareForExperiment,
                  'getExposureTime': self.getExposureTime,
                  'setExposureTime': self.setExposureTime,
-                 'getImageSizes': self.getImageSizes,
-                 'setImageSize': self.setImageSize,
                  'getSavefileInfo': self.getSavefileInfo,
                  'makeUI': self.makeUI,
                  'softTrigger': self.softTrigger},
@@ -222,11 +220,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         return self.enabled
 
 
-    def onPyroError(self, err, *args):
-        """Handle exceptions raised by aync. proxy."""
-        raise err
-
-
     def getExposureTime(self, name=None, isExact=False):
         """Read the real exposure time from the camera."""
         # Camera uses times in s; cockpit uses ms.
@@ -248,11 +241,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             cockpit.util.logger.log.warning("%s returned tuple not Binning()" % self.name)
             binning = Binning(*binning)
         return (roi.width//binning.h, roi.height//binning.v)
-
-
-    def getImageSizes(self, name):
-        """Return a list of available image sizes."""
-        return []
 
 
     def getSavefileInfo(self, name):
@@ -287,12 +275,12 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         """This function is called when data is received from the hardware."""
         (image, timestamp) = args
         if not isinstance(image, Exception):
-            events.publish('new image %s' % self.name, image, timestamp)
+            events.publish(events.NEW_IMAGE % self.name, image, timestamp)
         else:
             # Handle the dropped frame by publishing an empty image of the correct
             # size. Use the handler to fetch the size, as this will use a cached value,
             # if available.
-            events.publish('new image %s' % self.name,
+            events.publish(events.NEW_IMAGE % self.name,
                            np.zeros(self.handlers[0].getImageSize(), dtype=np.int16),
                            timestamp)
             raise image
@@ -302,11 +290,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         """Set the exposure time."""
         # Camera uses times in s; cockpit uses ms.
         self._proxy.set_exposure_time(exposureTime / 1000.0)
-
-
-    def setImageSize(self, name, imageSize):
-        pass
-
 
 
     def softTrigger(self, name=None):
@@ -336,7 +319,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                          lambda: gainButton.SetLabel("%s" % self.settings.get('gain', None)))
         sizer.AddSpacer(4)
         # Settings button
-        adv_button = wx.Button(parent=self.panel, label='settings')
+        adv_button = wx.Button(parent=self.panel, label='Settings')
         adv_button.Bind(wx.EVT_LEFT_UP, self.showSettings)
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)
@@ -359,24 +342,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             return
         self.updateSettings({'gain': gain})
 
-
-    def onModeButton(self, evt):
-        menu = wx.Menu()
-        if not self.modes:
-            # Camera not enabled yet.
-            menu.Append(0, str('No modes known - camera never enabled.'))
-            self.panel.Bind(wx.EVT_MENU,  None, id= 0)
-        else:
-            menuID = 0
-            for index, mode in enumerate(self.modes):
-                menu.Append(menuID, mode)
-                self.panel.Bind(wx.EVT_MENU,
-                                lambda event, m=index: self.setReadoutMode(m),
-                                id=menuID)
-                menuID += 1
-        cockpit.gui.guiUtils.placeMenuAtMouse(self.panel, menu)
-
-
     @pauseVideo
     def setReadoutMode(self, index):
         if len(self.modes) <= 1:
@@ -384,4 +349,3 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             return
         self.set_setting('readout mode', self.modes[index][0])
         self.updateSettings()
-

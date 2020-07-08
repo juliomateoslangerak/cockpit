@@ -706,8 +706,8 @@ class FPGAStatus(threading.Thread):
         It will update the FPGAStatus dictionary.
         """
         try:
-            # datagramLength = int(self.socket.recvfrom(4)[0].decode())
-            datagram = self.socket.recvfrom(1024)[0]
+            datagramLength = int(self.socket.recvfrom(4)[0].decode())
+            datagram = self.socket.recvfrom(datagramLength)[0]
         except:
             print('Error receiving status datagram: ', datagram)
 

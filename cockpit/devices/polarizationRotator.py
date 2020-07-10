@@ -29,8 +29,8 @@ handler with instances of whatever handler drives the analogue out-
 put, having converted the angle index to the required voltage.
 
 Sample config entry:
-  [polarizer]
-  type: PolarizationDevice
+  [SI polarizer]
+  type: cockpit.devices.polarizationRotator.PolarizationDevice
   analogSource: dsp
   analogLine: 1
   siVoltages: 488: 0.915, 1.05, 1.23
@@ -48,6 +48,7 @@ Sample config entry:
 from cockpit import depot
 from cockpit.devices import device
 
+
 class PolarizationDevice(device.Device):
     _config_types = {
         'idlevoltage': float,
@@ -59,27 +60,6 @@ class PolarizationDevice(device.Device):
     # TODO - identify the polarizer some other way.
     def __init__(self, name, config={}):
         super().__init__(name, config)
-
-
-    def getHandlers(self):
-        asource = self.config.get('analogsource', None)
-        aline = self.config.get('analogline', None)
-        offset = self.config.get('offset', 0)
-        gain = self.config.get('gain', 1)
-        dt = Decimal(self.config.get('settlingtime', 0.05))
-        aHandler = depot.getHandler(asource, depot.EXECUTOR)
-
-        if aHandler is None:
-            raise Exception('No control source.')
-        movementTimeFunc = lambda x, start, delta: (0, dt)
-        handler = aHandler.registerAnalog(self, aline, offset, gain, movementTimeFunc)
-
-        # Connect handler to analogue source to populate movement callbacks.
-        handler.connectToAnalogSource(aHandler, aline, offset, gain)
-
-        result.append(handler)
-        return result
-
 
     def getHandlers(self):
         aSource = self.config.get('analogsource', None)

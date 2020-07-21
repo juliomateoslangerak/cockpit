@@ -63,20 +63,20 @@ from OpenGL.GL import *
 # filepath.  It is a /-separated filepath, even on windows, so do not
 # use os.path.join.
 _FONT_PATH = pkg_resources.resource_filename(
-    'cockpit',
-    'resources/fonts/UniversalisADFStd-Regular.otf'
+    "cockpit", "resources/fonts/UniversalisADFStd-Regular.otf"
 )
 
 
 class _Glyph:
     def __init__(self, face: freetype.Face, char: str) -> None:
-        if face.load_char(char,freetype.FT_LOAD_RENDER):
-            raise RuntimeError('failed to load char \'%s\'' % char)
+        if face.load_char(char, freetype.FT_LOAD_RENDER):
+            raise RuntimeError("failed to load char '%s'" % char)
         glyph = face.glyph
         bitmap = glyph.bitmap
 
-        assert bitmap.pixel_mode == freetype.FT_PIXEL_MODE_GRAY, \
-            "We haven't implemented support for other pixel modes"
+        assert (
+            bitmap.pixel_mode == freetype.FT_PIXEL_MODE_GRAY
+        ), "We haven't implemented support for other pixel modes"
 
         glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT)
         glPixelStorei(GL_UNPACK_LSB_FIRST, GL_FALSE)
@@ -89,25 +89,34 @@ class _Glyph:
 
         self._descender = glyph.bitmap_top - self._height
         self._bearing_x = glyph.bitmap_left
-        self._advance = numpy.array([face.glyph.advance.x / 64.0,
-                                     face.glyph.advance.y / 64.0])
+        self._advance = numpy.array(
+            [face.glyph.advance.x / 64.0, face.glyph.advance.y / 64.0]
+        )
 
         glBindTexture(GL_TEXTURE_2D, self._texture_id)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        data = numpy.array(bitmap.buffer, numpy.ubyte).reshape(self._height,
-                                                               self._width)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, self._width, self._height, 0,
-                     GL_ALPHA, GL_UNSIGNED_BYTE, numpy.flipud(data))
+        data = numpy.array(bitmap.buffer, numpy.ubyte).reshape(
+            self._height, self._width
+        )
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_ALPHA,
+            self._width,
+            self._height,
+            0,
+            GL_ALPHA,
+            GL_UNSIGNED_BYTE,
+            numpy.flipud(data),
+        )
 
         glPopClientAttrib()
 
-
     def __del__(self):
         glDeleteTexture([self._texture_id])
-
 
     @property
     def advance(self) -> numpy.ndarray:
@@ -138,18 +147,19 @@ class _Glyph:
 class Face:
     def __init__(self, size: int) -> None:
         self._face = freetype.Face(_FONT_PATH)
-        self._face.set_char_size(size*64)
-        self._glyphs = {} # type: typing.Dict[str, _Glyph]
+        self._face.set_char_size(size * 64)
+        self._glyphs = {}  # type: typing.Dict[str, _Glyph]
 
     def render(self, text: str) -> None:
-        glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TEXTURE_BIT)
+        glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TEXTURE_BIT)
 
         glEnable(GL_TEXTURE_2D)
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
 
         glEnable(GL_BLEND)
-        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-                            GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+        )
 
         pen = numpy.array([0.0, 0.0])
         for i in range(len(text)):
@@ -160,9 +170,11 @@ class Face:
             self._glyphs[char].render(pen)
             pen += self._glyphs[char].advance
 
-            if i+1 < len(text):
-                kerning = self._face.get_kerning(self._face.get_char_index(char),
-                                                 self._face.get_char_index(text[i+1]))
-                pen += numpy.array([kerning.x/64.0, kerning.y/64.0])
+            if i + 1 < len(text):
+                kerning = self._face.get_kerning(
+                    self._face.get_char_index(char),
+                    self._face.get_char_index(text[i + 1]),
+                )
+                pen += numpy.array([kerning.x / 64.0, kerning.y / 64.0])
 
         glPopAttrib()

@@ -66,11 +66,13 @@ import wx
 
 import Pyro4
 import distutils.version
-if (distutils.version.LooseVersion(Pyro4.__version__) >=
-    distutils.version.LooseVersion('4.22')):
-    Pyro4.config.SERIALIZERS_ACCEPTED.discard('serpent')
-    Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
-    Pyro4.config.SERIALIZER = 'pickle'
+
+if distutils.version.LooseVersion(Pyro4.__version__) >= distutils.version.LooseVersion(
+    "4.22"
+):
+    Pyro4.config.SERIALIZERS_ACCEPTED.discard("serpent")
+    Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
+    Pyro4.config.SERIALIZER = "pickle"
     Pyro4.config.REQUIRE_EXPOSE = False
 
 import cockpit.config
@@ -91,6 +93,7 @@ class CockpitApp(wx.App):
     Args:
         config (:class:`cockpit.config.CockpitConfig`):
     """
+
     def __init__(self, config):
         ## OnInit() will make use of config, and wx.App.__init__()
         ## calls OnInit().  So we need to assign this before super().
@@ -109,48 +112,49 @@ class CockpitApp(wx.App):
     def Stage(self):
         return self._stage
 
-
     def OnInit(self):
         try:
             # Allow subsequent actions to abort startup by publishing
-            cockpit.events.subscribe('program exit', self.onExit)
+            cockpit.events.subscribe("program exit", self.onExit)
 
             depot_config = self.Config.depot_config
             cockpit.depot.initialize(depot_config)
-            numDevices = len(depot_config.sections()) + 1 # +1 for dummy devices
+            numDevices = len(depot_config.sections()) + 1  # +1 for dummy devices
             numNonDevices = 15
-            status = wx.ProgressDialog(parent = None,
-                    title = "Initializing OMX Cockpit",
-                    message = "Importing modules...",
-                    ## Fix maximum: + 1 is for dummy devices
-                    maximum = numDevices + numNonDevices)
+            status = wx.ProgressDialog(
+                parent=None,
+                title="Initializing OMX Cockpit",
+                message="Importing modules...",
+                ## Fix maximum: + 1 is for dummy devices
+                maximum=numDevices + numNonDevices,
+            )
             status.Show()
 
             # Do this early so we can see output while initializing.
             logging_window = cockpit.gui.loggingWindow.makeWindow(None)
 
-            updateNum=1
+            updateNum = 1
             status.Update(updateNum, "Initializing config...")
-            updateNum+=1
+            updateNum += 1
             cockpit.util.userConfig.initialize(self.Config)
 
             status.Update(updateNum, "Initializing devices...")
-            updateNum+=1
+            updateNum += 1
             for i, device in enumerate(cockpit.depot.initialize(depot_config)):
                 status.Update(updateNum, "Initializing devices...\n%s" % device)
-                updateNum+=1
+                updateNum += 1
             status.Update(updateNum, "Initializing device interfaces...")
-            updateNum+=1
+            updateNum += 1
             cockpit.interfaces.imager.initialize()
             cockpit.interfaces.stageMover.initialize()
             self._stage = cockpit.interfaces.stageMover.mover
             self._channels = cockpit.interfaces.channels.Channels()
-            for fpath in self.Config['global'].getpaths('channel-files', []):
+            for fpath in self.Config["global"].getpaths("channel-files", []):
                 new_channels = cockpit.interfaces.channels.LoadFromFile(fpath)
                 self._channels.Update(new_channels)
 
             status.Update(updateNum, "Initializing user interface...")
-            updateNum+=1
+            updateNum += 1
 
             main_window = cockpit.gui.mainWindow.makeWindow()
             self.SetTopWindow(main_window)
@@ -164,14 +168,16 @@ class CockpitApp(wx.App):
             # #618 and https://trac.wxwidgets.org/ticket/18785)
             main_window.AddChild(logging_window)
 
-            for module_name in ['cockpit.gui.camera.window',
-                                'cockpit.gui.mosaic.window',
-                                'cockpit.gui.macroStage.macroStageWindow',
-                                'cockpit.gui.shellWindow',
-                                'cockpit.gui.touchscreen',
-                                'cockpit.util.intensity']:
+            for module_name in [
+                "cockpit.gui.camera.window",
+                "cockpit.gui.mosaic.window",
+                "cockpit.gui.macroStage.macroStageWindow",
+                "cockpit.gui.shellWindow",
+                "cockpit.gui.touchscreen",
+                "cockpit.util.intensity",
+            ]:
                 module = importlib.import_module(module_name)
-                status.Update(updateNum, ' ... ' + module_name)
+                status.Update(updateNum, " ... " + module_name)
                 updateNum += 1
                 module.makeWindow(main_window)
 
@@ -188,10 +194,11 @@ class CockpitApp(wx.App):
                 #   1. check userConfig (value from last time)
                 #   2. check window class property SHOW_DEFAULT
                 #   3. if none of the above is set, hide
-                default_show = getattr(window, 'SHOW_DEFAULT', False)
-                config_name = 'Show Window ' + window.GetTitle()
-                to_show = cockpit.util.userConfig.getValue(config_name,
-                                                           default=default_show)
+                default_show = getattr(window, "SHOW_DEFAULT", False)
+                config_name = "Show Window " + window.GetTitle()
+                to_show = cockpit.util.userConfig.getValue(
+                    config_name, default=default_show
+                )
                 window.Show(to_show)
 
             # Now that the UI exists, we don't need this any more.
@@ -202,12 +209,12 @@ class CockpitApp(wx.App):
             cockpit.interfaces.imager.makeInitialPublications()
             cockpit.interfaces.stageMover.makeInitialPublications()
 
-            cockpit.events.publish('cockpit initialization complete')
+            cockpit.events.publish("cockpit initialization complete")
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
 
             return True
         except Exception as e:
-            cockpit.gui.ExceptionBox(caption='Failed to initialise cockpit')
+            cockpit.gui.ExceptionBox(caption="Failed to initialise cockpit")
             cockpit.util.logger.log.error("Initialization failed: %s" % e)
             cockpit.util.logger.log.error(traceback.format_exc())
             return False
@@ -281,11 +288,12 @@ class CockpitApp(wx.App):
             if not thread.daemon:
                 badThreads.append(thread)
         if badThreads:
-            cockpit.util.logger.log.error("Still have non-daemon threads %s" % map(str, badThreads))
+            cockpit.util.logger.log.error(
+                "Still have non-daemon threads %s" % map(str, badThreads)
+            )
             for thread in badThreads:
                 cockpit.util.logger.log.error(str(thread.__dict__))
         os._exit(0)
-
 
     def SetWindowPositions(self):
         """Place the windows in the position defined in userConfig.
@@ -293,33 +301,30 @@ class CockpitApp(wx.App):
         This should probably be a private method, or at least a method
         that would take the positions dict as argument.
         """
-        positions = cockpit.util.userConfig.getValue('WindowPositions',
-                                                     default={})
+        positions = cockpit.util.userConfig.getValue("WindowPositions", default={})
         for window in wx.GetTopLevelWindows():
             if window.Title in positions:
                 window.SetPosition(positions[window.Title])
 
-
     def _SaveWindowPositions(self):
-        positions = {w.Title : tuple(w.Position)
-                     for w in wx.GetTopLevelWindows()}
+        positions = {w.Title: tuple(w.Position) for w in wx.GetTopLevelWindows()}
 
         ## XXX: the camera window uses the title to include pixel info
         ## so fix the title so we can use it as ID later.
         camera_window_title = None
         for title in positions.keys():
-            if title.startswith('Camera views '):
+            if title.startswith("Camera views "):
                 camera_window_title = title
                 break
         if camera_window_title is not None:
-            positions['Camera views'] = positions.pop(camera_window_title)
+            positions["Camera views"] = positions.pop(camera_window_title)
 
-        cockpit.util.userConfig.setValue('WindowPositions', positions)
+        cockpit.util.userConfig.setValue("WindowPositions", positions)
 
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():
                 continue
-            config_name = 'Show Window ' + window.GetTitle()
+            config_name = "Show Window " + window.GetTitle()
             cockpit.util.userConfig.setValue(config_name, window.IsShown())
 
 
@@ -328,18 +333,18 @@ def main():
     ## wayland (see https://trac.wxwidgets.org/ticket/17702).  The
     ## workaround is to force GTK to use the x11 backend.  See also
     ## cockpit issue #347
-    if wx.Platform == '__WXGTK__' and 'GDK_BACKEND' not in os.environ:
-        os.environ['GDK_BACKEND'] = 'x11'
+    if wx.Platform == "__WXGTK__" and "GDK_BACKEND" not in os.environ:
+        os.environ["GDK_BACKEND"] = "x11"
 
     ## TODO: have this in a try, and show a window (would probably
     ## need to be different wx.App), with the error if it fails.
     config = cockpit.config.CockpitConfig(sys.argv)
-    cockpit.util.logger.makeLogger(config['log'])
+    cockpit.util.logger.makeLogger(config["log"])
     cockpit.util.files.initialize(config)
 
     app = CockpitApp(config=config)
     app.MainLoop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

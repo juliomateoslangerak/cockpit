@@ -59,7 +59,7 @@ from cockpit.handlers import deviceHandler
 from cockpit import events
 import re
 
-## This handler is responsible for tracking the current objective. 
+## This handler is responsible for tracking the current objective.
 class ObjectiveHandler(deviceHandler.DeviceHandler):
     ## \param nameToPixelSize A mapping of objective names to how many microns
     #         wide a pixel using that objective appears to be.
@@ -68,8 +68,18 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
     # - setObjective(name, objectiveName): Set the current objective to the
     #   named one. This is an optional callback; if not provided, nothing is
     #   done.
-    def __init__(self, name, groupName, nameToPixelSize, nameToTransform, nameToOffset, nameToColour, nameToLensID, curObjective,
-            callbacks = {}):
+    def __init__(
+        self,
+        name,
+        groupName,
+        nameToPixelSize,
+        nameToTransform,
+        nameToOffset,
+        nameToColour,
+        nameToLensID,
+        curObjective,
+        callbacks={},
+    ):
         super().__init__(name, groupName, False, {}, depot.OBJECTIVE)
         self.nameToPixelSize = nameToPixelSize
         self.nameToTransform = nameToTransform
@@ -89,29 +99,30 @@ class ObjectiveHandler(deviceHandler.DeviceHandler):
     @property
     def sortedObjectives(self):
         def parseMag(name):
-            m = re.search('[0-9.]+', name)
+            m = re.search("[0-9.]+", name)
             if m is None:
                 return None
             else:
                 return float(m.group())
-        return sorted(self.nameToPixelSize.keys(), key=parseMag)
 
+        return sorted(self.nameToPixelSize.keys(), key=parseMag)
 
     ## Let everyone know what the initial objective.
     def makeInitialPublications(self):
         self.changeObjective(self.curObjective)
 
-
     ## Let everyone know that the objective has been changed.
     def changeObjective(self, newName):
-        if 'setObjective' in self.callbacks:
-            self.callbacks['setObjective'](self.name, newName)
+        if "setObjective" in self.callbacks:
+            self.callbacks["setObjective"](self.name, newName)
         self.curObjective = newName
-        events.publish("objective change", newName, 
-                pixelSize=self.nameToPixelSize[newName], 
-                transform=self.nameToTransform[newName],
-                offset=self.nameToOffset[newName])
-
+        events.publish(
+            "objective change",
+            newName,
+            pixelSize=self.nameToPixelSize[newName],
+            transform=self.nameToTransform[newName],
+            offset=self.nameToOffset[newName],
+        )
 
     ## Get the current pixel size.
     def getPixelSize(self):

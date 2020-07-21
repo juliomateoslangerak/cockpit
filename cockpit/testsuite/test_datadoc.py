@@ -48,9 +48,9 @@ class TestWriteDataAsMrc(unittest.TestCase):
         self.data = numpy.flipud(numpy.rot90(self.data))
         # We could just copy the data in F-contiguous order but doing
         # the transformations shows how cockpit would get to them.
-        self.assertFalse(self.data.flags['C_CONTIGUOUS'])
+        self.assertFalse(self.data.flags["C_CONTIGUOUS"])
         self.assertWriteAndReadingBack()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

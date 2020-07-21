@@ -75,6 +75,7 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
     ## We use a class method to monitor output power by querying hardware.
     # A list of instances. Light persist until exit, so don't need weakrefs.
     _instances = []
+
     @classmethod
     @cockpit.util.threads.callInNewThread
     def _updater(cls):
@@ -87,24 +88,32 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
             while True:
                 time.sleep(0.1)
                 for light in cls._instances:
-                    getPower = light.callbacks['getPower']
+                    getPower = light.callbacks["getPower"]
                     if light not in queries.keys():
                         queries[light] = executor.submit(getPower)
                     elif queries[light].done():
                         light.lastPower = queries[light].result()
                         queries[light] = executor.submit(getPower)
 
-
-    def __init__(self, name, groupName, callbacks, wavelength, minPower,
-                 maxPower, curPower, isEnabled=True):
+    def __init__(
+        self,
+        name,
+        groupName,
+        callbacks,
+        wavelength,
+        minPower,
+        maxPower,
+        curPower,
+        isEnabled=True,
+    ):
         # Validation:
-        required = set(['getPower', 'setPower'])
+        required = set(["getPower", "setPower"])
         missing = required.difference(callbacks)
         if missing:
-            e = Exception('%s %s missing callbacks: %s.' %
-                            (self.__class__.__name__,
-                             name,
-                             ' '.join(missing)))
+            e = Exception(
+                "%s %s missing callbacks: %s."
+                % (self.__class__.__name__, name, " ".join(missing))
+            )
             raise e
 
         super().__init__(name, groupName, False, callbacks, depot.LIGHT_POWER)
@@ -116,27 +125,28 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
         self.powerSetPoint = None
         self.isEnabled = isEnabled
 
-        events.subscribe('save exposure settings', self.onSaveSettings)
-        events.subscribe('load exposure settings', self.onLoadSettings)
-
+        events.subscribe("save exposure settings", self.onSaveSettings)
+        events.subscribe("load exposure settings", self.onLoadSettings)
 
     def finalizeInitialization(self):
         super().finalizeInitialization()
         self._applyUserConfig()
 
-
     def _applyUserConfig(self):
-        targetPower = cockpit.util.userConfig.getValue(self.name + '-lightPower', default = 0.01)
+        targetPower = cockpit.util.userConfig.getValue(
+            self.name + "-lightPower", default=0.01
+        )
         try:
             self.setPower(targetPower)
         except Exception as e:
-            cockpit.util.logger.log.warning("Failed to set prior power level %s for %s: %s" % (targetPower, self.name, e))
-
+            cockpit.util.logger.log.warning(
+                "Failed to set prior power level %s for %s: %s"
+                % (targetPower, self.name, e)
+            )
 
     ## Save our settings in the provided dict.
     def onSaveSettings(self, settings):
         settings[self.name] = self.powerSetPoint
-
 
     ## Load our settings from the provided dict.
     def onLoadSettings(self, settings):
@@ -145,23 +155,22 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
                 self.setPower(settings[self.name])
             except Exception as e:
                 # Invalid power; just ignore it.
-                print ("Invalid power for %s: %s" % (self.name, settings.get(self.name, '')))
-
+                print(
+                    "Invalid power for %s: %s"
+                    % (self.name, settings.get(self.name, ""))
+                )
 
     ## Toggle accessibility of the handler.
     def setEnabled(self, isEnabled):
         self.isEnabled = isEnabled
 
-
     ## Return True iff we're currently enabled (i.e. GUI is active).
     def getIsEnabled(self):
         return self.isEnabled
 
-
     ## Set a new value for minPower.
     def setMinPower(self, minPower):
         self.minPower = minPower
-
 
     ## Set a new value for maxPower.
     def setMaxPower(self, maxPower):
@@ -169,25 +178,27 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
 
     ## Fetch the current laser power.
     def getPower(self):
-        return self.callbacks['getPower']()
+        return self.callbacks["getPower"]()
 
     ## Handle the user selecting a new power level.
     def setPower(self, power):
         if power < self.minPower or power > self.maxPower:
-            raise RuntimeError("Tried to set invalid power %f for light %s (range %f to %f)" % (power, self.name, self.minPower, self.maxPower))
-        self.callbacks['setPower'](power)
+            raise RuntimeError(
+                "Tried to set invalid power %f for light %s (range %f to %f)"
+                % (power, self.name, self.minPower, self.maxPower)
+            )
+        self.callbacks["setPower"](power)
         self.powerSetPoint = power
-        cockpit.util.userConfig.setValue(self.name + '-lightPower', power)
-
+        cockpit.util.userConfig.setValue(self.name + "-lightPower", power)
 
     ## Simple getter.
     def getWavelength(self):
         return self.wavelength
 
-
     ## Experiments should include the laser power.
     def getSavefileInfo(self):
         return "%s: %.1fmW" % (self.name, self.lastPower)
+
 
 # Fire up the status updater.
 LightPowerHandler._updater()

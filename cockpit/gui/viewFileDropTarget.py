@@ -60,7 +60,6 @@ class ViewFileDropTarget(wx.FileDropTarget):
         super().__init__()
         self.parent = parent
 
-
     def OnDropFiles(self, x, y, filenames):
         for filename in filenames:
             window = fileViewerWindow.FileViewer(filename, self.parent)

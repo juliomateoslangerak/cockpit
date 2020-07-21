@@ -30,8 +30,7 @@ import cockpit.devices.microscopeDevice
 
 
 class _MicroscopeTestDevice:
-    def __init__(self, test_device_cls, name: str,
-                 config: typing.Mapping[str, str]):
+    def __init__(self, test_device_cls, name: str, config: typing.Mapping[str, str]):
         # Ideally, the Cockpit device class for Microscope devices
         # would simply take a microscope.Device instance (which could
         # be, or not, a Pyro proxy).  However, it really only works
@@ -45,29 +44,27 @@ class _MicroscopeTestDevice:
         self._pyro_thread = threading.Thread(target=pyro_daemon.requestLoop)
         self._pyro_thread.start()
 
-        if 'uri' in config:
-            raise Exception('a URI config value must not defined')
+        if "uri" in config:
+            raise Exception("a URI config value must not defined")
         config = config.copy()
-        config['uri'] = pyro_uri
+        config["uri"] = pyro_uri
         super().__init__(name, config)
 
 
-class DummyCamera(_MicroscopeTestDevice,
-                  cockpit.devices.microscopeCamera.MicroscopeCamera):
+class DummyCamera(
+    _MicroscopeTestDevice, cockpit.devices.microscopeCamera.MicroscopeCamera
+):
     def __init__(self, *args, **kwargs):
-        super().__init__(microscope.testsuite.devices.TestCamera,
-                         *args, **kwargs)
+        super().__init__(microscope.testsuite.devices.TestCamera, *args, **kwargs)
 
 
-class DummyDSP(_MicroscopeTestDevice,
-               cockpit.devices.executorDevices.ExecutorDevice):
+class DummyDSP(_MicroscopeTestDevice, cockpit.devices.executorDevices.ExecutorDevice):
     def __init__(self, *args, **kwargs):
-        super().__init__(microscope.testsuite.devices.DummyDSP,
-                         *args, **kwargs)
+        super().__init__(microscope.testsuite.devices.DummyDSP, *args, **kwargs)
 
 
-class DummyLaser(_MicroscopeTestDevice,
-                 cockpit.devices.microscopeDevice.MicroscopeLaser):
+class DummyLaser(
+    _MicroscopeTestDevice, cockpit.devices.microscopeDevice.MicroscopeLaser
+):
     def __init__(self, *args, **kwargs):
-        super().__init__(microscope.testsuite.devices.TestLaser,
-                         *args, **kwargs)
+        super().__init__(microscope.testsuite.devices.TestLaser, *args, **kwargs)

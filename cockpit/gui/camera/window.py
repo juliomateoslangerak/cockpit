@@ -50,7 +50,6 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-
 import wx
 
 from cockpit import depot
@@ -61,10 +60,10 @@ import cockpit.gui.viewFileDropTarget
 from cockpit.gui.camera import viewPanel
 
 
-
 ## This class provides a grid of camera displays.
 class CamerasWindow(wx.Frame):
     SHOW_DEFAULT = True
+
     def __init__(self, parent):
         super().__init__(parent, title="Camera views")
 
@@ -88,19 +87,17 @@ class CamerasWindow(wx.Frame):
         self.resetGrid()
         self.SetDropTarget(cockpit.gui.viewFileDropTarget.ViewFileDropTarget(self))
 
-
     @cockpit.util.threads.callInMainThread
     def onCameraEnableEvent(self, camera, enabled):
         activeViews = [view for view in self.views if view.getIsEnabled()]
         if enabled and camera not in [view.curCamera for view in activeViews]:
             inactiveViews = set(self.views).difference(activeViews)
             inactiveViews.pop().enable(camera)
-        elif not(enabled):
+        elif not (enabled):
             for view in activeViews:
                 if view.curCamera is camera:
                     view.disable()
         self.resetGrid()
-
 
     # When cameras are enabled/disabled, we resize the UI to suit. We
     # want there to always be at least one unused ViewPanel so the
@@ -125,12 +122,10 @@ class CamerasWindow(wx.Frame):
         self.panel.SetSizerAndFit(self.sizer)
         self.SetClientSize(self.panel.GetSize())
 
-
     ## Received information on the pixel under the mouse; update our title
     # to include that information.
     def onImagePixelInfo(self, coords, value):
         self.SetTitle("Camera views    (%d, %d): %d" % (coords[0], coords[1], value))
-
 
     ## Rescale each camera view.
     def rescaleViews(self):
@@ -139,10 +134,9 @@ class CamerasWindow(wx.Frame):
                 view.canvas.resetPixelScale()
 
 
-
-
 ## Global window singleton.
 window = None
+
 
 def makeWindow(parent):
     global window
@@ -159,7 +153,9 @@ def getCameraScaling(camera):
     for view in window.views:
         if view.curCamera is camera:
             return view.getScaling()
-    raise RuntimeError("Tried to get camera scalings for non-active camera [%s]" % camera.name)
+    raise RuntimeError(
+        "Tried to get camera scalings for non-active camera [%s]" % camera.name
+    )
 
 
 ## Retrieve the image currently displayed by the specified camera.

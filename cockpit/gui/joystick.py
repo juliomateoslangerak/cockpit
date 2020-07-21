@@ -35,12 +35,12 @@ import wx.adv
 # future, but it may take several months for this to roll out to
 # wxPython.
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     buttonTest = lambda variable, constant: variable & (1 << constant)
-elif sys.platform == 'linux':
+elif sys.platform == "linux":
     buttonTest = lambda a, b: a == b
 else:
-    buttonTest = lambda a, b: a-1 ==  b
+    buttonTest = lambda a, b: a - 1 == b
 
 
 # Stick movement threshold
@@ -67,24 +67,24 @@ import cockpit.gui.mosaic.window as mosaic
 
 class Joystick:
     def __init__(self, window):
-        if sys.platform == 'darwin':
+        if sys.platform == "darwin":
             return None
         self._stick = wx.adv.Joystick()
         self._stick.SetCapture(window, 50)
         # Stick should be calibrated in the OS rather than correcting
         # for any offset from centre here.
-        self._centre = ( (self._stick.XMin + self._stick.XMax) // 2,
-                        (self._stick.YMin + self._stick.YMax) // 2)
+        self._centre = (
+            (self._stick.XMin + self._stick.XMax) // 2,
+            (self._stick.YMin + self._stick.YMax) // 2,
+        )
         self._buttonDownTimes = {}
         window.Bind(wx.EVT_JOY_MOVE, self._onMoveEvent)
         window.Bind(wx.EVT_JOY_BUTTON_DOWN, self._onButtonDown)
         window.Bind(wx.EVT_JOY_BUTTON_UP, self._onButtonUp)
 
-
     def _longPress(self, button, func):
         if buttonTest(self._stick.ButtonState, button):
             func()
-
 
     def _onButtonDown(self, event):
         # Old MSW joystick implementation did not populate timestamps,
@@ -93,7 +93,6 @@ class Joystick:
         self._buttonDownTimes[event.ButtonChange] = ts
         if buttonTest(event.ButtonChange, 2):
             wx.CallLater(_CLICKMS, self._longPress, 2, imager.imager.videoMode)
-
 
     def _onButtonUp(self, event):
         ts = event.GetTimestamp() or (time.time() * 1000)
@@ -105,12 +104,12 @@ class Joystick:
             mosaic.window.centerCanvas()
         elif buttonTest(event.ButtonChange, 1):
             from cockpit.interfaces.stageMover import changeMover
+
             changeMover()
         elif buttonTest(event.ButtonChange, 2):
             imager.imager.takeImage()
         elif buttonTest(event.ButtonChange, 3):
-             mosaic.window.toggleMosaic()
-
+            mosaic.window.toggleMosaic()
 
     def _onMoveEvent(self, event):
         from cockpit.interfaces.stageMover import moveRelative
@@ -124,8 +123,8 @@ class Joystick:
                 mosaic.window.canvas.multiplyZoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
-            moveRelative([-0.01*d for d in delta] + [0], False)
+            moveRelative([-0.01 * d for d in delta] + [0], False)
         elif buttonTest(event.ButtonState, 1):
-            moveRelative([0, 0, -0.01*delta[1]], False)
+            moveRelative([0, 0, -0.01 * delta[1]], False)
         else:
-            mosaic.window.canvas.dragView(tuple(0.01*d for d in delta))
+            mosaic.window.canvas.dragView(tuple(0.01 * d for d in delta))

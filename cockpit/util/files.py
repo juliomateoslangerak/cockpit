@@ -68,23 +68,27 @@ _LOGS_DIR = None
 def initialize(config):
     global _DATA_DIR
     global _LOGS_DIR
-    _DATA_DIR = config.getpath('global', 'data-dir')
-    _LOGS_DIR = config.getpath('log', 'dir')
+    _DATA_DIR = config.getpath("global", "data-dir")
+    _LOGS_DIR = config.getpath("log", "dir")
     _ensureDirectoriesExist()
+
 
 ## Get the directory in which all users' directories are located
 def _getDataDir():
     return _DATA_DIR
 
+
 ## Return the directory in which logfiles are stored
 def getLogDir():
     return _LOGS_DIR
 
+
 def getUserSaveDir():
     return os.path.join(_getDataDir(), getpass.getuser())
+
 
 def _ensureDirectoriesExist():
     for directory in [getUserSaveDir()]:
         if not os.path.exists(directory):
-            print ("Making",directory)
+            print("Making", directory)
             os.makedirs(directory)

@@ -80,23 +80,23 @@ def makeLogger(config):
             section for the logger.
     """
 
-    log_dir = config.getpath('dir')
+    log_dir = config.getpath("dir")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    filename = time.strftime(config.get('filename-template'))
+    filename = time.strftime(config.get("filename-template"))
     filepath = os.path.join(log_dir, filename)
 
-    level = Level[config.get('level')].value
+    level = Level[config.get("level")].value
 
     global log
     log = logging.getLogger()
     log.setLevel(level)
 
-    log_handler = logging.FileHandler(filepath, mode = "a")
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s'
-                                  + ' %(module)10s:%(lineno)4d'
-                                  + '  %(message)s')
+    log_handler = logging.FileHandler(filepath, mode="a")
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)-8s" + " %(module)10s:%(lineno)4d" + "  %(message)s"
+    )
     log_handler.setFormatter(formatter)
     log_handler.setLevel(level)
     log.addHandler(log_handler)

@@ -26,6 +26,7 @@ import cockpit.gui
 import wx
 import cockpit.util.threads
 
+
 class Filter:
     """An individual filter."""
 
@@ -49,41 +50,44 @@ class Filter:
             else:
                 self.value = None
 
-            
     def __repr__(self):
         if self.value:
-            return '%d: %s, %s' % (self.position, self.label, self.value)
+            return "%d: %s, %s" % (self.position, self.label, self.value)
         else:
-            return '%d: %s' % (self.position, self.label)
+            return "%d: %s" % (self.position, self.label)
 
 
 class FilterHandler(deviceHandler.DeviceHandler):
     """A handler for emission and ND filter wheels."""
-    def __init__(self, name, groupName, isEligibleForExperiments, callbacks, cameras, lights):
-        super().__init__(name, groupName, isEligibleForExperiments, callbacks,
-                         depot.LIGHT_FILTER)
+
+    def __init__(
+        self, name, groupName, isEligibleForExperiments, callbacks, cameras, lights
+    ):
+        super().__init__(
+            name, groupName, isEligibleForExperiments, callbacks, depot.LIGHT_FILTER
+        )
         self.cameras = cameras or []
         self.lights = lights or []
         self.lastFilter = None
 
-        #subscribe to save and load setting calls to enabvle saving and
-        #loading of configurations.
-        events.subscribe('save exposure settings', self.onSaveSettings)
-        events.subscribe('load exposure settings', self.onLoadSettings)
+        # subscribe to save and load setting calls to enabvle saving and
+        # loading of configurations.
+        events.subscribe("save exposure settings", self.onSaveSettings)
+        events.subscribe("load exposure settings", self.onLoadSettings)
 
     @property
     def filters(self):
-        return self.callbacks['getFilters']()
+        return self.callbacks["getFilters"]()
 
     ## Save our settings in the provided dict.
     def onSaveSettings(self, settings):
-        settings[self.name] = self.callbacks['getPosition']()
+        settings[self.name] = self.callbacks["getPosition"]()
 
     ## Load our settings from the provided dict.
     def onLoadSettings(self, settings):
         if self.name in settings:
             position = settings[self.name]
-            filters = self.callbacks['getFilters']()
+            filters = self.callbacks["getFilters"]()
             for f in filters:
                 if f.position == position:
                     self.setFilter(f)
@@ -92,11 +96,14 @@ class FilterHandler(deviceHandler.DeviceHandler):
     def makeSelector(self, parent):
         ctrl = wx.Choice(parent)
         ctrl.Set(list(map(str, self.filters)))
-        ctrl.Bind(wx.EVT_CHOICE, lambda evt: self.setFilter(self.filters[evt.Selection]))
-        self.addWatch('lastFilter', lambda f: ctrl.SetSelection(ctrl.FindString(str(f))))
+        ctrl.Bind(
+            wx.EVT_CHOICE, lambda evt: self.setFilter(self.filters[evt.Selection])
+        )
+        self.addWatch(
+            "lastFilter", lambda f: ctrl.SetSelection(ctrl.FindString(str(f)))
+        )
         ctrl.SetSelection(ctrl.FindString(str(self.lastFilter)))
         return ctrl
-
 
     def makeUI(self, parent):
         panel = wx.Panel(parent)
@@ -105,14 +112,12 @@ class FilterHandler(deviceHandler.DeviceHandler):
         panel.Sizer.Add(self.makeSelector(panel), flag=wx.EXPAND)
         return panel
 
-
     def setFilter(self, filter):
-        self.callbacks['setPosition'](filter.position, callback=self.updateAfterMove)
-
+        self.callbacks["setPosition"](filter.position, callback=self.updateAfterMove)
 
     def currentFilter(self):
-        position = self.callbacks['getPosition']()
-        filters = self.callbacks['getFilters']()
+        position = self.callbacks["getPosition"]()
+        filters = self.callbacks["getFilters"]()
         for f in filters:
             if f.position == position:
                 return f
@@ -130,7 +135,6 @@ class FilterHandler(deviceHandler.DeviceHandler):
         # Excitation filters
         for h in self.lights:
             pass
-
 
     def finalizeInitialization(self):
         self.updateAfterMove()

@@ -30,24 +30,25 @@ import cockpit.gui.device
 
 ## TODO: Clean up code.
 
+
 class RaspberryPi(device.Device):
     def __init__(self, name, config):
         # self.ipAddress and self.port set by device.Device.__init__
         super().__init__(name, config)
-        linestring = config.get('lines')
-        self.lines = linestring.split(',')
-        paths_linesString = config.get('paths')
-        self.excitation=[]
-        self.excitationMaps=[]
-        self.objective=[]
-        self.objectiveMaps=[]
+        linestring = config.get("lines")
+        self.lines = linestring.split(",")
+        paths_linesString = config.get("paths")
+        self.excitation = []
+        self.excitationMaps = []
+        self.objective = []
+        self.objectiveMaps = []
 
-        for path in (paths_linesString.split(';')):
-            parts = path.split(':')
-            if(parts[0]=='objective'):
+        for path in paths_linesString.split(";"):
+            parts = path.split(":")
+            if parts[0] == "objective":
                 self.objective.append(parts[1])
                 self.objectiveMaps.append(parts[2])
-            elif (parts[0]=='excitation'):
+            elif parts[0] == "excitation":
                 self.excitation.append(parts[1])
                 self.excitationMaps.append(parts[2])
 
@@ -55,62 +56,65 @@ class RaspberryPi(device.Device):
         ## util.connection.Connection for the temperature sensors.
 
         ## Maps light modes to the mirror settings for those modes, as a list
-        #IMD 20140806
-        #map paths to flips. 
+        # IMD 20140806
+        # map paths to flips.
         self.modeToFlips = collections.OrderedDict()
         for i in range(len(self.excitation)):
             self.modeToFlips[self.excitation[i]] = []
-            for flips in self.excitationMaps[i].split('|'):
-                flipsList=flips.split(',')
-                flipsInt=[int(flipsList[0]),int(flipsList[1])]
-                self.modeToFlips[self.excitation[i]].append(flipsInt)        
-        #map objectives to flips. 
+            for flips in self.excitationMaps[i].split("|"):
+                flipsList = flips.split(",")
+                flipsInt = [int(flipsList[0]), int(flipsList[1])]
+                self.modeToFlips[self.excitation[i]].append(flipsInt)
+        # map objectives to flips.
         self.objectiveToFlips = collections.OrderedDict()
         for i in range(len(self.objective)):
             self.objectiveToFlips[self.objective[i]] = []
-            for flips in self.objectiveMaps[i].split('|'):
-                flipsList=flips.split(',')
-                flipsInt=[int(flipsList[0]),int(flipsList[1])]
+            for flips in self.objectiveMaps[i].split("|"):
+                flipsList = flips.split(",")
+                flipsInt = [int(flipsList[0]), int(flipsList[1])]
                 self.objectiveToFlips[self.objective[i]].append(flipsInt)
-                
+
         self.lightPathButtons = []
         ## Current light path mode.
         self.curExMode = None
 
         ## Connect to the remote program, and set widefield mode.
-    def initialize(self):
-        self.RPiConnection = Pyro4.Proxy('PYRO:%s@%s:%d' % ('pi', self.ipAddress, self.port))
-        ## Log temperatures
-        self.logger = valueLogger.PollingLogger(self.name, 15,
-                                                self.RPiConnection.get_temperature)
 
+    def initialize(self):
+        self.RPiConnection = Pyro4.Proxy(
+            "PYRO:%s@%s:%d" % ("pi", self.ipAddress, self.port)
+        )
+        ## Log temperatures
+        self.logger = valueLogger.PollingLogger(
+            self.name, 15, self.RPiConnection.get_temperature
+        )
 
     ## Try to switch to widefield mode.
     def finalizeInitialization(self):
-        #set the first excitation mode as the inital state.
+        # set the first excitation mode as the inital state.
         self.setExMode(self.excitation[1])
-        #Subscribe to objective change to map new detector path to new pixel sizes via fake objective
-        events.subscribe('objective change', self.onObjectiveChange)
+        # Subscribe to objective change to map new detector path to new pixel sizes via fake objective
+        events.subscribe("objective change", self.onObjectiveChange)
 
-    
     ## Generate a column of buttons for setting the light path. Make a window
     # that plots our temperature data.
     def makeUI(self, parent):
-        rowSizer=wx.BoxSizer(wx.HORIZONTAL)
+        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer = wx.BoxSizer(wx.VERTICAL)
         label = cockpit.gui.device.Label(parent, -1, "Excitation path:")
         sizer.Add(label)
         for mode in self.excitation:
             button = wx.ToggleButton(parent, wx.ID_ANY, mode)
             # Respond to clicks on the button.
-            button.Bind(wx.EVT_TOGGLEBUTTON, lambda event, mode = mode: self.setExMode(mode))
+            button.Bind(
+                wx.EVT_TOGGLEBUTTON, lambda event, mode=mode: self.setExMode(mode)
+            )
             sizer.Add(button, 1, wx.EXPAND)
             self.lightPathButtons.append(button)
             if mode == self.curExMode:
                 button.SetValue(True)
         rowSizer.Add(sizer)
         return rowSizer
-
 
     ## Set the light path to the specified mode.
     def setExMode(self, mode):
@@ -120,17 +124,14 @@ class RaspberryPi(device.Device):
             button.SetValue(button.GetLabel() == mode)
         self.curExMode = mode
 
-
     ## Flip a mirror down and then up, to ensure that it's in the position
     # we want.
     def flipDownUp(self, index, isUp):
         self.RPiConnection.flipDownUp(index, int(isUp))
 
-
     def onObjectiveChange(self, name, pixelSize, transform, offset):
         for flips in self.objectiveToFlips[name]:
             self.flipDownUp(flips[0], flips[1])
-
 
     ## Debugging function: display a debug window.
     def showDebugWindow(self):
@@ -153,7 +154,7 @@ class piOutputWindow(wx.Frame):
         self.buttonToLine = {}
 
         # Set up the digital lineout buttons.
-        for i in range(len(piDIO.lines)) :
+        for i in range(len(piDIO.lines)):
             button = wx.ToggleButton(panel, wx.ID_ANY, str(piDIO.lines[i]))
             button.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.toggle())
             buttonSizer.Add(button, 1, wx.EXPAND)
@@ -162,7 +163,6 @@ class piOutputWindow(wx.Frame):
 
         panel.SetSizerAndFit(mainSizer)
         self.SetClientSize(panel.GetSize())
-
 
     ## One of our buttons was clicked; update the DSP's output.
     def toggle(self):

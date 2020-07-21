@@ -53,20 +53,20 @@ class Clarity(microscopeDevice.MicroscopeFilter):
             status = self._proxy.get_status()
         except:
             status = {}
-        connected = status.get('connected', False)
-        mode_selector = self.buttons['mode']
-        mode_selector.SetSelection(mode_selector.FindString(status.get('mode', '')))
+        connected = status.get("connected", False)
+        mode_selector = self.buttons["mode"]
+        mode_selector.SetSelection(mode_selector.FindString(status.get("mode", "")))
         self.panel.Enable(connected)
         if not connected:
             state = STATES.error
         else:
-            if status['on'] and status['busy']:
+            if status["on"] and status["busy"]:
                 state = STATES.busy
-            elif status['on']:
+            elif status["on"]:
                 state = STATES.enabled
             else:
                 state = STATES.disabled
-            self.buttons['door'].SetValue(status['door open'])
+            self.buttons["door"].SetValue(status["door open"])
         for h in self.handlers:
             events.publish(events.DEVICE_STATUS, h, state)
             if state not in [STATES.error, STATES.busy]:
@@ -81,19 +81,26 @@ class Clarity(microscopeDevice.MicroscopeFilter):
     def getHandlers(self):
         """Return device handlers."""
         super().getHandlers()
-        h = ClaritySlideHandler(self.name + "_slide", 'clarity', False,
-                                {'setPosition': self.set_slide_position,
-                                 'getPosition': self._proxy.get_slide_position,
-                                 'getFilters': self.get_slides_as_filters,
-                                 'getIsEnabled': self._proxy.get_is_enabled,
-                                 'setEnabled': self.setEnabled},
-                                 [],
-                                 [])
+        h = ClaritySlideHandler(
+            self.name + "_slide",
+            "clarity",
+            False,
+            {
+                "setPosition": self.set_slide_position,
+                "getPosition": self._proxy.get_slide_position,
+                "getFilters": self.get_slides_as_filters,
+                "getIsEnabled": self._proxy.get_is_enabled,
+                "setEnabled": self.setEnabled,
+            },
+            [],
+            [],
+        )
         self.handlers.append(h)
         return self.handlers
 
     def set_slide_position(self, position, callback=None):
         import Pyro4
+
         asproxy = Pyro4.Proxy(self._proxy._pyroUri)
         asproxy._pyroAsync()
         result = asproxy.set_slide_position(position).then(callback)
@@ -116,7 +123,9 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         panel = wx.Panel(outer)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         # power button
-        powerhandler = next(h for h in self.handlers if isinstance(h, ClaritySlideHandler))
+        powerhandler = next(
+            h for h in self.handlers if isinstance(h, ClaritySlideHandler)
+        )
         enable = cockpit.gui.device.EnableButton(outer, powerhandler)
         enable.SetLabel("enable")
         outer.Sizer.Add(enable, flag=wx.EXPAND)
@@ -125,7 +134,7 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         outer.Sizer.Add(panel)
         # slide selector
         panel.Sizer.AddSpacer(4)
-        panel.Sizer.Add(wx.StaticText(panel, label='sectioning'))
+        panel.Sizer.Add(wx.StaticText(panel, label="sectioning"))
         panel.Sizer.Add(powerhandler.makeSelector(panel), flag=wx.EXPAND)
         # # filter selector -- moved to filters panel
         # panel.Sizer.AddSpacer(4)
@@ -137,17 +146,18 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         self.buttons = {}
         # Mode selector
         panel.Sizer.AddSpacer(4)
-        panel.Sizer.Add(wx.StaticText(panel, label='Mode'))
+        panel.Sizer.Add(wx.StaticText(panel, label="Mode"))
         mode_selector = cockpit.gui.device.EnumChoice(panel)
-        mode_selector.Set(self.describe_setting('mode')['values'])
-        self.buttons['mode'] = mode_selector
+        mode_selector.Set(self.describe_setting("mode")["values"])
+        self.buttons["mode"] = mode_selector
         from functools import partial
-        mode_selector.setOnChoice(partial(self.set_setting, 'mode'))
+
+        mode_selector.setOnChoice(partial(self.set_setting, "mode"))
         panel.Sizer.Add(mode_selector)
         # door status indicator
         cb = wx.CheckBox(panel, wx.ID_ANY, "door open")
         cb.Disable()
-        self.buttons['door'] = cb
+        self.buttons["door"] = cb
         panel.Sizer.Add(cb)
         # Start a timer to report connection errors.
         self._timer = wx.Timer(panel)

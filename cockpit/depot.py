@@ -51,7 +51,7 @@
 
 
 ## This module serves as a central coordination point for all devices. Devices
-# are initialized and registered from here, and if a part of the UI wants to 
+# are initialized and registered from here, and if a part of the UI wants to
 # interact with a specific kind of device, they can find it through the depot.
 
 import configparser
@@ -75,7 +75,8 @@ POWER_CONTROL = "power control"
 SERVER = "server"
 STAGE_POSITIONER = "stage positioner"
 
-SKIP_CONFIG = ['objectives', 'server']
+SKIP_CONFIG = ["objectives", "server"]
+
 
 class DeviceDepot:
     ## Initialize the Depot.
@@ -97,7 +98,6 @@ class DeviceDepot:
         ## Maps group name to handlers.
         self.groupNameToHandlers = {}
 
-
     ## Call the initialize() method for each registered device, then get
     # the device's Handler instances and insert them into our various
     # containers.  Yield the device names as we go.
@@ -105,26 +105,27 @@ class DeviceDepot:
         ## TODO: we will want to remove this print statements when
         ## we're done refactoring the location of the log and config
         ## files (issue #320)
-        print("Cockpit is running from %s" % os.path.split(os.path.abspath(__file__))[0])
+        print(
+            "Cockpit is running from %s" % os.path.split(os.path.abspath(__file__))[0]
+        )
 
         # Create our server
         from cockpit.devices.server import CockpitServer
 
         ## TODO remove special case by having fallback empty section?
         ## Or fallback to the defaults in the class?
-        if config.has_section('server'):
-            sconf = dict(config.items('server'))
+        if config.has_section("server"):
+            sconf = dict(config.items("server"))
         else:
             sconf = {}
-        self.nameToDevice['server'] = CockpitServer('server', sconf)
-
+        self.nameToDevice["server"] = CockpitServer("server", sconf)
 
         # Parse config to create device instances.
         for name in config.sections():
             if name in SKIP_CONFIG:
                 continue
             try:
-                cls = config.gettype(name, 'type')
+                cls = config.gettype(name, "type")
             except configparser.NoOptionError:
                 raise RuntimeError("Missing 'type' key for device '%s'" % name)
 
@@ -143,12 +144,14 @@ class DeviceDepot:
             # TODO - catch circular dependencies.
             d = devices.pop(0)
             depends = []
-            for dependency in ['triggersource', 'analogsource', 'controller']:
+            for dependency in ["triggersource", "analogsource", "controller"]:
                 other = d.config.get(dependency)
                 if other:
                     if other not in self.nameToDevice:
-                        raise Exception("Device %s depends on non-existent device '%s'." %
-                                        (d.name, other))
+                        raise Exception(
+                            "Device %s depends on non-existent device '%s'."
+                            % (d.name, other)
+                        )
                     depends.append(other)
 
             if any([other not in done for other in depends]):
@@ -164,41 +167,45 @@ class DeviceDepot:
         if not getHandlersOfType(OBJECTIVE):
             from cockpit.devices.objective import ObjectiveDevice
 
-            if config.has_section('objectives'):
-                objs = dict(config.items('objectives'))
+            if config.has_section("objectives"):
+                objs = dict(config.items("objectives"))
             else:
                 objs = {}
-            dummies.append(ObjectiveDevice('objectives', objs))
+            dummies.append(ObjectiveDevice("objectives", objs))
         # Dummy stages
         axes = self.getSortedStageMovers().keys()
         if 2 not in axes:
             from cockpit.devices.dummyZStage import DummyZStage
+
             dummies.append(DummyZStage())
         if (0 not in axes) or (1 not in axes):
             from cockpit.devices.dummyXYStage import DummyMover
+
             dummies.append(DummyMover())
         # Cameras
         if not getHandlersOfType(CAMERA):
             from cockpit.devices.dummies import DummyCamera
+
             for i in range(1, 5):
-                dummies.append(DummyCamera('Dummy camera %d' % i, {}))
+                dummies.append(DummyCamera("Dummy camera %d" % i, {}))
         # Dummy imager
         if not getHandlersOfType(IMAGER):
             from cockpit.devices.dummies import DummyDSP
-            dummies.append(DummyDSP('imager', {}))
+
+            dummies.append(DummyDSP("imager", {}))
         # Dummy laser
         if not getHandlersOfType(LIGHT_TOGGLE):
             from cockpit.devices.dummies import DummyLaser
+
             for wl in [405, 488, 633]:
-                dummies.append(DummyLaser('Dummy %d' % wl, {'wavelength' : wl}))
+                dummies.append(DummyLaser("Dummy %d" % wl, {"wavelength": wl}))
         # Initialise dummies.
         for d in dummies:
             self.nameToDevice[d.name] = d
             self.initDevice(d)
 
         self.finalizeInitialization()
-        yield 'dummy-devices'
-
+        yield "dummy-devices"
 
     def addHandler(self, handler, device=None):
         if handler.deviceType not in self.deviceTypeToHandlers:
@@ -212,14 +219,15 @@ class DeviceDepot:
             otherHandler = self.nameToHandler[handler.name]
             if handler is not otherHandler:
                 otherDevice = self.handlerToDevice[otherHandler]
-                raise RuntimeError("Multiple handlers with the same name [%s] from devices [%s] and [%s]" %
-                                   (handler.name, str(device), str(otherDevice)))
+                raise RuntimeError(
+                    "Multiple handlers with the same name [%s] from devices [%s] and [%s]"
+                    % (handler.name, str(device), str(otherDevice))
+                )
         self.nameToHandler[handler.name] = handler
         self.handlerToDevice[handler] = device
         if handler.groupName not in self.groupNameToHandlers:
             self.groupNameToHandlers[handler.groupName] = []
         self.groupNameToHandlers[handler.groupName].append(handler)
-
 
     ## Initialize a Device.
     def initDevice(self, device):
@@ -237,26 +245,25 @@ class DeviceDepot:
 
     ## Let each device publish any initial events it needs. It's assumed this
     # is called after all the handlers have set up their UIs, so that they can
-    # be adjusted to match the current configuration. 
+    # be adjusted to match the current configuration.
     def makeInitialPublications(self):
         for device in self.nameToDevice.values():
             device.makeInitialPublications()
         for handler in self.handlersList:
             handler.makeInitialPublications()
 
-
     ## Do any extra initialization needed now that everything is properly
     # set up.
     def finalizeInitialization(self):
         from concurrent.futures import ThreadPoolExecutor
+
         with ThreadPoolExecutor(max_workers=4) as pool:
-           for device in self.nameToDevice.values():
-               pool.submit(device.finalizeInitialization)
+            for device in self.nameToDevice.values():
+                pool.submit(device.finalizeInitialization)
         # Context manager ensures devices are finalized before handlers.
         with ThreadPoolExecutor(max_workers=4) as pool:
             for handler in self.handlersList:
                 pool.submit(handler.finalizeInitialization)
-
 
     ## Return a mapping of axis to a sorted list of positioners for that axis.
     # We sort by range of motion, with the largest range coming first in the
@@ -270,11 +277,10 @@ class DeviceDepot:
             axisToMovers[mover.axis].append(mover)
 
         for axis, handlers in axisToMovers.items():
-            handlers.sort(reverse = True,
-                    key = lambda a: a.getHardLimits()[1] - a.getHardLimits()[0]
+            handlers.sort(
+                reverse=True, key=lambda a: a.getHardLimits()[1] - a.getHardLimits()[0]
             )
         return axisToMovers
-
 
 
 ## XXX: Global singleton
@@ -300,7 +306,7 @@ def getHandlerWithName(name):
     if d is None:
         # try case mangling
         keys = {k.lower(): k for k in deviceDepot.nameToHandler.keys()}
-        d = deviceDepot.nameToHandler.get( keys.get(name.lower()), None)
+        d = deviceDepot.nameToHandler.get(keys.get(name.lower()), None)
     return d
 
 
@@ -342,6 +348,7 @@ def getActiveCameras():
 ## Add a handler
 def addHandler(handler, device=None):
     return deviceDepot.addHandler(handler, device)
+
 
 ## Get a device by its name.
 def getDeviceWithName(name):

@@ -101,17 +101,24 @@ class DrawerHandler(deviceHandler.DeviceHandler):
     # supplied, they override the DrawerSettings if any.
     # \param settings A list of DrawerSettings instances.
     # \param settingIndex Index into settings list indicating the current mode.
-    def __init__(self, name: str, groupName: str,
-                 settings: typing.Sequence[DrawerSettings],
-                 settingIndex: int, callbacks = {}) -> None:
+    def __init__(
+        self,
+        name: str,
+        groupName: str,
+        settings: typing.Sequence[DrawerSettings],
+        settingIndex: int,
+        callbacks={},
+    ) -> None:
         super().__init__(name, groupName, False, callbacks, depot.DRAWER)
         self.settings = settings
         self.settingIndex = settingIndex
 
         # Last thing to do is update UI to show default selections.
         initial_settings = self.settings[self.settingIndex]
-        events.oneShotSubscribe('cockpit initialization complete',
-                                lambda: self.changeDrawer(initial_settings))
+        events.oneShotSubscribe(
+            "cockpit initialization complete",
+            lambda: self.changeDrawer(initial_settings),
+        )
 
     ## Generate a row of buttons, one for each possible drawer.
     def makeUI(self, parent) -> None:
@@ -119,12 +126,16 @@ class DrawerHandler(deviceHandler.DeviceHandler):
             # Nothing to be done here.
             return None
 
-        frame = wx.Frame(parent, title='Drawers',
-                         style=wx.RESIZE_BORDER|wx.CAPTION |wx.FRAME_NO_TASKBAR)
+        frame = wx.Frame(
+            parent,
+            title="Drawers",
+            style=wx.RESIZE_BORDER | wx.CAPTION | wx.FRAME_NO_TASKBAR,
+        )
         panel = wx.Panel(frame)
 
-        box = wx.RadioBox(panel, label='Drawers',
-                          choices=[s.name for s in self.settings])
+        box = wx.RadioBox(
+            panel, label="Drawers", choices=[s.name for s in self.settings]
+        )
         box.SetSelection(self.settingIndex)
         box.SetFont(box.GetFont().Larger())
         box.Bind(wx.EVT_RADIOBOX, self.OnRadioBox)
@@ -137,7 +148,6 @@ class DrawerHandler(deviceHandler.DeviceHandler):
         frame_sizer.Add(panel)
         frame.SetSizerAndFit(frame_sizer)
 
-
     def OnRadioBox(self, event: wx.CommandEvent) -> None:
         self.changeDrawer(self.settings[event.GetInt()])
 
@@ -145,5 +155,6 @@ class DrawerHandler(deviceHandler.DeviceHandler):
     def changeDrawer(self, newSetting: DrawerSettings) -> None:
         for cname in newSetting.cameraNames:
             handler = depot.getHandler(cname, depot.CAMERA)
-            handler.updateFilter(newSetting.cameraToDye[cname],
-                                 newSetting.cameraToWavelength[cname])
+            handler.updateFilter(
+                newSetting.cameraToDye[cname], newSetting.cameraToWavelength[cname]
+            )

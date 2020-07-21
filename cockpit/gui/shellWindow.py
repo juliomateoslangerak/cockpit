@@ -20,8 +20,10 @@
 
 import wx.py.shell
 
+
 class ShellWindow(wx.py.shell.ShellFrame):
     SHOW_DEFAULT = False
+
 
 def makeWindow(parent):
     window = ShellWindow(parent)

@@ -32,10 +32,7 @@ import cockpit.events
 ## filesystem filepath.  It is a /-separated filepath, even on
 ## windows, so do not use os.path.join.
 
-BITMAPS_PATH = pkg_resources.resource_filename(
-    'cockpit',
-    'resources/bitmaps/'
-)
+BITMAPS_PATH = pkg_resources.resource_filename("cockpit", "resources/bitmaps/")
 
 
 ## A single event type for all cockpit.events. The origian cockpit
@@ -66,12 +63,12 @@ class EvtEmitter(wx.EvtHandler):
     always called.
 
     """
+
     def __init__(self, parent, cockpit_event_type):
         assert isinstance(parent, wx.Window)
         super().__init__()
         self._cockpit_event_type = cockpit_event_type
-        cockpit.events.subscribe(self._cockpit_event_type,
-                                 self._EmitCockpitEvent)
+        cockpit.events.subscribe(self._cockpit_event_type, self._EmitCockpitEvent)
 
         ## Destroy() is not called when the parent is destroyed, see
         ## https://github.com/wxWidgets/Phoenix/issues/630 so we need
@@ -82,8 +79,7 @@ class EvtEmitter(wx.EvtHandler):
         self.AddPendingEvent(CockpitEvent(EventData=args))
 
     def _Unsubscribe(self):
-        cockpit.events.unsubscribe(self._cockpit_event_type,
-                                   self._EmitCockpitEvent)
+        cockpit.events.unsubscribe(self._cockpit_event_type, self._EmitCockpitEvent)
 
     def _OnParentDestroy(self, event):
         self._Unsubscribe()
@@ -109,7 +105,7 @@ def ExceptionBox(caption="", parent=None):
     """
     current_exception = sys.exc_info()[1]
     if current_exception is None:
-        raise RuntimeError('Not handling an exception')
+        raise RuntimeError("Not handling an exception")
 
     ## wx.MessageDialog looks better than plain wx.Dialog but we want
     ## to include the traceback without line-wrapping and to be able
@@ -120,8 +116,11 @@ def ExceptionBox(caption="", parent=None):
 
     dialog = wx.Dialog(parent, title=caption, name="exception-dialog")
     message = wx.StaticText(dialog, label=str(current_exception))
-    details = wx.TextCtrl(dialog, value=traceback.format_exc(),
-                          style=(wx.TE_MULTILINE|wx.TE_DONTWRAP|wx.TE_READONLY))
+    details = wx.TextCtrl(
+        dialog,
+        value=traceback.format_exc(),
+        style=(wx.TE_MULTILINE | wx.TE_DONTWRAP | wx.TE_READONLY),
+    )
 
     ## 'w.Font.Family = f' does not work because it 'w.Font' returns a
     ## copy of the font.  We need to modify that copy and assign back.
@@ -132,12 +131,13 @@ def ExceptionBox(caption="", parent=None):
     sizer = wx.BoxSizer(wx.VERTICAL)
     sizer.Add(message, wx.SizerFlags(0).Expand().Border())
     sizer.Add(details, wx.SizerFlags(1).Expand().Border())
-    sizer.Add(dialog.CreateSeparatedButtonSizer(wx.OK),
-              wx.SizerFlags(0).Expand().Border())
+    sizer.Add(
+        dialog.CreateSeparatedButtonSizer(wx.OK), wx.SizerFlags(0).Expand().Border()
+    )
 
     ## The default width of a TextCtrl does not take into account its
     ## actual content.  We need to manually set its size (issue #497)
-    if wx.Platform != '__WXMSW__':
+    if wx.Platform != "__WXMSW__":
         details_text_size = details.GetTextExtent(details.Value)
     else:
         ## On Windows, GetTextExtent ignores newlines so we need to
@@ -145,8 +145,9 @@ def ExceptionBox(caption="", parent=None):
         traceback_lines = details.Value.splitlines()
         longest_line = max(traceback_lines, key=len)
         one_line_size = details.GetTextExtent(longest_line)
-        details_text_size = wx.Size(one_line_size[0],
-                                    one_line_size[1] * len(traceback_lines))
+        details_text_size = wx.Size(
+            one_line_size[0], one_line_size[1] * len(traceback_lines)
+        )
     details.SetInitialSize(details.GetSizeFromTextSize(details_text_size))
 
     dialog.SetSizerAndFit(sizer)

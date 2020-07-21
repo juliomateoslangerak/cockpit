@@ -105,6 +105,10 @@ class CockpitApp(wx.App):
     def Channels(self):
         return self._channels
 
+    @property
+    def Stage(self):
+        return self._stage
+
 
     def OnInit(self):
         try:
@@ -139,7 +143,11 @@ class CockpitApp(wx.App):
             updateNum+=1
             cockpit.interfaces.imager.initialize()
             cockpit.interfaces.stageMover.initialize()
+            self._stage = cockpit.interfaces.stageMover.mover
             self._channels = cockpit.interfaces.channels.Channels()
+            for fpath in self.Config['global'].getpaths('channel-files', []):
+                new_channels = cockpit.interfaces.channels.LoadFromFile(fpath)
+                self._channels.Update(new_channels)
 
             status.Update(updateNum, "Initializing user interface...")
             updateNum+=1

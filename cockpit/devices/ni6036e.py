@@ -24,7 +24,6 @@ from cockpit.devices import device
 from cockpit.util import valueLogger
 from cockpit import depot
 from cockpit import events
-import cockpit.gui.toggleButton
 import cockpit.util.connection
 import collections
 import matplotlib
@@ -106,11 +105,9 @@ class NI6036e(device.Device):
                     flipsList=flips.split(',')
                     flipsInt=[int(flipsList[0]),int(flipsList[1])]
                     self.objectiveToFlips[self.objective[i]].append(flipsInt)
-                
-        self.lightPathButtons = []
 
         ## Current light path mode.
-        self.curExMode = None
+        self.curExMode = 0
         self.curStageMode = None
         self.curDetMode = None
 
@@ -138,7 +135,7 @@ class NI6036e(device.Device):
     ## Try to switch to widefield mode.
     def finalizeInitialization(self):
         if self.excitation:
-            self.setExMode(self.excitation[0])
+            self.setExMode(self.excitation[self.curExMode])
         self.temperatureConnection.connect(self.receiveTemperatureData)
 #        self.setStageMode('Inverted')
         #set default emission path
@@ -158,26 +155,11 @@ class NI6036e(device.Device):
     ## Generate a column of buttons for setting the light path. Make a window
     # that plots our temperature data.
     def makeUI(self, parent):
-
-        rowSizer=wx.BoxSizer(wx.HORIZONTAL)
-        
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        label = wx.StaticText(parent, -1, "Excitation path:")
-        label.SetFont(wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.BOLD))
-        sizer.Add(label)
-        for mode in self.excitation:
-            button = cockpit.gui.toggleButton.ToggleButton( 
-                textSize = 12, label = mode, size = (180, 50), 
-                parent = parent)
-            # Respond to clicks on the button.
-            button.Bind(wx.EVT_LEFT_DOWN, lambda event, mode = mode: self.setExMode(mode))
-            sizer.Add(button)
-            self.lightPathButtons.append(button)
-            if mode == self.curExMode:
-                button.activate()
-        rowSizer.Add(sizer)
-        return rowSizer
-
+        box = wx.RadioBox(parent, label='Excitation path',
+                          choices=[mode for mode in self.excitation])
+        box.SetSelection(self.excitation.index(self.curExMode))
+        box.Bind(wx.EVT_RADIOBOX, self.OnRadioBox)
+        return box
 
     #IMD commented out 20170320 as we asre moving all this to config file.
     
@@ -228,12 +210,15 @@ class NI6036e(device.Device):
         # return rowSizer
 
 
+    def OnRadioBox(self, event: wx.CommandEvent) -> None:
+        mode = self.excitation[event.GetInt()]
+        self.setExMode(mode)
+
+
     ## Set the light path to the specified mode.
     def setExMode(self, mode):
         for mirrorIndex, isUp in self.modeToFlips[mode]:
             self.flipDownUp(mirrorIndex, isUp)
-        for button in self.lightPathButtons:
-            button.setActive(button.GetLabel() == mode)
         self.curExMode = mode
 
 
@@ -281,7 +266,7 @@ class NI6036e(device.Device):
 
     ## Flip a mirror down and then up, to ensure that it's in the position
     # we want.
-    def flipDownUp(self, index, isUp):
+    def flipDownUp(self, index, isUp: bool):
         self.niConnection.flipDownUp(index, int(isUp))
 
 
@@ -318,12 +303,9 @@ class niOutputWindow(wx.Frame):
         self.buttonToLine = {}
 
         # Set up the digital lineout buttons.
-        for i in range(len(self.nicard.lines)) :
-            button = cockpit.gui.toggleButton.ToggleButton(
-                    parent = panel, label = str(self.nicard.lines[i]),
-                    activateAction = self.toggle,
-                    deactivateAction = self.toggle,
-                    size = (140, 80))
+        for i, line in enumerate(self.nicard.lines):
+            button = wx.ToggleButton(panel, label=str(line), size=(140, 80))
+            button.Bind(wx.EVT_TOGGLEBUTTON, self.OnToggleButton)
             buttonSizer.Add(button, 1, wx.EXPAND)
             self.buttonToLine[button] = i
         mainSizer.Add(buttonSizer)
@@ -331,15 +313,14 @@ class niOutputWindow(wx.Frame):
         panel.SetSizerAndFit(mainSizer)
         self.SetClientSize(panel.GetSize())
 
-
     ## One of our buttons was clicked; update the DSP's output.
-    def toggle(self):
-        output = 0
+    def OnToggleButton(self, event: wx.CommandEvent) -> None:
+        del event
+        # TODO: we know exactly which of the toggle buttons has been
+        # pressed/unpressed, we shouldn't have to loop over all lines
+        # and set them all again.
         for button, line in self.buttonToLine.items():
-            if button.getIsActive():
-                self.nicard.niConnection.flipDownUp(line, 1)
-            else:
-                self.nicard.niConnection.flipDownUp(line, 0)
+            self.nicard.niConnection.flipDownUp(line, button.GetValue())
 
 
 

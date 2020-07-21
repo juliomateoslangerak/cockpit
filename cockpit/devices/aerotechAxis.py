@@ -152,10 +152,8 @@ class AerotechZStage(device.Device):
             {'moveAbsolute': self.moveAbsolute,
                 'moveRelative': self.moveRelative, 
                 'getPosition': self.getPosition, 
-                'getMovementTime': self.getMovementTime,
-                'cleanupAfterExperiment': self.cleanup},
-                axis, [10, 50, 100, 500, 1000, 5000],
-                1, (minVal, maxVal), (minVal, maxVal))
+                'getMovementTime': self.getMovementTime},
+                axis, (minVal, maxVal), (minVal, maxVal))
         result.append(handler)
         return result
     
@@ -252,10 +250,3 @@ class AerotechZStage(device.Device):
             self.socket.connect((self.ipAddress, self.port))
         except:
             raise
-
-
-    ## Cleanup after an experiment. For a real mover, this would probably 
-    # just mean making sure we were back where we were before the experiment
-    # started.
-    def cleanup(self, axis, isCleanupFinal):
-        self.moveAbsolute(axis, self.position)

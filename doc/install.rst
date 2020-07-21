@@ -12,6 +12,7 @@ Installation
 
 .. include:: ../INSTALL
 
+
 Linux
 =====
 
@@ -30,7 +31,6 @@ The Cockpit dependencies not available on Debian repositories are
 PyPI, they need to be installed first with `apt`::
 
   sudo apt install \
-    git \
     python3 \
     python3-matplotlib \
     python3-numpy \
@@ -42,78 +42,67 @@ PyPI, they need to be installed first with `apt`::
     python3-setuptools \
     python3-wxgtk4.0
 
-Of Microscope's own dependencies, `hidapi
-<https://pypi.org/project/hidapi/>`_ is also not available on Debian
-repositories.  It will be installed at the same time as microscope
-with `pip`::
+Once that is done, installing Cockpit with `pip` will also install the
+other dependencies::
 
-  pip3 install --user microscope
-
-Finally clone the Cockpit repository and install it::
-
-  git clone cockpit
-  pip3 install --user --no-index cockpit/
-  rm -r cockpit
-
-	     
-Developer install instructions
-==============================
+  pip3 install --user microscope-cockpit
 
 
 macOS
-=====
+-----
 
-macOS needs git and python3 which are not part of the default
-setup. There are various route to get these two packages but below are
-instructions for how to do this via homebrew.
+The easiest method to install cockpit on macOS is to install the
+python.org build of the latest python version and then use the pip to
+install cockpit and its dependencies.
 
-Install Homebrew from https://brew.sh/ currently this involves starting
-a terminal (/Applications/Utilities/terminal.app) and running the command::
+First download and install the latest python 3 from `python.org
+<https://www.python.org/downloads/mac-osx/>`_.
 
- /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+Once python is installed open a terminal window
+(``/Application/Utilities/Terminal``) and use pip to install cockpit.
+You must use 'pip3' as this will run the newly installed python3
+rather than the system default Python 2.7 which cockpit does not
+support::
 
-Then use homebrew to install git and python3::
+  pip3 install microscope-cockpit
 
- brew install git
+This may prompt you to install the XCode command line utilities.
+Please install these as they are required for some of the instrument
+control functionality in Cockpit (they are required to build hidapi
+used in microscope).  If this step is required you will have to rerun
+the pip3 install command above as it will have failed the first time.
 
- brew install python3
-
-Create a directory for microscope and cockpit, I used ~/src::
-
- mkdir ~/src
- cd ~/src
-
-Next clone the github respoitories::
-
- git clone https://github.com/MicronOxford/microscope.git
- git clone https://github.com/MicronOxford/cockpit.git
-
-Setup these packages as a developer::
-
- cd microscope
- python3 setup.py develop
-
-For me this failed as I didn't have write access to the python library
-directory /Library/Python/3.7/site-packages. If this is not a problem
-move on the the cockpit septup. I had to create this directory and
-change its ownership to my userid. As this is a laptop and I am the
-only user this shouldn't be a problem::
-
- sudo mkdir /Library/Python/3.7
- sudo chown <username> /Library/Python/3.7
- mkdir /Library/Python/3.7/site-packages
-
-Then run the setup again::
-
- python3 setup.py develop
-
-Finally install cockpit in the same way::
-
- cd ../cockpit
- python3 setup.py develop
-
-Then test::
+Once installed, cockpit can be started from command line::
 
  cockpit
 
-This should start the cockpit GUI.
+
+Microsoft Windows
+=================
+
+Python must be installed first, and the installer can be downloaded
+from `python.org <https://www.python.org/downloads/windows/>`_.
+During the Python installation, ensure that pip is also installed (it
+will be by default) and that the install and scripts directories are
+added to Windows ``PATH`` (check the "Add Python X.Y to PATH" option
+during installation).
+
+Once Python is installed, Cockpit can be installed with pip like so::
+
+  pip install microscope-cockpit
+
+
+Development sources
+===================
+
+Cockpit development happens in a public git repository making it
+possible to install cockpit from development sources::
+
+  git clone https://github.com/MicronOxford/cockpit.git
+  pip install --no-index cockpit/
+
+If the plan is to make changes to the source code or to have the
+installed version follow development, consider installing in develop
+mode, also known as editable mode::
+
+  pip install --no-index --editable cockpit/

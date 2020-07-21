@@ -137,30 +137,33 @@ class NIcRIO(executorDevices.ExecutorDevice):
         """
         return self.connection.MoveAbsolute(line, target)
 
-    # def getHandlers(self):
-    #     """We control which light sources are active, as well as a set of stage motion piezos.
-    #     """
-    #     result = list()
-    #     h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-    #         self.name, "executor",
-    #         {'examineActions': lambda *args: None,
-    #          'executeTable': self.executeTable,
-    #          'readDigital': self.connection.ReadDigital,
-    #          'writeDigital': self.connection.WriteDigital,
-    #          'getAnalog': self.getAnalog,
-    #          'setAnalog': self.setAnalog,
-    #          'runSequence': self.runSequence,
-    #          },
-    #         dlines=self.nrDigitalLines, alines=self.nrAnalogLines)
-    #
-    #     result.append(h)
-    #
-    #     result.append(cockpit.handlers.imager.ImagerHandler(
-    #         "%s imager" % self.name, "imager",
-    #         {'takeImage': h.takeImage}))
-    #
-    #     self.handlers = set(result)
-    #     return result
+    def getHandlers(self):
+        """We control which light sources are active, as well as a set of stage motion piezos.
+        """
+        result = list()
+        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
+            self.name, "executor",
+            {'examineActions': lambda *args: None,
+             'executeTable': self.executeTable,
+             'readDigital': self.connection.ReadDigital,
+             'writeDigital': self.connection.WriteDigital,
+             'getAnalog': self.getAnalog,
+             'setAnalog': self.setAnalog,
+             'runSequence': self.runSequence,
+             },
+            dlines=self._dlines, alines=self._alines)
+
+        result.append(h)
+
+        result.append(cockpit.handlers.imager.ImagerHandler(
+            "%s imager" % self.name, "imager",
+            {'takeImage': h.takeImage}))
+
+        self.handlers = set(result)
+        return result
+
+    def takeImage(self):
+        pass
 
     def _adaptActions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:

@@ -192,7 +192,7 @@ class ActionTable:
         table = {}
 
         def action_type(action):
-            if isinstance(action, float):
+            if isinstance(action, (float, int)):
                 return 'analogue'
             if isinstance(action, bool):
                 return 'digital'

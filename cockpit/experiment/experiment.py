@@ -507,7 +507,7 @@ class Experiment:
     # cameras and lights to use for the exposure, as well as how long to
     # expose each light for and when we're allowed to start. We need to
     # enforce that all of the cameras are ready to go before we trigger them.
-    # We also need to enforce that any frame-transer cameras have not seen any
+    # We also need to enforce that any frame-transfer cameras have not seen any
     # light since the last time they were blanked.
     # \param lightTimePairs List of (light, exposure time) tuples
 
@@ -552,6 +552,7 @@ class Experiment:
         for camera in cameras:
             maxExposureTime = max(maxExposureTime,
                     camera.getMinExposureTime(isExact = True))
+
             if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
                 nextReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
                 # Ensure camera is exposing for long enough to finish reading
@@ -559,16 +560,27 @@ class Experiment:
                 maxExposureTime = max(maxExposureTime,
                         nextReadyTime - exposureStartTime)
 
+            # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
+            # to ensure that all the pixels are exposed when we turn on the lights
+            elif camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
+                maxExposureTime += (self.cameraToReadoutTime[camera] + decimal.Decimal(0.1))
+
+
         # Open the shutters for the specified exposure times, centered within
-        # the max exposure time.
+        # the max exposure time. If camera has a rolling shutter, centered in the time frame
+        # where all pixels are exposed
         # Note that a None value here means the user wanted to expose the
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name != 'ambient': # i.e. not ambient light
-                # Center the light exposure.
-                timeSlop = maxExposureTime - exposureTime
-                offset = timeSlop / 2
+            if light is not None and light.name != 'ambient':  # i.e. not ambient light
+                if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
+                    # Center with all pixels exposed
+                    offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
+                else:
+                    # Center the light exposure.
+                    timeSlop = maxExposureTime - exposureTime
+                    offset = timeSlop / 2
                 table.addAction(exposureEndTime - exposureTime - offset, light, True)
                 table.addAction(exposureEndTime - offset, light, False)
             # Record this exposure time.
@@ -589,12 +601,7 @@ class Experiment:
                 table.addAction(exposureStartTime, camera, True)
                 table.addAction(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
-                # We added some security time to the readout time that
-                # we have to remove now
-                cameraExposureStartTime = (exposureStartTime
-                                           - self.cameraToReadoutTime[camera]
-                                           - decimal.Decimal(0.005))
-                table.addAction(cameraExposureStartTime, camera, True)
+                table.addAction(exposureStartTime, camera, True)
                 table.addAction(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_BEFORE:
                 table.addToggle(exposureStartTime, camera)

@@ -573,7 +573,7 @@ class Experiment:
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
             if light is not None and light.name != 'ambient':  # i.e. not ambient light
-                if camera.getShutteringMode == cockpit.handlers.camera.SHUTTERING_ROLLING:
+                if camera.getShutteringMode() == cockpit.handlers.camera.SHUTTERING_ROLLING:
                     # Center with all pixels exposed
                     offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
                 else:

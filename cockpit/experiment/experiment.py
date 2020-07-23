@@ -552,7 +552,6 @@ class Experiment:
         for camera in cameras:
             maxExposureTime = max(maxExposureTime,
                     camera.getMinExposureTime(isExact = True))
-
             if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
                 nextReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
                 # Ensure camera is exposing for long enough to finish reading
@@ -562,7 +561,7 @@ class Experiment:
 
             # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
             # to ensure that all the pixels are exposed when we turn on the lights
-            elif camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
+            elif camera.getShutteringMode() == cockpit.handlers.camera.SHUTTERING_ROLLING:
                 maxExposureTime += (self.cameraToReadoutTime[camera] + decimal.Decimal(0.1))
 
 
@@ -574,7 +573,7 @@ class Experiment:
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
             if light is not None and light.name != 'ambient':  # i.e. not ambient light
-                if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
+                if camera.getShutteringMode == cockpit.handlers.camera.SHUTTERING_ROLLING:
                     # Center with all pixels exposed
                     offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
                 else:
@@ -598,9 +597,6 @@ class Experiment:
             if mode == cockpit.handlers.camera.TRIGGER_AFTER:
                 table.addToggle(exposureEndTime, camera)
             elif mode == cockpit.handlers.camera.TRIGGER_DURATION:
-                table.addAction(exposureStartTime, camera, True)
-                table.addAction(exposureEndTime, camera, False)
-            elif mode == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
                 table.addAction(exposureStartTime, camera, True)
                 table.addAction(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_BEFORE:

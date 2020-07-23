@@ -65,9 +65,13 @@ import cockpit.util.colors
 ## Available trigger modes for triggering the camera.
 # Trigger at the end of an exposure; trigger before the exposure;
 # trigger for the duration of the exposure.
-(TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT, TRIGGER_DURATION_PSEUDOGLOBAL) = range(5)
+(TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT) = range(4)
 
-## This handler is for cameras, of course. Cameras provide images to the 
+## Available electronic shuttering modes.
+# GLobal shuttering and rolling shuttering;
+(SHUTTERING_GLOBAL, SHUTTERING_ROLLING) = range(2)
+
+## This handler is for cameras, of course. Cameras provide images to the
 # microscope, and are assumed to be usable during experiments. 
 class CameraHandler(deviceHandler.DeviceHandler):
     ## Create the Handler. 
@@ -88,15 +92,12 @@ class CameraHandler(deviceHandler.DeviceHandler):
     # - Optional: getMinExposureTime(name): returns the minimum exposure time
     #   the camera is capable of performing, in milliseconds. If not available,
     #   0ms is used.
-    # \param exposureMode One of TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION
-    #   or TRIGGER_DURATION_PSEUDOGLOBAL. The first two are for external-trigger
-    #   cameras, which may be frame-transfer (trigger at end of exposure, and expose
-    #   continuously) or not (trigger at beginning of exposure and expose for
-    #   a pre-configured duration). The last two are for external-exposure cameras,
+    # \param exposureMode One of TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION.
+    #   The first two are for external-trigger cameras, which may be frame-transfer
+    #   (trigger at end of exposure, and expose continuously) or not
+    #   (trigger at beginning of exposure and expose for a pre-configured duration).
+    #   The last two are for external-exposure cameras,
     #   which expose for as long as you tell them to, based on the TTL line.
-    #   The TRIGGER_DURATION_PSEUDOGLOBAL is for using the rolling shutter and we
-    #   only want to excite the sample in the time that all of the pixels are
-    #   exposed.
     # \param minExposureTime Minimum exposure duration, in milliseconds.
     #   Typically only applicable if doExperimentsExposeContinuously is True.
     
@@ -232,6 +233,12 @@ class CameraHandler(deviceHandler.DeviceHandler):
     @cached
     def getExposureTime(self, isExact = False):
         return self.callbacks['getExposureTime'](self.name, isExact)
+
+
+    @cached
+    def getShutteringMode(self):
+        return self.callbacks['getShutteringMode'](self.name)
+
 
     ## Do any necessary preparation for the camera to participate in an 
     # experiment.

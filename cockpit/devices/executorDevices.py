@@ -193,7 +193,7 @@ class ExecutorDevice(device.Device):
 
         actions = self._adaptActions(actions)
         events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                'Waiting for\nExecutor to finish', (255, 255, 0))
+                       'Waiting for DSP to finish')
         self.connection.PrepareActions(actions, numReps)
         events.executeAndWaitFor(events.EXECUTOR_DONE % self.name, self.connection.RunActions)
         events.publish(events.EXPERIMENT_EXECUTION)

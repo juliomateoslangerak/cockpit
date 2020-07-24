@@ -43,10 +43,6 @@ from cockpit.devices.camera import CameraDevice
 from cockpit.interfaces.imager import pauseVideo
 from microscope.devices import ROI, Binning
 
-# The following must be defined as in handlers/camera.py
-(TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT) = range(4)
-(SHUTTERING_GLOBAL, SHUTTERING_ROLLING) = range(2)
-
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
 

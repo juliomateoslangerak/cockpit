@@ -101,7 +101,7 @@ class BoulderSLM(device.Device):
         self.asproxy = None
         self.position = None
         self.wasPowered = None
-        self.slmTimeout = 5
+        self.slmTimeout = 10
         self.slmRetryLimit = 3
         self.last = _LastParameters(self)
 
@@ -163,8 +163,7 @@ class BoulderSLM(device.Device):
         delta = (targetPosition - pos) + (targetPosition < pos) * len(self.last.params)
         for i in range(delta):
             self.handler.triggerNow()
-            time.sleep(0.05)
-        # self.cycleToPosition(targetPosition)
+            time.sleep(0.01)
 
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
         # Found a table entry with a simple index. Trigger until that index
@@ -252,7 +251,7 @@ class BoulderSLM(device.Device):
         # Fire several triggers to ensure that the sequence is loaded.
         for i in range(12):
             self.handler.triggerNow()
-            time.sleep(0.05)
+            time.sleep(0.01)
         # Ensure that we're at position 0.
         self.cycleToPosition(0)
         self.position = self.getCurrentPosition()

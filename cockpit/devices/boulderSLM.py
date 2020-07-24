@@ -25,9 +25,12 @@
 Sample config entry:
   [slm]
   type: BoulderSLM
+  uri: PYRO:pyroSLM@slmhost:8000
   triggerSource: dsp
   triggerLine: 2
-  uri: PYRO:pyroSLM@slmhost:8000
+  diffractionangle: 0.35
+  settlingtime: 10
+
 
   [dsp]
   type: LegacyDSP
@@ -88,6 +91,7 @@ class _LastParameters():
 class BoulderSLM(device.Device):
     _config_types = {
         'settlingtime': float,
+        'diffractionangle': float,
         'triggerLine': int,
     }
 
@@ -97,7 +101,7 @@ class BoulderSLM(device.Device):
         self.asproxy = None
         self.position = None
         self.wasPowered = None
-        self.slmTimeout = 10
+        self.slmTimeout = 5
         self.slmRetryLimit = 3
         self.last = _LastParameters(self)
 
@@ -159,7 +163,8 @@ class BoulderSLM(device.Device):
         delta = (targetPosition - pos) + (targetPosition < pos) * len(self.last.params)
         for i in range(delta):
             self.handler.triggerNow()
-            time.sleep(0.01)
+            time.sleep(0.05)
+        # self.cycleToPosition(targetPosition)
 
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
         # Found a table entry with a simple index. Trigger until that index
@@ -187,6 +192,8 @@ class BoulderSLM(device.Device):
                 sequenceLength = length
                 break
         sequence = reducedParams[0:sequenceLength]
+        # Stop any current sequence in the SLM
+        self.connection.stop()
         ## Tell the SLM to prepare the pattern sequence.
         asyncResult = self.asproxy.set_sim_sequence(sequence)
 
@@ -245,7 +252,7 @@ class BoulderSLM(device.Device):
         # Fire several triggers to ensure that the sequence is loaded.
         for i in range(12):
             self.handler.triggerNow()
-            time.sleep(0.01)
+            time.sleep(0.05)
         # Ensure that we're at position 0.
         self.cycleToPosition(0)
         self.position = self.getCurrentPosition()

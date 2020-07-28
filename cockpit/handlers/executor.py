@@ -54,6 +54,7 @@
 import collections
 from cockpit import depot
 from cockpit.handlers import deviceHandler
+from cockpit import handlers
 from cockpit import events
 from cockpit.handlers.genericPositioner import GenericPositionerHandler
 from numbers import Number
@@ -299,6 +300,11 @@ class DigitalMixin:
             return
         camlines = sum([1<<self.digitalClients[cam] for cam in self.activeCameras])
 
+        # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
+        exposureStartTime = [cam.getTimeBetweenExposures() for cam in self.activeCameras \
+                             if cam.getShutteringMode() == handlers.camera.SHUTTERING_ROLLING]
+        exposureStartTime = max(exposureStartTime, default=0)
+
         if camlines == 0:
             # No cameras to be triggered.
             return
@@ -317,11 +323,13 @@ class DigitalMixin:
         if ltpairs:
             # Start by all active cameras and lights.
             state = camlines | functools.reduce(operator.ior, list(zip(*ltpairs))[0])
-            seq = [(0, state)]
+            if exposureStartTime != 0:
+                seq = [(0, camlines)]
+            seq.append((exposureStartTime, state))
             # Switch off each light as its exposure time expires.
-            for  lline, ltime in ltpairs:
+            for lline, ltime in ltpairs:
                 state -= lline
-                seq.append( (ltime, state))
+                seq.append((exposureStartTime + ltime, state))
         else:
             # No lights. Just trigger the cameras.
             seq = [(0, camlines)]

@@ -119,6 +119,11 @@ class BoulderSLM(device.Device):
         if angle:
             self.connection.set_sim_diffraction_angle(angle)
 
+    def onExit(self) -> None:
+        for proxy in [self.connection, self.asproxy]:
+            if proxy is not None:
+                proxy._pyroRelease()
+        super().onExit()
 
     def finalizeInitialization(self):
         # A mapping of context-menu entries to functions.
@@ -202,9 +207,6 @@ class BoulderSLM(device.Device):
         for i, (t, handler, action) in enumerate(table.actions):
             if handler is not self.handler:
                 # Nothing to do
-                continue
-            elif action in [True, False]:
-                # Trigger action generated on earlier pass through.
                 continue
             # Action specifies a target frame in the sequence.
             # Remove original event.

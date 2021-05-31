@@ -68,6 +68,9 @@ CONTROL_SIZE = (280, -1)
 ## Minimum size of text input fields.
 FIELD_SIZE = (70, -1)
 
+_FILENAME_TEMPLATE = "{date}-{time}_t{cycle}_p{site}.mrc"
+
+
 ## This class allows for configuring multi-site experiments.
 class MultiSiteExperimentDialog(wx.Dialog):
     def __init__(self, parent):
@@ -224,8 +227,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.experimentPanel = experimentConfigPanel.ExperimentConfigPanel(
                 self.panel, resizeCallback = self.onExperimentPanelResize,
                 resetCallback = self.onExperimentPanelReset,
-                configKey = 'multiSiteExperimentPanel',
-                shouldShowFileControls = False)
+                configKey = 'multiSiteExperimentPanel')
+        self.experimentPanel.filepath_panel.SetTemplate(_FILENAME_TEMPLATE)
         self.panelSizer.Add(self.experimentPanel, 0,
                 wx.ALIGN_CENTER | wx.ALL, 5)
         self.experimentPanel.Hide()
@@ -235,17 +238,17 @@ class MultiSiteExperimentDialog(wx.Dialog):
         button = wx.Button(self.panel, -1, "Reset")
         button.SetToolTip(wx.ToolTip("Reload this window with all default values"))
         button.Bind(wx.EVT_BUTTON, self.onReset)
-        buttonSizer.Add(button, 0, wx.ALIGN_LEFT | wx.ALL, 5)
+        buttonSizer.Add(button, 0, wx.ALL, 5)
 
         buttonSizer.Add((1, 0), 1, wx.EXPAND)
 
         button = wx.Button(self.panel, wx.ID_CANCEL, "Cancel")
-        buttonSizer.Add(button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        buttonSizer.Add(button, 0, wx.ALL, 5)
         
         button = wx.Button(self.panel, wx.ID_OK, "Start")
         button.SetToolTip(wx.ToolTip("Start the experiment"))
         button.Bind(wx.EVT_BUTTON, self.onStart)
-        buttonSizer.Add(button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        buttonSizer.Add(button, 0, wx.ALL, 5)
 
         self.panelSizer.Add(buttonSizer, 0, wx.ALL, 5)
         self.panel.SetSizerAndFit(self.panelSizer)
@@ -265,6 +268,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
     ## User checked/unchecked the "customize light frequencies" button.
     def onCustomizeLightFrequencies(self, event):
         self.lightFrequenciesPanel.Show(self.shouldCustomizeLightFrequencies.GetValue())
+        self.panel.Layout()
         self.panel.SetSizerAndFit(self.panelSizer)
         self.SetClientSize(self.panel.GetSize())
 
@@ -282,8 +286,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.experimentPanel = experimentConfigPanel.ExperimentConfigPanel(
                 self.panel, resizeCallback = self.onExperimentPanelResize,
                 resetCallback = self.onExperimentPanelReset,
-                configKey = 'multiSiteExperimentPanel',
-                shouldShowFileControls = False)
+                configKey = 'multiSiteExperimentPanel')
+        self.experimentPanel.filepath_panel.SetTemplate(_FILENAME_TEMPLATE)
         # Put the experiment panel back into the sizer immediately after
         # the button that shows/hides it.
         for i, item in enumerate(self.panelSizer.GetChildren()):
@@ -451,10 +455,12 @@ class MultiSiteExperimentDialog(wx.Dialog):
         except ValueError:
             # Not actually an int.
             pass
-        filename = "%s_t%03d_p%s_%s" % (
-                time.strftime('%Y%m%d-%H%M', experimentStart),
-                cycleNum, siteId, self.fileBase.GetValue())
-        self.experimentPanel.setFilename(filename)
+        self.experimentPanel.filepath_panel.UpdateFilename({
+            "date": time.strftime('%Y%m%d', experimentStart),
+            "time": time.strftime('%H%M', experimentStart),
+            "cycle": ("%03d" % cycleNum),
+            "site": siteId,
+        })
         start = time.time()
         events.executeAndWaitFor(events.EXPERIMENT_COMPLETE,
                 self.experimentPanel.runExperiment)

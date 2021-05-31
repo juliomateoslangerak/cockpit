@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+## Copyright (C) 2020 David Miguel Susano Pinto <david.pinto@bioch.ox.ac.uk>
 ## Copyright (C) 2018-19 Mick Phillips <mick.phillips@gmail.com>
 ##
 ## This file is part of Cockpit.
@@ -18,12 +19,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-import typing
-
 import wx
 
 import cockpit.interfaces.channels
-from cockpit import depot, events
+from cockpit import depot
 from cockpit.util.colors import wavelengthToColor
 from cockpit.gui.device import EnableButton
 from cockpit.gui import safeControls
@@ -53,7 +52,8 @@ class LightPanel(wx.Panel):
 
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
-        line = wx.StaticBox(self, size=(-1,4), style=wx.LI_HORIZONTAL)
+        line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
+        line = wx.Control(self, size=(-1, line_height))
         line.SetBackgroundColour(wavelengthToColor(self.light.wavelength))
         self.Sizer.Add(line, flag=wx.EXPAND)
 
@@ -63,16 +63,15 @@ class LightPanel(wx.Panel):
 
         if lightPower is not None:
             self.Sizer.AddSpacer(4)
-            self.Sizer.Add(wx.StaticText(self, label="Power / mW"),
+            self.Sizer.Add(wx.StaticText(self, label='Power (%)'),
                            flag=wx.ALIGN_CENTER_HORIZONTAL)
-            powCtrl = safeControls.SpinGauge(self,
-                                             minValue = lightPower.minPower,
-                                             maxValue = lightPower.maxPower,
-                                             fetch_current=lightPower.getPower)
-            powCtrl.SetValue(lightPower.powerSetPoint)
-            lightPower.addWatch('powerSetPoint', powCtrl.SetValue)
+            powCtrl = safeControls.SpinGauge(self, minValue=0.0, maxValue=100.0,
+                                             fetch_current=lambda: lightPower.getPower()*100.0)
+            powCtrl.SetValue(lightPower.powerSetPoint *100.0)
+            lightPower.addWatch('powerSetPoint',
+                                lambda p: powCtrl.SetValue(p *100.0))
             powCtrl.Bind(safeControls.EVT_SAFE_CONTROL_COMMIT,
-                         lambda evt: lightPower.setPower(evt.Value))
+                         lambda evt: lightPower.setPower(evt.Value /100.0))
             self.Sizer.Add(powCtrl)
 
         if lightFilters:
@@ -132,7 +131,8 @@ class CameraPanel(wx.Panel):
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
 
-        self.line = wx.StaticBox(self, size=(-1,4), style=wx.LI_HORIZONTAL)
+        line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
+        self.line = wx.Control(self, size=(-1, line_height))
         self.line.SetBackgroundColour(wavelengthToColor(self.camera.wavelength or 0))
         self.Sizer.Add(self.line, flag=wx.EXPAND)
         # If there are problems here, it's because the inline function below is
@@ -193,22 +193,38 @@ class CameraControlsPanel(wx.Panel):
 
 class ObjectiveControls(wx.Panel):
     """A panel with an objective selector."""
-    def __init__(self, parent):
+    def __init__(
+        self,
+        parent: wx.Window,
+        interface: cockpit.interfaces.Objectives,
+    ) -> None:
         super().__init__(parent)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self._interface = interface
         label = PanelLabel(self, label="Objective")
-        self.Sizer.Add(label)
-        panel = wx.Panel(self, style=wx.RAISED_BORDER)
-        self.Sizer.Add(panel, 1, wx.EXPAND)
-        panel.Sizer =  wx.BoxSizer(wx.VERTICAL)
+        self._choice = wx.Choice(self, choices=interface.GetNamesSorted())
+        if not self._choice.SetStringSelection(interface.GetName()):
+            raise Exception(
+                "failed to find objective '%s'" % interface.GetName()
+            )
 
-        for o in depot.getHandlersOfType(depot.OBJECTIVE):
-            ctrl = wx.Choice(panel)
-            ctrl.Set(o.sortedObjectives)
-            panel.Sizer.Add(ctrl)
-            ctrl.Bind(wx.EVT_CHOICE, lambda evt: o.changeObjective(evt.GetString()))
-            events.subscribe("objective change",
-                             lambda *a, **kw: ctrl.SetSelection(ctrl.FindString(a[0])))
+        self._choice.Bind(wx.EVT_CHOICE, self._OnObjectiveChoice)
+        self._interface.Bind(
+            cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
+            self._OnObjectiveChanged,
+        )
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(label)
+        sizer.Add(self._choice)
+        self.SetSizer(sizer)
+
+    def _OnObjectiveChoice(self, event: wx.CommandEvent) -> None:
+        self._interface.ChangeObjective(event.GetString())
+
+    def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
+        if not self._choice.SetStringSelection(event.GetString()):
+            raise Exception("failed to find objective '%s'" % event.GetString())
+        event.Skip()
 
 
 class FilterControls(wx.Panel):
@@ -277,6 +293,7 @@ class ChannelsPanel(wx.Panel):
     def RemoveButton(self, name: str) -> None:
         button = self.GetButtonByLabel(name)
         self._buttons_sizer.Detach(button)
+        button.Destroy()
         self._LayoutWithFrame()
 
     def GetButtonByLabel(self, name: str) -> wx.Button:

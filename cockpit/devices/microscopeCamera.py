@@ -19,10 +19,7 @@
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""MicroscopeCamera device.
-
-  Supports cameras which implement the interface defined in
-  microscope.camera.Camera ."""
+"""Cameras from Python Microscope device server."""
 
 import decimal
 import Pyro4
@@ -40,8 +37,10 @@ import cockpit.util.threads
 import cockpit.util.userConfig
 from cockpit.devices.microscopeDevice import MicroscopeBase
 from cockpit.devices.camera import CameraDevice
+from cockpit.handlers.objective import ObjectiveHandler
 from cockpit.interfaces.imager import pauseVideo
 from microscope.devices import ROI, Binning
+from microscope import TriggerMode, TriggerType
 
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
@@ -70,6 +69,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             self.modes = self.describe_setting('readout mode')['values']
         else:
             self.modes = []
+        if self.baseTransform:
+            self._setTransform(self.baseTransform)
 
     @property
     def _modenames(self):
@@ -118,7 +119,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             self.updateSettings(self.cached_settings)
             #self._proxy.update_settings(self.settings)
             self._proxy.enable()
-        self.handlers[0].exposureMode = self._proxy.get_trigger_type()
+        self.handlers[0].exposureMode = self._getCockpitExposureMode()
 
 
     def performSubscriptions(self):
@@ -129,8 +130,11 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                 self.onObjectiveChange)
 
 
-    def onObjectiveChange(self, name, pixelSize, transform, offset):
-        self.updateTransform(transform)
+    def onObjectiveChange(self, handler: ObjectiveHandler) -> None:
+        # Changing an objective might change the transform since a
+        # different objective might actually mean a different light
+        # path (see comments on issue #456).
+        self.updateTransform(handler.transform)
 
 
     def setAnyDefaults(self):
@@ -157,6 +161,30 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         self.defaults = DEFAULTS_PENDING
         self.setAnyDefaults()
 
+    def _getCockpitExposureMode(self) -> int:
+        # Cockpit does not support all possible comabinations of
+        # trigger type and mode from Microscope.
+        microscope_trigger_to_cockpit_exposure = {
+            (
+                TriggerType.SOFTWARE,
+                TriggerMode.ONCE,
+            ): cockpit.handlers.camera.TRIGGER_SOFT,
+            (
+                TriggerType.HIGH,
+                TriggerMode.ONCE,
+            ): cockpit.handlers.camera.TRIGGER_BEFORE,
+            (
+                TriggerType.LOW,
+                TriggerMode.ONCE
+            ): cockpit.handlers.camera.TRIGGER_AFTER,
+            (
+                TriggerType.HIGH,
+                TriggerMode.BULB,
+            ): cockpit.handlers.camera.TRIGGER_DURATION,
+        }
+        return microscope_trigger_to_cockpit_exposure[
+            (self._proxy.trigger_type, self._proxy.trigger_mode)
+        ]
 
     def getHandlers(self):
         """Return camera handlers."""
@@ -195,7 +223,6 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             if self.enabled:
                 self.enabled = False
                 self._proxy.disable()
-                self._proxy.make_safe()
                 self.listener.disconnect()
                 return self.enabled
 
@@ -211,9 +238,9 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         asproxy._pyroAsync()
         result = asproxy.enable()
         result.wait(timeout=10)
-        self.enabled = result.value
+        self.enabled = self._proxy.get_is_enabled()
         if self.enabled:
-            self.handlers[0].exposureMode = self._proxy.get_trigger_type()
+            self.handlers[0].exposureMode = self._getCockpitExposureMode()
             self.listener.connect()
         self.updateSettings()
         return self.enabled
@@ -309,6 +336,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         # Readout mode control
         sizer.Add(wx.StaticText(self.panel, label="Readout mode"))
         modeButton = wx.Choice(self.panel, choices=self._modenames)
+        self.updateModeButton(modeButton)
         sizer.Add(modeButton, flag=wx.EXPAND)
         events.subscribe(events.SETTINGS_CHANGED % self,
                          lambda: self.updateModeButton(modeButton))
@@ -316,7 +344,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         sizer.AddSpacer(4)
         # Gain control
         sizer.Add(wx.StaticText(self.panel, label="Gain"))
-        gainButton = wx.Button(self.panel)
+        gainButton = wx.Button(self.panel,
+                               label="%s" % self.settings.get('gain', None))
         gainButton.Bind(wx.EVT_LEFT_UP, self.onGainButton)
         sizer.Add(gainButton, flag=wx.EXPAND)
         events.subscribe(events.SETTINGS_CHANGED % self,

@@ -55,7 +55,6 @@ import time
 
 from cockpit import depot
 from cockpit.handlers import deviceHandler
-from cockpit import events
 import cockpit.util.logger
 import cockpit.util.userConfig
 import cockpit.util.threads
@@ -67,8 +66,6 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
     ## callbacks should fill in the following functions:
     # - setPower(value): Set power level.
     # - getPower(): Get current output power level.
-    # \param minPower Minimum output power in milliwatts.
-    # \param maxPower Maximum output power in milliwatts.
     # \param curPower Initial output power.
     # \param isEnabled True iff the handler can be interacted with.
 
@@ -95,8 +92,8 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
                         queries[light] = executor.submit(getPower)
 
 
-    def __init__(self, name, groupName, callbacks, wavelength, minPower,
-                 maxPower, curPower, isEnabled=True):
+    def __init__(self, name, groupName, callbacks, wavelength, curPower: float,
+                 isEnabled=True) -> None:
         # Validation:
         required = set(['getPower', 'setPower'])
         missing = required.difference(callbacks)
@@ -110,14 +107,9 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
         super().__init__(name, groupName, False, callbacks, depot.LIGHT_POWER)
         LightPowerHandler._instances.append(self)
         self.wavelength = wavelength
-        self.minPower = minPower
-        self.maxPower = maxPower
         self.lastPower = curPower
         self.powerSetPoint = None
         self.isEnabled = isEnabled
-
-        events.subscribe('save exposure settings', self.onSaveSettings)
-        events.subscribe('load exposure settings', self.onLoadSettings)
 
 
     def finalizeInitialization(self):
@@ -133,19 +125,15 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
             cockpit.util.logger.log.warning("Failed to set prior power level %s for %s: %s" % (targetPower, self.name, e))
 
 
-    ## Save our settings in the provided dict.
-    def onSaveSettings(self, settings):
-        settings[self.name] = self.powerSetPoint
+    def onSaveSettings(self):
+        return self.powerSetPoint
 
-
-    ## Load our settings from the provided dict.
     def onLoadSettings(self, settings):
-        if self.name in settings:
-            try:
-                self.setPower(settings[self.name])
-            except Exception as e:
-                # Invalid power; just ignore it.
-                print ("Invalid power for %s: %s" % (self.name, settings.get(self.name, '')))
+        try:
+            self.setPower(settings)
+        except Exception as e:
+            # Invalid power; just ignore it.
+            print("Invalid power for %s: %s" % (self.name, settings))
 
 
     ## Toggle accessibility of the handler.
@@ -158,23 +146,15 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
         return self.isEnabled
 
 
-    ## Set a new value for minPower.
-    def setMinPower(self, minPower):
-        self.minPower = minPower
-
-
-    ## Set a new value for maxPower.
-    def setMaxPower(self, maxPower):
-        self.maxPower = maxPower
-
     ## Fetch the current laser power.
     def getPower(self):
         return self.callbacks['getPower']()
 
     ## Handle the user selecting a new power level.
     def setPower(self, power):
-        if power < self.minPower or power > self.maxPower:
-            raise RuntimeError("Tried to set invalid power %f for light %s (range %f to %f)" % (power, self.name, self.minPower, self.maxPower))
+        if power < 0.0 or power > 1.0:
+            raise RuntimeError("Tried to set invalid power %f for light %s"
+                               % (power, self.name))
         self.callbacks['setPower'](power)
         self.powerSetPoint = power
         cockpit.util.userConfig.setValue(self.name + '-lightPower', power)
@@ -187,7 +167,7 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
 
     ## Experiments should include the laser power.
     def getSavefileInfo(self):
-        return "%s: %.1fmW" % (self.name, self.lastPower)
+        return "%s: %.1f" % (self.name, self.lastPower)
 
 # Fire up the status updater.
 LightPowerHandler._updater()

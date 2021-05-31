@@ -64,13 +64,6 @@ import cockpit.util.logger
 ## TODO: test with hardware.
 
 
-## Will look for a config section called 'picomotor', containing parameters:
-#   cal        -  calibration;
-#   ipAddress  - the IP address of the controller;
-#   port       - the port the controller listens on.
-
-## This module is for the Newport picomotor controllers. 
-
 #few commnads
 # pr - position relative
 # pa - position aboslute
@@ -105,6 +98,19 @@ import cockpit.util.logger
 # 1 pa 10000
 
 class PicoMotorDevice(device.Device):
+    """Newport picomotor controllers.
+
+    The configuration section for these devices requires the following
+    values:
+
+    ``cal``
+        Calibration.
+    ``ipAddress``
+        The IP address of the controller.
+    ``port``
+        The port the controller listens on.
+
+    """
     _config_types = {
         'cal': float,
         'port': int,
@@ -136,7 +142,6 @@ class PicoMotorDevice(device.Device):
         # value; this will be modified in initialize.
         self.xyPositionCache = [10 ** 100, 10 ** 100,7500]
 
-        events.subscribe('program exit', self.onExit)
         events.subscribe(events.USER_ABORT, self.onAbort)
 
 

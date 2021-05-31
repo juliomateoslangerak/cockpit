@@ -114,6 +114,11 @@ class MicroscopeBase(device.Device):
         self.describe_setting = self._proxy.describe_setting
         self.describe_settings = self._proxy.describe_settings
 
+    def onExit(self) -> None:
+        if self._proxy is not None:
+            self._proxy._pyroRelease()
+        super().onExit()
+
     def finalizeInitialization(self):
         super().finalizeInitialization()
         # Set default settings on remote device. These will be over-
@@ -300,18 +305,15 @@ class MicroscopeLaser(MicroscopeBase):
             self._proxy.disable()
 
     def getHandlers(self):
-        """Return device handlers. Derived classes may override this."""
-        # Querying remote for maxPower can cause delays, so set to None
-        # and update later.
         self.handlers.append(cockpit.handlers.lightPower.LightPowerHandler(
             self.name + ' power',  # name
             self.name + ' light source',  # groupName
             {
-                'setPower': cockpit.util.threads.callInNewThread(self._proxy.set_power_mw),
-                'getPower': self._proxy.get_power_mw, # Synchronous - can hang threads.
+                'setPower': self._setPower,
+                'getPower': self._getPower,
             },
             self.config.get('wavelength', None),
-            0, None, 20, #minPower, maxPower, curPower,
+            curPower=.2,
             isEnabled=True))
         trigsource = self.config.get('triggersource', None)
         trigline = self.config.get('triggerline', None)
@@ -334,16 +336,21 @@ class MicroscopeLaser(MicroscopeBase):
         return self.handlers
 
 
+    @cockpit.util.threads.callInNewThread
+    def _setPower(self, power: float) -> None:
+        self._proxy.power = power
+
+    def _getPower(self) -> float:
+        return self._proxy.power
+
+
     def finalizeInitialization(self):
         # This should probably work the other way around:
         # after init, the handlers should query for the current state,
         # rather than the device pushing state info to the handlers as
         # we currently do here.
-        #
-        # Query the remote to update max power on handler.
         ph = self.handlers[0] # powerhandler
-        ph.setMaxPower(self._proxy.get_max_power_mw())
-        ph.powerSetPoint = self._proxy.get_set_power_mw()
+        ph.powerSetPoint = self._proxy.get_set_power()
         # Set lightHandler to enabled if light source is on.
         lh = self.handlers[-1]
         lh.state = int(self._proxy.get_is_on())
@@ -367,16 +374,12 @@ class MicroscopeFilter(MicroscopeBase):
             self.lights = None
 
         # Filters
-        # Used to do this in finalizeInitialization, but there's
-        # no obvious reason to do it there, and it occasionally
-        # caused a threadpool deadlock.
-        fdefs = self.config.get('filters', None)
-        if fdefs:
-            fdefs = [re.split(':\s*|,\s*', f) for f in re.split('\n', fdefs) if f]
-        else:
-            fdefs = self._proxy.get_filters()
-        if not fdefs:
-            raise Exception ("No local or remote filter definitions for %s." % self.name)
+        fdefs = self.config.get('filters')
+        if fdefs is None:
+            raise Exception(
+                "Missing 'filters' value for device '%s'" % self.name
+            )
+        fdefs = [re.split(':\s*|,\s*', f) for f in re.split('\n', fdefs) if f]
         self.filters = [cockpit.handlers.filterHandler.Filter(*f) for f in fdefs]
 
 

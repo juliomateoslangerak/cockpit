@@ -52,11 +52,55 @@ to get FTGL installed (see issue #615).
 
 """
 
-import pkg_resources
-
 import freetype
 import numpy
-from OpenGL.GL import *
+import pkg_resources
+from OpenGL.GL import (
+    GL_ALPHA,
+    GL_BLEND,
+    GL_CLAMP,
+    GL_CLIENT_PIXEL_STORE_BIT,
+    GL_COLOR_BUFFER_BIT,
+    GL_ENABLE_BIT,
+    GL_FALSE,
+    GL_LINEAR,
+    GL_MODULATE,
+    GL_ONE,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_QUADS,
+    GL_SRC_ALPHA,
+    GL_TEXTURE_2D,
+    GL_TEXTURE_BIT,
+    GL_TEXTURE_ENV,
+    GL_TEXTURE_ENV_MODE,
+    GL_TEXTURE_MAG_FILTER,
+    GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T,
+    GL_UNPACK_ALIGNMENT,
+    GL_UNPACK_LSB_FIRST,
+    GL_UNPACK_ROW_LENGTH,
+    GL_UNSIGNED_BYTE,
+    glBegin,
+    glBindTexture,
+    glBlendFuncSeparate,
+    glDeleteTextures,
+    glEnable,
+    glEnd,
+    glGenTextures,
+    glPixelStorei,
+    glPopAttrib,
+    glPopClientAttrib,
+    glPushAttrib,
+    glPushClientAttrib,
+    glTexCoord2f,
+    glTexEnvi,
+    glTexImage2D,
+    glTexParameterf,
+    glTexParameteri,
+    glVertex2f,
+)
+import wx
 
 
 # The resource_name argument for resource_filename is not a filesystem
@@ -104,10 +148,15 @@ class _Glyph:
 
         glPopClientAttrib()
 
+    def release(self) -> None:
+        """Delete associated textures.
 
-    def __del__(self):
-        glDeleteTexture([self._texture_id])
+        We need to use this instead of ``__del__`` because by the time
+        the finaliser is called the GLContext might already have been
+        destroyed.
 
+        """
+        glDeleteTextures([self._texture_id])
 
     @property
     def advance(self) -> numpy.ndarray:
@@ -136,10 +185,26 @@ class _Glyph:
 
 
 class Face:
-    def __init__(self, size: int) -> None:
+    """
+    Args:
+        window: A wx window whose destruction will trigger the release
+            of the resources.  This is required to ensure that it
+            happens while the GLContext is still active.
+        size:
+    """
+    def __init__(self, window: wx.Window, size: int) -> None:
+        super().__init__()
         self._face = freetype.Face(_FONT_PATH)
         self._face.set_char_size(size*64)
         self._glyphs = {} # type: typing.Dict[str, _Glyph]
+
+        window.Bind(wx.EVT_WINDOW_DESTROY, self._OnWindowDestroy)
+
+    def _OnWindowDestroy(self, event: wx.WindowDestroyEvent) -> None:
+        while self._glyphs:
+            char_glyph = self._glyphs.popitem()
+            char_glyph[1].release()
+        event.Skip()
 
     def render(self, text: str) -> None:
         glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TEXTURE_BIT)

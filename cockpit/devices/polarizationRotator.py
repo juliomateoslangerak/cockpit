@@ -19,47 +19,75 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
-""" This module makes a retarder/rotator available to Cockpit.
-
-The device class makes available a handler for SI experiments which
-takes an integer argument in the action table that specifies the SI
-angle index. Upon exmining the table, it replaces instances of this
-handler with instances of whatever handler drives the analogue out-
-put, having converted the angle index to the required voltage.
-
-Sample config entry:
-  [SI polarizer]
-  type: cockpit.devices.polarizationRotator.PolarizationDevice
-  analogSource: dsp
-  analogLine: 1
-  siVoltages: 488: 0.915, 1.05, 1.23
-              561: 1.32, 0.90, 1.12
-              647: 1.18, 1.61, 0.97
-  idleVoltage: 1.0
-  offset: 0                             # in volts
-  gain: 6553.6                          # in ADU per volt
-
-
-  [dsp]
-  type: LegacyDSP
-  ...
-"""
 from cockpit import depot
 from cockpit.devices import device
 
 
 class PolarizationDevice(device.Device):
+    """Retarder/rotator Cockpit device.
+
+    The device class makes available a handler for SI experiments
+    which takes an integer argument in the action table that specifies
+    the SI angle index.  Upon exmining the table, it replaces
+    instances of this handler with instances of whatever handler
+    drives the analogue out- put, having converted the angle index to
+    the required voltage.
+
+    Sample config entry:
+
+    .. code:: ini
+
+        [SI polarizer]
+        type: cockpit.devices.polarizationRotator.PolarizationDevice
+        analogSource: NAME_OF_EXECUTOR_DEVICE
+        analogLine: 1
+        siVoltages: 488: 0.915, 1.05, 1.23
+                    561: 1.32, 0.90, 1.12
+                    647: 1.18, 1.61, 0.97
+        idleVoltage: 1.0
+        offset: 0                # in volts
+        gain: 6553.6             # in ADU per volt
+
+    .. note::
+
+        For use in SI experiments the device must be named ``"SI
+        polarizer"``.
+
+    .. todo::
+
+        Identify the polarizer in some other way so that a specific
+        name is not required for the SI experiments.
+
+    """
     _config_types = {
         'idlevoltage': float,
         'offset': float,
         'gain': float,
     }
 
-    # For use in SI experiments, should be named "SI polarizer" in config.
-    # TODO - identify the polarizer some other way.
     def __init__(self, name, config={}):
         super().__init__(name, config)
+
+
+    def getHandlers(self):
+        asource = self.config.get('analogsource', None)
+        aline = self.config.get('analogline', None)
+        offset = self.config.get('offset', 0)
+        gain = self.config.get('gain', 1)
+        dt = Decimal(self.config.get('settlingtime', 0.05))
+        aHandler = depot.getHandler(asource, depot.EXECUTOR)
+
+        if aHandler is None:
+            raise Exception('No control source.')
+        movementTimeFunc = lambda x, start, delta: (0, dt)
+        handler = aHandler.registerAnalog(self, aline, offset, gain, movementTimeFunc)
+
+        # Connect handler to analogue source to populate movement callbacks.
+        handler.connectToAnalogSource(aHandler, aline, offset, gain)
+
+        result.append(handler)
+        return result
+
 
     def getHandlers(self):
         aSource = self.config.get('analogsource', None)

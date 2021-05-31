@@ -50,11 +50,11 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+"""Does an open-shutter sweep in Z."""
 
 from cockpit.experiment import actionTable
 from cockpit.experiment import experiment
 
-import math
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = 'Open-shutter sweep'

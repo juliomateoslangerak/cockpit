@@ -54,6 +54,7 @@
 import collections
 import math
 import threading
+import time
 
 import numpy
 import scipy.ndimage.measurements
@@ -68,6 +69,7 @@ import cockpit.gui.dialogs.offsetSitesDialog
 import cockpit.gui.freetype
 import cockpit.gui.guiUtils
 import cockpit.gui.keyboard
+import cockpit.interfaces
 import cockpit.interfaces.stageMover
 import cockpit.util.files
 import cockpit.util.userConfig
@@ -211,7 +213,8 @@ class MosaicCommon:
             # Scale bar width.
             self.scalebar = 100*(10**math.floor(math.log(1/self.canvas.scale,10)))
             # Scale bar position, near the top left-hand corner.
-            scalebarPos = [30,-10]
+            scaleFactor = self.GetContentScaleFactor()
+            scalebarPos = [30*scaleFactor,-10*scaleFactor]
 
             # Scale bar vertices.
             x1 = scalebarPos[0]/self.canvas.scale
@@ -226,7 +229,7 @@ class MosaicCommon:
             # Do the actual drawing
             glColor3f(255, 0, 0)
             # The scale bar itself.
-            glLineWidth(8)
+            glLineWidth(8*scaleFactor)
             glBegin(GL_LINES)
             glVertex2f(x1,y1)
             glVertex2f(x2,y1)
@@ -235,9 +238,9 @@ class MosaicCommon:
             # The scale label.
             glPushMatrix()
             labelPosX= x1
-            labelPosY= y1 - (20./self.canvas.scale)
+            labelPosY= y1 - (20.*scaleFactor/self.canvas.scale)
             glTranslatef(labelPosX, labelPosY, 0)
-            fontScale = 1. / self.canvas.scale
+            fontScale = scaleFactor / self.canvas.scale
             glScalef(fontScale, fontScale, 1.)
             if (self.scalebar>1.0):
                 self.scale_face.render('%d um' % self.scalebar)
@@ -288,15 +291,14 @@ class MosaicCommon:
 
         glBegin(GL_LINE_LOOP)
         # Draw the box.
-        # get cams and objective opbjects
         cams = depot.getActiveCameras()
-        objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
         # if there is a camera us its real pixel count
         if (len(cams) > 0):
+            pixel_size = wx.GetApp().Objectives.GetPixelSize()
             width, height = cams[0].getImageSize()
-            self.crosshairBoxSize = width * objective.getPixelSize()
+            self.crosshairBoxSize = width * pixel_size
             width = self.crosshairBoxSize
-            height = height * objective.getPixelSize()
+            height = height * pixel_size
         else:
             # else use the default which is 512Xpixel size from objective
             width = self.crosshairBoxSize
@@ -356,8 +358,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # separate fonts instead of dynamically changing the font size
         # because changing the font size would mean discarding the
         # glyph textures for that size.
-        self.site_face = cockpit.gui.freetype.Face(96)
-        self.scale_face = cockpit.gui.freetype.Face(18)
+        self.site_face = cockpit.gui.freetype.Face(self, 96)
+        self.scale_face = cockpit.gui.freetype.Face(self, 18)
 
         #default scale bar size is Zero
         self.scalebar = cockpit.util.userConfig.getValue('mosaicScaleBar',
@@ -441,30 +443,35 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         sideSizer.Add(self.sitesPanel, 1, wx.EXPAND)
         sizer.Add(sideSizer, 0, wx.EXPAND)
 
+        # The MosaicCanvas can't figure out its own best size so it
+        # just disappears after Fit.  We suggest its width to be 3/4
+        # of the window width.
+        side_panel_size = sideSizer.ComputeFittingClientSize(self)
+        canvas_size = (side_panel_size[0] * 3, side_panel_size[1])
 
         ## MosaicCanvas instance.
         limits = cockpit.interfaces.stageMover.getHardLimits()[:2]
         self.canvas = canvas.MosaicCanvas(self, limits, self.drawOverlay,
-                                          self.onMouse)
+                                          self.onMouse, size=canvas_size)
         sizer.Add(self.canvas, 1, wx.EXPAND)
-        self.SetSizerAndFit(sizer)
 
-        # The MosaicCanvas can't figure out its own best size so it
-        # just disappears after Fit.  We suggest its width to be 3/4
-        # of the window width.
-        self.SetClientSize((sideSizer.Size[0] * 4, sideSizer.Size[1]))
+        self.SetSizerAndFit(sizer)
 
         events.subscribe(events.STAGE_POSITION, self.onAxisRefresh)
         events.subscribe('soft safety limit', self.onAxisRefresh)
-        events.subscribe('objective change', self.onObjectiveChange)
-        events.subscribe(events.USER_ABORT, self.onAbort)
 
+        abort_emitter = cockpit.gui.EvtEmitter(self, events.USER_ABORT)
+        abort_emitter.Bind(cockpit.gui.EVT_COCKPIT, self.onAbort)
+
+        wx.GetApp().Objectives.Bind(
+            cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
+            self._OnObjectiveChanged,
+        )
         self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
         for item in [self, self.canvas, self.sitesPanel]:
             cockpit.gui.keyboard.setKeyboardHandlers(item)
 
         self.mosaicThread = None
-
 
     ## Create a button with the appropriate properties.
     def makeButton(self, parent, label, leftAction, rightAction, helpText,
@@ -484,11 +491,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         # Calculate the size of the box at the center of the crosshairs.
         # \todo Should we necessarily assume a 512x512 area here?
-        objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
         #if we havent previously set crosshairBoxSize (maybe no camera active)
         if (self.crosshairBoxSize == 0):
-            self.crosshairBoxSize = 512 * objective.getPixelSize()
-        self.offset = objective.getOffset()
+            self.crosshairBoxSize = 512 * wx.GetApp().Objectives.GetPixelSize()
+        self.offset = wx.GetApp().Objectives.GetOffset()
         scale = (150./self.crosshairBoxSize)
         self.canvas.zoomTo(-curPosition[0]+self.offset[0],
                            curPosition[1]-self.offset[1], scale)
@@ -503,11 +509,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
 
     ## User changed the objective in use; resize our crosshair box to suit.
-    def onObjectiveChange(self, name, pixelSize, transform, offset, **kwargs):
-        self.crosshairBoxSize = 512 * pixelSize
-        self.offset = offset
+    def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
+        self.crosshairBoxSize = 512 * wx.GetApp().Objectives.GetPixelSize()
+        self.offset = wx.GetApp().Objectives.GetOffset()
         #force a redraw so that the crosshairs are properly sized
         self.Refresh()
+        event.Skip()
 
 
     ## Handle mouse events.
@@ -694,11 +701,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 if camera not in active:
                     camera = active[0]
                 # Set image width and height based on camera and objective.
-                objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
+                pixel_size = wx.GetApp().Objectives.GetPixelSize()
                 width, height = camera.getImageSize()
-                width *= objective.getPixelSize()
-                height *= objective.getPixelSize()
-                self.offset = objective.getOffset()
+                width *= pixel_size
+                height *= pixel_size
+                self.offset = wx.GetApp().Objectives.GetOffset()
                 # Successfully reconfigured: clear the flag.
                 self.shouldReconfigure = False
 
@@ -708,7 +715,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             try:
                 data, timestamp = events.executeAndWaitForOrTimeout(
                     events.NEW_IMAGE % camera.name,
-                    cockpit.interfaces.imager.takeImage,
+                    wx.GetApp().Imager.takeImage,
                     camera.getExposureTime()/1000 + CAMERA_TIMEOUT,
                     shouldBlock=True)
             except Exception as e:
@@ -721,6 +728,17 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # have changed.
             try:
                 minVal, maxVal = cockpit.gui.camera.window.getCameraScaling(camera)
+                # HACK: If this is the first image being acquired the
+                # viewCanvas has not yet set the scaling.  Its default
+                # of [0 1] is unlikely to be appropriate for images
+                # that are likely uint8/16.  So wait a bit and read it
+                # again.  We should either be deciding the scaling
+                # ourselves, or get an image with associated scaling
+                # information or after the scaling information has
+                # been set.  See issue #718.
+                if (minVal == 0.0) and (maxVal == 1.0):
+                    time.sleep(0.1)
+                    minVal, maxVal = cockpit.gui.camera.window.getCameraScaling(camera)
             except Exception as e:
                 # Go to idle state.
                 self.shouldContinue.clear()
@@ -768,10 +786,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     camera = cam
                     break
         # Get image size in microns.
-        objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
+        pixel_size = wx.GetApp().Objectives.GetPixelSize()
         width, height = camera.getImageSize()
-        width *= objective.getPixelSize()
-        height *= objective.getPixelSize()
+        width *= pixel_size
+        height *= pixel_size
         x, y, z = cockpit.interfaces.stageMover.getPosition()
         data = cockpit.gui.camera.window.getImageForCamera(camera)
         self.canvas.addImage(data, (-x +self.offset[0]- width / 2,
@@ -1025,7 +1043,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     # \param action Function to call with the selected camera as a parameter.
     def showCameraMenu(self, text, action):
         cameras = depot.getActiveCameras()
-        if len(cameras) == 1:
+        if len(cameras) == 0:
+            wx.MessageBox("Please enable a camera to run a mosaic.",
+                          caption="No cameras are enabled")
+        elif len(cameras) == 1:
             action(cameras[0])
         else:
             menu = wx.Menu()
@@ -1252,7 +1273,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             for offset in numpy.arange(-1, 1.1, .1):
                 cockpit.interfaces.stageMover.goTo((x, y, z + offset), shouldBlock = True)
                 image, timestamp = events.executeAndWaitFor(events.NEW_IMAGE % camera.name,
-                        cockpit.interfaces.imager.takeImage, shouldBlock = True)
+                        wx.GetApp().Imager.takeImage, shouldBlock = True)
                 if bestIntensity is None or image.max() > bestIntensity:
                     bestIntensity = image.max()
                     bestOffset = offset

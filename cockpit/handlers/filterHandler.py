@@ -18,10 +18,8 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from cockpit.handlers import deviceHandler
 from cockpit import depot
-from cockpit import events
 import cockpit.gui
 import wx
 import cockpit.util.threads
@@ -66,27 +64,18 @@ class FilterHandler(deviceHandler.DeviceHandler):
         self.lights = lights or []
         self.lastFilter = None
 
-        #subscribe to save and load setting calls to enabvle saving and
-        #loading of configurations.
-        events.subscribe('save exposure settings', self.onSaveSettings)
-        events.subscribe('load exposure settings', self.onLoadSettings)
-
     @property
     def filters(self):
         return self.callbacks['getFilters']()
 
-    ## Save our settings in the provided dict.
-    def onSaveSettings(self, settings):
-        settings[self.name] = self.callbacks['getPosition']()
+    def onSaveSettings(self):
+        return self.callbacks['getPosition']()
 
-    ## Load our settings from the provided dict.
     def onLoadSettings(self, settings):
-        if self.name in settings:
-            position = settings[self.name]
-            filters = self.callbacks['getFilters']()
-            for f in filters:
-                if f.position == position:
-                    self.setFilter(f)
+        filters = self.callbacks['getFilters']()
+        for f in filters:
+            if f.position == settings:
+                self.setFilter(f)
 
     ### UI functions ####
     def makeSelector(self, parent):

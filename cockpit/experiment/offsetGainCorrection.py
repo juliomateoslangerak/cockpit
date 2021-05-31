@@ -49,10 +49,12 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+"""Generates offset/gain correction files (which add an offset to
+pixel values and then multiply them by a gain factor).
+"""
 
 from cockpit.experiment import actionTable
 import decimal
-from cockpit import depot
 from cockpit import events
 from cockpit.experiment import experiment
 from cockpit.gui import guiUtils
@@ -202,10 +204,10 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         results.shape = len(self.cameras), 1, 2, results.shape[-2], results.shape[-1]
 
         # Construct a header for the image data.
-        objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
+        pixel_size = wx.GetApp().Objectives.GetPixelSize()
         wavelengths = [c.wavelength for c in self.cameras]
         header = cockpit.util.datadoc.makeHeaderFor(results, 
-                XYSize = objective.getPixelSize(), ZSize = 0, 
+                XYSize = pixel_size, ZSize = 0, 
                 wavelengths = wavelengths)
 
         filehandle = open(self.savePath, 'wb')

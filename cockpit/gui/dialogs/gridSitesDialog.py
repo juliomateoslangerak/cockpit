@@ -49,8 +49,6 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-
-from cockpit import depot
 import cockpit.gui.guiUtils
 import cockpit.interfaces.stageMover
 import cockpit.util.userConfig
@@ -127,8 +125,7 @@ class GridSitesDialog(wx.Dialog):
         imageWidth = float(self.imageWidth.GetValue())
         imageHeight = float(self.imageHeight.GetValue())
         markerSize = float(self.markerSize.GetValue())
-        objective = depot.getHandlersOfType(depot.OBJECTIVE)[0]
-        pixelSize = objective.getPixelSize()
+        pixelSize = wx.GetApp().Objectives.GetPixelSize()
 
         for xOffset in range(int(self.numColumns.GetValue())):
             xLoc = curLoc[0] - xOffset * pixelSize * imageWidth

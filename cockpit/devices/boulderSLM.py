@@ -19,24 +19,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
-""" This module makes a BNS SLM  device available to Cockpit.
-
-Sample config entry:
-  [slm]
-  type: BoulderSLM
-  uri: PYRO:pyroSLM@slmhost:8000
-  triggerSource: dsp
-  triggerLine: 2
-  diffractionangle: 0.35
-  settlingtime: 10
-
-
-  [dsp]
-  type: LegacyDSP
-  ...
-
-"""
+"""Boulder SLM."""
 
 from collections import OrderedDict
 import decimal
@@ -89,9 +72,22 @@ class _LastParameters():
 
 
 class BoulderSLM(device.Device):
+    """Boulder SLM device.
+
+    Sample config entry:
+
+    .. code:: ini
+
+        [slm]
+        type: cockpit.devices.boulderSLM.BoulderSLM
+        uri: PYRO:pyroSLM@slmhost:8000
+        triggerSource: NAME_OF_EXECUTOR_DEVICE
+        triggerLine: 2
+
+    """
+
     _config_types = {
         'settlingtime': float,
-        'diffractionangle': float,
         'triggerLine': int,
     }
 
@@ -196,8 +192,6 @@ class BoulderSLM(device.Device):
                 sequenceLength = length
                 break
         sequence = reducedParams[0:sequenceLength]
-        # Stop any current sequence in the SLM
-        self.connection.stop()
         ## Tell the SLM to prepare the pattern sequence.
         asyncResult = self.asproxy.set_sim_sequence(sequence)
 

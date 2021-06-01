@@ -51,7 +51,6 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 import numpy
-import os
 from OpenGL.GL import *
 import threading
 import time
@@ -62,7 +61,6 @@ import cockpit.gui
 import cockpit.gui.freetype
 import cockpit.interfaces.stageMover
 import cockpit.util.logger
-from cockpit import depot
 
 
 ## @package cockpit.gui.macroStage
@@ -93,7 +91,7 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         ## Whether or not we should try to draw
         self.shouldDraw = True
         ## Font for drawing text
-        self.face = cockpit.gui.freetype.Face(18)
+        self.face = cockpit.gui.freetype.Face(self, 18)
 
         ## X values below this are off the canvas. We leave it up to children
         # to fill in proper values for these.
@@ -215,7 +213,7 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
 
     ## Draw some text at the specified location
     def drawTextAt(self, loc, text, size, color = (0, 0, 0)):
-        width, height = self.GetClientSize()
+        width, height = self.GetClientSize()*self.GetContentScaleFactor()
         aspect = float(height) / width
         loc = self.scaledVertex(loc[0], loc[1], True)
 

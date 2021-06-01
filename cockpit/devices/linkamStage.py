@@ -18,15 +18,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
-"""pyLinkam
-
-Cockpit-side module for Linkam stages. Tested with CMS196.
-
-Config uses following parameters:
-  type:         LinkamStage
-  uri:          uri of pyLinkam remote
-"""
+"""Linkam stages."""
 
 from cockpit import events
 import cockpit.gui.guiUtils
@@ -36,14 +28,13 @@ import cockpit.handlers.stagePositioner
 import Pyro4
 from cockpit.devices.device import Device
 import threading
-import cockpit.util.logger as logger
 import cockpit.util.threads
 from cockpit.util import valueLogger
 
 import datetime
 import time
 import wx
-import re # to get regular expression parsing for config file
+
 
 DEFAULT_LIMITS = ((0, 0), (11000, 3000))
 LOGGING_PERIOD = 30
@@ -132,6 +123,17 @@ class RefillTimerPanel(wx.Panel):
 
 
 class LinkamStage(MicroscopeBase, Device):
+    """Cockpit-side module for Linkam stages.
+
+    Tested with CMS196.  Config uses following parameters:
+
+    ``type``
+        Needs to be ``cockpit.devices.linkamStage.LinkamStage``.
+    ``uri``
+        URI of device server.
+
+    """
+
     _temperature_names = ('bridge', 'dewar', 'chamber', 'base')
     _refill_names = ('sample', 'external')
 

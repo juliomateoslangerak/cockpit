@@ -54,6 +54,7 @@
 import collections
 import math
 import threading
+import time
 
 import numpy
 import scipy.ndimage.measurements
@@ -212,7 +213,8 @@ class MosaicCommon:
             # Scale bar width.
             self.scalebar = 100*(10**math.floor(math.log(1/self.canvas.scale,10)))
             # Scale bar position, near the top left-hand corner.
-            scalebarPos = [30,-10]
+            scaleFactor = self.GetContentScaleFactor()
+            scalebarPos = [30*scaleFactor,-10*scaleFactor]
 
             # Scale bar vertices.
             x1 = scalebarPos[0]/self.canvas.scale
@@ -227,7 +229,7 @@ class MosaicCommon:
             # Do the actual drawing
             glColor3f(255, 0, 0)
             # The scale bar itself.
-            glLineWidth(8)
+            glLineWidth(8*scaleFactor)
             glBegin(GL_LINES)
             glVertex2f(x1,y1)
             glVertex2f(x2,y1)
@@ -236,9 +238,9 @@ class MosaicCommon:
             # The scale label.
             glPushMatrix()
             labelPosX= x1
-            labelPosY= y1 - (20./self.canvas.scale)
+            labelPosY= y1 - (20.*scaleFactor/self.canvas.scale)
             glTranslatef(labelPosX, labelPosY, 0)
-            fontScale = 1. / self.canvas.scale
+            fontScale = scaleFactor / self.canvas.scale
             glScalef(fontScale, fontScale, 1.)
             if (self.scalebar>1.0):
                 self.scale_face.render('%d um' % self.scalebar)
@@ -356,8 +358,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # separate fonts instead of dynamically changing the font size
         # because changing the font size would mean discarding the
         # glyph textures for that size.
-        self.site_face = cockpit.gui.freetype.Face(96)
-        self.scale_face = cockpit.gui.freetype.Face(18)
+        self.site_face = cockpit.gui.freetype.Face(self, 96)
+        self.scale_face = cockpit.gui.freetype.Face(self, 18)
 
         #default scale bar size is Zero
         self.scalebar = cockpit.util.userConfig.getValue('mosaicScaleBar',
@@ -441,18 +443,19 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         sideSizer.Add(self.sitesPanel, 1, wx.EXPAND)
         sizer.Add(sideSizer, 0, wx.EXPAND)
 
+        # The MosaicCanvas can't figure out its own best size so it
+        # just disappears after Fit.  We suggest its width to be 3/4
+        # of the window width.
+        side_panel_size = sideSizer.ComputeFittingClientSize(self)
+        canvas_size = (side_panel_size[0] * 3, side_panel_size[1])
 
         ## MosaicCanvas instance.
         limits = cockpit.interfaces.stageMover.getHardLimits()[:2]
         self.canvas = canvas.MosaicCanvas(self, limits, self.drawOverlay,
-                                          self.onMouse)
+                                          self.onMouse, size=canvas_size)
         sizer.Add(self.canvas, 1, wx.EXPAND)
-        self.SetSizerAndFit(sizer)
 
-        # The MosaicCanvas can't figure out its own best size so it
-        # just disappears after Fit.  We suggest its width to be 3/4
-        # of the window width.
-        self.SetClientSize((sideSizer.Size[0] * 4, sideSizer.Size[1]))
+        self.SetSizerAndFit(sizer)
 
         events.subscribe(events.STAGE_POSITION, self.onAxisRefresh)
         events.subscribe('soft safety limit', self.onAxisRefresh)
@@ -469,7 +472,6 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             cockpit.gui.keyboard.setKeyboardHandlers(item)
 
         self.mosaicThread = None
-
 
     ## Create a button with the appropriate properties.
     def makeButton(self, parent, label, leftAction, rightAction, helpText,
@@ -726,6 +728,17 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # have changed.
             try:
                 minVal, maxVal = cockpit.gui.camera.window.getCameraScaling(camera)
+                # HACK: If this is the first image being acquired the
+                # viewCanvas has not yet set the scaling.  Its default
+                # of [0 1] is unlikely to be appropriate for images
+                # that are likely uint8/16.  So wait a bit and read it
+                # again.  We should either be deciding the scaling
+                # ourselves, or get an image with associated scaling
+                # information or after the scaling information has
+                # been set.  See issue #718.
+                if (minVal == 0.0) and (maxVal == 1.0):
+                    time.sleep(0.1)
+                    minVal, maxVal = cockpit.gui.camera.window.getCameraScaling(camera)
             except Exception as e:
                 # Go to idle state.
                 self.shouldContinue.clear()
@@ -1030,7 +1043,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     # \param action Function to call with the selected camera as a parameter.
     def showCameraMenu(self, text, action):
         cameras = depot.getActiveCameras()
-        if len(cameras) == 1:
+        if len(cameras) == 0:
+            wx.MessageBox("Please enable a camera to run a mosaic.",
+                          caption="No cameras are enabled")
+        elif len(cameras) == 1:
             action(cameras[0])
         else:
             menu = wx.Menu()

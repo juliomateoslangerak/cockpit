@@ -19,12 +19,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-import typing
-
 import wx
 
 import cockpit.interfaces.channels
-from cockpit import depot, events
+from cockpit import depot
 from cockpit.util.colors import wavelengthToColor
 from cockpit.gui.device import EnableButton
 from cockpit.gui import safeControls
@@ -54,7 +52,8 @@ class LightPanel(wx.Panel):
 
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
-        line = wx.StaticBox(self, size=(-1,4), style=wx.LI_HORIZONTAL)
+        line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
+        line = wx.Control(self, size=(-1, line_height))
         line.SetBackgroundColour(wavelengthToColor(self.light.wavelength))
         self.Sizer.Add(line, flag=wx.EXPAND)
 
@@ -132,7 +131,8 @@ class CameraPanel(wx.Panel):
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
 
-        self.line = wx.StaticBox(self, size=(-1,4), style=wx.LI_HORIZONTAL)
+        line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
+        self.line = wx.Control(self, size=(-1, line_height))
         self.line.SetBackgroundColour(wavelengthToColor(self.camera.wavelength or 0))
         self.Sizer.Add(self.line, flag=wx.EXPAND)
         # If there are problems here, it's because the inline function below is
@@ -293,6 +293,7 @@ class ChannelsPanel(wx.Panel):
     def RemoveButton(self, name: str) -> None:
         button = self.GetButtonByLabel(name)
         self._buttons_sizer.Detach(button)
+        button.Destroy()
         self._LayoutWithFrame()
 
     def GetButtonByLabel(self, name: str) -> wx.Button:

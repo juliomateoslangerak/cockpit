@@ -50,16 +50,13 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-
 # This module creates the primary window.  This window houses widgets
 # to control the most important hardware elements.  It is only
 # responsible for setting up the user interface; it assume that the
 # devices have already been initialized.
 
-import json
 import os.path
 import pkg_resources
-import platform
 import subprocess
 import sys
 import typing
@@ -217,6 +214,16 @@ class MainWindowPanel(wx.Panel):
             window = fileViewerWindow.FileViewer(filenames[0], self)
             if len(filenames) > 1:
                 print ("Opening first of %d files. Others can be viewed by dragging them from the filesystem onto the main window of the Cockpit." % len(filenames))
+
+
+class EditMenu(wx.Menu):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        menu_item = self.Append(wx.ID_ANY, item="Reset User Configuration")
+        self.Bind(wx.EVT_MENU, self.OnResetUserConfig, menu_item)
+
+    def OnResetUserConfig(self, evt: wx.CommandEvent) -> None:
+        cockpit.util.userConfig.clearAllValues()
 
 
 class ChannelsMenu(wx.Menu):
@@ -472,6 +479,9 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnQuit, menu_item)
         menu_bar.Append(file_menu, '&File')
 
+        edit_menu = EditMenu()
+        menu_bar.Append(edit_menu, "&Edit")
+
         channels_menu = ChannelsMenu()
         menu_bar.Append(channels_menu, '&Channels')
 
@@ -612,15 +622,16 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
                       'See the GNU General Public Licence, version 3 or later,'
                       ' for details.')
 
-
     # Authors are sorted alphabetically.
     for dev_name in ['Chris Weisiger',
+                     'Danail Stoychev',
                      'David Miguel Susano Pinto',
                      'Eric Branlund',
                      'Ian Dobbie',
                      'Julio Mateos-Langerak',
                      'Mick Phillips',
-                     'Nicholas Hall',]:
+                     'Nicholas Hall',
+                     'Sebastian Hasse',]:
         info.AddDeveloper(dev_name)
 
     # wxWidgets has native and generic implementations for the about
@@ -635,7 +646,7 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
         # We should not have to set this, it should be set later via
         # the AboutBox parent icon.  We don't yet have icons working
         # (issue #388), but remove this when it is.
-        info.SetIcon(wx.Icon(os.path.join(cockpit.gui.BITMAPS_PATH,
+        info.SetIcon(wx.Icon(os.path.join(cockpit.gui.IMAGES_PATH,
                                           'cockpit-8bit.ico')))
 
         info.SetLicence('Cockpit is free software: you can redistribute it'
@@ -659,5 +670,4 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
 ## Create the window.
 def makeWindow():
     window = MainWindow()
-    window.Show()
     return window

@@ -50,12 +50,7 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-# from microscope import ElectronicShutteringMode
-import enum  # TODO: remove this after microscope update
-class ElectronicShutteringMode(enum.Enum):
-    GLOBAL = 1
-    ROLLING = 2
-
+from microscope import ElectronicShutteringMode
 
 from cockpit.experiment import dataSaver
 from cockpit import depot

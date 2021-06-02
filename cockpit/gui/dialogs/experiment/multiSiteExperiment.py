@@ -393,11 +393,12 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     print ("Couldn't finish cycle in time; off by %.2f seconds" % (-waitTime))
             print ("Starting cycle",cycleNum,"of",numCycles,"at %.2f" % time.time())
             cycleStartTime = time.time()
-            self.activateLights(cycleNum)
+            if self.shouldCustomizeLightFrequencies.GetValue():
+                self.activateLights(cycleNum)
             for siteId in siteIds:
                 if self.shouldAbort:
                     break
-                print ("Imaging site",siteId,"at %.2f" % time.time())
+                print("Imaging site",siteId,"at %.2f" % time.time())
                 self.imageSite(siteId, cycleNum, experimentStart)
 
             if self.shouldAbort:

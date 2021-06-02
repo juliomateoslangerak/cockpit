@@ -285,7 +285,6 @@ class Experiment:
         self.examineActions()
         self.table.sort()
         self.table.enforcePositiveTimepoints()
-        # self.table.plotProfile()
 
     ## Perform any necessary sanity checks to ensure that the environment is
     # set up properly. Raise an exception if anything is wrong.

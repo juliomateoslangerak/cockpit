@@ -112,9 +112,9 @@ class ZStackExperiment(experiment.Experiment):
             for cameras, lightTimePairs in self.exposureSettings:
                 for camera in cameras:
                     cameraReadyTime = max(cameraReadyTime,
-                                          self.getTimeWhenCameraCanExpose(table, camera))
-        table.addAction(max(curTime, cameraReadyTime),
-                        self.zPositioner, self.zStart)
+                            self.getTimeWhenCameraCanExpose(table, camera))
+        table.addAction(max(curTime + stabilizationTime, cameraReadyTime),
+                self.zPositioner, self.zStart)
 
         return table
 

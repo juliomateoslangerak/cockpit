@@ -65,10 +65,6 @@ import cockpit.util.colors
 # trigger for the duration of the exposure.
 (TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT) = range(4)
 
-## Available electronic shuttering modes.
-# GLobal shuttering and rolling shuttering;
-(SHUTTERING_GLOBAL, SHUTTERING_ROLLING) = range(2)
-
 ## This handler is for cameras, of course. Cameras provide images to the
 # microscope, and are assumed to be usable during experiments. 
 class CameraHandler(deviceHandler.DeviceHandler):

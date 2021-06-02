@@ -50,6 +50,12 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+# from microscope import ElectronicShutteringMode
+import enum  # TODO: remove this after microscope update
+class ElectronicShutteringMode(enum.Enum):
+    GLOBAL = 1
+    ROLLING = 2
+
 
 from cockpit.experiment import dataSaver
 from cockpit import depot
@@ -562,7 +568,7 @@ class Experiment:
 
             # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
             # to ensure that all the pixels are exposed when we turn on the lights
-            elif camera.getShutteringMode() == cockpit.handlers.camera.SHUTTERING_ROLLING:
+            elif camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
                 maxExposureTime += (self.cameraToReadoutTime[camera] + decimal.Decimal(0.1))
 
 
@@ -574,7 +580,7 @@ class Experiment:
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
             if light is not None and light.name != 'ambient':  # i.e. not ambient light
-                if camera.getShutteringMode() == cockpit.handlers.camera.SHUTTERING_ROLLING:
+                if camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
                     # Center with all pixels exposed
                     offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
                 else:

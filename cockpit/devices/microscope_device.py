@@ -479,9 +479,8 @@ class _MicroscopeStageAxis:
         )
 
         group_name = "%d stage motion" % index
-        eligible_for_experiments = False
-        # TODO: to make it eligible for experiments, we need a
-        # get_movement_time callback (see issue #614).
+        eligible_for_experiments = True
+
         callbacks = {
             "get_movement_time": self.get_movement_time,
             "get_position": self.get_position,
@@ -502,10 +501,11 @@ class _MicroscopeStageAxis:
         return self._handler
 
     def get_movement_time(self, index: int, start: float, end: float) -> float:
-        # TODO: this is not implemented yet but it shouldn't be called
-        # anyway because we are not eligible for experiments.
-        del index
-        raise NotImplementedError("")
+        dt = float(self.config.get("settling_time", 10)) # um
+        vel = float(self.config.get("velocity", 1000)) # um/s
+        if hasattr(self._axis, 'velocity'):
+            vel = self._axis.velocity
+        return abs(end - start) / vel, dt
 
     def get_position(self, index: int) -> float:
         """Get the position for the specified axis."""

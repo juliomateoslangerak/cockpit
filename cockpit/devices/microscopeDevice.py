@@ -53,6 +53,7 @@ import Pyro4
 import wx
 from microscope import AxisLimits
 
+from decimal import Decimal
 import cockpit.gui.device
 import cockpit.handlers.deviceHandler
 import cockpit.handlers.digitalioHandler
@@ -480,9 +481,10 @@ class _MicroscopeStageAxis:
         )
 
         group_name = "%d stage motion" % index
-        eligible_for_experiments = False
+        eligible_for_experiments = True
         # TODO: to make it eligible for experiments, we need a
         # getMovementTime callback (see issue #614).
+        # WORKAROUND: calculate from configuration parameters
         callbacks = {
             "getMovementTime": self.getMovementTime,
             "getPosition": self.getPosition,
@@ -499,14 +501,15 @@ class _MicroscopeStageAxis:
             limits,
         )
 
+    def getMovementTime(self, axis, start, end):
+        dt = float(self.config.get("settlingtime", 10)) # um
+        vel = float(self.config.get("velocity", 1000)) # um/s
+        if hasattr(self._axis, 'velocity'):
+            vel = self._axis.velocity
+        return (Decimal(abs(end - start) / vel), Decimal(dt))
+
     def getHandler(self) -> PositionerHandler:
         return self._handler
-
-    def getMovementTime(self, index: int, start: float, end: float) -> float:
-        # TODO: this is not implemented yet but it shouldn't be called
-        # anyway because we are not eligible for experiments.
-        del index
-        raise NotImplementedError("")
 
     def getPosition(self, index: int) -> float:
         """Get the position for the specified axis."""

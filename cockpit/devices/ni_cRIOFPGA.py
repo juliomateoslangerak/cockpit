@@ -710,14 +710,20 @@ class FPGAStatus(threading.Thread):
             datagram = self.socket.recvfrom(datagramLength)[0]
         except:
             print('Error receiving status datagram: ', datagram)
+            return None
 
         try:
             status = json.loads(datagram)
-        except:
+        except json.JSONDecodeError as e:
             print('Could not serialize status datagram: ', datagram)
-            return
+            print(e)
+            return None
 
-        return status
+        if type(status) is dict:
+            return status
+        else:
+            print('Datagram was not decoded as dict but as:', status)
+            return None
 
     def publishFPGAStatusChanges(self, newStatus):
         """FInd interesting status or status changes in the FPGA and publish them

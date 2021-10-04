@@ -65,6 +65,7 @@ COCKPIT_AXES = {'x': 0, 'y': 1, 'z': 2, 'SI angle': -1}
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4
 FPGA_HEARTBEAT_RATE = .1  # At which rate is the FPGA sending update status signals
+FPGA_HEARTBEAT_MAX_MSG_LEN = 2048
 MASTER_IP = '10.6.19.11'
 
 
@@ -706,24 +707,15 @@ class FPGAStatus(threading.Thread):
         It will update the FPGAStatus dictionary.
         """
         try:
-            datagramLength = int(self.socket.recvfrom(4)[0].decode())
-            datagram = self.socket.recvfrom(datagramLength)[0]
-        except:
-            print('Error receiving status datagram: ', datagram)
-            return None
-
-        try:
+            datagram = self.socket.recvfrom(FPGA_HEARTBEAT_MAX_MSG_LEN)[0]
             status = json.loads(datagram)
         except json.JSONDecodeError as e:
             print('Could not serialize status datagram: ', datagram)
             print(e)
+
             return None
 
-        if type(status) is dict:
-            return status
-        else:
-            print('Datagram was not decoded as dict but as:', status)
-            return None
+        return status
 
     def publishFPGAStatusChanges(self, newStatus):
         """FInd interesting status or status changes in the FPGA and publish them
@@ -743,6 +735,9 @@ class FPGAStatus(threading.Thread):
 
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
+
+            if newFPGAStatus is None:
+                continue
             # with self.FPGAStatusLock:
             if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and \
                     newFPGAStatus['Event'] == 'done' and \

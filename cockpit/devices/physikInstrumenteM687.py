@@ -139,7 +139,7 @@ class PhysikInstrumenteM687(Device):
         self.axisMapper = {0: 2, 1: 1}
         ## Maps cockpit axis ordering to a +-1 multiplier to apply to motion,
         # since some of our axes are flipped.
-        self.axisSignMapper = {0: -1, 1: 1}
+        self.axisSignMapper = {0: 1, 1: 1}
 
         ## If there is a config section for the m687, grab the config and
         # subscribe to events.

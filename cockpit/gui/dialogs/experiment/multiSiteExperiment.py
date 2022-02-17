@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2018 Mick Phillips <mick.phillips@gmail.com>
-## Copyright (C) 2018 Ian Dobbie <ian.dobbie@bioch.ox.ac.uk>
+## Copyright (C) 2021 University of Oxford
 ##
 ## This file is part of Cockpit.
 ##
@@ -95,7 +94,6 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     'cycleDuration': '60',
                     'delayBeforeStarting': '0',
                     'delayBeforeImaging': '0',
-                    'fileBase': '',
                     'shouldCustomizeLightFrequencies': False,
                     'shouldOptimizeSiteOrder': True,
                     'lightFrequencies': ['1' for l in self.allLights],
@@ -156,11 +154,6 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 "I start imaging the site. This is mostly useful if " +
                 "your stage needs time to stabilize after moving.")
 
-        self.fileBase = guiUtils.addLabeledInput(self.panel,
-                columnSizer, label = "Data file base name:",
-                defaultValue = self.settings['fileBase'],
-                size = FIELD_SIZE, minSize = CONTROL_SIZE)
-        
         controlsSizer.Add(columnSizer, 0, wx.ALL, 5)
 
         columnSizer = wx.BoxSizer(wx.VERTICAL)
@@ -503,7 +496,6 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     'cycleDuration': self.cycleDuration.GetValue(),
                     'delayBeforeStarting': self.delayBeforeStarting.GetValue(),
                     'delayBeforeImaging': self.delayBeforeImaging.GetValue(),
-                    'fileBase': self.fileBase.GetValue(),
                     'shouldCustomizeLightFrequencies': self.shouldCustomizeLightFrequencies.GetValue(),
                     'shouldOptimizeSiteOrder': self.shouldOptimizeSiteOrder.GetValue(),
                     'lightFrequencies': lightFrequencies,

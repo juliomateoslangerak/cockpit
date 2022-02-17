@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2018 Mick Phillips <mick.phillips@gmail.com>
+## Copyright (C) 2021 University of Oxford
 ##
 ## This file is part of Cockpit.
 ##
@@ -74,7 +74,7 @@ class RefillTimerPanel(wx.Panel):
     def format(self, dt, prefix=""):
         prefix = '{:3.3} '.format(prefix)
         if dt is None:
-            return prefix + "--:--:--"
+            return prefix + "XX --:--:--"
         elif isinstance(dt, datetime.timedelta):
             dt = dt.total_seconds()
         mm, ss = divmod(dt, 60)
@@ -211,6 +211,7 @@ class LinkamStage(MicroscopeBase, Device):
 
     def initialize(self):
         """Initialize the device."""
+        super().initialize()
         self.getPosition(shouldUseCache = False)
         self.updateSettings()
 

@@ -661,32 +661,34 @@ class FPGAStatus(threading.Thread):
     def __init__(self, parent, host, port):
         threading.Thread.__init__(self)
         self.parent = parent
+        self.host = host
+        self.port = port
         # Create a dictionary to store the FPGA status and a lock to access it
         self.currentFPGAStatus = {}
         self.FPGAStatusLock = threading.Lock()
 
-        self.socket = self.createReceiveSocket(host, port)
+        # Create a socket
+        self.socket = None
+        self.createReceiveSocket()
 
         # Create a handle to stop the thread
         self.shouldRun = True
 
-    def createReceiveSocket(self, host, port):
+    def createReceiveSocket(self):
         """Creates a UDP socket meant to receive status information
         form the RT-ipAddress
 
         returns the bound socket
         """
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         except socket.error as msg:
             print('Failed to create socket. Error code: ', msg)
 
         try:
-            s.bind((host, port))
+            self.socket.bind((self.host, self.port))
         except socket.error as msg:
             print('Failed to bind address.\n', msg)
-
-        return s
 
     def getStatus(self, key=None):
         """Method to call from outside to get the status

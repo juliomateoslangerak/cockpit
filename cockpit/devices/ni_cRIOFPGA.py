@@ -731,7 +731,6 @@ class FPGAStatus(threading.Thread):
         """
         if newStatus['Event'] in ['done', 'FPGA done']:
             self.parent.parent.experimentDone()
-            # events.publish(events.EXECUTOR_DONE, self.parent.parent.name)
             newStatus['Event'] = ''
 
         return newStatus

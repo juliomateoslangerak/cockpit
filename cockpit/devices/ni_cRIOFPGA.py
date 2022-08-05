@@ -738,11 +738,20 @@ class FPGAStatus(threading.Thread):
     def run(self):
         self.currentFPGAStatus = self.getFPGAStatus()
         update_rate = FPGA_HEARTBEAT_RATE / 2
+        retries = 0
 
         while self.shouldRun:
             newFPGAStatus = self.getFPGAStatus()
+            if retries > 300:
+                # retrying to establish connection
+                try:
+                    self.createReceiveSocket()
+                except Exception as e:
+                    print(f'The status UDP connection to the Executor is lost after {retries} retries')
+                    raise e
 
             if newFPGAStatus is None:
+                retries += 1
                 continue
             # with self.FPGAStatusLock:
             if newFPGAStatus['Event'] != self.currentFPGAStatus['Event'] and \

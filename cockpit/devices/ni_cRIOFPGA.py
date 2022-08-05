@@ -717,6 +717,11 @@ class FPGAStatus(threading.Thread):
 
             return None
 
+        # for some reason (see taiga issue #125) the returned datagram decodes as an int and the connection is lost
+        if type(status) != dict:
+            print(f'The returned status for the FPGA is not the expected type: {status}')
+            return None
+
         return status
 
     def publishFPGAStatusChanges(self, newStatus):

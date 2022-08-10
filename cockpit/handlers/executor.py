@@ -304,7 +304,7 @@ class DigitalMixin:
         if not self.digitalClients:
             # No triggered devices registered.
             return
-        camlines = sum([1<<self.digitalClients[cam] for cam in self.activeCameras])
+        camlines = sum([1 << self.digitalClients[cam] for cam in self.activeCameras])
 
         # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
         exposureStartTime = [cam.getTimeBetweenExposures() for cam in self.activeCameras
@@ -322,7 +322,7 @@ class DigitalMixin:
             ltpairs.append((lline, ltime))
 
         # Sort by exposure time
-        ltpairs.sort(key = lambda item: item[1])
+        ltpairs.sort(key=lambda item: item[1])
 
         # Generate a sequence of (time, digital state)
         # TODO: currently uses bulb exposure; should support other modes.
@@ -332,10 +332,13 @@ class DigitalMixin:
             if exposureStartTime != 0:
                 seq = [(0, camlines)]
             seq.append((exposureStartTime, state))
-            # Switch off each light as its exposure time expires.
+            # Switch off each light as its exposure time expires. If exposure times are equal, keep only the last one.
             for lline, ltime in ltpairs:
                 state -= lline
-                seq.append((exposureStartTime + ltime, state))
+                if (exposureStartTime + ltime) == seq[-1][0]:
+                    seq[-1] = (exposureStartTime + ltime, state)
+                else:
+                    seq.append((exposureStartTime + ltime, state))
         else:
             # No lights. Just trigger the cameras.
             seq = [(0, camlines)]

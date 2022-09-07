@@ -57,6 +57,7 @@ import typing
 from cockpit import depot
 from cockpit import events
 from cockpit.util import userConfig
+import cockpit.util.threads
 
 import numpy
 import threading
@@ -458,14 +459,14 @@ def saveSite(newSite = None):
     # Start counting from the new site, if necessary.
     global uniqueSiteIndex
     uniqueSiteIndex = max(uniqueSiteIndex, newSite.uniqueID)
-    events.publish('new site', newSite)
+    events.publish(events.NEW_SITE, newSite)
 
 
 ## Remove a site with the specified ID.
 def deleteSite(siteID):
     site = mover.idToSite[siteID]
     del mover.idToSite[siteID]
-    events.publish('site deleted', site)
+    events.publish(events.DELETE_SITE, site)
     # HACK: if this siteID is for the most-recently created
     # site, decrement the global site ID.
     global uniqueSiteIndex

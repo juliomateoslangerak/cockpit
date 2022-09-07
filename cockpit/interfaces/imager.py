@@ -50,6 +50,8 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
+import threading
+
 from cockpit import events
 from cockpit.handlers.imager import ImagerHandler
 import cockpit.util.threads
@@ -92,12 +94,8 @@ class Imager:
         self._imageHandlers = handlers
         ## Set of active cameras, so we can check their framerates.
         self.activeCameras = set()
-        events.subscribe(events.CAMERA_ENABLE,
-                lambda c, isOn: self.toggle(self.activeCameras, c, isOn))
         ## Set of active light sources, so we can check their exposure times.
         self.activeLights = set()
-        events.subscribe(events.LIGHT_SOURCE_ENABLE,
-                lambda l, isOn: self.toggle(self.activeLights, l, isOn))
         ## Time of last call to takeImage(), so we can avoid calling it
         # faster than the time it takes to actually collect another image.
         self.lastImageTime = time.time()
@@ -105,29 +103,48 @@ class Imager:
         self.shouldStopVideoMode = False
         ## Boolean that indicates if we're currently in video mode.
         self.amInVideoMode = False
+
+        self._lock = threading.Lock()
+        events.subscribe(events.LIGHT_SOURCE_ENABLE, self._on_light_enable)
+        events.subscribe(events.CAMERA_ENABLE, self._on_camera_enable)
+        events.subscribe('light exposure update', self._on_light_update)
+
         events.subscribe(events.USER_ABORT, self.stopVideo)
-        # Update exposure times on certain events.
-        events.subscribe('light exposure update', self.updateExposureTime)
-        events.subscribe(events.LIGHT_SOURCE_ENABLE, lambda *args: self.updateExposureTime())
-        events.subscribe(events.CAMERA_ENABLE, lambda *args: self.updateExposureTime())
 
 
-    ## Update exposure times on cameras.
+    def _get_exposure_time(self) -> int:
+        if self.activeLights:
+            return max([l.getExposureTime() for l in self.activeLights])
+        else:
+            return 0
+
+
     @pauseVideo
-    def updateExposureTime(self, source=None):
-        e_times = [l.getExposureTime() for l in self.activeLights]
-        if not e_times:
-            return
-        e_max = max(e_times)
-        [c.setExposureTime(e_max) for c in self.activeCameras]
+    def _updateExposureTime(self):
+        e_time = self._get_exposure_time()
+        for c in self.activeCameras:
+            c.setExposureTime(e_time)
 
 
-    ## Add or remove the provided object from the specified set.
-    def toggle(self, container, thing, shouldAdd):
+    def _toggle(self, container, thing, shouldAdd):
         if shouldAdd:
             container.add(thing)
-        elif thing in container:
-            container.remove(thing)
+        else:
+            container.discard(thing)
+
+    def _on_camera_enable(self, handler, isEnabled):
+        with self._lock:
+            self._toggle(self.activeCameras, handler, isEnabled)
+            self._updateExposureTime()
+
+    def _on_light_enable(self, handler, isEnabled):
+        with self._lock:
+            self._toggle(self.activeLights, handler, isEnabled)
+            self._updateExposureTime()
+
+    def _on_light_update(self, handler):
+        with self._lock:
+            self._updateExposureTime()
 
 
     ## Take an image.
@@ -216,8 +233,6 @@ class Imager:
         camLimiter = 0
         for camera in self.activeCameras:
             camLimiter = max(camLimiter, camera.getTimeBetweenExposures())
-        lightLimiter = 0
-        for light in self.activeLights:
-            lightLimiter = max(lightLimiter, light.getExposureTime())
+        lightLimiter = self._get_exposure_time()
         # The limiters are in milliseconds; downconvert.
         return self.lastImageTime + (camLimiter + lightLimiter) / 1000.0

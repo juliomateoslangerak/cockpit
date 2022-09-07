@@ -508,7 +508,7 @@ class Experiment:
     # cameras and lights to use for the exposure, as well as how long to
     # expose each light for and when we're allowed to start. We need to
     # enforce that all of the cameras are ready to go before we trigger them.
-    # We also need to enforce that any frame-transfer cameras have not seen any
+    # We also need to enforce that any frame-transer cameras have not seen any
     # light since the last time they were blanked.
     # \param lightTimePairs List of (light, exposure time) tuples
 
@@ -573,7 +573,7 @@ class Experiment:
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name != 'ambient':  # i.e. not ambient light
+            if light is not None and light.name != 'Ambient':  # i.e. not ambient light
                 if camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
                     # Center with all pixels exposed
                     offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
@@ -666,7 +666,10 @@ class Experiment:
             return 0
 
         nextUseTime = lastUseTime
-        if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_BEFORE:
+        if camera.getExposureMode() in [
+            cockpit.handlers.camera.TRIGGER_BEFORE,
+            cockpit.handlers.camera.TRIGGER_SOFT,
+        ]:
             # The camera actually finished exposing (and started reading
             # out) some time after lastUseTime, depending on its declared
             # exposure time.

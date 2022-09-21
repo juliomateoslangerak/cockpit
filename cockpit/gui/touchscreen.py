@@ -579,9 +579,9 @@ class LightsPanelEntry(wx.Panel):
                 cockpit.gui.IMAGES_PATH, "touchscreen/misc_wavelength.png",
             )
         )
-        if self.power:
+        if self.light:
             img.Replace(
-                255, 255, 255, *wavelengthToColor(self.power.wavelength)
+                255, 255, 255, *wavelengthToColor(self.light.wavelength)
             )
         sizer_row0.Add(
             wx.StaticBitmap(self, bitmap=img.ConvertToBitmap()),
@@ -900,6 +900,13 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
     def selectedSites(self):
         return mosaic.window.selectedSites
 
+    @property
+    def displayTrails(self):
+        return mosaic.window.displayTrails
+    @property
+    def trails(self):
+        return mosaic.window.trails
+    
     @property
     def primitives(self):
         return mosaic.window.primitives

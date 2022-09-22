@@ -124,8 +124,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def performSubscriptions(self):
         """Perform subscriptions for this camera."""
-        events.subscribe(events.CLEANUP_AFTER_EXPERIMENT,
-                self.cleanupAfterExperiment)
+        # events.subscribe(events.CLEANUP_AFTER_EXPERIMENT,
+        #         self.cleanupAfterExperiment)
         events.subscribe('objective change',
                 self.onObjectiveChange)
 

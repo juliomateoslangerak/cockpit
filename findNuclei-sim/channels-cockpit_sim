@@ -1,0 +1,59 @@
+{
+  "Blue": {
+    "camera": true,
+    "filterwheel": 0,
+    "Dummy 405 power": 0.01,
+    "Dummy 405": {
+      "isEnabled": true,
+      "exposureTime": 100
+    },
+    "Dummy 488 power": 0.3,
+    "Dummy 488": {
+      "isEnabled": false,
+      "exposureTime": 100
+    },
+    "Dummy 633 power": 0.01,
+    "Dummy 633": {
+      "isEnabled": false,
+      "exposureTime": 100
+    }
+  },
+  "Green": {
+    "camera": true,
+    "filterwheel": 1,
+    "Dummy 405 power": 0.01,
+    "Dummy 405": {
+      "isEnabled": false,
+      "exposureTime": 100
+    },
+    "Dummy 488 power": 0.3,
+    "Dummy 488": {
+      "isEnabled": true,
+      "exposureTime": 100
+    },
+    "Dummy 633 power": 0.01,
+    "Dummy 633": {
+      "isEnabled": false,
+      "exposureTime": 100
+    }
+  },
+  "Red": {
+    "camera": true,
+    "filterwheel": 2,
+    "Dummy 405 power": 0.01,
+    "Dummy 405": {
+      "isEnabled": false,
+      "exposureTime": 100
+    },
+    "Dummy 488 power": 0.3,
+    "Dummy 488": {
+      "isEnabled": false,
+      "exposureTime": 100
+    },
+    "Dummy 633 power": 0.01,
+    "Dummy 633": {
+      "isEnabled": true,
+      "exposureTime": 100
+    }
+  }
+}

@@ -164,6 +164,21 @@ class MosaicCommon:
         self.drawCrosshairs(cockpit.interfaces.stageMover.getPosition()[:2], (1, 0, 0),
                             offset=True)
 
+        if self.displayTrails and len(self.trails) > 1:
+            glLineWidth(max(1, self.canvas.scale * 1.5))
+            #trails colour is green
+            glColor3f(0,1,0)
+            glBegin(GL_LINES)
+            last_x=-self.trails[0][0]-self.offset[0]
+            last_y=self.trails[0][1]-self.offset[1]
+            for vertex in self.trails[1:]:
+                glVertex2f(last_x,last_y)
+                glVertex2f(-vertex[0]+self.offset[0],vertex[1]-self.offset[1])
+                last_x = -vertex[0]+self.offset[0]
+                last_y = vertex[1]-self.offset[1]
+            glEnd()
+
+        
         # If we're selecting tiles, draw the box the user is selecting.
         if self.selectTilesFunc is not None and self.lastClickPos is not None:
             start = self.canvas.mapScreenToCanvas(self.lastClickPos)
@@ -337,7 +352,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         ## Camera used for making a mosaic
         self.camera = None
-
+        #toogle and array for trails
+        self.trails=[]
+        self.displayTrails=False
+        
         ## Mosaic tile overlap
         self.overlap = cockpit.util.userConfig.getValue('mosaicTileOverlap',
                                                         default = 0.0)
@@ -415,8 +433,17 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                                    style=wx.LB_EXTENDED|wx.LB_SORT)
         self.sitesBox.Bind(wx.EVT_LISTBOX, self.onSelectSite)
         self.sitesBox.Bind(wx.EVT_LISTBOX_DCLICK, self.onDoubleClickSite)
-        events.subscribe('new site', self.onNewSiteCreated)
-        events.subscribe('site deleted', self.onSiteDeleted)
+
+        #these are gui events so use the EvtEmitter to run in the main
+        #thread.
+        cockpit.gui.EvtEmitter(self, cockpit.events.NEW_SITE).Bind(
+            cockpit.gui.EVT_COCKPIT,
+            self._OnNewSite,
+        )
+        cockpit.gui.EvtEmitter(self, cockpit.events.DELETE_SITE).Bind(
+            cockpit.gui.EVT_COCKPIT,
+            self._OnSiteDelete,
+            )
         sitesSizer.Add(self.sitesBox, 1, wx.EXPAND)
 
         for args in [
@@ -472,6 +499,15 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         self.mosaicThread = None
 
+        ## Dont continue mosaics if we chnage objective
+        events.subscribe('objective change', self.onObjectiveChange)
+
+    ##Objective chnage sets the shouldRestart flag so we dont
+    ##continue in the wrong place
+    def onObjectiveChange(self, objective):
+        self.shouldRestart = True
+
+        
     ## Create a button with the appropriate properties.
     def makeButton(self, parent, label, leftAction, rightAction, helpText,
             size = (-1, -1)):
@@ -504,6 +540,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def onAxisRefresh(self, axis, *args):
         if axis in [0, 1]:
             # Only care about the X and Y axes.
+            #append new position
+            self.trails.append(cockpit.interfaces.stageMover.getPosition()[:2])
             wx.CallAfter(self.canvas.Refresh)
 
 
@@ -588,6 +626,16 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             menu.Append(menuId, "Toggle mosaic scale bar")
             self.Bind(wx.EVT_MENU,
                       lambda event: self.togglescalebar(),
+                      id=menuId)
+            menuId += 1
+            menu.Append(menuId, "Toggle trails display")
+            self.Bind(wx.EVT_MENU,
+                      lambda event: self.toggleDisplayTrails(),
+                      id=menuId)
+            menuId += 1
+            menu.Append(menuId, "Clear old trails")
+            self.Bind(wx.EVT_MENU,
+                      lambda event: self.clearTrails(),
                       id=menuId)
 
             cockpit.gui.guiUtils.placeMenuAtMouse(self, menu)
@@ -808,6 +856,21 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         cockpit.util.userConfig.setValue('mosaicScaleBar',self.scalebar)
         self.Refresh()
 
+    def toggleDisplayTrails(self):
+        #toggle Display of trails in mosaic.
+        self.displayTrails = not self.displayTrails
+        #send a mosaic update event to update touchscreen
+        events.publish(events.MOSAIC_UPDATE)
+        #store current state for future.
+        cockpit.util.userConfig.setValue('mosaicDisplayTrails',self.displayTrails)
+        self.Refresh()
+
+    def clearTrails(self):
+        #clear all exisiting trails
+        self.trails=[]
+        events.publish(events.MOSAIC_UPDATE)
+        self.Refresh()
+        
     ## Save the current stage position as a new site with the specified
     # color (or our currently-selected color if none is provided).
     def saveSite(self, color = None):
@@ -970,7 +1033,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # Redisplay the sites in the sitesbox.
             self.sitesBox.Clear()
             for site in cockpit.interfaces.stageMover.getAllSites():
-                self.onNewSiteCreated(site, shouldRefresh = False)
+                self._AddSiteToList(site, shouldRefresh = False)
             self.Refresh()
 
 
@@ -995,7 +1058,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
 
     ## A new site was created (from any source); add it to our sites box.
-    def onNewSiteCreated(self, site, shouldRefresh = True):
+    def _OnNewSite(self, event: wx.CommandEvent) -> None:
+        site = event.EventData[0]
+        self._AddSiteToList(site, shouldRefresh=True)
+
+
+    def _AddSiteToList(self, site, shouldRefresh=True):
         # This display is a bit compressed, so that all positions are visible
         # even if there's a scrollbar in the sites box.
         position = ",".join(["%d" % p for p in site.position])
@@ -1010,7 +1078,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
 
     ## A site was deleted; remove it from our sites box.
-    def onSiteDeleted(self, site):
+    def _OnSiteDelete(self, event: wx.CommandEvent) -> None:
+        site = event.EventData[0]
         for item in self.sitesBox.GetItems():
             if site.uniqueID == item:
                 self.sitesBox.Delete(item)

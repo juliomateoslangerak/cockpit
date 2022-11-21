@@ -565,7 +565,7 @@ class Experiment:
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
         for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name != 'ambient': # i.e. not ambient light
+            if light is not None and light.name != 'Ambient': # i.e. not ambient light
                 # Center the light exposure.
                 timeSlop = maxExposureTime - exposureTime
                 offset = timeSlop / 2
@@ -662,7 +662,10 @@ class Experiment:
             return 0
 
         nextUseTime = lastUseTime
-        if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_BEFORE:
+        if camera.getExposureMode() in [
+            cockpit.handlers.camera.TRIGGER_BEFORE,
+            cockpit.handlers.camera.TRIGGER_SOFT,
+        ]:
             # The camera actually finished exposing (and started reading
             # out) some time after lastUseTime, depending on its declared
             # exposure time.

@@ -140,10 +140,6 @@ class CameraPanel(wx.Panel):
         camera.addWatch('wavelength', self.onWavelengthChange)
         self.Sizer.AddSpacer(2)
 
-        if hasattr(camera, 'modes'):
-            modebutton = wx.Button(parent, label='Mode')
-            self.Sizer.Add(modebutton)
-
         if camera.callbacks.get('makeUI', None):
             self.Sizer.Add(camera.callbacks['makeUI'](self))
         self.Sizer.AddSpacer(2)
@@ -301,7 +297,7 @@ class ChannelsPanel(wx.Panel):
                 return sizer_item.Window
         else:
             raise ValueError('There is no button named \'%s\''
-                             % channel_name)
+                             % name)
 
 
     def OnChannelAdded(self, event: wx.CommandEvent) -> None:

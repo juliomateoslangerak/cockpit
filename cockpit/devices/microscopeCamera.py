@@ -203,6 +203,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                  'prepareForExperiment': self.prepareForExperiment,
                  'getExposureTime': self.getExposureTime,
                  'setExposureTime': self.setExposureTime,
+                 'getShutteringMode': self.getShutteringMode,
                  'getSavefileInfo': self.getSavefileInfo,
                  'makeUI': self.makeUI,
                  'softTrigger': self.softTrigger},
@@ -252,6 +253,11 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             return decimal.Decimal(t) * (decimal.Decimal(1000.0))
         else:
             return t * 1000.0
+
+
+    def getShutteringMode(self, name):
+        """Get the electronic shuttering mode of the camera."""
+        return self._proxy.get_shuttering_mode()
 
 
     def getImageSize(self, name):

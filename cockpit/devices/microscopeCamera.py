@@ -257,7 +257,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def getShutteringMode(self, name):
         """Get the electronic shuttering mode of the camera."""
-        return self._proxy.shuttering_mode()
+        return self._proxy.shuttering_mode
 
 
     def getImageSize(self, name):

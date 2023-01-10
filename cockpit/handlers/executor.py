@@ -311,6 +311,11 @@ class DigitalMixin:
                              if cam.getShutteringMode() == ElectronicShutteringMode.ROLLING]
         exposureStartTime = max(exposureStartTime, default=0)
 
+        # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
+        exposureStartTime = [cam.getTimeBetweenExposures() for cam in self.activeCameras
+                             if cam.getShutteringMode() == ElectronicShutteringMode.ROLLING]
+        exposureStartTime = max(exposureStartTime, default=0)
+
         if camlines == 0:
             # No cameras to be triggered.
             return

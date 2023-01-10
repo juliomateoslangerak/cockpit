@@ -114,8 +114,8 @@ class EnumerateSitesPanel(wx.Panel):
                 if token.find('-') != -1:
                     first, last = token.split('-')
                     # These ranges are inclusive, so add 1 to last
-                    newIndices = [i for i in range(int(first), int(last) + 1)
-                                  if cockpit.interfaces.stageMover.doesSiteExist(i)]
+                    newIndices = range(int(first), int(last) + 1)
+                    newIndices = filter(cockpit.interfaces.stageMover.doesSiteExist, newIndices)
                     baseIndices.extend(newIndices)
                     baseFrequencies.extend([frequency] * len(newIndices))
                 elif cockpit.interfaces.stageMover.doesSiteExist(int(token)):

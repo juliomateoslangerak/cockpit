@@ -227,7 +227,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         self.PostEvent()
 
     def OnSpin(self, evt):
-        """Update value and appearnace on spin button event.
+        """Update value and appearance on spin button event.
 
         Args:
           evt (wx.SpinEvent): The event.

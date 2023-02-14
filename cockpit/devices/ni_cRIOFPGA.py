@@ -106,13 +106,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
             self.connection.disconnect()
         self.connection = None
 
-    @cockpit.util.threads.locked
-    def finalizeInitialization(self):
-        server = depot.getHandlersOfType(depot.SERVER)[0]
-        self.receiveUri = server.register(self.receiveData)
-        # for line in range(self.nrAnalogLines):
-        #     self.setAnalog(line, 65536//2)
-
     def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
         super().onPrepareForExperiment(*args)
         self._lastAnalogs = [self.connection.ReadPosition(a) for a in range(self._alines)]

@@ -101,6 +101,11 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self.connection.connect()
         self.connection.Abort()
 
+    def onExit(self) -> None:
+        if self.connection is not None:
+            self.connection.disconnect()
+        self.connection = None
+
     @cockpit.util.threads.locked
     def finalizeInitialization(self):
         server = depot.getHandlersOfType(depot.SERVER)[0]

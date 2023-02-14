@@ -290,8 +290,6 @@ class Connection:
 
     def disconnect(self):
         if self.connection is not None:
-            server = depot.getHandlersOfType(depot.SERVER)[0]
-            server.unregister(self.callback)
             try:
                 self.connection.close()
             except Exception as e:

@@ -89,7 +89,7 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self._alines = self.config.get('alines', 4)
         self._currentAnalogs = self._alines * [0]
         # Absolute positions prior to the start of the experiment.
-        self._lastAnalogs = 4*[0]
+        self._lastAnalogs = self._alines * [0]
         # Store last movement profile for debugging
         self._lastProfile = None
 

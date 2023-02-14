@@ -92,7 +92,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self._lastAnalogs = 4*[0]
         # Store last movement profile for debugging
         self._lastProfile = None
-        self.connection = None
 
     @cockpit.util.threads.locked
     def initialize(self):

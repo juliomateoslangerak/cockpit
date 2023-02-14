@@ -74,14 +74,14 @@ class NIcRIO(executorDevices.ExecutorDevice):
         'ipaddress': str,
         'sendport': int,
         'receiveport': int,
+        'tickrate': int,
         'alines': int,
         'dlines': int,
     }
 
     def __init__(self, name, config):
         super().__init__(name, config)
-        # TODO: tickrate should go into a config?
-        self.tickrate = 100  # Number of ticks per ms. As of the resolution of the action table.
+        self.tickrate = config.get('tickrate')  # Number of ticks per ms. As of the resolution of the action table.
         self.sendPort = config.get('sendport')
         self.receivePort = config.get('receiveport')
         self.port = [self.sendPort, self.receivePort]

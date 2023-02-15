@@ -300,16 +300,10 @@ class Connection:
         """
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error as msg:
-            print('Failed to create socket.\n', msg)
-            return 1, '1'
-
-        try:
             s.settimeout(timeout)
             s.connect((host, port))
-        except socket.error as msg:
-            print('Failed to establish connection.\n', msg)
-            return 1, '2'
+        except socket.error as e:
+            raise e
 
         return s
 

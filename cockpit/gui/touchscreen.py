@@ -902,10 +902,10 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         self.SetMinSize(wx.Size(600, -1))
         # MOSAIC BINDING
         events.subscribe(events.STAGE_POSITION, self.onAxisRefresh)
-        events.subscribe("stage step size", self.onAxisRefresh)
-        events.subscribe("soft safety limit", self.onAxisRefresh)
-        events.subscribe("mosaic start", self.mosaicStart)
-        events.subscribe("mosaic stop", self.mosaicStop)
+        events.subscribe(events.STAGE_STEP_SIZE, self.onAxisRefresh)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onAxisRefresh)
+        events.subscribe(events.MOSAIC_START, self.mosaicStart)
+        events.subscribe(events.MOSAIC_STOP, self.mosaicStop)
         events.subscribe(events.MOSAIC_UPDATE, self.mosaicUpdate)
         wx.GetApp().Objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED, self.onObjectiveChange,
@@ -1129,7 +1129,7 @@ class StageControlXY(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(0, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_x.set_value(e.EventData[1])
             if e.EventData[0] == 0
@@ -1151,7 +1151,7 @@ class StageControlXY(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(1, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_y.set_value(e.EventData[1])
             if e.EventData[0] == 1
@@ -1272,7 +1272,7 @@ class StageControlZ(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(2, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_z.set_value(e.EventData[1])
             if e.EventData[0] == 2
@@ -1714,7 +1714,7 @@ class DialogSafeties(wx.Dialog):
             sizer_row_buttons, 0, wx.ALIGN_CENTRE | wx.TOP | wx.BOTTOM, 5
         )
         # Further event handling
-        cockpit.gui.EvtEmitter(self, "soft safety limit").Bind(
+        cockpit.gui.EvtEmitter(self, events.SOFT_SAFETY_LIMIT).Bind(
             cockpit.gui.EVT_COCKPIT, lambda e: self._on_limit_soft_change(e)
         )
         # Finalise layout

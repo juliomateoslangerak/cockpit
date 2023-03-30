@@ -54,6 +54,7 @@ import cockpit.gui
 import cockpit.gui.freetype
 import cockpit.gui.guiUtils
 import cockpit.gui.dialogs.getNumberDialog
+import cockpit.gui.mosaic.window
 import cockpit.util.datadoc
 import cockpit.util.threads
 
@@ -745,6 +746,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 ('Toggle sync view', self.toggleSyncViews),
                 ("Toggle FFT mode", self.toggleFFT),
                 ('', None),
+                ('Send image to mosaic',
+                         cockpit.gui.mosaic.window.transferCameraImage),
                 ('Save image', self.saveData)
                 ]
 
@@ -820,7 +823,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         shape = numpy.array(self.imageShape, dtype=np.uint)
         if (coords < shape).all() and (coords >= 0).all():
             value = self.imageData[coords[0], coords[1]]
-            events.publish("image pixel info", coords[::-1], value)
+            events.publish(events.IMAGE_PIXEL_INFO, coords[::-1], value)
 
 
     ## Modify our panning amount by the provided factor.

@@ -484,7 +484,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.SetSizerAndFit(sizer)
 
         events.subscribe(events.STAGE_POSITION, self.onAxisRefresh)
-        events.subscribe('soft safety limit', self.onAxisRefresh)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onAxisRefresh)
 
         abort_emitter = cockpit.gui.EvtEmitter(self, events.USER_ABORT)
         abort_emitter.Bind(cockpit.gui.EVT_COCKPIT, self.onAbort)
@@ -500,7 +500,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.mosaicThread = None
 
         ## Dont continue mosaics if we chnage objective
-        events.subscribe('objective change', self.onObjectiveChange)
+        events.subscribe(events.OBJECTIVE_CHANGE, self.onObjectiveChange)
 
     ##Objective chnage sets the shouldRestart flag so we dont
     ##continue in the wrong place
@@ -711,7 +711,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             if not self.shouldContinue.is_set():
                 ## Enter idle state.
                 # Update button label in main thread.
-                events.publish("mosaic stop")
+                events.publish(events.MOSAIC_STOP)
                 wx.CallAfter(self.nameToButton['Run mosaic'].SetLabel, 'Run mosaic')
                 # Detect stage movement so know whether to start new spiral on new position.
                 events.subscribe(events.STAGE_POSITION, self.onStageMoveWhenPaused)
@@ -723,7 +723,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 wx.CallAfter(self.nameToButton['Run mosaic'].SetLabel, 'Stop mosaic')
                 # Set reconfigure flag: cameras or objective may have changed.
                 self.shouldReconfigure = True
-                events.publish("mosaic start")
+                events.publish(events.MOSAIC_START)
                 # Catch case that stage has moved but user wants to continue mosaic.
                 if not self.shouldRestart and target is not None:
                     self.goTo(target, True)

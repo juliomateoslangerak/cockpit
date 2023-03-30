@@ -65,6 +65,10 @@ Available events
 Anything can be "published".  The following is a list of events that
 the system expects.
 
+``COCKPIT_INIT_COMPLETE``
+Cockpit initialization has completed, some hardware may need to take
+additional init steps. 
+
 ``CAMERA_ENABLE``
 
 ``CLEANUP_AFTER_EXPERIMENT``
@@ -83,7 +87,13 @@ the system expects.
   The light source associated with the provided handler has been
   enabled / disabled for taking images.
 
+``LIGHT_EXPOSURE_UPDATE``
+The exposure time on a light source has been updated
+
 ``MOSAIC_UPDATE``
+
+``MOSAIC_START``
+A mosaic has been started
 
 ``NEW_IMAGE % camera name``
   An image has arrived for the camera with the given name.
@@ -103,6 +113,8 @@ the system expects.
 ``STAGE_STOPPED``
   A ``StagePositioner`` handler has stopped moving.
 
+``MACRO_STAGE_XY_DRAW``
+
 ``STAGE_TOP_BOTTOM``
 
 ``UPDATE_STATUS_LIGHT``
@@ -115,31 +127,41 @@ the system expects.
 ``SYNCED_VIEW``
 Enabled on camera view images that are synced with zoom/pan to other views. 
 
-``"filter change"``
+``DIO_OUTPUT``
+A DIO output line has chnaged state
 
-``"image pixel info"``
+``DIO_INPUT``
+A DIO input line has chnaged state
+
+``VALUELOGGER_INPUT``
+New Value logger data has arrived
+
+``FILTER_CHANGE``
+There has been a filter change on some beam path. 
+
+``IMAGE_PIXEL_INFO``
   The mouse has moved over a camera view, and the specified
   coordinates have the given value.
 
 ``"new site"``
   The user has marked a position as being of interest.
 
-``"objective change"``
+``OBJECTIVE_CHANGE``
   The objective has been changed.
 
-``"site deleted"``
+``DELETE_SITE``
   The specified Site is to be forgotten.
 
-``"soft safety limit"``
+``SOFT_SAFETY_LIMIT``
   The software-enforced motion limits for the given axis (summing all
   stage-positioner devices) have been changed.
 
-``"stage step index"``
+``STAGE_STEP_INDEX``
   Which Handler is currently being used to move the stage has been
   changed; the Handlers are arranged in order of maximum range of
   motion.
 
-``"stage step size"``
+``STAGE_STEP_SIZE``
   The amount of distance the stage will move when the user uses the
   numeric keypad has changed.
 
@@ -153,6 +175,7 @@ import typing
 
 ## Define common event strings here. This way, they're here for reference,
 # and can be used elsewhere to avoid errors due to typos.
+COCKPIT_INIT_COMPLETE = 'cockpit initialization complete'
 DEVICE_STATUS = 'device status'
 EXPERIMENT_EXECUTION = 'experiment execution'
 EXPERIMENT_COMPLETE = 'experiment complete'
@@ -160,21 +183,33 @@ UPDATE_STATUS_LIGHT = 'update status light'
 PREPARE_FOR_EXPERIMENT = 'prepare for experiment'
 CLEANUP_AFTER_EXPERIMENT = 'cleanup after experiment'
 LIGHT_SOURCE_ENABLE = 'light source enable'
+LIGHT_EXPOSURE_UPDATE = 'light exposure update'
 CAMERA_ENABLE = 'camera enable'
+FILTER_CHANGE = 'filter change'
 STAGE_POSITION = 'stage position'
 STAGE_MOVER = 'stage mover'
 STAGE_STOPPED = 'stage stopped'
 STAGE_TOP_BOTTOM = 'stage saved top/bottom'
+STAGE_STEP_INDEX = 'stage step index'
+STAGE_STEP_SIZE = 'stage step size'
+MACRO_STAGE_XY_DRAW = 'macro stage xy draw'
+SOFT_SAFETY_LIMIT = 'soft safety limit'
 NEW_SITE = 'new site'
 DELETE_SITE = 'site deleted'
 SYNCED_VIEW = 'synced view'
 USER_ABORT = 'user abort'
 MOSAIC_UPDATE = 'mosaic update'
+MOSAIC_START = 'mosaic start'
+MOSAIC_STOP = 'mosaic stop'
 NEW_IMAGE = 'new image %s' # must be suffixed with image source
+IMAGE_PIXEL_INFO = 'image pixel info'
+OBJECTIVE_CHANGE = 'objective change'
 SETTINGS_CHANGED = 'settings changed %s' # must be suffixed with device/handler name
 EXECUTOR_DONE = 'executor done %s' # must be sufficed with device/handler name
 VIDEO_MODE_TOGGLE = 'video mode toggle'
-
+DIO_OUTPUT = 'DIO output'
+DIO_INPUT = 'DIO input'
+VALUELOGGER_INPUT = 'ValueLogger input'
 
 _Subscriber = typing.Callable[..., None]
 

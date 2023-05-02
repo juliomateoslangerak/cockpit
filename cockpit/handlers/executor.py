@@ -53,7 +53,7 @@ import typing
 
 import matplotlib.pyplot as plt
 
-import collections
+import collections.abc
 
 from microscope import ElectronicShutteringMode
 
@@ -170,7 +170,7 @@ class ExecutorHandler(DeviceHandler):
             if h in self.analogClients:
                 # update analog state
                 lineHandler = self.analogClients[h]
-                if isinstance(args, collections.Iterable):
+                if isinstance(args, collections.abc.Iterable):
                     # Using an indexed position
                     pos = lineHandler.indexedPosition(*args)
                 else:
@@ -305,6 +305,11 @@ class DigitalMixin:
             # No triggered devices registered.
             return
         camlines = sum([1 << self.digitalClients[cam] for cam in self.activeCameras])
+
+        # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
+        exposureStartTime = [cam.getTimeBetweenExposures() for cam in self.activeCameras
+                             if cam.getShutteringMode() == ElectronicShutteringMode.ROLLING]
+        exposureStartTime = max(exposureStartTime, default=0)
 
         # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
         exposureStartTime = [cam.getTimeBetweenExposures() for cam in self.activeCameras

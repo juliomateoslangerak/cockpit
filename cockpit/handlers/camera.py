@@ -64,7 +64,7 @@ import cockpit.util.colors
 # trigger for the duration of the exposure.
 (TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT) = range(4)
 
-## This handler is for cameras, of course. Cameras provide images to the
+## This handler is for cameras, of course. Cameras provide images to the 
 # microscope, and are assumed to be usable during experiments. 
 class CameraHandler(deviceHandler.DeviceHandler):
     ## Create the Handler. 
@@ -80,6 +80,8 @@ class CameraHandler(deviceHandler.DeviceHandler):
     # - getExposureTime(name, isExact): Returns the time in milliseconds that
     #   the camera is set to expose for when triggered. If isExact is set,
     #   returns a decimal.Decimal instance.
+    # - getShutteringMode(name): Returns if the camera has a global or a rolling
+    #   electronic shuttering mode.
     # - prepareForExperiment(name, experiment): Get the camera ready for an
     #   experiment.
     # - Optional: getMinExposureTime(name): returns the minimum exposure time
@@ -156,7 +158,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
         ## Update the filter for this camera.
         self.dye = dye
         self.wavelength = wavelength
-        events.publish('filter change')
+        events.publish(events.FILTER_CHANGE)
 
 
     ## Invoke our callback, and let everyone know that a new camera is online.
@@ -225,7 +227,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
         return self.callbacks['getShutteringMode'](self.name)
 
 
-    ## Do any necessary preparation for the camera to participate in an 
+    ## Do any necessary preparation for the camera to participate in an
     # experiment.
     @reset_cache
     def prepareForExperiment(self, experiment):

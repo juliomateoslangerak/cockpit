@@ -74,14 +74,14 @@ class NIcRIO(executorDevices.ExecutorDevice):
         'ipaddress': str,
         'sendport': int,
         'receiveport': int,
+        'tickrate': int,
         'alines': int,
         'dlines': int,
     }
 
     def __init__(self, name, config):
         super().__init__(name, config)
-        # TODO: tickrate should go into a config?
-        self.tickrate = 100  # Number of ticks per ms. As of the resolution of the action table.
+        self.tickrate = config.get('tickrate')  # Number of ticks per ms. As of the resolution of the action table.
         self.sendPort = config.get('sendport')
         self.receivePort = config.get('receiveport')
         self.port = [self.sendPort, self.receivePort]
@@ -89,10 +89,9 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self._alines = self.config.get('alines', 4)
         self._currentAnalogs = self._alines * [0]
         # Absolute positions prior to the start of the experiment.
-        self._lastAnalogs = 4*[0]
+        self._lastAnalogs = self._alines * [0]
         # Store last movement profile for debugging
         self._lastProfile = None
-        self.connection = None
 
     @cockpit.util.threads.locked
     def initialize(self):
@@ -102,12 +101,10 @@ class NIcRIO(executorDevices.ExecutorDevice):
         self.connection.connect()
         self.connection.Abort()
 
-    @cockpit.util.threads.locked
-    def finalizeInitialization(self):
-        server = depot.getHandlersOfType(depot.SERVER)[0]
-        self.receiveUri = server.register(self.receiveData)
-        # for line in range(self.nrAnalogLines):
-        #     self.setAnalog(line, 65536//2)
+    def onExit(self) -> None:
+        if self.connection is not None:
+            self.connection.disconnect()
+        self.connection = None
 
     def onPrepareForExperiment(self, *args):  # TODO: Verify here for weird z movements
         super().onPrepareForExperiment(*args)
@@ -134,31 +131,6 @@ class NIcRIO(executorDevices.ExecutorDevice):
             target: target value.
         """
         return self.connection.MoveAbsolute(line, target)
-
-    def getHandlers(self):
-        """We control which light sources are active, as well as a set of stage motion piezos.
-        """
-        result = list()
-        h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
-            self.name, "executor",
-            {'examineActions': lambda *args: None,
-             'executeTable': self.executeTable,
-             'readDigital': self.connection.ReadDigital,
-             'writeDigital': self.connection.WriteDigital,
-             'getAnalog': self.getAnalog,
-             'setAnalog': self.setAnalog,
-             'runSequence': self.runSequence,
-             },
-            dlines=self._dlines, alines=self._alines)
-
-        result.append(h)
-
-        result.append(cockpit.handlers.imager.ImagerHandler(
-            "%s imager" % self.name, "imager",
-            {'takeImage': h.takeImage}))
-
-        self.handlers = set(result)
-        return result
 
     def takeImage(self):
         pass
@@ -316,8 +288,6 @@ class Connection:
 
     def disconnect(self):
         if self.connection is not None:
-            server = depot.getHandlersOfType(depot.SERVER)[0]
-            server.unregister(self.callback)
             try:
                 self.connection.close()
             except Exception as e:
@@ -330,16 +300,10 @@ class Connection:
         """
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error as msg:
-            print('Failed to create socket.\n', msg)
-            return 1, '1'
-
-        try:
             s.settimeout(timeout)
             s.connect((host, port))
-        except socket.error as msg:
-            print('Failed to establish connection.\n', msg)
-            return 1, '2'
+        except socket.error as e:
+            raise e
 
         return s
 

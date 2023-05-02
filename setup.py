@@ -65,10 +65,10 @@ setuptools.setup(
     python_requires = '>=3.5',
     install_requires = [
         'PyOpenGL',
-        'Pyro4',
+        'Pyro4>=4.22',
         'freetype-py',
         'matplotlib',
-        'microscope>=0.5',
+        'microscope @ git+https://github.com/juliomateoslangerak/microscope.git@pre-production',
         'numpy',
         'pyserial',
         'scipy',

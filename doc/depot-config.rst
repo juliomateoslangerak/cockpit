@@ -223,25 +223,82 @@ fields so can be used to tag specific objectives, or objective types.
   colour:(1,0,0)
   lensID: 10118
 
-    
-  
+
+Digital IO
+```````````
+
+The Digital IO device type is for input and output digital signals
+that are not required to be synchronised with other controls for
+experimental purposes. The controls therefor don't have hard timing
+expectations and typically are used for control over microscope
+features like switching illumination or emission beam paths.
+
+The config allows defining which lines are input and which output,
+naming of specific lines labels and the definition of buttons to allow
+the setting of specific output lines to specific states, as well as
+forcing the activation, or deactivation of other buttons. For instance
+this could be used to switch excitation beam paths between and
+Widefield and SIM states, which are mutually exclusive.
+
+The label array and paths dictionary are directly eval'd, and example
+config file for 4 line, the first 2 are output and the last 2 are
+input. See the example config entries:
+
+.. code:: ini
+
+  IOMap:1,1,0,0
+  labels: ["Mirror1","Mirror2","In1","In2"]
+  paths:{ "Widefield": [{"Mirror1": True, "Mirror2": False}, {"SIM": False}],
+      "SIM": [{"Mirror1": False, "Mirror2": True}, {"Widefield": False}]}
+
+Input and output digital signals are sent to the logger when values
+change. The logger is set to record the state before and after state
+changes are updated so that digital transitions are sharp. Typically
+values are only logged on state changes, both output changes trigger by
+the user or other actions and input changes that are pushed from the
+remote process.
+      
+
+Value Logger
+````````````
+
+The Value logger component allows analogue (or digital) signals to be
+passed into the Cockpit Logger and then viewed on the
+LogValueViewer. This allows a remote process such as a temperature
+logger to push data to Cockpit which is then logged and available for
+display in the LogValueViewer.
+
+The Value Logger configuration has a labels array which specifies
+names for each logged channel.
+
+.. code:: ini
+
+  labels:["T1", "T2"]
+
 Additional specific parameters
 ``````````````````````````````
 
 As well as the general parameters defined by the different microscope
 device types, hardware specific parameters can be set and any not
 defined parameter will be sent to the remote microscope as a setting
-for that device, eg:
+for that device. This involves the special keyword setting: followed
+by key-value pairs, this is an example from a Andor camera config:
 
 
 .. code:: ini
-
-  isWaterCooled: True
-  targetTemperature: -80
+	  
+settings:
+    aoi_height: 1024
+    aoi_width: 1024
+    aoi_left: 513
+    aoi_top: 513
+    pixel_readout_rate: 100 MHz
+    simple_pre_amp_gain_control: 16bit (low noise & high well capacity)
+    trigger_mode: External Exposure
 
 Will set the remote parameters as specified, this example is from an
-Andor iXon EMCCD device and will enable the watercooling switch and
-set the temperature to -80 C. 
+Andor camera device and will set aoi sizes, readout rates,pre_amp_gain
+and trigger mode.
 
 
 Non Python-Microscope devices

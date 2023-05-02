@@ -64,13 +64,6 @@ import typing
 import wx
 
 import Pyro4
-import distutils.version
-if (distutils.version.LooseVersion(Pyro4.__version__) >=
-    distutils.version.LooseVersion('4.22')):
-    Pyro4.config.SERIALIZERS_ACCEPTED.discard('serpent')
-    Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
-    Pyro4.config.SERIALIZER = 'pickle'
-    Pyro4.config.REQUIRE_EXPOSE = False
 
 import cockpit.config
 import cockpit.depot
@@ -85,6 +78,13 @@ import cockpit.interfaces.stageMover
 import cockpit.util.files
 import cockpit.util.logger
 import cockpit.util.userConfig
+
+
+# Required since Pyro4 v4.22 (which is a project requirement anyway)
+Pyro4.config.SERIALIZERS_ACCEPTED.discard('serpent')
+Pyro4.config.SERIALIZERS_ACCEPTED.add('pickle')
+Pyro4.config.SERIALIZER = 'pickle'
+Pyro4.config.REQUIRE_EXPOSE = False
 
 
 class CockpitApp(wx.App):
@@ -218,7 +218,7 @@ class CockpitApp(wx.App):
             cockpit.depot.makeInitialPublications()
             cockpit.interfaces.stageMover.makeInitialPublications()
 
-            cockpit.events.publish('cockpit initialization complete')
+            cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
             return True
         except Exception as e:

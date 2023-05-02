@@ -52,7 +52,7 @@ class LightPanel(wx.Panel):
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
         line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
-        line = wx.Control(self, size=(-1, line_height))
+        line = wx.StaticText(self, label="", size=(-1, line_height))
         line.SetBackgroundColour(wavelengthToColor(self.light.wavelength))
         self.Sizer.Add(line, flag=wx.EXPAND)
 
@@ -131,7 +131,7 @@ class CameraPanel(wx.Panel):
         self.Sizer.AddSpacer(2)
 
         line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
-        self.line = wx.Control(self, size=(-1, line_height))
+        self.line = wx.StaticText(self, label="", size=(-1, line_height))
         self.line.SetBackgroundColour(wavelengthToColor(self.camera.wavelength or 0))
         self.Sizer.Add(self.line, flag=wx.EXPAND)
         # If there are problems here, it's because the inline function below is
@@ -140,13 +140,9 @@ class CameraPanel(wx.Panel):
         camera.addWatch('wavelength', self.onWavelengthChange)
         self.Sizer.AddSpacer(2)
 
-        if hasattr(camera, 'modes'):
-            modebutton = wx.Button(parent, label='Mode')
-            self.Sizer.Add(modebutton)
-
         if camera.callbacks.get('makeUI', None):
-            self.Sizer.Add(camera.callbacks['makeUI'](self))
-        self.Sizer.AddSpacer(2)
+            self.Sizer.Add(camera.callbacks['makeUI'](self),
+                           wx.SizerFlags().Expand())
 
 
     def onWavelengthChange(self, wl):
@@ -301,7 +297,7 @@ class ChannelsPanel(wx.Panel):
                 return sizer_item.Window
         else:
             raise ValueError('There is no button named \'%s\''
-                             % channel_name)
+                             % name)
 
 
     def OnChannelAdded(self, event: wx.CommandEvent) -> None:

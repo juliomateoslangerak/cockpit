@@ -55,7 +55,7 @@
 
 from cockpit.devices import device
 
-def Transform(tstr=None):
+def _config_to_transform(tstr):
     """Desribes a simple transform: (flip LR, flip UD, rotate 90)"""
     if tstr:
         return tuple([bool(int(t)) for t in tstr.strip('()').split(',')])
@@ -68,7 +68,10 @@ class CameraDevice(device.Device):
     def __init__(self, name, config):
         super().__init__(name, config)
         # baseTransform depends on camera orientation and is constant.
-        self.baseTransform = Transform(config.get('transform', None))
+        if 'transform' in config:
+            self.baseTransform = _config_to_transform(config.get('transform'))
+        else:
+            self.baseTransform = [0,0,0]
 
     def updateTransform(self, pathTransform):
         """Apply a new pathTransform"""
@@ -84,7 +87,7 @@ class CameraDevice(device.Device):
         self._setTransform((lr, ud, rot))
 
     def _setTransform(self, transform):
-        # Sublcasses should override this if transforms are done on the device.
+        # Subclasses should override this if transforms are done on the device.
         self._transform = transform
 
     def finalizeInitialization(self):

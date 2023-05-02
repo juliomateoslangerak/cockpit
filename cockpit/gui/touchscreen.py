@@ -759,56 +759,10 @@ class CamerasPanelEntry(wx.Panel):
         button_toggle.setState(self.camera_handler.state)
         sizer_row0.Add(button_toggle, 1, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(sizer_row0, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        # Second row: gain
-        if "gain" in self.camera.settings:
-            sizer_row1 = wx.BoxSizer(wx.HORIZONTAL)
-            gain_min, gain_max = self.camera.describe_setting("gain")["values"]
-            gain_img = wx.Image(
-                os.path.join(
-                    cockpit.gui.IMAGES_PATH, "touchscreen/misc_opamp.png"
-                )
-            )
-            gain_ctrl = VariableControlContinuous(
-                self,
-                init_val=self.camera.settings["gain"],
-                step_offset=1,
-                units="",
-                limit_low=gain_min,
-                limit_high=gain_max,
-            )
-            gain_ctrl.Bind(
-                EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-                lambda e: self.camera.updateSettings(
-                    {"gain": e.GetClientData()[1]}
-                ),
-            )
-            events.subscribe(
-                events.SETTINGS_CHANGED % self.camera,
-                lambda: gain_ctrl.set_value(self.camera.settings["gain"]),
-            )
-            sizer_row1.Add(
-                wx.StaticBitmap(self, bitmap=gain_img.ConvertToBitmap()),
-                0,
-                wx.ALIGN_CENTER,
-            )
-            sizer_row1.Add(gain_ctrl, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
-            sizer.Add(
-                sizer_row1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5
-            )
-        # Third row: readout and settings
-        sizer_row2 = wx.BoxSizer(wx.HORIZONTAL)
-        readout_choice = wx.Choice(self, choices=[])
-        if "readout mode" in self.camera.settings:
-            readout_choice.SetItems(self.camera._modenames)
-            readout_choice.SetSelection(0)
-        else:
-            readout_choice.Enable(False)
-        sizer_row2.Add(readout_choice, 1, wx.ALIGN_CENTER)
+        # Second row: the settings button
         button_settings = wx.Button(self, label="Settings")
         button_settings.Bind(wx.EVT_LEFT_UP, self.camera.showSettings)
-        sizer_row2.Add(button_settings, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
-        sizer.Add(sizer_row2, 0, wx.EXPAND | wx.ALL, 5)
-        # Finalise layout
+        sizer.Add(button_settings, wx.SizerFlags().Expand().Border(wx.ALL, 5))
         self.SetSizer(sizer)
         self.Layout()
 
@@ -948,10 +902,10 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         self.SetMinSize(wx.Size(600, -1))
         # MOSAIC BINDING
         events.subscribe(events.STAGE_POSITION, self.onAxisRefresh)
-        events.subscribe("stage step size", self.onAxisRefresh)
-        events.subscribe("soft safety limit", self.onAxisRefresh)
-        events.subscribe("mosaic start", self.mosaicStart)
-        events.subscribe("mosaic stop", self.mosaicStop)
+        events.subscribe(events.STAGE_STEP_SIZE, self.onAxisRefresh)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onAxisRefresh)
+        events.subscribe(events.MOSAIC_START, self.mosaicStart)
+        events.subscribe(events.MOSAIC_STOP, self.mosaicStop)
         events.subscribe(events.MOSAIC_UPDATE, self.mosaicUpdate)
         wx.GetApp().Objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED, self.onObjectiveChange,
@@ -1175,7 +1129,7 @@ class StageControlXY(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(0, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_x.set_value(e.EventData[1])
             if e.EventData[0] == 0
@@ -1197,7 +1151,7 @@ class StageControlXY(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(1, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_y.set_value(e.EventData[1])
             if e.EventData[0] == 1
@@ -1318,7 +1272,7 @@ class StageControlZ(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: wx.GetApp().Stage.SetStepSize(2, e.GetClientData()[1]),
         )
-        cockpit.gui.EvtEmitter(self, "stage step size").Bind(
+        cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
             lambda e: varctrl_step_z.set_value(e.EventData[1])
             if e.EventData[0] == 2
@@ -1665,7 +1619,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
             # size is still 1x1
             new_width = self.GetClientSize()[0]
             vp_aspect_ratio = _VIEWPANEL_SIZE[0] / _VIEWPANEL_SIZE[1]
-            new_height = new_width / vp_aspect_ratio
+            new_height = int(new_width / vp_aspect_ratio)
             for view in viewsToShow:
                 view.change_size(wx.Size(new_width, new_height))
 
@@ -1760,7 +1714,7 @@ class DialogSafeties(wx.Dialog):
             sizer_row_buttons, 0, wx.ALIGN_CENTRE | wx.TOP | wx.BOTTOM, 5
         )
         # Further event handling
-        cockpit.gui.EvtEmitter(self, "soft safety limit").Bind(
+        cockpit.gui.EvtEmitter(self, events.SOFT_SAFETY_LIMIT).Bind(
             cockpit.gui.EVT_COCKPIT, lambda e: self._on_limit_soft_change(e)
         )
         # Finalise layout

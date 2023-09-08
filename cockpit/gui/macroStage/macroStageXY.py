@@ -202,7 +202,7 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         # Bind context menu event to None to prevent main window context menu
         # being displayed in preference to our own.
         self.Bind(wx.EVT_CONTEXT_MENU, lambda event: None)
-        events.subscribe("soft safety limit", self.onSafetyChange)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onSafetyChange)
         self.SetToolTip(wx.ToolTip("Left double-click to move the stage. " +
                 "Right click for gotoXYZ and double-click to toggle displaying of mosaic " +
                 "tiles."))
@@ -211,6 +211,27 @@ class MacroStageXY(macroStageBase.MacroStageBase):
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
             self._OnObjectiveChanged,
         )
+
+        #many stages have an external control that cockpit knows nothing about
+        #eg an xy(z) joystick. So setup a wx timer to poll the position
+        #and update if it changes.
+        self._positionCache = [0.0 for x in range(len
+                                (cockpit.interfaces.stageMover.getPosition()))]
+        self._timer = wx.Timer(self)
+        #poll every 1 s (1000 ms)
+        self._timer.Start(1000)
+        self.Bind(wx.EVT_TIMER, self.onTimer)
+
+    #code that the wx timer calls to check postion on a regular basisis.
+    def onTimer(self, evt):
+        position=cockpit.interfaces.stageMover.getPosition()
+        for i,pos in enumerate(position):
+            if pos != self._positionCache[i]:
+                events.publish(events.STAGE_POSITION, i, pos)
+                self._positionCache[i] = pos
+
+    def OnDestroy(self, evt):
+        self._timer.Stop()
 
     ## Safety limits have changed, which means we need to force a refresh.
     # \todo Redrawing everything just to tackle the safety limits is a bit
@@ -408,7 +429,7 @@ class MacroStageXY(macroStageBase.MacroStageBase):
             glEnd()
             glLineWidth(1)
 
-            events.publish('macro stage xy draw', self)
+            events.publish(events.MACRO_STAGE_XY_DRAW, self)
 
             glFlush()
             self.SwapBuffers()

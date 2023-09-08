@@ -46,14 +46,50 @@ from microscope import TriggerMode, TriggerType
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
 
 
+def _config_to_ROI(roi_str: str):
+    return ROI(*[int(t) for t in roi_str.strip('()').split(',')])
+
+
 class MicroscopeCamera(MicroscopeBase, CameraDevice):
-    """A class to control remote python microscope cameras."""
+    """Device class for a remote Python-Microscope camera.
+
+    The default transform and ROI can be configured, in the same
+    format as the one used in Python-Microscope.  For example::
+
+        [south camera]
+        type: cockpit.devices.microscopeCamera.MicroscopeCamera
+        uri: PYRO:SomeCamera@192.168.0.2:7003
+        # transform: (lr, ud, rot)
+        transform: (1, 0, 0)
+        # ROI: (left, top, width, height)
+        ROI: (512, 512, 128, 128)
+
+    Guessing the correct transform can be tricky and it's often easier
+    to do it by trial and error.  Since this is a fairly specific
+    thing that is typically only done once, there isn't a UI on
+    Cockpit to do it.  To experiment and find the right transform
+    value from Cockpit, open a PyShell from Cockpit (``Ctrl``+``P``)
+    and change it manually like so::
+
+        from cockpit import depot
+        cam = depot.getDeviceWithName("south camera")
+        cam._setTransform((True, False, False))
+        cam.softTrigger()
+        # If the image displayed is not correct, experiment with
+        # other transform, e.g.:
+        cam._setTransform((True, True, False))
+
+    """
     def __init__(self, name, config):
         # camConfig is a dict with containing configuration parameters.
         super().__init__(name, config)
         self.enabled = False
         self.panel = None
-        self.modes = []
+
+        if 'roi' in config:
+            self._base_ROI = _config_to_ROI(config.get('roi'))
+        else:
+            self._base_ROI = None
 
     def initialize(self):
         # Parent class will connect to proxy
@@ -65,33 +101,10 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             self.updateSettings()
         except:
             pass
-        if 'readout mode' in self.settings:
-            self.modes = self.describe_setting('readout mode')['values']
-        else:
-            self.modes = []
         if self.baseTransform:
             self._setTransform(self.baseTransform)
-
-    @property
-    def _modenames(self):
-        # Modes are a descriptive string of the form
-        # [amp-type] [freq] [channel]
-        if not self.modes:
-            return ['default']
-        import re
-        channels = set()
-        chre = re.compile(r' CH([0-9]+)', re.IGNORECASE)
-        ampre = re.compile(r'CONVENTIONAL ', re.IGNORECASE)
-        modes = []
-        for i, m in self.modes:
-            modes.append(ampre.sub('CONV ', m))
-            match = chre.search(m)
-            if match:
-                channels.union(match.groups())
-
-        if len(channels) < 2:
-            modes = [chre.sub('', m) for m in modes]
-        return modes
+        if self._base_ROI is not None:
+            roi = self._proxy.set_roi(self._base_ROI)
 
     def finalizeInitialization(self):
         super().finalizeInitialization()
@@ -126,7 +139,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         """Perform subscriptions for this camera."""
         events.subscribe(events.CLEANUP_AFTER_EXPERIMENT,
                 self.cleanupAfterExperiment)
-        events.subscribe('objective change',
+        events.subscribe(events.OBJECTIVE_CHANGE,
                 self.onObjectiveChange)
 
 
@@ -205,6 +218,9 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                  'setExposureTime': self.setExposureTime,
                  'getShutteringMode': self.getShutteringMode,
                  'getSavefileInfo': self.getSavefileInfo,
+                 'setROI': self.setROI,
+                 'getROI': self.getROI,
+                 'getSensorShape': self.getSensorShape,
                  'makeUI': self.makeUI,
                  'softTrigger': self.softTrigger},
             cockpit.handlers.camera.TRIGGER_SOFT,
@@ -262,16 +278,25 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def getImageSize(self, name):
         """Read the image size from the camera."""
-        roi = self._proxy.get_roi()  # left, bottom, right, top
-        if not isinstance(roi, ROI):
-            cockpit.util.logger.log.warning("%s returned tuple not ROI()" % self.name)
-            roi = ROI(*roi)
+        roi = self.getROI(name)
         binning = self._proxy.get_binning()
         if not isinstance(binning, Binning):
             cockpit.util.logger.log.warning("%s returned tuple not Binning()" % self.name)
             binning = Binning(*binning)
         return (roi.width//binning.h, roi.height//binning.v)
 
+    def getROI(self, name):
+        """Read the ROI from the camera"""
+        roi = self._proxy.get_roi()
+        if not isinstance(roi, ROI):
+            cockpit.util.logger.log.warning("%s returned tuple not ROI()" % self.name)
+            roi = ROI(*roi)
+        return roi
+
+    def getSensorShape(self, name):
+        """Read the sensor shape from the camera"""
+        sensor_shape = self._proxy.get_sensor_shape()
+        return sensor_shape
 
     def getSavefileInfo(self, name):
         """Return an info string describing the measurement."""
@@ -322,6 +347,12 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         self._proxy.set_exposure_time(exposureTime / 1000.0)
 
 
+    def setROI(self, name, roi):
+        result = self._proxy.set_roi(roi)
+
+        if not result:
+            cockpit.util.logger.log.warning("%s could not set ROI" % self.name)
+
     def softTrigger(self, name=None):
         if self.enabled:
             self._proxy.soft_trigger()
@@ -329,57 +360,14 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     ### UI functions ###
     def makeUI(self, parent):
-        # TODO - this should probably live in a base deviceHandler.
+        # TODO - this only adds a button with the button for settings.
+        # Maybe that shold all be handled in CameraPanel since the
+        # logic to draw the settings ins the microscope.gui package
+        # anyway.
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        # Readout mode control
-        sizer.Add(wx.StaticText(self.panel, label="Readout mode"))
-        modeButton = wx.Choice(self.panel, choices=self._modenames)
-        self.updateModeButton(modeButton)
-        sizer.Add(modeButton, flag=wx.EXPAND)
-        events.subscribe(events.SETTINGS_CHANGED % self,
-                         lambda: self.updateModeButton(modeButton))
-        modeButton.Bind(wx.EVT_CHOICE, lambda evt: self.setReadoutMode(evt.GetSelection()))
-        sizer.AddSpacer(4)
-        # Gain control
-        sizer.Add(wx.StaticText(self.panel, label="Gain"))
-        gainButton = wx.Button(self.panel,
-                               label="%s" % self.settings.get('gain', None))
-        if 'gain' not in self.settings:
-            gainButton.Disable()
-        gainButton.Bind(wx.EVT_BUTTON, self.onGainButton)
-        sizer.Add(gainButton, flag=wx.EXPAND)
-        events.subscribe(events.SETTINGS_CHANGED % self,
-                         lambda: gainButton.SetLabel("%s" % self.settings.get('gain', None)))
-        sizer.AddSpacer(4)
-        # Settings button
         adv_button = wx.Button(parent=self.panel, label='Settings')
         adv_button.Bind(wx.EVT_LEFT_UP, self.showSettings)
-        sizer.Add(adv_button)
-        self.panel.SetSizerAndFit(sizer)
+        sizer.Add(adv_button, flags=wx.SizerFlags().Expand())
+        self.panel.SetSizer(sizer)
         return self.panel
-
-
-    def updateModeButton(self, button):
-        button.Set(self._modenames)
-        button.SetSelection(self.settings.get('readout mode', 0))
-
-
-    def onGainButton(self, evt):
-        if 'gain' not in self.settings:
-            return
-        desc = self.describe_setting('gain')
-        mingain, maxgain = desc['values']
-        gain = wx.GetNumberFromUser('Gain', '', 'Set gain', value=self.settings.get('gain', 0),
-                                    min=mingain, max=maxgain)
-        if gain == -1:
-            return
-        self.updateSettings({'gain': gain})
-
-    @pauseVideo
-    def setReadoutMode(self, index):
-        if len(self.modes) <= 1:
-            # Only one mode - nothing to do.
-            return
-        self.set_setting('readout mode', self.modes[index][0])
-        self.updateSettings()

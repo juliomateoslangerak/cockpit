@@ -72,7 +72,7 @@ class CamerasWindow(wx.Frame):
     def __init__(self, parent):
         super().__init__(parent, title="Camera views")
 
-        self.numCameras = len(depot.getHandlersOfType(depot.CAMERA))
+        self.numCameras = len(wx.GetApp().Depot.getHandlersOfType(depot.CAMERA))
 
         self.panel = wx.Panel(self)
 
@@ -86,7 +86,7 @@ class CamerasWindow(wx.Frame):
             self.views.append(view)
 
         events.subscribe(events.CAMERA_ENABLE, self.onCameraEnableEvent)
-        events.subscribe("image pixel info", self.onImagePixelInfo)
+        events.subscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
         cockpit.gui.keyboard.setKeyboardHandlers(self)
 
         self.resetGrid()

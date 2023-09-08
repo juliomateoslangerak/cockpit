@@ -171,8 +171,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
         events.subscribe(events.EXPERIMENT_COMPLETE, self.onExperimentComplete)
         events.subscribe(events.STAGE_TOP_BOTTOM, self.Refresh)
-        events.subscribe("soft safety limit", self.onSafetyChange)
-        events.subscribe("stage step size", self.onStepSizeChange)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onSafetyChange)
+        events.subscribe(events.STAGE_STEP_SIZE, self.onStepSizeChange)
         self.SetToolTip(wx.ToolTip("Double-click to move in Z"))
 
 

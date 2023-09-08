@@ -485,6 +485,9 @@ class SIExperiment(experiment.Experiment):
         del doc
         del img_data
 
+        # Copy permissions to new file
+        shutil.copymode(self.savePath, tmp_fh.name)
+
         ## Windows needs to have the file removed first.
         if os.name == "nt":
             os.remove(self.savePath)
@@ -497,6 +500,16 @@ class SIExperiment(experiment.Experiment):
         if self.savePath:
             self.reorder_img_file()
         return
+
+    def lastMinuteActions(self):
+        if self.sliceHeight != 0.125:
+            warning = "Slice height must be 0.125 for softWoRx 3D " \
+                      "reconstruction. Choose:" \
+                      "\n    'OK' to run as is;" \
+                      "\n    'Cancel' to go back and change parameters."
+            if not guiUtils.getUserPermission(warning):
+                return False
+        return True
 
 
 ## A consistent name to use to refer to the class itself.

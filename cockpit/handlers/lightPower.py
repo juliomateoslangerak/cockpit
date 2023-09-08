@@ -49,14 +49,10 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-import concurrent.futures as futures
-import time
-
 from cockpit import depot
 from cockpit.handlers import deviceHandler
 import cockpit.util.logger
 import cockpit.util.userConfig
-import cockpit.util.threads
 
 
 ## This handler is for light sources where the power of the light can be
@@ -67,29 +63,6 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
     # - getPower(): Get current output power level.
     # \param curPower Initial output power.
     # \param isEnabled True iff the handler can be interacted with.
-
-    ## We use a class method to monitor output power by querying hardware.
-    # A list of instances. Light persist until exit, so don't need weakrefs.
-    _instances = []
-    @classmethod
-    @cockpit.util.threads.callInNewThread
-    def _updater(cls):
-        ## Monitor output power and tell controls to update their display.
-        # Querying power status can block while I/O is pending, so we use a
-        # threadpool.
-        # A map of lights to queries.
-        queries = {}
-        with futures.ThreadPoolExecutor() as executor:
-            while True:
-                time.sleep(0.1)
-                for light in cls._instances:
-                    getPower = light.callbacks['getPower']
-                    if light not in queries.keys():
-                        queries[light] = executor.submit(getPower)
-                    elif queries[light].done():
-                        light.lastPower = queries[light].result()
-                        queries[light] = executor.submit(getPower)
-
 
     def __init__(self, name, groupName, callbacks, wavelength, curPower: float,
                  isEnabled=True) -> None:
@@ -104,7 +77,6 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
             raise e
 
         super().__init__(name, groupName, False, callbacks, depot.LIGHT_POWER)
-        LightPowerHandler._instances.append(self)
         self.wavelength = wavelength
         self.lastPower = curPower
         self.powerSetPoint = None
@@ -167,6 +139,3 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
     ## Experiments should include the laser power.
     def getSavefileInfo(self):
         return "%s: %.1f" % (self.name, self.lastPower)
-
-# Fire up the status updater.
-LightPowerHandler._updater()

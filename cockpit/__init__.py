@@ -96,7 +96,16 @@ class CockpitApp(wx.App):
         ## OnInit() will make use of config, and wx.App.__init__()
         ## calls OnInit().  So we need to assign this before super().
         self._config = config
+        self._depot = cockpit.depot.DeviceDepot()
+        # FIXME: some places still access the depot singleton instance
+        # in the module (through the module free functions) so we need
+        # to keep a reference to this object there.
+        cockpit.depot.deviceDepot = self._depot
         super().__init__(redirect=False)
+
+    @property
+    def Depot(self):
+        return self._depot
 
     @property
     def Config(self):
@@ -126,12 +135,15 @@ class CockpitApp(wx.App):
             Pyro4.config.PICKLE_PROTOCOL_VERSION = self.Config[
                 "global"
             ].getint("pyro-pickle-protocol")
+
             depot_config = self.Config.depot_config
-            cockpit.depot.initialize(depot_config)
+
+            self.Depot.initialize(depot_config)
+
             numDevices = len(depot_config.sections()) + 1 # +1 for dummy devices
             numNonDevices = 15
             status = wx.ProgressDialog(parent = None,
-                    title = "Initializing OMX Cockpit",
+                    title = "Initializing Cockpit",
                     message = "Importing modules...",
                     ## Fix maximum: + 1 is for dummy devices
                     maximum = numDevices + numNonDevices)
@@ -147,18 +159,18 @@ class CockpitApp(wx.App):
 
             status.Update(updateNum, "Initializing devices...")
             updateNum+=1
-            for device in cockpit.depot.initialize(depot_config):
+            for device in self.Depot.initialize(depot_config):
                 status.Update(updateNum, "Initializing devices...\n%s" % device)
                 updateNum+=1
             status.Update(updateNum, "Initializing device interfaces...")
             updateNum+=1
 
             self._imager = cockpit.interfaces.imager.Imager(
-                cockpit.depot.getHandlersOfType(cockpit.depot.IMAGER)
+                self.Depot.getHandlersOfType(cockpit.depot.IMAGER)
             )
             cockpit.interfaces.stageMover.initialize()
             self._objectives = cockpit.interfaces.Objectives(
-                cockpit.depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
+                self.Depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
             )
             self._stage = cockpit.interfaces.stageMover.mover
             self._channels = cockpit.interfaces.channels.Channels()
@@ -215,10 +227,10 @@ class CockpitApp(wx.App):
             # Sometimes, status doesn't make it into the list, so test.
             status.Destroy()
 
-            cockpit.depot.makeInitialPublications()
+            self.Depot.makeInitialPublications()
             cockpit.interfaces.stageMover.makeInitialPublications()
 
-            cockpit.events.publish('cockpit initialization complete')
+            cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
             return True
         except Exception as e:
@@ -267,7 +279,7 @@ class CockpitApp(wx.App):
         except:
             cockpit.util.logger.log.error("Error on USER_ABORT during exit")
             cockpit.util.logger.log.error(traceback.format_exc())
-        for dev in cockpit.depot.getAllDevices():
+        for dev in self.Depot.getAllDevices():
             try:
                 dev.onExit()
             except:
@@ -319,7 +331,11 @@ class CockpitApp(wx.App):
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():
                 continue
-            config_name = 'Show Window ' + window.GetTitle()
+            title=window.GetTitle()
+            #camera views title can need to be stripped.
+            if title.startswith('Camera views '):
+                title='Camera views'
+            config_name = 'Show Window ' + title
             cockpit.util.userConfig.setValue(config_name, window.IsShown())
 
 
@@ -349,7 +365,7 @@ def main(argv: typing.Sequence[str]) -> int:
     # HACK: manually exit the program if we find threads running.  At
     # this point, any thread running is non-daemonic, i.e., a thread
     # that doesn't exit when the main thread exits.  These will make
-    # cockipt process hang and require it to be manually terminated.
+    # cockpit process hang and require it to be manually terminated.
     # Why do we have non-daemonic threads?  Daemon status is inherited
     # from the parent thread, and must be manually set.  Since it is
     # easy to forget, we'll leave this here to catch any failure and

@@ -13,7 +13,7 @@ Troubleshooting
 This is a brief introduction to troubleshooting the configuration and
 running a microscope via Cockpit.  More detailed support can be gained
 by raising an issue on the Cockpit `github issues page
-<https://github.com/MicronOxford/cockpit/issues>`__.
+<https://github.com/microscope-cockpit/cockpit/issues>`__.
 
 Startup issues
 ==============
@@ -96,7 +96,7 @@ from this script is below:
 
 In this example it can clearly be seen that ``cameraR`` is closed so
 is the device preventing cockpit from starting up.  This error was
-produced be deliberately connecting to the wrong port to generate an
+produced by deliberately connecting to the wrong port to generate an
 error on startup.
 
 

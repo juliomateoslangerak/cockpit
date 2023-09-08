@@ -104,7 +104,7 @@ class ViewPanel(wx.Panel):
 
         self.disable()
 
-        events.subscribe("filter change", self.onFilterChange)
+        events.subscribe(events.FILTER_CHANGE, self.onFilterChange)
         self.Bind(wx.EVT_LEFT_DCLICK, self.onMouse)
 
     ## User interacted with our current image.
@@ -140,7 +140,7 @@ class ViewPanel(wx.Panel):
             self.Bind(wx.EVT_MENU, lambda event: self.curCamera.toggleState(), item)
         else:
             # Get all inactive cameras.
-            cameras = depot.getHandlersOfType(depot.CAMERA)
+            cameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
             cameras.sort(key = lambda c: c.descriptiveName)
             for camera in cameras:
                 if not camera.getIsEnabled():

@@ -44,15 +44,22 @@ class CockpitConfig(configparser.ConfigParser):
     """Configuration for cockpit.
 
     Args:
-        argv (list<str>): command line options, including the program
-            name.  Will most likely be ``sys.argv``.
+        cmd_line_options (argparse.Namespace): parsed command line
+            options, which controls which configuration files are
+            read, and is then merged into the configuration itself.
 
     """
-    def __init__(self, argv):
+    def __init__(self, cmd_line_options: argparse.Namespace):
         super().__init__(converters=_type_converters)
         self.read_dict(_default_cockpit_config())
 
-        cmd_line_options = _parse_cmd_line_options(argv[1:])
+        ## Check if depot or config files specified exist (see #710).
+        for fname in cmd_line_options.depot_files:
+            if not (os.path.isfile(fname) and os.access(fname, os.R_OK)):
+                raise Exception("Unable to read depot file %s" % fname)
+        for fname in cmd_line_options.config_files:
+            if not (os.path.isfile(fname) and os.access(fname, os.R_OK)):
+                raise Exception("Unable to read config file %s" % fname)
 
         ## Read cockpit config files.  Least "important" files go
         ## first so that later files can override option values.
@@ -149,7 +156,6 @@ class DepotConfig(configparser.ConfigParser):
                     for k, v in file_config[new_section].items():
                         self[new_section][k] = v
 
-
 def _default_cockpit_config():
     default = {
         'global' : {
@@ -170,6 +176,7 @@ def _default_cockpit_config():
         'stage' : {
             # A list of primitives to draw on the macrostage display.
             'primitives' : '',
+            'min-delta-to-display': '0.01',
             ## TODO: come up with sensible defaults.  These are historical.
             'dishAltitude' : '7570',
             'slideAltitude' : '7370',
@@ -179,48 +186,11 @@ def _default_cockpit_config():
             # 'loadPosition' : '',
             # 'unloadPosition' : '',
         },
+        'joystick' : {
+            'speed' : 0.01,
+        }
     }
     return default
-
-
-def _parse_cmd_line_options(options):
-    parser = argparse.ArgumentParser(prog=_PROGRAM_NAME)
-
-    parser.add_argument('--config-file', dest='config_files',
-                        action='append', default=[],
-                        metavar='COCKPIT-CONFIG-PATH',
-                        help='File path for another cockpit config file')
-
-    parser.add_argument('--no-user-config-files',
-                        dest='read_user_config_files',
-                        action='store_false',
-                        help="Do not read user config files")
-    parser.add_argument('--no-system-config-files',
-                        dest='read_system_config_files',
-                        action='store_false',
-                        help="Do not read system config files")
-    parser.add_argument('--no-config-files',
-                        dest='read_config_files',
-                        action='store_false',
-                        help="Do not read user and system config files")
-
-    parser.add_argument('--depot-file', dest='depot_files',
-                        action='append',
-                        metavar='DEPOT-CONFIG-PATH',
-                        help='File path for depot device configuration')
-
-    parser.add_argument('--debug', dest='debug', action='store_true',
-                        help="Enable debug logging level")
-
-    parsed_options = parser.parse_args(options)
-
-    ## '--no-config-files' is just a convenience flag option for
-    ## '--no-user-config-file --no-system-config-files'
-    if not parsed_options.read_config_files:
-        parsed_options.read_user_config_files = False
-        parsed_options.read_system_config_files = False
-
-    return parsed_options
 
 
 def default_system_cockpit_config_files():
@@ -241,23 +211,23 @@ def _default_system_config_dirs():
     """
     if _is_windows():
         try:
-            base_dirs = [os.path.expandvars('%ProgramData%')]
+            base_dirs = [os.path.expandvars(r'%ProgramData%')]
         except KeyError: # Fallback according to KNOWNFOLDERID docs
-            base_dirs = [os.path.expandvars('%SystemDrive%\ProgramData')]
+            base_dirs = [os.path.expandvars(r'%SystemDrive%\ProgramData')]
     elif _is_mac():
         base_dirs = ['/Library/Preferences']
     else: # freedesktop.org Base Directory Specification
-        base_dirs = _get_nonempty_env('XDG_CONFIG_DIRS', '/etc/xdg').split(':')
+        base_dirs = _get_nonempty_env('XDG_CONFIG_DIRS', r'/etc/xdg').split(':')
         base_dirs = [d for d in base_dirs if d] # remove empty entries
     return [os.path.join(d, _PROGRAM_NAME) for d in base_dirs]
 
 def _default_user_config_dir():
     if _is_windows():
-        base_dir = os.path.expandvars('%LocalAppData%')
+        base_dir = os.path.expandvars(r'%LocalAppData%')
     elif _is_mac():
-        base_dir = os.path.expanduser('~/Library/Application Support')
+        base_dir = os.path.expanduser(r'~/Library/Application Support')
     else: # freedesktop.org Base Directory Specification
-        base_dir = _get_nonempty_env('XDG_CONFIG_HOME',
+        base_dir = _get_nonempty_env(r'XDG_CONFIG_HOME',
                                      os.path.join(os.environ['HOME'],
                                                   '.config'))
     return os.path.join(base_dir, _PROGRAM_NAME)
@@ -278,28 +248,21 @@ def _default_system_config_files(fname):
 def _default_log_dir():
     if _is_windows():
         try:
-            base_dir = os.path.expandvars('%LocalAppData%')
+            base_dir = os.path.expandvars(r'%LocalAppData%')
         except KeyError: # Fallback according to KNOWNFOLDERID docs
-            base_dir = os.path.expandvars('%UserProfile%\AppData\Local')
+            base_dir = os.path.expandvars(r'%UserProfile%\AppData\Local')
     elif _is_mac():
-        base_dir = os.path.expanduser('~/Library/Logs')
+        base_dir = os.path.expanduser(r'~/Library/Logs')
     else: # freedesktop.org Base Directory Specification
-        ## Log files are not really cache files, but XDG spec says
-        ## "user-specific non-essential data files" and that's the
-        ## closest thing we have.
-        base_dir = _get_nonempty_env('XDG_CACHE_HOME',
-                                     os.path.join(os.environ['HOME'], '.cache'))
+        base_dir = _get_nonempty_env(
+            'XDG_STATE_HOME',
+            os.path.join(os.environ['HOME'], '.local', 'state')
+        )
     return os.path.join(base_dir, _PROGRAM_NAME)
 
 
 def _default_user_data_dir():
-    ## TODO: need better default.  See issue #320.  But not before we
-    ## add an option to change it in the GUI.
-    if _is_windows():
-        root_dir = 'C:\\'
-    else:
-        root_dir = os.path.expanduser('~')
-    return os.path.join(root_dir, 'MUI_DATA')
+    return os.path.join('~', 'MUI_DATA')
 
 
 def _parse_lines(option: str) -> typing.List[str]:

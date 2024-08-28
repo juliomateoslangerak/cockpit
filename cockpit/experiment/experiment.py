@@ -58,14 +58,17 @@ from cockpit.gui import guiUtils
 
 import cockpit.handlers.camera
 import cockpit.interfaces.stageMover
-import cockpit.util.logger
 
 import decimal
 import gc
+import logging
 import os
 import threading
 import time
 import wx
+
+
+_logger = logging.getLogger(__name__)
 
 
 ## Purely for debugging purposes, a copy of the last Experiment that was
@@ -227,10 +230,8 @@ class Experiment:
             if not guiUtils.getUserPermission(warning):
                 return False
 
-
-        # ToDo: check duration of action table against timelapse settings
-        # display appropriate warnings.
-        self.lastMinuteActions()
+        if not self.lastMinuteActions():
+            return False
 
         self._run_thread = threading.Thread(target=self.execute,
                                             name="Experiment-execute")
@@ -257,6 +258,7 @@ class Experiment:
                                                      max_wavelength)
 
             saver = dataSaver.DataSaver(self.cameras, self.numReps,
+                                        self.repDuration,
                                         self.cameraToImageCount,
                                         self.cameraToIgnoredImageIndices,
                                         self._run_thread, self.savePath,
@@ -324,7 +326,7 @@ class Experiment:
     ## Do any last-minute actions immediately before starting the experiment.
     # Return False if anything goes wrong.
     def lastMinuteActions(self):
-        pass
+        return True
 
     ## Generate an ActionTable of events to perform during the experiment.
     # Return the ActionTable instance.
@@ -333,7 +335,7 @@ class Experiment:
 
     ## Run the experiment. Return True if it was successful.
     def execute(self):
-        cockpit.util.logger.log.info("Experiment.execute started.")
+        _logger.info("Experiment.execute started.")
         # Iteratively find the ExperimentExecutor that can tackle the largest
         # portion of self.table, have them run it, and wait for them to finish.
         executors = depot.getHandlersOfType(depot.EXECUTOR)
@@ -352,7 +354,11 @@ class Experiment:
                     delay += max(0, time.time() - nextTime)
 
                 if self.shouldAbort:
-                    cockpit.util.logger.log.error("Cancelling on rep %d after %d actions due to user abort" % (rep, curIndex))
+                    _logger.error(
+                        "Cancelling on rep %d after %d actions due to user abort",
+                        rep,
+                        curIndex,
+                    )
                     break
                 best = None
                 bestLen = 0
@@ -403,7 +409,7 @@ class Experiment:
 
             if shouldStop:
                 # All reps handled by an executor.
-                cockpit.util.logger.log.debug("Stopping now at %.2f" % time.time())
+                _logger.debug("Stopping now at %.2f", time.time())
                 break
             # Wait for the end of the rep.
             if rep != self.numReps - 1:
@@ -412,7 +418,7 @@ class Experiment:
         ## TODO: figure out how long we should wait for the last captures to complete.
         # For now, wait 1s.
         time.sleep(1.)
-        cockpit.util.logger.log.info("Experiment.execute completed.")
+        _logger.info("Experiment.execute completed.")
         return True
 
     ## Wait for the provided thread(s) to finish, then clean up our handlers.
@@ -439,7 +445,7 @@ class Experiment:
 
     ## Generate the "titles" that provide extra miscellaneous information
     # about the experiment. These are part of the MRC file format spec:
-    # http://msg.ucsf.edu/IVE/IVE4_HTML/IM_ref2.html
+    # https://web.archive.org/web/20190129061250/http://msg.ucsf.edu/IVE/IVE4_HTML/IM_ref2.html
     # There can be up to 10 titles and they can have up to 80 characters each.
     # We group them by device type.
     def generateTitles(self):

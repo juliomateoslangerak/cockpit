@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2021 University of Oxford
+## Copyright (C) 2024 David Miguel Susano Pinto
 ##
 ## This file is part of Cockpit.
 ##
@@ -20,19 +20,23 @@
 
 import unittest
 
-import cockpit.gui.freetype
-from cockpit.testsuite.test_gui import WxTestCase
+import cockpit
 
 
-class FaceTestCase(WxTestCase):
-    def setUp(self):
-        super().setUp()
-        self.face = cockpit.gui.freetype.Face(self.frame, 18)
+class TestGetHelp(unittest.TestCase):
+    """Test getting help text / usage from command line options.
 
-    def test_render(self):
-        ## Not sure how to actual test if it gets rendered, but this
-        ## should at least not error.
-        self.face.render('foobar')
+    This test was added to ensure that the SystemExit exception
+    triggered by argparse when handling `--help` is not accidentally
+    caught to be displayed in a GUI like a "real" exception.
+
+    """
+    def test(self):
+        with self.assertRaises(SystemExit) as cm:
+            cockpit.main(["cockpit", "--help"])
+        self.assertEqual(
+            cm.exception.code, 0, "exit code from --help should be zero"
+        )
 
 
 if __name__ == '__main__':

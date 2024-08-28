@@ -51,13 +51,23 @@
 
 
 ## This module serves as a central coordination point for all devices. Devices
-# are initialized and registered from here, and if a part of the UI wants to 
+# are initialized and registered from here, and if a part of the UI wants to
 # interact with a specific kind of device, they can find it through the depot.
 
 import collections
 import configparser
 import os
+from concurrent.futures import ThreadPoolExecutor
 
+from cockpit.devices.dummies import (
+    DummyCamera,
+    DummyDSP,
+    DummyLaser,
+    DummyStage,
+    DummyStage,
+)
+from cockpit.devices.objective import ObjectiveDevice
+from cockpit.devices.server import CockpitServer
 from cockpit.handlers.deviceHandler import DeviceHandler
 
 ## Different eligible device handler types. These correspond 1-to-1 to
@@ -75,6 +85,8 @@ OBJECTIVE = "objective"
 POWER_CONTROL = "power control"
 SERVER = "server"
 STAGE_POSITIONER = "stage positioner"
+DIO = "digital io"
+VALUE_LOGGER = "value logger"
 
 SKIP_CONFIG = ['server']
 
@@ -109,8 +121,6 @@ class DeviceDepot:
         print("Cockpit is running from %s" % os.path.split(os.path.abspath(__file__))[0])
 
         # Create our server
-        from cockpit.devices.server import CockpitServer
-
         ## TODO remove special case by having fallback empty section?
         ## Or fallback to the defaults in the class?
         if config.has_section('server'):
@@ -164,7 +174,6 @@ class DeviceDepot:
 
         # Dummy objectives
         if not getHandlersOfType(OBJECTIVE):
-            from cockpit.devices.objective import ObjectiveDevice
             dummy_obj_config = {
                 "40x": {
                     "pixel_size": "0.2",
@@ -189,14 +198,12 @@ class DeviceDepot:
         # Dummy stages
         axes = self.getSortedStageMovers().keys()
         if 2 not in axes:
-            from cockpit.devices.dummies import DummyStage
             dummies.append(DummyStage("dummy Z stage",
                                       {"z-lower-limits": "0",
                                        "z-upper-limits": "2500",
                                        "z-units-per-micron": "1"}))
 
         if (0 not in axes) or (1 not in axes):
-            from cockpit.devices.dummies import DummyStage
             dummies.append(DummyStage("dummy XY stage",
                                       {"x-lower-limits": "0",
                                        "x-upper-limits": "25000",
@@ -207,16 +214,13 @@ class DeviceDepot:
 
         # Cameras
         if not getHandlersOfType(CAMERA):
-            from cockpit.devices.dummies import DummyCamera
             for i in range(1, 5):
                 dummies.append(DummyCamera('Dummy camera %d' % i, {}))
         # Dummy imager
         if not getHandlersOfType(IMAGER):
-            from cockpit.devices.dummies import DummyDSP
             dummies.append(DummyDSP('imager', {}))
         # Dummy laser
         if not getHandlersOfType(LIGHT_TOGGLE):
-            from cockpit.devices.dummies import DummyLaser
             for wl in [405, 488, 633]:
                 dummies.append(DummyLaser('Dummy %d' % wl, {'wavelength' : wl}))
         # Initialise dummies.
@@ -272,14 +276,22 @@ class DeviceDepot:
     ## Do any extra initialization needed now that everything is properly
     # set up.
     def finalizeInitialization(self):
-        from concurrent.futures import ThreadPoolExecutor
+        futures = []
         with ThreadPoolExecutor(max_workers=4) as pool:
-           for device in self.nameToDevice.values():
-               pool.submit(device.finalizeInitialization)
-        # Context manager ensures devices are finalized before handlers.
+            for device in self.nameToDevice.values():
+                futures.append(pool.submit(device.finalizeInitialization))
+        for future in futures:
+            if future.exception():
+                raise future.exception()
+
+        # Ensure devices are finalized before handlers.
+        futures = []
         with ThreadPoolExecutor(max_workers=4) as pool:
             for handler in self.handlersList:
-                pool.submit(handler.finalizeInitialization)
+                futures.append(pool.submit(handler.finalizeInitialization))
+        for future in futures:
+            if future.exception():
+                raise future.exception()
 
 
     ## Return a mapping of axis to a sorted list of positioners for that axis.
@@ -298,90 +310,99 @@ class DeviceDepot:
             )
         return axisToMovers
 
+    def getHandlerWithName(self, name):
+        """Return the handler with the specified name."""
+        return self.nameToHandler.get(name, None)
+
+    def getHandlersOfType(self, deviceType):
+        """Return all registered device handlers of the appropriate type."""
+        return self.deviceTypeToHandlers[deviceType]
+
+    def getHandlersInGroup(self, groupName):
+        """Return all registered device handlers in the appropriate group."""
+        return self.groupNameToHandlers[groupName]
+
+    def getAllHandlers(self):
+        """Get all registered device handlers."""
+        return self.nameToHandler.values()
+
+    def getAllDevices(self):
+        """Get all registered devices."""
+        return self.nameToDevice.values()
+
+    def getActiveCameras(self):
+        """Get all cameras that are currently in use."""
+        cameras = self.getHandlersOfType(CAMERA)
+        result = []
+        for camera in cameras:
+            if camera.getIsEnabled():
+                result.append(camera)
+        return result
+
+    def getDeviceWithName(self, name):
+        """Get a device by its name."""
+        return self.nameToDevice.get(name)
+
+    def getHandler(self, nameOrDevice, handlerType):
+        """Get the handlers of a specific type for a device."""
+        if isinstance(nameOrDevice, DeviceHandler):
+            if nameOrDevice.deviceType == handlerType:
+                return nameOrDevice
+        if isinstance(nameOrDevice, str):
+            dev = self.getDeviceWithName(nameOrDevice)
+        else:
+            dev = nameOrDevice
+
+        handlers = set(self.getHandlersOfType(handlerType))
+        devHandlers = set(self.deviceToHandlers.get(dev, []))
+        handlers = handlers.intersection(devHandlers)
+        if len(handlers) == 0:
+            return None
+        elif len(handlers) == 1:
+            return handlers.pop()
+        else:
+            return list(handlers)
 
 
-## XXX: Global singleton
+## XXX: Global singleton and a bunch of simple passthroughs because
+## this module has historically been used as the object itself.
 deviceDepot = None
 
-
-## Simple passthrough.
+## Simple passthrough
 def initialize(config):
-    global deviceDepot
-    deviceDepot = DeviceDepot()
     for device in deviceDepot.initialize(config):
         yield device
 
 
-## Simple passthrough.
 def makeInitialPublications():
     deviceDepot.makeInitialPublications()
 
-
-## Return the handler with the specified name.
 def getHandlerWithName(name):
-    return deviceDepot.nameToHandler.get(name, None)
+    return deviceDepot.getHandlerWithName(name)
 
-
-## Return all registered device handlers of the appropriate type.
 def getHandlersOfType(deviceType):
-    return deviceDepot.deviceTypeToHandlers[deviceType]
+    return deviceDepot.getHandlersOfType(deviceType)
 
-
-## Return all registered device handlers in the appropriate group.
 def getHandlersInGroup(groupName):
-    return deviceDepot.groupNameToHandlers[groupName]
+    return deviceDepot.getHandlersInGroup(groupName)
 
-
-## Get all registered device handlers.
 def getAllHandlers():
-    return deviceDepot.nameToHandler.values()
+    return deviceDepot.getAllHandlers()
 
-
-## Get all registered devices.
 def getAllDevices():
-    return deviceDepot.nameToDevice.values()
+    return deviceDepot.getAllDevices()
 
-
-## Simple passthrough.
 def getSortedStageMovers():
     return deviceDepot.getSortedStageMovers()
 
-
-## Get all cameras that are currently in use.
 def getActiveCameras():
-    cameras = getHandlersOfType(CAMERA)
-    result = []
-    for camera in cameras:
-        if camera.getIsEnabled():
-            result.append(camera)
-    return result
+    return deviceDepot.getActiveCameras()
 
-
-## Add a handler
 def addHandler(handler, device=None):
     return deviceDepot.addHandler(handler, device)
 
-## Get a device by its name.
 def getDeviceWithName(name):
     return deviceDepot.nameToDevice.get(name)
 
-
-## Get the handlers of a specific type for a device.
 def getHandler(nameOrDevice, handlerType):
-    if isinstance(nameOrDevice, DeviceHandler):
-        if nameOrDevice.deviceType == handlerType:
-            return nameOrDevice
-    if isinstance(nameOrDevice, str):
-        dev = getDeviceWithName(nameOrDevice)
-    else:
-        dev = nameOrDevice
-
-    handlers = set(getHandlersOfType(handlerType))
-    devHandlers = set(deviceDepot.deviceToHandlers.get(dev, []))
-    handlers = handlers.intersection(devHandlers)
-    if len(handlers) == 0:
-        return None
-    elif len(handlers) == 1:
-        return handlers.pop()
-    else:
-        return list(handlers)
+    return deviceDepot.getHandler(nameOrDevice, handlerType)

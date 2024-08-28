@@ -47,7 +47,7 @@
 ## THE POSSIBILITY OF SUCH DAMAGE.
 
 """MRC file format: refer to
-http://www.msg.ucsf.edu/IVE/IVE4_HTML/IM_ref2.html
+https://web.archive.org/web/20190129061250/http://msg.ucsf.edu/IVE/IVE4_HTML/IM_ref2.html
 
 Mrc class uses memory mapping (file size limit about 1GB (more or less)
 Mrc2 class section wise file/array I/O
@@ -566,7 +566,7 @@ class Mrc2:
         self._shape = (nsecs, ny,nx) # todo: wavelenths , times
         self._shape2d = self._shape[-2:]
         self._dtype  = MrcMode2dtype( self.hdr.PixelType )
-        self._secByteSize = N.nbytes[self._dtype] * N.prod( self._shape2d )
+        self._secByteSize = self._dtype.itemsize * N.prod( self._shape2d )
 
     def setHdrForShapeType(self, shape, type ):
         mrcmode = dtype2MrcMode(type)
@@ -774,7 +774,7 @@ def shapeFromHdr(hdr, verbose=0):
 # my hack to allow thinks like a.Mrc.hdr.d = (1,2,3)
 def implement_hdr(hdrArray):
     class hdr:
-        __slots__ = mrcHdrNames[:] + ['_array']
+        __slots__ = list(mrcHdr_dtype.names) + ['_array']
         def __init__(s):
             pass
         def __setattr__(s, n, v):
@@ -961,7 +961,7 @@ def init_simple(hdr, mode, nxOrShape, ny=None, nz=None):
     hdr.type= 0
     hdr.nspg= 0
     hdr.next= 0
-    hdr.dvid= 0xc0a0
+    hdr.dvid = -16224
     hdr.blank= 0
     hdr.NumIntegers= 0
     hdr.NumFloats= 0
@@ -1094,49 +1094,42 @@ def adjusted_data_shape(numel, shape):
     return tuple(shape)
 
 
-mrcHdrFields = [
-    ('3i4', 'Num'),
-    ('1i4', 'PixelType'),
-    ('3i4', 'mst'),
-    ('3i4', 'm'),
-    ('3f4', 'd'),
-    ('3f4', 'angle'),
-    ('3i4', 'axis'),
-    ('3f4', 'mmm1'),
-    ('1i2', 'type'),
-    ('1i2', 'nspg'),
-    ('1i4', 'next'),
-    ('1i2', 'dvid'),
-    ('30i1', 'blank'),
-    ('1i2', 'NumIntegers', 'Number of 4 byte integers stored in the extended header per section. '),
-    ('1i2', 'NumFloats', 'Number of 4 byte floating-point numbers stored in the extended header per section. '),
-    ('1i2', 'sub', 'Number of sub-resolution data sets stored within the image. Typically, this equals 1. '),
-    ('1i2', 'zfac', 'Reduction quotient for the z axis of the sub-resolution images. '),
-    ('2f4', 'mm2', 'Minimum intensity of the 2nd wavelength image. '),
-    ('2f4', 'mm3', 'Minimum intensity of the 2nd wavelength image. '),
-    ('2f4', 'mm4', 'Minimum intensity of the 2nd wavelength image. '),
-    ('1i2', 'ImageType', 'Image type. See Image Type table below. '),
-    ('1i2', 'LensNum', 'Lens identification number.'),
-    ('1i2', 'n1', 'Depends on the image type.'),
-    ('1i2', 'n2', 'Depends on the image type.'),
-    ('1i2', 'v1', 'Depends on the image type. '),
-    ('1i2', 'v2', 'Depends on the image type. '),
-    ('2f4', 'mm5', 'Minimum intensity of the 2nd wavelength image. '),
-    ('1i2', 'NumTimes', 'Number of time points.'),
-    ('1i2', 'ImgSequence', 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
-    ('3f4', 'tilt', 'X axis tilt angle (degrees). '),
-    ('1i2', 'NumWaves', 'Number of wavelengths.'),
-    ('5i2', 'wave', 'Wavelength 1, in nm.'),
-    ('3f4', 'zxy0', 'X origin, in um.'),
-    ('1i4', 'NumTitles', 'Number of titles. Valid numbers are between 0 and 10. '),
-    ('10a80', 'title', 'Title 1. 80 characters long. '),
-]
-
-mrcHdrNames = []
-mrcHdrFormats = []
-for ff in mrcHdrFields:
-    mrcHdrFormats.append(ff[0])
-    mrcHdrNames.append(ff[1])
-del ff
-del mrcHdrFields
-mrcHdr_dtype = list(zip(mrcHdrNames, mrcHdrFormats))
+mrcHdr_dtype = N.dtype(
+    [
+        ("Num", "i4", (3,)),
+        ("PixelType", "i4"),
+        ("mst", "i4", (3,)),
+        ("m", "i4", (3,)),
+        ("d", "f4", (3,)),
+        ("angle", "f4", (3,)),
+        ("axis", "i4", (3,)),
+        ("mmm1", "f4", (3,)),
+        ("type", "i2"),
+        ("nspg", "i2"),
+        ("next", "i4"),
+        ("dvid", "i2"),
+        ("blank", "i1", (30,)),
+        ("NumIntegers", "i2"),  # Number of 4 byte integers stored in the extended header per section.
+        ("NumFloats", "i2"),  # Number of 4 byte floating-point numbers stored in the extended header per section.
+        ("sub", "i2"),  # Number of sub-resolution data sets stored within the image. Typically, this equals 1.
+        ("zfac", "i2"),  # Reduction quotient for the z axis of the sub-resolution images.
+        ("mm2", "f4", (2,)),  # Minimum intensity of the 2nd wavelength image.
+        ("mm3", "f4", (2,)),  # Minimum intensity of the 2nd wavelength image.
+        ("mm4", "f4", (2,)),  # Minimum intensity of the 2nd wavelength image.
+        ("ImageType", "i2"),  # Image type. See Image Type table below.
+        ("LensNum", "i2"),  # Lens identification number.
+        ("n1", "i2"),  # Depends on the image type.
+        ("n2", "i2"),  # Depends on the image type.
+        ("v1", "i2"),  # Depends on the image type.
+        ("v2", "i2"),  # Depends on the image type.
+        ("mm5", "f4", (2,)),  # Minimum intensity of the 2nd wavelength image.
+        ("NumTimes", "i2"),  # Number of time points.
+        ("ImgSequence", "i2"),  # Image sequence. 0=ZTW, 1=WZT, 2=ZWT.
+        ("tilt", "f4", (3,)),  # X axis tilt angle (degrees).
+        ("NumWaves", "i2"),  # Number of wavelengths.
+        ("wave", "i2", (5,)),  # Wavelength 1, in nm.
+        ("zxy0", "f4", (3,)),  # X origin, in µm.
+        ("NumTitles", "i4"),  # Number of titles. Valid numbers are between 0 and 10.
+        ("title", "a80", (10,)),  # Title 1. 80 characters long.
+    ]
+)

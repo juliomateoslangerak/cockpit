@@ -28,6 +28,7 @@ import matplotlib
 import numpy as np
 import os
 import wx
+import sys
 
 matplotlib.use('WXAgg')
 import matplotlib.dates
@@ -55,7 +56,8 @@ def make_bitmap(hex, text=None):
         dc = wx.MemoryDC()
         dc.SelectObject(bmp)
         w, h = dc.GetTextExtent(text)
-        dc.DrawText(text, (BMP_SIZE[0] - w) / 2,  (BMP_SIZE[1] - h) / 2)
+        dc.DrawText(text, int((BMP_SIZE[0] - w) / 2),
+                    int((BMP_SIZE[1] - h) / 2))
         dc.SelectObject(wx.NullBitmap)
     return bmp
 
@@ -545,7 +547,6 @@ class CSVPlotter(wx.Frame):
 
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) <= 1:
         filenames = glob.glob("*.log")
     else:

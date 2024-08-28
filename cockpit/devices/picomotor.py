@@ -55,11 +55,15 @@ from cockpit import events
 import cockpit.handlers.stagePositioner
 import cockpit.util.threads
 
+import logging
 import socket
 import threading
 import time
 
-import cockpit.util.logger
+
+_logger = logging.getLogger(__name__)
+
+
 ## TODO: test with hardware.
 
 
@@ -204,7 +208,7 @@ class PicoMotorDevice(device.Device):
             self.sendXYCommand('%s pa 100' %
                                (self.axisMapper[axis]),0)
             #calculate how to move back to where we were
-            endpositon[axis]=-newposition[axis]+oldposition[axis]
+            endposition[axis]=-newposition[axis]+origPosition[axis]
                         
   
         print ("home done now returning to last position",endposition)
@@ -301,8 +305,11 @@ class PicoMotorDevice(device.Device):
                 try :
                     response = self.xyConnection.recv(1024)
                 except :
-                    cockpit.util.logger.log.debug("in command %s, %d, No response",
-                                              command,numExpectedLines)
+                    _logger.debug(
+                        "in command %s, %d, No response",
+                        command,
+                        numExpectedLines
+                    )
                 return response
 
 
@@ -314,7 +321,7 @@ class PicoMotorDevice(device.Device):
         numLines = 0
         while True:
             output = self.xyConnection.recv(1024)
-            cockpit.util.logger.log.debug("Picomotor responce %s", output)
+            _logger.debug("Picomotor responce %s", output)
             response += output
             numLines += 1
             if numLines == numExpectedLines:

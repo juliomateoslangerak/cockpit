@@ -95,7 +95,7 @@ class DataDoc:
         ## Size in pixels of the data, since having it as a Numpy array
         # instead of a tuple (from self.imageArray.shape) is occasionally
         # handy.
-        self.size = numpy.array([self.numWavelengths, numTimepoints, numZ, numY, numX], dtype = numpy.int)
+        self.size = numpy.array([self.numWavelengths, numTimepoints, numZ, numY, numX], dtype = int)
         ## 5D array of pixel data, indexed as
         # self.imageArray[wavelength][time][z][y][x]
         # In other words, in WTZYX order. In general we try to treat
@@ -124,7 +124,7 @@ class DataDoc:
 
         ## Index of the single pixel that is visible in all different data
         # views.
-        self.curViewIndex = numpy.array(self.size / 2, numpy.int)
+        self.curViewIndex = numpy.array(self.size / 2, int)
         # Initial time view is at 0
         self.curViewIndex[1] = 0
 
@@ -389,7 +389,7 @@ class DataDoc:
             transformedCoord = numpy.array([coord[0],
                     transformedCoord[2], transformedCoord[1],
                     transformedCoord[0]],
-                dtype = numpy.int
+                dtype = int
             )
             resultCoords[wavelength,:] = transformedCoord
             transformedCoord.shape = 4, 1
@@ -501,7 +501,7 @@ class DataDoc:
                 del self.image.Mrc
 
             # Write out the header.
-            outputFile = file(savePath, 'wb')
+            outputFile = open(savePath, 'wb')
             outputFile.write(newHeader._array.tostring())
 
         # Slices to use to crop out the 3D volume we want to use for each
@@ -618,7 +618,7 @@ class DataDoc:
             output[i] = scipy.ndimage.affine_transform(slice, invertedTransform,
                     offset, output = numpy.float32, cval = slice.min(),
                     order = order)
-        output = scipy.ndimage.interpolation.shift(output, [dz, dy, dx],
+        output = scipy.ndimage.shift(output, [dz, dy, dx],
                 order = order)
         return output
 
@@ -689,7 +689,6 @@ def writeMrcHeader(header, filehandle):
 # the left (e.g. a 512x512 array becomes a 1x1x1x512x512 array).
 def writeDataAsMrc(data, filename, XYSize = None, ZSize = None, wavelengths = [],
                    zxy0=None):
-    print(zxy0)
     shape = (5 - len(data.shape)) * [1] + list(data.shape)
     data_out = data.reshape(shape)
     header = makeHeaderFor(data_out, XYSize = XYSize, ZSize = ZSize,
@@ -698,6 +697,44 @@ def writeDataAsMrc(data, filename, XYSize = None, ZSize = None, wavelengths = []
     writeMrcHeader(header, handle)
     handle.seek(1024) # Seek to end of header
     data_out.tofile(handle)
+    handle.close()
+
+
+## Write out the provided data array as if it were an MRC file. Note that
+# the input array must be in WTZYX order; if the array has insufficient
+# dimensions it will be augmented with dimensions of size 1 starting from
+# the left (e.g. a 512x512 array becomes a 1x1x1x512x512 array).
+def writeDataAsMrcWithExthdr(data, filename, XYSize = None,
+                             ZSize = None, wavelengths = [],
+                             zxy0=None, lensID=None, intMetadataBuffers = [],
+                             floatMetadataBuffers = []):
+    shape = (5 - len(data.shape)) * [1] + list(data.shape)
+    data_out = data.reshape(shape)
+    header = makeHeaderFor(data_out, XYSize = XYSize, ZSize = ZSize,
+                           wavelengths = wavelengths,zxy0=zxy0)
+    #deal with extended header meta data
+    numIntegers = len(intMetadataBuffers)
+    numFloats = len(floatMetadataBuffers)
+    header.NumIntegers = numIntegers
+    header.NumFloats = numFloats
+    header.LensNum = lensID
+    extendedBytes = 4 * (numIntegers + numFloats)
+    header.next = extendedBytes
+    
+    handle = open(filename, 'wb')
+    writeMrcHeader(header, handle)
+
+    metadataOffset = 1024 
+    dataOffset = (1024 + extendedBytes)
+    try:
+        handle.seek(metadataOffset)
+        handle.write(intMetadataBuffers)
+        handle.write(floatMetadataBuffers)
+        handle.seek(dataOffset) # Seek to end of header
+        data_out.tofile(handle)
+    except Exception as e:
+        print ("Error writing image:",e)
+        raise e
     handle.close()
 
 

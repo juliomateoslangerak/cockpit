@@ -55,13 +55,17 @@
 # Python on it to start the program. It initializes everything and creates
 # the GUI.
 
+import argparse
 import importlib
+import logging
 import os
+import os.path
 import sys
 import threading
+import time
 import traceback
-import typing
 import wx
+from typing import List
 
 import Pyro4
 
@@ -75,9 +79,10 @@ import cockpit.interfaces
 import cockpit.interfaces.channels
 import cockpit.interfaces.imager
 import cockpit.interfaces.stageMover
-import cockpit.util.files
-import cockpit.util.logger
 import cockpit.util.userConfig
+
+
+_logger = logging.getLogger(__name__)
 
 
 # Required since Pyro4 v4.22 (which is a project requirement anyway)
@@ -96,7 +101,16 @@ class CockpitApp(wx.App):
         ## OnInit() will make use of config, and wx.App.__init__()
         ## calls OnInit().  So we need to assign this before super().
         self._config = config
+        self._depot = cockpit.depot.DeviceDepot()
+        # FIXME: some places still access the depot singleton instance
+        # in the module (through the module free functions) so we need
+        # to keep a reference to this object there.
+        cockpit.depot.deviceDepot = self._depot
         super().__init__(redirect=False)
+
+    @property
+    def Depot(self):
+        return self._depot
 
     @property
     def Config(self):
@@ -126,12 +140,15 @@ class CockpitApp(wx.App):
             Pyro4.config.PICKLE_PROTOCOL_VERSION = self.Config[
                 "global"
             ].getint("pyro-pickle-protocol")
+
             depot_config = self.Config.depot_config
-            cockpit.depot.initialize(depot_config)
+
+            self.Depot.initialize(depot_config)
+
             numDevices = len(depot_config.sections()) + 1 # +1 for dummy devices
             numNonDevices = 15
             status = wx.ProgressDialog(parent = None,
-                    title = "Initializing OMX Cockpit",
+                    title = "Initializing Cockpit",
                     message = "Importing modules...",
                     ## Fix maximum: + 1 is for dummy devices
                     maximum = numDevices + numNonDevices)
@@ -147,18 +164,18 @@ class CockpitApp(wx.App):
 
             status.Update(updateNum, "Initializing devices...")
             updateNum+=1
-            for device in cockpit.depot.initialize(depot_config):
+            for device in self.Depot.initialize(depot_config):
                 status.Update(updateNum, "Initializing devices...\n%s" % device)
                 updateNum+=1
             status.Update(updateNum, "Initializing device interfaces...")
             updateNum+=1
 
             self._imager = cockpit.interfaces.imager.Imager(
-                cockpit.depot.getHandlersOfType(cockpit.depot.IMAGER)
+                self.Depot.getHandlersOfType(cockpit.depot.IMAGER)
             )
             cockpit.interfaces.stageMover.initialize()
             self._objectives = cockpit.interfaces.Objectives(
-                cockpit.depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
+                self.Depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
             )
             self._stage = cockpit.interfaces.stageMover.mover
             self._channels = cockpit.interfaces.channels.Channels()
@@ -215,16 +232,16 @@ class CockpitApp(wx.App):
             # Sometimes, status doesn't make it into the list, so test.
             status.Destroy()
 
-            cockpit.depot.makeInitialPublications()
+            self.Depot.makeInitialPublications()
             cockpit.interfaces.stageMover.makeInitialPublications()
 
-            cockpit.events.publish('cockpit initialization complete')
+            cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
             return True
         except Exception as e:
             cockpit.gui.ExceptionBox(caption='Failed to initialise cockpit')
-            cockpit.util.logger.log.error("Initialization failed: %s" % e)
-            cockpit.util.logger.log.error(traceback.format_exc())
+            _logger.error("Initialization failed: %s" % e)
+            _logger.error(traceback.format_exc())
             return False
 
     def onActivateApp(self, event):
@@ -265,16 +282,14 @@ class CockpitApp(wx.App):
         try:
             cockpit.events.publish(cockpit.events.USER_ABORT)
         except:
-            cockpit.util.logger.log.error("Error on USER_ABORT during exit")
-            cockpit.util.logger.log.error(traceback.format_exc())
-        for dev in cockpit.depot.getAllDevices():
+            _logger.error("Error on USER_ABORT during exit")
+            _logger.error(traceback.format_exc())
+        for dev in self.Depot.getAllDevices():
             try:
                 dev.onExit()
             except:
-                cockpit.util.logger.log.error(
-                    "Error on device '%s' during exit", dev.name
-                )
-                cockpit.util.logger.log.error(traceback.format_exc())
+                _logger.error("Error on device '%s' during exit", dev.name)
+                _logger.error(traceback.format_exc())
         # Documentation states that we must return the same return value
         # as the base class.
         return super().OnExit()
@@ -319,37 +334,157 @@ class CockpitApp(wx.App):
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():
                 continue
-            config_name = 'Show Window ' + window.GetTitle()
+            title=window.GetTitle()
+            #camera views title can need to be stripped.
+            if title.startswith('Camera views '):
+                title='Camera views'
+            config_name = 'Show Window ' + title
             cockpit.util.userConfig.setValue(config_name, window.IsShown())
 
 
-def main(argv: typing.Sequence[str]) -> int:
-    ## wxglcanvas (used in the mosaic windows) does not work with
-    ## wayland (see https://trac.wxwidgets.org/ticket/17702).  The
-    ## workaround is to force GTK to use the x11 backend.  See also
-    ## cockpit issue #347
-    if wx.Platform == '__WXGTK__' and 'GDK_BACKEND' not in os.environ:
-        os.environ['GDK_BACKEND'] = 'x11'
+def show_exception_app() -> None:
+    app = wx.App()
+    cockpit.gui.ExceptionBox(caption='Failed to initialise cockpit')
+    ## We ProcessPendingEvents() instead of entering the MainLoop()
+    ## because we won't have more windows created, meaning that the
+    ## program would not exit after closing the exception box.
+    app.ProcessPendingEvents()
 
+
+def _parse_cmd_line_args(cmd_line_args: List[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="cockpit")
+
+    parser.add_argument(
+        "--config-file",
+        dest="config_files",
+        action="append",
+        default=[],
+        metavar="COCKPIT-CONFIG-PATH",
+        help="File path for another cockpit config file",
+    )
+    parser.add_argument(
+        "--no-user-config-files",
+        dest="read_user_config_files",
+        action="store_false",
+        help="Do not read user config files"
+    )
+    parser.add_argument(
+        "--no-system-config-files",
+        dest="read_system_config_files",
+        action="store_false",
+        help="Do not read system config files"
+    )
+    parser.add_argument(
+        "--no-config-files",
+        dest="read_config_files",
+        action="store_false",
+        help="Do not read user and system config files"
+    )
+
+    parser.add_argument(
+        "--depot-file",
+        dest="depot_files",
+        action="append",
+        default=[],
+        metavar="DEPOT-CONFIG-PATH",
+        help="File path for depot device configuration"
+    )
+
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable debug logging level"
+    )
+
+    cmd_line_options = parser.parse_args(cmd_line_args[1:])
+
+    ## '--no-config-files' is just a convenience flag option for
+    ## '--no-user-config-file --no-system-config-files'
+    if not cmd_line_options.read_config_files:
+        cmd_line_options.read_user_config_files = False
+        cmd_line_options.read_system_config_files = False
+
+    return cmd_line_options
+
+
+def _configure_logging(config) -> None:
+    """Setup the *root* logger.
+
+    Args:
+        logging_config (``configparser.SectionProxy``): the config
+            section for the logger.
+    """
+    log_dir = config.getpath('dir')
+    os.makedirs(log_dir, exist_ok=True)
+
+    filename = time.strftime(config.get('filename-template'))
+    filepath = os.path.join(log_dir, filename)
+
+    level = getattr(logging, config.get('level').upper())
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+
+    log_handler = logging.FileHandler(filepath, mode = "a")
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s'
+                                  + ' %(module)10s:%(lineno)4d'
+                                  + '  %(message)s')
+    log_handler.setFormatter(formatter)
+    log_handler.setLevel(level)
+    root_logger.addHandler(log_handler)
+
+
+def _pre_gui_init(argv: List[str]) -> cockpit.config.CockpitConfig:
+    """Cockpit initialisation before we have a GUI."""
+    ## Logging setup has four phases:
+    ##
+    ##   1) an initial configuration with Python's default so we can
+    ##      have logs from the very beginning even if only on the
+    ##      command line;
+    ##   2) after parsing the command line options, maybe change the
+    ##      logging level if there is --debug flag;
+    ##   3) after we have read and parse all configuration files,
+    ##      logging starts properly possibly written to a file (in
+    ##      addition to the command line);
+    ##   4) once the CockpitApp have started, logs are also displayed
+    ##      on Cockpit's logging window.
+
+    logging.basicConfig()
+    cmd_line_options = _parse_cmd_line_args(argv)
+    if cmd_line_options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    config = cockpit.config.CockpitConfig(cmd_line_options)
+    _configure_logging(config['log'])
+
+    data_dir = config.getpath('global', 'data-dir')
+    _logger.info("Creating data-dir '%s' if needed", data_dir)
+    os.makedirs(data_dir, exist_ok=True)
+
+    return config
+
+
+def main(argv: List[str]) -> int:
     try:
-        config = cockpit.config.CockpitConfig(argv)
-        cockpit.util.logger.makeLogger(config['log'])
-        cockpit.util.files.initialize(config)
-    except:
-        app = wx.App()
-        cockpit.gui.ExceptionBox(caption='Failed to initialise cockpit')
-        # We ProcessPendingEvents() instead of entering the MainLoop()
-        # because we won't have more windows created, meaning that the
-        # program would not exit after closing the exception box.
-        app.ProcessPendingEvents()
-    else:
-        app = CockpitApp(config=config)
-        app.MainLoop()
+        config = _pre_gui_init(argv)
+    ## If anything happens during this initial stage there is no UI
+    ## yet, so create a simple UI to display the exception text.
+    ## Then, re-raise the caught exception so that it is displayed on
+    ## command line and for whatever cleanup Python does.
+    except SystemExit as ex:
+        ## Do not show exception UI on exit code zero because it was
+        ## not an error, maybe 'cockpit --help' was called.
+        if ex.code != 0:
+            show_exception_app()
+        raise ex
+    except BaseException as ex:
+        show_exception_app()
+        raise ex
+
+    app = CockpitApp(config=config)
+    app.MainLoop()
 
     # HACK: manually exit the program if we find threads running.  At
     # this point, any thread running is non-daemonic, i.e., a thread
     # that doesn't exit when the main thread exits.  These will make
-    # cockipt process hang and require it to be manually terminated.
+    # cockpit process hang and require it to be manually terminated.
     # Why do we have non-daemonic threads?  Daemon status is inherited
     # from the parent thread, and must be manually set.  Since it is
     # easy to forget, we'll leave this here to catch any failure and
@@ -362,13 +497,11 @@ def main(argv: typing.Sequence[str]) -> int:
         if not thread.daemon and thread is not threading.main_thread():
             badThreads.append(thread)
     if badThreads:
-        cockpit.util.logger.log.error(
+        _logger.error(
             "Found %d non-daemon threads at exit.  These are:", len(badThreads)
         )
         for thread in badThreads:
-            cockpit.util.logger.log.error(
-                "Thread '%s': %s", thread.name, thread.__dict__
-            )
+            _logger.error("Thread '%s': %s", thread.name, thread.__dict__)
         os._exit(1)
     return 0
 

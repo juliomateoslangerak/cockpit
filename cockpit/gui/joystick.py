@@ -18,12 +18,17 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-
-from operator import sub
+import logging
 import sys
 import time
+from operator import sub
+
 import wx
 import wx.adv
+
+
+_logger = logging.getLogger(__name__)
+
 
 # Define a button comparison function that supports the different
 # enumeration schemes on Windows and Linux as at wxWidgets version 3.1.2.
@@ -47,6 +52,7 @@ else:
 _CLICKMS = 200
 _THRESHOLD = 300
 
+
 # Joystick behaviour
 #   move, no button     - pan mosaic window
 #   move, button 0 held - move XY stage
@@ -66,7 +72,21 @@ import cockpit.gui.mosaic.window as mosaic
 
 class Joystick:
     def __init__(self, window):
-        if sys.platform == 'darwin':
+        # Support for Joysticks in wx is conditional (see #870)
+        if not wx.adv.USE_JOYSTICK:
+            _logger.warning(
+                'wxWidgets was built without joystick support'
+                ' so it is disabled in Cockpit too.'
+            )
+            return None
+        # While Joysticks methods work in Window and Linux when there
+        # are no Joysticks connected, it errors in Mac so we really
+        # need to check this (see #870)
+        if wx.adv.Joystick.GetNumberJoysticks() == 0:
+            _logger.info(
+                'wxWidgets found no joysticks so support for them'
+                ' is disabled in Cockpit.'
+            )
             return None
         self._stick = wx.adv.Joystick()
         self._stick.SetCapture(window, 50)
@@ -75,6 +95,8 @@ class Joystick:
         self._centre = ( (self._stick.XMin + self._stick.XMax) // 2,
                         (self._stick.YMin + self._stick.YMax) // 2)
         self._buttonDownTimes = {}
+        self._speed = self.Config["joystick"].getfloat("speed")
+
         window.Bind(wx.EVT_JOY_MOVE, self._onMoveEvent)
         window.Bind(wx.EVT_JOY_BUTTON_DOWN, self._onButtonDown)
         window.Bind(wx.EVT_JOY_BUTTON_UP, self._onButtonUp)
@@ -124,8 +146,8 @@ class Joystick:
                 mosaic.window.canvas.multiplyZoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
-            moveRelative([-0.01*d for d in delta] + [0], False)
+            moveRelative([-0.01*d*self._speed for d in delta] + [0], False)
         elif buttonTest(event.ButtonState, 1):
-            moveRelative([0, 0, -0.01*delta[1]], False)
+            moveRelative([0, 0, -0.01*delta[1]*self._speed], False)
         else:
-            mosaic.window.canvas.dragView(tuple(0.01*d for d in delta))
+            mosaic.window.canvas.dragView(tuple(0.01*d*self._speed for d in delta))

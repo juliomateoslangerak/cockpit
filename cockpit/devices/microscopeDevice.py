@@ -43,10 +43,13 @@ For connection via a controller::
 
 """
 
+import collections.abc
+import logging
 import typing
 
 import Pyro4
 import wx
+import time
 from cockpit import events
 from cockpit.devices import device
 from cockpit import depot
@@ -55,14 +58,21 @@ import cockpit.handlers.deviceHandler
 import cockpit.handlers.filterHandler
 import cockpit.handlers.lightPower
 import cockpit.handlers.lightSource
+import cockpit.handlers.digitalioHandler
 import cockpit.util.colors
 import cockpit.util.userConfig
 import cockpit.util.threads
+import cockpit.util.listener
+from cockpit.util import valueLogger
 from cockpit.gui.device import SettingsEditor
 from cockpit.handlers.stagePositioner import PositionerHandler
 from cockpit.interfaces import stageMover
 import re
-from microscope.devices import AxisLimits
+from microscope import AxisLimits
+
+
+_logger = logging.getLogger(__name__)
+
 
 # Pseudo-enum to track whether device defaults in place.
 (DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
@@ -129,7 +139,7 @@ class MicroscopeBase(device.Device):
         settings = {}
         if ss:
             settings.update(([m.groups() for kv in ss.split('\n')
-                             for m in [re.match(r'(.*)\s*[:=]\s*(.*)', kv)] if m]))
+                             for m in [re.match(r'(.*?)\s*[:=]\s*(.*?)$', kv)] if m]))
         for k,v in settings.items():
             try:
                 desc = self.describe_setting(k)
@@ -179,7 +189,6 @@ class MicroscopeBase(device.Device):
             # on the handler. The handler should probably expose the
             # settings interface.
             self.setAnyDefaults()
-            import collections.abc
             if self.handlers and isinstance(self.handlers, collections.abc.Sequence):
                 h = self.handlers[0]
             elif self.handlers:
@@ -361,14 +370,14 @@ class MicroscopeFilter(MicroscopeBase):
         # Cameras
         cdefs = self.config.get('cameras', None)
         if cdefs:
-            self.cameras = re.split('[,;]\s*', cdefs)
+            self.cameras = re.split(r'[,;]\s*', cdefs)
         else:
             self.cameras = None
 
         # Lights
         ldefs = self.config.get('lights', None)
         if ldefs:
-            self.lights = re.split('[,;]\s*', ldefs)
+            self.lights = re.split(r'[,;]\s*', ldefs)
         else:
             self.lights = None
 
@@ -378,7 +387,7 @@ class MicroscopeFilter(MicroscopeBase):
             raise Exception(
                 "Missing 'filters' value for device '%s'" % self.name
             )
-        fdefs = [re.split(':\s*|,\s*', f) for f in re.split('\n', fdefs) if f]
+        fdefs = [re.split(r':\s*|,\s*', f) for f in re.split(r'\n', fdefs) if f]
         self.filters = [cockpit.handlers.filterHandler.Filter(*f) for f in fdefs]
 
 
@@ -520,6 +529,22 @@ class MicroscopeStage(MicroscopeBase):
     def initialize(self) -> None:
         super().initialize()
 
+        if self._proxy.may_move_on_enable():
+            # Motors will home during enable.
+            title = "Stage needs to move"
+            msg = (
+                "The '%s' stage needs to find the home position."
+                " Homing may move it so please ensure that there are"
+                " no obstructions, then press 'OK' to home the stage."
+                " If you press 'Cancel' the stage will not be homed"
+                " and its behaviour will be unpredictable."
+                % (self.name)
+            )
+            if cockpit.gui.guiUtils.getUserPermission(msg, title):
+                 self._proxy.enable()
+        else:
+            self._proxy.enable()
+
         # The names of the axiss we have already configured, to avoid
         # handling the same one under different names, and to ensure
         # that we have all axis configured.
@@ -561,22 +586,368 @@ class MicroscopeStage(MicroscopeBase):
                 # them?
                 raise Exception('No configuration for the axis named \'%s\''
                                 % their_axis_name)
-
-        if self._proxy.may_move_on_enable():
-            # Motors will home during enable.
-            title = "Stage needs to move"
-            msg = (
-                "The '%s' stage needs to find the home position."
-                " Homing may move it so please ensure that there are"
-                " no obstructions, then press 'OK' to home the stage."
-                " If you press 'Cancel' the stage will not be homed"
-                " and its behaviour will be unpredictable."
-                % (self.name)
-            )
-            if cockpit.gui.guiUtils.getUserPermission(msg, title):
-                 self._proxy.enable()
-
-
+        #check if we need to poll for updates of position
+        #This is usually required as there is a manual joystick which can move
+        #the stage without cockit knowing about it.
+        #Note: currently this varibale isnt checked, all stages are polled
+        #in macrostageXY.
+        self.pollStage = bool(self.config.get('poll-stage',False))
+        if (self.pollStage):
+            if len(self._axes) == int(self.config.get('num-stage-axes',0)):
+                #need to know in advance how many axis need to initilized
+                self.pollInterval=float(self.config.get('poll-interval',10))
+                self._positionCache = [0.0 for x in range(len(self._axes))]
+            
     def getHandlers(self) -> typing.List[PositionerHandler]:
         # Override MicroscopeBase.getHandlers.  Do not call super.
         return [x.getHandler() for x in self._axes]
+
+class MicroscopeDIO(MicroscopeBase):
+    """Device class for asynchronous Digital Inout and Output signals.
+    This class enables the configuration of named buttons in main GUI window
+    to control for situation such a switchable excitation paths.
+
+    Additionally it provides a debug window which allow control of the 
+    state of all output lines and the direction (input or output) of each 
+    control line assuming the hardware support this.
+    """
+
+    def __init__(self, name: str, config: typing.Mapping[str, str]) -> None:
+        super().__init__(name, config)
+        self.name = name
+
+    def initialize(self) -> None:
+        super().initialize()
+        self.numLines=self._proxy.get_num_lines()
+        #cache which we can read from if we dont want a roundtrip
+        #to the remote.
+        self._cache = [False]*self.numLines
+        self.labels = [""]*self.numLines
+        self.IOMap = [None]*self.numLines
+
+        #read config entries if they exisit to
+        iomapConfig = self.config.get('iomap',[None]*self.numLines)
+        if iomapConfig[0] is not None:
+            #config is deifned so read it into a bool variable,
+            # else it is all [Nones]
+            iomap=iomapConfig.split(',')
+            for i,state in enumerate(iomap):
+                self.IOMap[i]=bool(int(state))
+        labels = self.config.get('labels',None)
+        paths = self.config.get('paths',None)
+
+        if self.IOMap[0] is not None:
+            #first entry is not None so map defined
+            self._proxy.set_all_IO_state(self.IOMap)
+        else:
+            #no map so set all lines to output
+            self._proxy.set_all_IO_state([True]*self.numLines)
+        #start all output lines as false
+        for i in range(self.numLines):
+            if self.IOMap[i]:
+                self.write_line(i,False)
+                
+        ##extract names of lines from file, too many are ignored,
+        ## too few are padded with str(line number)
+        templabels=[]
+        if labels:
+            templabels=eval(labels)
+        for i in range(self.numLines):
+            if i<len(templabels):
+                self.labels[i]=templabels[i]
+            else:
+                self.labels[i]=("Line %d" %i)
+        # extract defined paths
+        if paths:
+            self.paths=eval(paths)
+        else:
+            self.paths={}
+        # Lister to receive data back from hardware
+        self.listener = cockpit.util.listener.Listener(self._proxy,
+                                               lambda *args:
+                                                       self.receiveData(*args))
+        #log to record line state chnages
+        self.logger = valueLogger.ValueLogger(self.name,
+                    keys=self.labels)
+        events.subscribe(events.DIO_INPUT,self.log_state_change)
+        events.subscribe(events.DIO_OUTPUT,self.log_state_change)
+
+
+
+    def read_line(self, line: int, cache=False, updateGUI=True) -> int:
+        if cache:
+            return self._cache[line]
+        state = self._proxy.read_line(line)
+        if updateGUI:
+            #prevent a loop by calling this read line in the button
+            #toggle code
+            events.publish(events.DIO_INPUT,line,state)
+        return state
+
+    def read_all_lines(self, cache=False):
+        if cache:
+            return self._cache
+        states=self._proxy.read_all_lines()
+        for i in range(len(states)):
+            events.publish(events.DIO_INPUT,i,states[i])
+        return (states)
+
+    def write_line(self, line: int, state: bool) -> None:
+        self._proxy.write_line(line,state)
+        events.publish(events.DIO_OUTPUT,line,state)
+
+    def write_all_lines(self, array):
+        self._proxy.write_all_lines(array)
+        for i in range(len(array)):
+            events.publish(events.DIO_OUTPUT,i,array[i])
+
+    def get_IO_state(self,line, cache=False):
+        if cache:
+            return(self.IOMap[line])
+        state=self._proxy.get_IO_state(line)
+        self.IOMap[line] = state
+        return(state)
+
+    def set_IO_state(self,line,state):
+        self.IOMap[line] = state
+        self._proxy.set_IO_state(line,state)
+
+    def enable(self,state):
+        if state:
+            self._proxy.enable()
+            self.listener.connect()
+            return(True)
+        else:
+            self._proxy.disable()
+            self.listener.disconnect()
+            return(False)
+
+    def log_state_change(self,line,state):
+        #log befroe we update cache to get sharp transitions.
+        self.logger.log(list(map(int,self._cache)))
+        self._cache[line]=state
+        #need to map bool's to ints for valuelogviewer
+        self.logger.log(list(map(int,self._cache)))
+
+        
+    ## Debugging function: display a debug window.
+    def showDebugWindow(self):
+        self.DIOdebugWindow=DIOOutputWindow(self, parent=wx.GetApp().GetTopWindow()).Show()
+
+    def getHandlers(self):
+        """Return device handlers."""
+        ##nneds functions to get and set signals for save and load
+        ##channel functionality. 
+        h = cockpit.handlers.digitalioHandler.DigitalIOHandler(self.name,
+                             'DIO', False, 
+                            {'setOutputs': self.write_all_lines,
+                             'setIOstate': self.set_IO_state,
+                             'getOutputs': self.read_all_lines,
+                             'getIOstate': self.get_IO_state,
+                             'getPaths': self.getPaths,
+                             'write line': self.write_line,
+                             'get labels': self.getLabels,
+                             'enable': self.enable})
+        self.handlers = [h]
+        return self.handlers
+
+    def getLabels(self):
+        return self.labels
+
+    def getPaths(self):
+        return self.paths
+
+    def receiveData(self, *args):
+        """This function is called when input line state is received from 
+        the hardware."""
+        ((line,state),timestamp) = args
+        if self.IOMap[line]:
+            #this is meant to be an output line!
+            raise Exception('Input signal received on an output digital line')
+        #State changed send event to interested parties.
+        events.publish(events.DIO_INPUT,line,state)
+
+## This debugging window lets each digital lineout of the DIO device
+## be manipulated individually.
+
+class DIOOutputWindow(wx.Frame):
+    def __init__(self, DIO, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        ## piDevice instance.
+        self.DIO = DIO
+        # Contains all widgets.
+        panel = wx.Panel(self)
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        toggleSizer = wx.GridSizer(1, DIO.numLines, 1, 1)
+        buttonSizer = wx.GridSizer(1, DIO.numLines, 1, 1)
+
+        ## Maps buttons to their lines.
+        self.lineToButton = {}
+        self.state=self.DIO._proxy.read_all_lines()
+        # Set up the digital lineout buttons.
+        for i in range(DIO.numLines) :
+            #state of IO , output or Input
+            toggle = wx.ToggleButton(panel, wx.ID_ANY)
+            toggle.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.updateState())
+            toggleSizer.Add(toggle, 1, wx.EXPAND)
+            ioState=self.DIO.get_IO_state(i)
+            toggle.SetValue(ioState)
+            if ioState:
+                toggle.SetLabel("Output")
+            else:
+                toggle.SetLabel("Input")
+            #Button to toggle state of output lines.
+            button = wx.ToggleButton(panel, wx.ID_ANY, self.DIO.labels[i])
+            button.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.toggle())
+            buttonSizer.Add(button, 1, wx.EXPAND)
+            self.lineToButton[i] = [toggle,button]
+            if (self.state[i] is not None):
+                button.SetValue(bool(self.state[i]))
+            else:
+                #if no state reported from remote set to false
+                button.SetValue(False)
+            if (ioState==False):
+                #need to do something like colour the button red
+                button.Disable()
+                button.SetLabel(str(int(self.DIO.read_line(i))))
+            else:
+                button.Enable()
+
+        mainSizer.Add(toggleSizer)
+        mainSizer.Add(buttonSizer)
+        panel.SetSizerAndFit(mainSizer)
+        self.SetClientSize(panel.GetSize())
+        events.subscribe(events.DIO_OUTPUT,self.outputChanged)
+        events.subscribe(events.DIO_INPUT,self.inputChanged)
+
+    #functions to updated chaces and GUI displays when DIO state changes. 
+    def outputChanged(self,line,state):
+        #check this is an output line
+        if self.DIO.IOMap:
+            self.lineToButton[line][1].SetValue(state)
+            self.updateState(line,bool(state))
+
+    def inputChanged(self,line,state):
+        self.updateState(line,bool(state))
+
+    ## One of our buttons was clicked; update the debug output.
+    def toggle(self):
+        for line, (toggle, button)  in self.lineToButton.items():
+            if (self.DIO.get_IO_state(line)):
+                self.DIO.write_line(line, button.GetValue())
+            else:
+                #read input state.
+                button.SetValue=bool(self.DIO.read_line(line,updateGUI=False))
+
+    ## One of our buttons was clicked; update the debug output.
+    @cockpit.util.threads.callInMainThread
+    def updateState(self,line = None,state = None):
+        if (line is not None) and (state is not None):
+            _logger.debug("Line %d returned %s", line, str(state))
+            if (self.DIO.get_IO_state(line)):
+                #output button have names
+                self.lineToButton[line][1].SetLabel(self.DIO.labels[line])
+            else:
+                self.lineToButton[line][1].SetLabel(str(int(state)))
+            return()
+        for line, (toggle, button)  in self.lineToButton.items():
+            state=toggle.GetValue()
+            self.DIO.set_IO_state(line, state)
+            if state:
+                button.Enable()
+                toggle.SetLabel("Output")
+                button.SetLabel(self.DIO.labels[line])
+            else:
+                button.Disable()
+                toggle.SetLabel("Input")
+                state=self.DIO.read_line(line,updateGUI = False)
+                button.SetLabel(str(int(state)))
+
+
+class MicroscopeValueLogger(MicroscopeBase):
+    """Device class for asynchronous Digital Input and Output signals.
+    This class enables the configuration of named buttons in main GUI window
+    to control for situation such a switchable excitation paths.
+
+    Additionally it provides a debug window which allow control of the 
+    state of all output lines and the direction (input or output) of each 
+    control line assuming the hardware support this.
+    """
+
+    def __init__(self, name: str, config: typing.Mapping[str, str]) -> None:
+        super().__init__(name, config)
+        self.name = name
+
+    def initialize(self) -> None:
+        super().initialize()
+        self.numSensors=self._proxy.get_num_sensors()
+        #cache which we can read from if we dont want a roundtrip
+        #to the remote.
+        self._cache = [False]*self.numSensors
+        self.labels = [""]*self.numSensors
+        labels = self.config.get('labels',None)
+        ##do we get data pushed or do we pull it from the remote. 
+        self.pullData = self.config.get('pulldata',False)
+        self.pollInterval = int(self.config.get('pollinterval',20))
+        ##extract names of lines from file, too many are ignored,
+        ## too few are padded with str(line number)
+        templabels=[]
+        if labels:
+            templabels=eval(labels)
+        for i in range(self.numSensors):
+            if i<len(templabels):
+                self.labels[i]=templabels[i]
+            else:
+                self.labels[i]=("Sensor %d" %i)
+        # Lister to receive data back from hardware
+        if not self.pullData:
+            #data is pushed so we need the start a listerner to receive the data
+            self.listener = cockpit.util.listener.Listener(self._proxy,
+                                               lambda *args:
+                                                       self.receiveData(*args))
+            #log to record line state chnages
+            self.logger = valueLogger.ValueLogger(self.name,
+                                                  keys=self.labels)
+        else:
+            self.logger = valueLogger.PollingLogger(self.name,
+                                                     self.pollInterval,
+                                                     self.getRemoteValues,
+                                                     keys=self.labels)
+
+        self.enable(True)
+        
+    def receiveData(self, *args):
+        """This function is called when sensors push data from the remote and 
+        return data from the hardware."""
+        (data,timestamp) = args
+        events.publish(events.VALUELOGGER_INPUT,data)
+        self.logger.log(data)
+
+    def getRemoteValues(self):
+        """This calls the remote getValues() function to 
+        pull data from the remote hardware."""
+        data=self._proxy.getValues()
+        events.publish(events.VALUELOGGER_INPUT,data)
+        return(data)
+        
+    def enable(self,state):
+        if state:
+            self._proxy.enable()
+            if not self.pullData:
+                self.listener.connect()
+            return(True)
+        else:
+            self._proxy.disable()
+            if not self.pullData:
+                self.listener.disconnect()
+            else:
+                # Is this a race condition should we stop the event then
+                # disable the proxy?
+                self.logger.__stopEvent.set()
+            return(False)
+
+    #ensure we stop the polling if we are shutting down. 
+    def onExit(self):
+        self.enable(False)
+

@@ -18,11 +18,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import os
 import os.path
 import pprint
 
-from cockpit.util import logger
+
+_logger = logging.getLogger(__name__)
+
 
 ## @package userConfig
 # This module handles loading and saving changes to user configuration, which
@@ -43,8 +46,9 @@ def _loadConfig(fpath):
     except FileNotFoundError:
         config = {}
     except SyntaxError as e:
-        logger.log.error("invalid or corrupted user config file '%s': %s",
-                         fpath, str(e))
+        _logger.error(
+            "invalid or corrupted user config file '%s': %s", fpath, str(e)
+        )
     return config
 
 

@@ -54,19 +54,21 @@ from cockpit import depot
 import cockpit.experiment.experimentRegistry
 from cockpit.gui import guiUtils
 import cockpit.interfaces.stageMover
-import cockpit.util.logger
 import cockpit.util.userConfig
-import cockpit.util.files
 
 import collections
 import decimal
 import json
+import logging
 import os.path
 import time
 import traceback
 import typing
 
 import wx
+
+
+_logger = logging.getLogger(__name__)
 
 
 ## @package dialogs.experimentConfigPanel
@@ -106,9 +108,9 @@ class ExperimentConfigPanel(wx.Panel):
         # debugging, so we can examine the state of the experiment.
         self.runner = None
 
-        self.allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        self.allLights = wx.GetApp().Depot.getHandlersOfType(depot.LIGHT_TOGGLE)
         self.allLights.sort(key = lambda l: l.wavelength)
-        self.allCameras = depot.getHandlersOfType(depot.CAMERA)
+        self.allCameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
         self.allCameras.sort(key = lambda c: c.name)
 
         ## Map of default settings as loaded from config.
@@ -362,7 +364,7 @@ class ExperimentConfigPanel(wx.Panel):
         # Get the filepath to save settings to.
         dialog = wx.FileDialog(self, style = wx.FD_SAVE, wildcard = '*.txt',
                 message = 'Please select where to save the experiment.',
-                defaultDir = cockpit.util.files.getUserSaveDir())
+                defaultDir=wx.GetApp().Config.getpath('global', 'data-dir'))
         if dialog.ShowModal() != wx.ID_OK:
             # User cancelled.
             return
@@ -371,9 +373,9 @@ class ExperimentConfigPanel(wx.Panel):
         try:
             handle.write(json.dumps(settings))
         except Exception as e:
-            cockpit.util.logger.log.error("Couldn't save experiment settings: %s" % e)
-            cockpit.util.logger.log.error(traceback.format_exc())
-            cockpit.util.logger.log.error("Settings are:\n%s" % str(settings))
+            _logger.error("Couldn't save experiment settings: %s" % e)
+            _logger.error(traceback.format_exc())
+            _logger.error("Settings are:\n%s" % str(settings))
         handle.close()
         
 
@@ -382,7 +384,7 @@ class ExperimentConfigPanel(wx.Panel):
     def onLoadExperiment(self, event = None):
         dialog = wx.FileDialog(self, style = wx.FD_OPEN, wildcard = '*.txt',
                 message = 'Please select the experiment file to load.',
-                defaultDir = cockpit.util.files.getUserSaveDir())
+                defaultDir=wx.GetApp().Config.getpath('global', 'data-dir'))
         if dialog.ShowModal() != wx.ID_OK:
             # User cancelled.
             return
@@ -411,12 +413,12 @@ class ExperimentConfigPanel(wx.Panel):
         self.saveSettings()
         # Find the Z mover with the smallest range of motion, assumed
         # to be our experiment mover.
-        mover = depot.getSortedStageMovers()[2][-1]
+        mover = wx.GetApp().Depot.getSortedStageMovers()[2][-1]
         # Only use active cameras and enabled lights.
         # Must do list(filter) because we will iterate over the list
         # many times.
         cameras = list(filter(lambda c: c.getIsEnabled(),
-                depot.getHandlersOfType(depot.CAMERA)))
+                wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)))
         if not cameras:
             wx.MessageDialog(self,
                     message = "No cameras are enabled, so the experiment cannot be run.",
@@ -529,7 +531,7 @@ class FilepathPanel(wx.Panel):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._dir_ctrl = wx.DirPickerCtrl(
-            self, path=cockpit.util.files.getUserSaveDir()
+            self, path=wx.GetApp().Config.getpath('global', 'data-dir')
         )
         self._template_ctrl = wx.TextCtrl(self)
         self._template_ctrl.SetToolTip(

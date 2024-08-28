@@ -20,6 +20,7 @@
 
 import configparser
 import contextlib
+import decimal
 import os
 import os.path
 import posixpath
@@ -27,7 +28,9 @@ import tempfile
 import unittest
 import unittest.mock
 
+import cockpit
 import cockpit.config
+import cockpit.devices.light
 
 """Test units for cockpit.config
 """
@@ -85,7 +88,8 @@ def patched_config_dirs(system_basedirs, user_basedir):
 
 
 def call_cockpit(*args):
-    return cockpit.config.CockpitConfig(['cockpit', *args])
+    parsed_args = cockpit._parse_cmd_line_args(["cockpit", *args])
+    return cockpit.config.CockpitConfig(parsed_args)
 
 
 class TempConfigFile:
@@ -155,11 +159,9 @@ class TestGetType(TestConfigConverters):
         self.assertTypes('str', str)
 
     def test_python_stdlib_type(self):
-        import decimal
         self.assertTypes('decimal.Decimal', decimal.Decimal)
 
     def test_cockpit_device_type(self):
-        import cockpit.devices.light
         self.assertTypes('cockpit.devices.light.SimpleLight',
                           cockpit.devices.light.SimpleLight)
 
@@ -257,7 +259,7 @@ class TestLinuxPaths(unittest.TestCase):
     def test_default_without_xdg_variables(self):
         """Default files and directories in Linux systems"""
         with patched_env({'HOME' : '/srv/people'}):
-            for var in ('XDG_CONFIG_DIRS', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME'):
+            for var in ('XDG_CONFIG_DIRS', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME'):
                 os.environ.pop(var, None)
             self.assertEqual(cockpit.config.default_system_cockpit_config_files(),
                              ['/etc/xdg/cockpit/cockpit.conf'])
@@ -268,7 +270,7 @@ class TestLinuxPaths(unittest.TestCase):
             self.assertEqual(cockpit.config.default_user_depot_config_files(),
                              ['/srv/people/.config/cockpit/depot.conf'])
             self.assertEqual(cockpit.config._default_log_dir(),
-                             '/srv/people/.cache/cockpit')
+                             '/srv/people/.local/state/cockpit')
             self.assertEqual(cockpit.config._default_user_config_dir(),
                              '/srv/people/.config/cockpit')
 

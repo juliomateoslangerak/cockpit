@@ -67,7 +67,7 @@ class ImageSequenceViewer(wx.Frame):
         self.images = images
         self.title = title
         ## Current image/pixel under examination.
-        self.curViewIndex = numpy.zeros(5, dtype = numpy.int)
+        self.curViewIndex = numpy.zeros(5, dtype = int)
 
         ## Panel for holding UI widgets.
         self.panel = wx.Panel(self)
@@ -86,7 +86,8 @@ class ImageSequenceViewer(wx.Frame):
         sizer.Add(sliderSizer)
 
         self.canvas = cockpit.gui.imageViewer.viewCanvas.ViewCanvas(self.panel,
-                size = (self.images.shape[-1], self.images.shape[-2] + 40) )
+                size = (max(self.images.shape[-1], self.images.shape[-2]),
+                        max(self.images.shape[-1], self.images.shape[-2])+ 40) )
         sizer.Add(self.canvas)
         self.panel.SetSizerAndFit(sizer)
         temp = wx.BoxSizer(wx.VERTICAL)
@@ -97,7 +98,7 @@ class ImageSequenceViewer(wx.Frame):
         # to access curViewIndex in self.setCurImage we get strange values.
         self.setCurImage()
 
-        events.subscribe('image pixel info', self.onImagePixelInfo)
+        events.subscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
         self.Bind(wx.EVT_CLOSE, self.onClose)
         accelTable = wx.AcceleratorTable([
             (wx.ACCEL_NORMAL, wx.WXK_NUMPAD_MULTIPLY, 1), 
@@ -114,7 +115,7 @@ class ImageSequenceViewer(wx.Frame):
     ## Unsubscribe from the pixel info event so we don't leave stale functions
     # lying around.
     def onClose(self, event):
-        events.unsubscribe('image pixel info', self.onImagePixelInfo)
+        events.unsubscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
         event.Skip()
 
 

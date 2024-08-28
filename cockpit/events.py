@@ -39,13 +39,11 @@ For example::
 
     # subscribe obj.on_user_abort so that it is called when the
     # USER_ABORT event is published.
-    events.subscribe(events.USER_ABORT,
-                     obj.on_user_abort)
+    events.subscribe(events.USER_ABORT, obj.on_user_abort)
 
     # Publish the CAMERA_ENABLE event as well as the associated data,
     # camera handler and whether it has been enabled or disabled.
-    events.publish(events.CAMERA_ENABLE,
-                   camera_handler, is_enabled)
+    events.publish(events.CAMERA_ENABLE, camera_handler, is_enabled)
 
 Beware
 ======
@@ -65,7 +63,14 @@ Available events
 Anything can be "published".  The following is a list of events that
 the system expects.
 
+``COCKPIT_INIT_COMPLETE``
+    Cockpit initialisation has completed, some hardware may need to
+    take additional init steps.
+
 ``CAMERA_ENABLE``
+
+``UPDATE_ROI``
+    A camera has updated its ROI which might change other displays.
 
 ``CLEANUP_AFTER_EXPERIMENT``
 
@@ -74,74 +79,93 @@ the system expects.
 ``EXECUTOR_DONE % executor_name``
 
 ``EXPERIMENT_COMPLETE``
-  The entirety of an experiment has finished execution.
+    The entirety of an experiment has finished execution.
 
 ``EXPERIMENT_EXECUTION``
-  Some component of the currently-running experiment has finished.
+    Some component of the currently-running experiment has finished.
 
 ``LIGHT_SOURCE_ENABLE``
-  The light source associated with the provided handler has been
-  enabled / disabled for taking images.
+    The light source associated with the provided handler has been
+    enabled / disabled for taking images.
+
+``LIGHT_EXPOSURE_UPDATE``
+    The exposure time on a light source has been updated
 
 ``MOSAIC_UPDATE``
 
-``NEW_IMAGE % camera name``
-  An image has arrived for the camera with the given name.
+``MOSAIC_START``
+    A mosaic has been started
+
+``NEW_IMAGE % camera_name``
+    An image has arrived for the camera with the given name.
 
 ``PREPARE_FOR_EXPERIMENT``
-  An experiment is about to be executed, so devices should prepare
-  themselves.
+    An experiment is about to be executed, so devices should prepare
+    themselves.
 
-``SETTINGS_CHANGED % deviceor_handler_name``
+``SETTINGS_CHANGED % device_or_handler_name``
 
 ``STAGE_MOVER``
-  A ``StagePositioner`` handler is moving.
+    A :class:`StagePositioner` handler is moving.
 
 ``STAGE_POSITION``
-  The stage currently is at the specified position.
+    The stage currently is at the specified position.
 
 ``STAGE_STOPPED``
-  A ``StagePositioner`` handler has stopped moving.
+    A :class:`StagePositioner` handler has stopped moving.
+
+``MACRO_STAGE_XY_DRAW``
 
 ``STAGE_TOP_BOTTOM``
 
 ``UPDATE_STATUS_LIGHT``
 
 ``USER_ABORT``
-  The user clicked on the Abort button.
+    The user clicked on the "Abort" button.
 
 ``VIDEO_MODE_TOGGLE``
 
 ``SYNCED_VIEW``
-Enabled on camera view images that are synced with zoom/pan to other views. 
+    Enabled on camera view images that are synced with zoom/pan to
+    other views.
 
-``"filter change"``
+``DIO_OUTPUT``
+    A DIO output line has changed state
 
-``"image pixel info"``
-  The mouse has moved over a camera view, and the specified
-  coordinates have the given value.
+``DIO_INPUT``
+    A DIO input line has changed state
+
+``VALUELOGGER_INPUT``
+    New :class:`ValueLogger` data has arrived
+
+``FILTER_CHANGE``
+    There has been a filter change on some beam path.
+
+``IMAGE_PIXEL_INFO``
+    The mouse has moved over a camera view, and the specified
+    coordinates have the given value.
 
 ``"new site"``
-  The user has marked a position as being of interest.
+    The user has marked a position as being of interest.
 
-``"objective change"``
-  The objective has been changed.
+``OBJECTIVE_CHANGE``
+    The objective has been changed.
 
-``"site deleted"``
-  The specified Site is to be forgotten.
+``DELETE_SITE``
+    The specified Site is to be forgotten.
 
-``"soft safety limit"``
-  The software-enforced motion limits for the given axis (summing all
-  stage-positioner devices) have been changed.
+``SOFT_SAFETY_LIMIT``
+    The software-enforced motion limits for the given axis (summing
+    all stage-positioner devices) have changed.
 
-``"stage step index"``
-  Which Handler is currently being used to move the stage has been
-  changed; the Handlers are arranged in order of maximum range of
-  motion.
+``STAGE_STEP_INDEX``
+    Which ``Handler`` is currently being used to move the stage has
+    been changed; the Handlers are arranged in order of maximum range
+    of motion.
 
-``"stage step size"``
-  The amount of distance the stage will move when the user uses the
-  numeric keypad has changed.
+``STAGE_STEP_SIZE``
+    The amount of distance the stage will move when the user uses the
+    numeric keypad has changed.
 
 """
 
@@ -153,6 +177,7 @@ import typing
 
 ## Define common event strings here. This way, they're here for reference,
 # and can be used elsewhere to avoid errors due to typos.
+COCKPIT_INIT_COMPLETE = 'cockpit initialization complete'
 DEVICE_STATUS = 'device status'
 EXPERIMENT_EXECUTION = 'experiment execution'
 EXPERIMENT_COMPLETE = 'experiment complete'
@@ -160,21 +185,34 @@ UPDATE_STATUS_LIGHT = 'update status light'
 PREPARE_FOR_EXPERIMENT = 'prepare for experiment'
 CLEANUP_AFTER_EXPERIMENT = 'cleanup after experiment'
 LIGHT_SOURCE_ENABLE = 'light source enable'
+LIGHT_EXPOSURE_UPDATE = 'light exposure update'
 CAMERA_ENABLE = 'camera enable'
+UPDATE_ROI = 'update roi'
+FILTER_CHANGE = 'filter change'
 STAGE_POSITION = 'stage position'
 STAGE_MOVER = 'stage mover'
 STAGE_STOPPED = 'stage stopped'
 STAGE_TOP_BOTTOM = 'stage saved top/bottom'
+STAGE_STEP_INDEX = 'stage step index'
+STAGE_STEP_SIZE = 'stage step size'
+MACRO_STAGE_XY_DRAW = 'macro stage xy draw'
+SOFT_SAFETY_LIMIT = 'soft safety limit'
 NEW_SITE = 'new site'
 DELETE_SITE = 'site deleted'
 SYNCED_VIEW = 'synced view'
 USER_ABORT = 'user abort'
 MOSAIC_UPDATE = 'mosaic update'
+MOSAIC_START = 'mosaic start'
+MOSAIC_STOP = 'mosaic stop'
 NEW_IMAGE = 'new image %s' # must be suffixed with image source
+IMAGE_PIXEL_INFO = 'image pixel info'
+OBJECTIVE_CHANGE = 'objective change'
 SETTINGS_CHANGED = 'settings changed %s' # must be suffixed with device/handler name
 EXECUTOR_DONE = 'executor done %s' # must be sufficed with device/handler name
 VIDEO_MODE_TOGGLE = 'video mode toggle'
-
+DIO_OUTPUT = 'DIO output'
+DIO_INPUT = 'DIO input'
+VALUELOGGER_INPUT = 'ValueLogger input'
 
 _Subscriber = typing.Callable[..., None]
 

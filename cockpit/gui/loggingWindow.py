@@ -49,13 +49,15 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-
+import logging
 import sys
+import threading
+
 import wx
 import wx.aui
 
-import cockpit.util.logger
 
+_logger = logging.getLogger(__name__)
 
 
 ## This class provides a window that displays two text panels which capture
@@ -77,7 +79,6 @@ class LoggingWindow(wx.Frame):
         # as it comes in, then we get tons of newlines we don't want.
         self.textCache = ''
         # Need a lock on the cache to prevent segfaults due to concurrent access.
-        import threading
         self.cacheLock = threading.Lock()
 
         # HACK: enforce that writing to these controls only happens in the
@@ -112,9 +113,9 @@ class LoggingWindow(wx.Frame):
                 # We strip any unicode with filter to prevent a cascade of
                 # ---Logging Error--- messages.
                 if target is self.stdOut:
-                    cockpit.util.logger.log.debug(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
+                    _logger.debug(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
                 else:
-                    cockpit.util.logger.log.error(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
+                    _logger.error(''.join(filter(lambda c: ord(c) < 128, self.textCache)))
                 self.textCache = ''
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:

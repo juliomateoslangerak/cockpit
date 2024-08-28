@@ -50,16 +50,19 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 from OpenGL.GL import *
 import traceback
 import wx
 
 from cockpit import events
 import cockpit.interfaces.stageMover
-import cockpit.util.logger
 import cockpit.util.userConfig
 
 from cockpit.gui.macroStage import macroStageBase
+
+
+_logger = logging.getLogger(__name__)
 
 
 ## Width of an altitude line.
@@ -171,8 +174,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
         events.subscribe(events.EXPERIMENT_COMPLETE, self.onExperimentComplete)
         events.subscribe(events.STAGE_TOP_BOTTOM, self.Refresh)
-        events.subscribe("soft safety limit", self.onSafetyChange)
-        events.subscribe("stage step size", self.onStepSizeChange)
+        events.subscribe(events.SOFT_SAFETY_LIMIT, self.onSafetyChange)
+        events.subscribe(events.STAGE_STEP_SIZE, self.onStepSizeChange)
         self.SetToolTip(wx.ToolTip("Double-click to move in Z"))
 
 
@@ -188,8 +191,12 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             slot = int((altitude - self.minY) // ALTITUDE_BUCKET_SIZE)
             if slot < 0 or slot > len(self.altitudeBuckets):
                 # This should, of course, be impossible.
-                cockpit.util.logger.log.warning("Impossible experiment altitude %f (min %f, max %f)",
-                        altitude, self.minY, self.maxY)
+                _logger.warning(
+                    "Impossible experiment altitude %f (min %f, max %f)",
+                    altitude,
+                    self.minY,
+                    self.maxY,
+                )
             else:
             # bounds check slot
                 if slot < len(self.altitudeBuckets):
@@ -285,8 +292,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
                         self.histograms = self.histograms[:-1]
 
             except Exception as e:
-                cockpit.util.logger.log.error("Error updating macro stage Z status: %s", e)
-                cockpit.util.logger.log.error(traceback.format_exc())
+                _logger.error("Error updating macro stage Z status: %s", e)
+                _logger.error(traceback.format_exc())
                 self.shouldDraw = False
 
         
@@ -408,7 +415,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             # Draw direction of stage motion, if any
             if abs(motorPos - self.prevStagePosition[2]) > .01:
                 delta = motorPos - self.prevStagePosition[2]
-                if abs(delta) > macroStageBase.MIN_DELTA_TO_DISPLAY:
+                if abs(delta) > self._min_delta_to_display:
                     lineCenterX = scaleX + self.horizLineLength / 2
                     self.drawArrow(
                             (lineCenterX, motorPos), 
@@ -422,7 +429,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             # our stage position info.
             self.drawEvent.set()
         except Exception as e:
-            cockpit.util.logger.log.error("Error drawing Z macro stage: %s", e)
+            _logger.error("Error drawing Z macro stage: %s", e)
             traceback.print_exc()
             self.shouldDraw = False
 

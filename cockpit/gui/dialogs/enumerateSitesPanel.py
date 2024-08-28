@@ -49,12 +49,15 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-
-import cockpit.gui.guiUtils
-import cockpit.util.logger
-import cockpit.interfaces.stageMover
+import logging
 
 import wx
+
+import cockpit.gui.guiUtils
+import cockpit.interfaces.stageMover
+
+
+_logger = logging.getLogger(__name__)
 
 
 ## @package dialogs.enumerateSitesPanel
@@ -124,5 +127,8 @@ class EnumerateSitesPanel(wx.Panel):
                 
             return (baseIndices, baseFrequencies)
         except Exception as e:
-            cockpit.util.logger.log.warning("Invalid site list \"%s\"; returning no sites", self.sites.GetValue())
+            _logger.warning(
+                "Invalid site list \"%s\"; returning no sites",
+                self.sites.GetValue()
+            )
             return []

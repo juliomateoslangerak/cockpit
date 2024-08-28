@@ -80,6 +80,10 @@ class CameraHandler(deviceHandler.DeviceHandler):
     # - getExposureTime(name, isExact): Returns the time in milliseconds that
     #   the camera is set to expose for when triggered. If isExact is set,
     #   returns a decimal.Decimal instance.
+    # - setROI(name, roi): Change the camera's region of interest to
+    #   the specified region.
+    # - getROI(name): Returns the current region of interest.
+    # - getSensorShape(name): Returns the camera's sensor shape.
     # - prepareForExperiment(name, experiment): Get the camera ready for an
     #   experiment.
     # - Optional: getMinExposureTime(name): returns the minimum exposure time
@@ -159,7 +163,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
         ## Update the filter for this camera.
         self.dye = dye
         self.wavelength = wavelength
-        events.publish('filter change')
+        events.publish(events.FILTER_CHANGE)
 
 
     ## Invoke our callback, and let everyone know that a new camera is online.
@@ -221,6 +225,18 @@ class CameraHandler(deviceHandler.DeviceHandler):
     @cached
     def getExposureTime(self, isExact = False):
         return self.callbacks['getExposureTime'](self.name, isExact)
+
+    @reset_cache
+    def setROI(self, roi):
+        return self.callbacks['setROI'](self.name, roi)
+
+    @cached
+    def getROI(self):
+        return self.callbacks['getROI'](self.name)
+
+    @cached
+    def getSensorShape(self):
+        return self.callbacks['getSensorShape'](self.name)
 
     ## Do any necessary preparation for the camera to participate in an 
     # experiment.

@@ -53,7 +53,6 @@ from cockpit import events
 import cockpit.gui.guiUtils
 import cockpit.handlers.stagePositioner
 import cockpit.interfaces.stageMover
-import cockpit.util.logger
 import cockpit.util.threads
 import cockpit.util.userConfig
 
@@ -161,8 +160,8 @@ class PhysikInstrumenteM687(Device):
             self.softlimits = ((-67500, 67500), (-42500, 42500))
 
         events.subscribe(events.USER_ABORT, self.onAbort)
-        events.subscribe('macro stage xy draw', self.onMacroStagePaint)
-        #events.subscribe('cockpit initialization complete', self.promptExerciseStage)
+        events.subscribe(events.MACRO_STAGE_XY_DRAW, self.onMacroStagePaint)
+        #events.subscribe(events.COCKPIT_INIT_COMPLETE, self.promptExerciseStage)
 
 
     def initialize(self):

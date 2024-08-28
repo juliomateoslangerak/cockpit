@@ -59,16 +59,12 @@ from cockpit import events
 import cockpit.gui
 import cockpit.gui.freetype
 import cockpit.interfaces.stageMover
-import cockpit.util.logger
 
 
 ## @package cockpit.gui.macroStage
 # This module contains the MacroStageBase base class, used by the MacroStageXY
 # and MacroStageZ classes, as well as some shared constants.
 
-## Don't bother showing a movement arrow for
-# movements smaller than this.
-MIN_DELTA_TO_DISPLAY = .01
 ## Line thickness for the arrow
 ARROW_LINE_THICKNESS = 3.5
 ## Bluntness of the arrowhead (pi/2 == totally blunt)
@@ -102,6 +98,12 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         ## Y values above this are off the canvas
         self.maxY = 1000
 
+        ## Don't bother showing a movement arrow for movements smaller
+        ## than this.
+        self._min_delta_to_display = wx.GetApp().Config['stage'].getfloat(
+            'min-delta-to-display', 0.01
+        )
+
         ## (X, Y, Z) vector describing the stage position as of the last
         # time we drew ourselves. We need this to display motion deltas.
         self.prevStagePosition = numpy.zeros(3)
@@ -124,7 +126,7 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_SIZE, lambda event: event)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: event) # Do nothing, to avoid flashing
         events.subscribe(events.STAGE_POSITION, self.onMotion)
-        events.subscribe("stage step index", self.onStepIndexChange)
+        events.subscribe(events.STAGE_STEP_INDEX, self.onStepIndexChange)
 
     ## Set up some set-once things for OpenGL.
     def initGL(self):

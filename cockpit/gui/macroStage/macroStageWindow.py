@@ -65,6 +65,7 @@ from cockpit.interfaces import stageMover
 class HandlerPositionCtrl(wx.TextCtrl):
     def __init__(self, parent, axis: int, handler_index: int) -> None:
         super().__init__(parent, style=wx.TE_RIGHT|wx.TE_READONLY)
+        self.SetMinSize(self.GetSizeFromText("88888.88"))
         self._axis = axis
         self._handler_index = handler_index
 
@@ -72,7 +73,7 @@ class HandlerPositionCtrl(wx.TextCtrl):
             self.Disable()
 
         for event, handler in [(cockpit.events.STAGE_POSITION, self._OnMove),
-                               ('stage step index', self._OnHandlerChange)]:
+                               (cockpit.events.STAGE_STEP_INDEX, self._OnHandlerChange)]:
             emitter = cockpit.gui.EvtEmitter(self, event)
             emitter.Bind(cockpit.gui.EVT_COCKPIT, handler)
 
@@ -107,6 +108,7 @@ class AxisStepCtrl(wx.TextCtrl):
     """
     def __init__(self, parent, axis: int) -> None:
         super().__init__(parent, style=wx.TE_RIGHT)
+        self.SetMinSize(self.GetSizeFromText("8888.88"))
         self._axis = axis
 
         self._SetStepSizeValue(stageMover.getCurStepSizes()[self._axis])
@@ -119,7 +121,7 @@ class AxisStepCtrl(wx.TextCtrl):
         self.Bind(wx.EVT_KILL_FOCUS, self._OnKillFocus)
         self.Bind(wx.EVT_SET_FOCUS, self._OnSetFocus)
 
-        step_size = cockpit.gui.EvtEmitter(self, 'stage step size')
+        step_size = cockpit.gui.EvtEmitter(self, cockpit.events.STAGE_STEP_SIZE)
         step_size.Bind(cockpit.gui.EVT_COCKPIT, self._OnStepSizeChange)
 
 

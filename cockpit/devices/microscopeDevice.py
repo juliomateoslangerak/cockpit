@@ -602,6 +602,52 @@ class MicroscopeStage(MicroscopeBase):
         # Override MicroscopeBase.getHandlers.  Do not call super.
         return [x.getHandler() for x in self._axes]
 
+
+class MicroscopeSLM(MicroscopeSwitchableDevice):
+    """Device class for a remote python-microscope Spatial Light Modulator.
+
+    Sample configuration entry:
+
+    [SLM]
+    type: cockpit.devices.microscopeSLM.MicroscopeSLM
+    uri: PYRO:SomeSLM@192.168.0.23:7001
+
+    If the SLM is triggered by an external source, the following
+    [SLM]
+    type: cockpit.devices.microscopeSLM.MicroscopeSLM
+    uri: PYRO:SomeSLM@192.168.0.23:7001
+    triggersource: trigsource
+    triggerline: 2
+    settlingtime: 10
+
+    [trigsource]
+    type: ExecutorDevice
+    """
+    def __init__(self, name: str, config: typing.Mapping[str, str]):
+        """Initialise the SLM device."""
+        super().__init__(name, config)
+        self.name = name
+    #     self.uri = config.get('uri')
+    #     self.triggerSource = config.get('triggerSource')
+    #     self.triggerLine = config.get('triggerLine')
+    #     self.slm = Pyro4.Proxy(self.uri)
+    #     self.slm.set_trigger_source(self.triggerSource)
+    #     self.slm.set_trigger_line(self.triggerLine)
+    #
+    #     self.depot = depot.Depot()
+    #     self.depot.register('slm', self.slm)
+    #
+
+    def getHandlers(self):
+        """Return camera handlers."""
+        trigsource = self.config.get('triggersource', None)
+        trigline = self.config.get('triggerline', None)
+        if trigsource:
+            trighandler = depot.getHandler(trigsource, depot.EXECUTOR)
+        else:
+            trighandler = None
+
+
 class MicroscopeDIO(MicroscopeBase):
     """Device class for asynchronous Digital Inout and Output signals.
     This class enables the configuration of named buttons in main GUI window

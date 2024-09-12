@@ -84,9 +84,12 @@ class SIM_SLM(device.Device):
         type: cockpit.devices.sim_slm.SIM_SLM
         uri: PYRO:sim_slm@slmhost:8000
         diffractionAngle: 0.45
-        modulationFactor: 180
+        modulationFactors: 488: 190
+                           561: 180
+                           647: 170
         triggerSource: NAME_OF_EXECUTOR_DEVICE
         triggerLine: 2
+        settlingtime: 10
 
     """
 
@@ -118,9 +121,18 @@ class SIM_SLM(device.Device):
         if angle:
             self.connection.set_setting("sim_diffraction_angle", angle)
 
-        modulation_factor = self.config.get('modulationFactor', None)
-        if modulation_factor:
-            self.connection.set_setting("modulation_factor", modulation_factor)
+        modulation_factors = {}
+
+        for vdef in self.config.get('modulationFactors', '').split('\n'):
+            if vdef == "":
+                continue
+            w, f = vdef.strip('\n').split(':')
+            modulation_factors[int(w)] = int(f)
+
+        if modulation_factors:
+            self.connection.set_sim_modulation_factors(modulation_factors)
+        else:
+            raise Warning('No modulation factors defined in config.')
 
     def onExit(self) -> None:
         for proxy in [self.connection, self.asproxy]:
@@ -133,7 +145,7 @@ class SIM_SLM(device.Device):
         # Define in tuples - easier to read and reorder.
         menuTuples = (('Generate SIM sequence', self.testSIMSequence),
                       ('SIM diff. angle', self.setDiffractionAngle),
-                      ('SIM modulation factor', self.setModulationFactor))
+                      ('SIM modulation factor', self.setModulationFactors))
         # Store as ordered dict for easy item->func lookup.
         self.menuItems = OrderedDict(menuTuples)
 
@@ -401,17 +413,16 @@ class SIM_SLM(device.Device):
                 atMouse=True))
         self.connection.set_setting("sim_diffraction_angle", newTheta)
 
-    def setModulationFactor(self):
+    def setModulationFactors(self):
         try:
-            modulation = self.connection.get_setting("sim_modulation_factor")
+            modulation_factors = self.connection.get_sim_modulation_factors()
         except:
             raise Exception('Could not communicate with SLM service.')
-        newModulation = float(cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
+        new_modulation_factors = cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
                 None,
                 'Set SIM modulation factor',
-                ('Adjust modulation factor (0-360)\nobtain good modulation and '
-                 'intensity rations 1.3, 1, 1.3\nin -1, 0, +1 orders.\n'
-                 u'Current modulation factor is %d°.' % modulation ),
-                modulation,
-                atMouse=True))
-        self.connection.set_setting("sim_modulation_factor", newModulation)
+                [str(wavelength) for wavelength in modulation_factors.keys()],
+                [factor for factor in modulation_factors.values()],
+                atMouse=True)
+        new_modulation_factors = {int(wavelength): factor for wavelength, factor in zip(modulation_factors.keys(), new_modulation_factors)}
+        self.connection.set_sim_modulation_factors(new_modulation_factors)

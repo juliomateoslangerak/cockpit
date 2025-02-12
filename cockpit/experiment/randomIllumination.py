@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2021 University of Oxford
+## Copyright (C) 2025 CNRS Julio Mateos Langerak <
 ##
 ## This file is part of Cockpit.
 ##

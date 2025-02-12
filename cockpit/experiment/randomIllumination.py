@@ -68,7 +68,7 @@ import shutil
 import wx
 
 ## Provided so the UI knows what to call this experiment.
-EXPERIMENT_NAME = 'Random Illumination'
+EXPERIMENT_NAME = "Random Illumination"
 
 
 def postpad_data(data, shape):
@@ -78,11 +78,12 @@ def postpad_data(data, shape):
     values to obtain a specific shape.  The blank values are zero or
     NaN when supported by the datatype.  See cockpit bug #289.
     """
-    postpad_length =  shape - numpy.array(data.shape)
+    postpad_length = shape - numpy.array(data.shape)
     pad_width = list(zip([0] * len(shape), postpad_length))
     ## Let numpy figure out what to convert NaN into for blank values
-    return numpy.pad(data, pad_width, mode='constant',
-                     constant_values=[numpy.nan])
+    return numpy.pad(
+        data, pad_width, mode="constant", constant_values=[numpy.nan]
+    )
 
 
 def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
@@ -102,19 +103,26 @@ def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
         z_wanted - a 3 element tuple of 1 character, with the wanted
             order of the z dimension.
     """
-    assert data.ndim == len(order_packed), \
-        "DATA ndims different from lenght of ORDER_PACKED"
-    assert sorted(z_order) == ['a', 'p', 'z'], \
-        "Z_ORDER does not have only 'a, z, p'"
-    assert sorted(z_order) == sorted(z_wanted), \
-        "Z_ORDER not same elements as Z_WANTED"
+    assert data.ndim == len(
+        order_packed
+    ), "DATA ndims different from lenght of ORDER_PACKED"
+    assert sorted(z_order) == [
+        "a",
+        "p",
+        "z",
+    ], "Z_ORDER does not have only 'a, z, p'"
+    assert sorted(z_order) == sorted(
+        z_wanted
+    ), "Z_ORDER not same elements as Z_WANTED"
 
     z_idx = order_packed.index("z")
-    order_in = order_packed[0:z_idx] + z_order + order_packed[z_idx+1:]
-    order_out = order_packed[0:z_idx] + z_wanted + order_packed[z_idx+1:]
+    order_in = order_packed[0:z_idx] + z_order + order_packed[z_idx + 1 :]
+    order_out = order_packed[0:z_idx] + z_wanted + order_packed[z_idx + 1 :]
 
     packed_shape = data.shape
-    unpacked_shape = packed_shape[0:z_idx] + z_lengths + packed_shape[z_idx+1:]
+    unpacked_shape = (
+        packed_shape[0:z_idx] + z_lengths + packed_shape[z_idx + 1 :]
+    )
 
     ## If we are dealing with truncated files we may need to add blank
     ## planes into the data.  See cockpit bug #289.
@@ -140,23 +148,29 @@ class RIExperiment(experiment.Experiment):
     # \param polarizerHandler The polarizer to use for the experiment.
     # \param slmHandler Optionally, random illumination is handled by an
     #        SLM or similar pattern-generating device.
-    def __init__(self, numRImages, patternSize, polarizerHandler=None,
-            slmHandler=None,
-            *args, **kwargs):
+    def __init__(
+        self,
+        numRImages,
+        patternSize,
+        polarizerHandler=None,
+        slmHandler=None,
+        *args,
+        **kwargs,
+    ):
         # Store the collection order in the MRC header.
-        metadata = 'Nr of RImages: %s' % numRImages
-        #Store the diffraction angle in MRC metadata
-        self.slmdev = depot.getDeviceWithName('slm')
+        metadata = "Nr of RImages: %s" % numRImages
+        # Store the diffraction angle in MRC metadata
+        self.slmdev = depot.getDeviceWithName("slm")
         if self.slmdev:
             self.diffangle = self.slmdev.connection.get_sim_diffraction_angle()
-            metadata += ': SLM diff_angle %.3f' % self.diffangle
+            metadata += ": SLM diff_angle %.3f" % self.diffangle
             self.slm_shape = self.slmdev.connection.get_shape()
             # TODO: what other metadata to get from SLM?
-        if 'metadata' in kwargs:
+        if "metadata" in kwargs:
             # Augment the existing string.
-            kwargs['metadata'] += "; %s" % metadata
+            kwargs["metadata"] += "; %s" % metadata
         else:
-            kwargs['metadata'] = metadata
+            kwargs["metadata"] = metadata
         super().__init__(*args, **kwargs)
         self.numZSlices = int(math.ceil(self.zHeight / self.sliceHeight))
         self.numRImages = numRImages
@@ -188,7 +202,9 @@ class RIExperiment(experiment.Experiment):
 
         for i in range(numRImages):
             pattern = gen.choice(choices, size=corr_shape)
-            yield pattern.repeat(pattern_size, axis=0).repeat(pattern_size, axis=1)
+            yield pattern.repeat(pattern_size, axis=0).repeat(
+                pattern_size, axis=1
+            )
 
     def generateActions(self):
         table = actionTable.ActionTable()
@@ -197,7 +213,7 @@ class RIExperiment(experiment.Experiment):
         numZSlices = int(math.ceil(self.zHeight / self.sliceHeight))
 
         table.addAction(curTime, self.zPositioner, self.zStart)
-        curTime += decimal.Decimal('1')
+        curTime += decimal.Decimal("1")
 
         # Add a first trigger of the SLM to get first new image.
         table.addAction(curTime, self.slmHandler, 0)
@@ -210,7 +226,9 @@ class RIExperiment(experiment.Experiment):
             zTarget = self.zStart + self.sliceHeight * zIndex
             motionTime, stabilizationTime = 0, 0
             if prevZ is not None:
-                motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevZ, zTarget)
+                motionTime, stabilizationTime = (
+                    self.zPositioner.getMovementTime(prevZ, zTarget)
+                )
                 motionTime *= 1000
                 stabilizationTime *= 1000
             curTime += motionTime
@@ -226,15 +244,18 @@ class RIExperiment(experiment.Experiment):
                 curTime += self.slmHandler.settlingtime
                 # Image the sample.
                 for cameras, lightTimePairs in self.exposureSettings:
-                    curTime = self.expose(curTime, cameras, lightTimePairs, table)
+                    curTime = self.expose(
+                        curTime, cameras, lightTimePairs, table
+                    )
                     # Advance the time very slightly so that all exposures
                     # are strictly ordered.
-                    curTime += decimal.Decimal('1e-10')
+                    curTime += decimal.Decimal("1e-10")
                 # Hold the Z motion flat during the exposure.
             table.addAction(curTime, self.zPositioner, zTarget)
 
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
-                self.zHeight, self.zStart)
+            self.zHeight, self.zStart
+        )
         motionTime *= 1000
         stabilizationTime *= 1000
         table.addAction(curTime + motionTime, self.zPositioner, self.zStart)
@@ -257,22 +278,28 @@ class RIExperiment(experiment.Experiment):
         wavelengths = []
         longestWavelength = max([ltp[0].wavelength for ltp in lightTimePairs])
 
-        for pattern in self.generate_rim_sequence(self.numRImages, self.slm_shape, self.pattern_size):
+        for pattern in self.generate_rim_sequence(
+            self.numRImages, self.slm_shape, self.pattern_size
+        ):
             # SLM trigger
-            table.addAction(curTime, self.slmHandler, (pattern, longestWavelength))
+            table.addAction(
+                curTime, self.slmHandler, (pattern, longestWavelength)
+            )
             curTime += self.slmHandler.getMovementTime()
             return super().expose(curTime, cameras, lightTimePairs, table)
 
-    def cleanup(self, runThread = None, saveThread = None):
+    def cleanup(self, runThread=None, saveThread=None):
         super().cleanup(runThread, saveThread)
         return
 
     def lastMinuteActions(self):
         if self.sliceHeight != 0.125:
-            warning = "Slice height must be 0.125 for softWoRx 3D " \
-                      "reconstruction. Choose:" \
-                      "\n    'OK' to run as is;" \
-                      "\n    'Cancel' to go back and change parameters."
+            warning = (
+                "Slice height must be 0.125 for softWoRx 3D "
+                "reconstruction. Choose:"
+                "\n    'OK' to run as is;"
+                "\n    'Cancel' to go back and change parameters."
+            )
             if not guiUtils.getUserPermission(warning):
                 return False
         return True
@@ -288,6 +315,7 @@ class BaseRIMExperimentUI(wx.Panel):
 
     Subclasses must implement class property `_CONFIG_KEY_SUFFIX`.
     """
+
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
 
@@ -299,25 +327,22 @@ class BaseRIMExperimentUI(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-
     ## Given a parameters dict (parameter name to value) to hand to the
     # experiment instance, augment them with our special parameters.
     def augmentParams(self, params):
         self.saveSettings()
-        params['slmHandler'] = depot.getHandler('slm', depot.EXECUTOR)
+        params["slmHandler"] = depot.getHandler("slm", depot.EXECUTOR)
         return params
 
     def _getDefaultSettings(self):
         allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
-        default = {
-        }
+        default = {}
         return default
 
     ## Load the saved experiment settings, if any.
     def loadSettings(self):
         result = cockpit.util.userConfig.getValue(
-                self.configKey,
-                default = self._getDefaultSettings()
+            self.configKey, default=self._getDefaultSettings()
         )
 
         allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
@@ -325,18 +350,17 @@ class BaseRIMExperimentUI(wx.Panel):
 
     ## Generate a dict of our settings.
     def getSettingsDict(self):
-        return {
-        }
+        return {}
 
     ## Save the current experiment settings to config.
-    def saveSettings(self, settings = None):
+    def saveSettings(self, settings=None):
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(self.configKey, settings)
 
 
 class ExperimentUI(BaseRIMExperimentUI):
-    _CONFIG_KEY_SUFFIX = 'RIExperimentSettings'
+    _CONFIG_KEY_SUFFIX = "RIExperimentSettings"
 
     def __init__(self, parent, configKey):
         super().__init__(parent, configKey)

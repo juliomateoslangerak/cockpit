@@ -109,7 +109,6 @@ class Experiment:
     # \param otherHandlers List of miscellaneous handlers that are involved in
     #        the experiment.
     # \param metadata String of extra metadata to insert into the "titles"
-
     #        section of the saved file.
     # \param savePath Path to save image data to. If this isn't provided then
     #        no data will be saved.

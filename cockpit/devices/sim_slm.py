@@ -18,6 +18,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
+
 """This device module is a reinterpretation of boulderSLM in order to work with the newer implementation of
 microscope's SLM"""
 
@@ -36,8 +37,10 @@ import cockpit.handlers.executor
 import time
 import cockpit.util
 
-class _LastParameters():
-    """A class to keep a record of last SIM parmeters using async calls."""
+
+class _LastParameters:
+    """A class to keep a record of last SIM parameters using async calls."""
+
     def __init__(self, slm):
         self.slm = slm
         self._params = None
@@ -94,12 +97,14 @@ class SIM_SLM(device.Device):
     """
 
     _config_types = {
-        'settlingtime': float,
-        'triggerLine': int,
+        "settlingtime": float,
+        "triggerLine": int,
     }
 
     def __init__(self, name, config={}):
         super().__init__(name, config)
+
+        # General device properties.
         self.connection = None
         self.asproxy = None
         self.position = None
@@ -107,6 +112,13 @@ class SIM_SLM(device.Device):
         self.slmTimeout = 10
         self.slmRetryLimit = 3
         self.last = _LastParameters(self)
+
+        # SIM-specific properties.
+        self.diffractionAngle = None
+        self.modulationFactors = {}
+
+        # GUI properties.
+        self.menuItems = None
 
     def initialize(self):
         if self.uri:
@@ -116,23 +128,17 @@ class SIM_SLM(device.Device):
         self.connection = Pyro4.Proxy(uri)
         self.asproxy = Pyro4.Proxy(uri)
         self.asproxy._pyroAsync()
-        # If there's a diffraction angle in the config, set it on the remote.
-        angle = self.config.get('diffractionAngle', None)
-        if angle:
-            self.connection.set_setting("sim_diffraction_angle", angle)
 
-        modulation_factors = {}
+        self.diffractionAngle = self.config.get("diffractionAngle", None)
 
-        for vdef in self.config.get('modulationFactors', '').split('\n'):
+        for vdef in self.config.get("modulationFactors", "").split("\n"):
             if vdef == "":
                 continue
-            w, f = vdef.strip('\n').split(':')
-            modulation_factors[int(w)] = int(f)
+            w, f = vdef.strip("\n").split(":")
+            self.modulationFactors[int(w)] = int(f)
 
-        if modulation_factors:
-            self.connection.set_sim_modulation_factors(modulation_factors)
-        else:
-            raise Warning('No modulation factors defined in config.')
+        if not self.modulationFactors:
+            raise Warning("No modulation factors defined in config.")
 
     def onExit(self) -> None:
         for proxy in [self.connection, self.asproxy]:
@@ -143,9 +149,11 @@ class SIM_SLM(device.Device):
     def finalizeInitialization(self):
         # A mapping of context-menu entries to functions.
         # Define in tuples - easier to read and reorder.
-        menuTuples = (('Generate SIM sequence', self.testSIMSequence),
-                      ('SIM diff. angle', self.setDiffractionAngle),
-                      ('SIM modulation factor', self.setModulationFactors))
+        menuTuples = (
+            ("Generate SIM sequence", self.testSIMSequence),
+            ("SIM diff. angle", self.setDiffractionAngle),
+            ("SIM modulation factor", self.setModulationFactors),
+        )
         # Store as ordered dict for easy item->func lookup.
         self.menuItems = OrderedDict(menuTuples)
 
@@ -156,7 +164,8 @@ class SIM_SLM(device.Device):
         """Enable or disable the SLM."""
         if state:
             # Enable.
-            if self.last.params == self.connection.get_sim_sequence():
+            # TODO: This call has to be repatriated
+            if self.last.params == self.getSIMSequence():
                 # Hardware and software sequences match
                 targetPosition = self.getCurrentPosition()
             else:
@@ -175,11 +184,14 @@ class SIM_SLM(device.Device):
             self.cycleToPosition(targetPosition)
         else:
             # Disable the SLM.
+            # TODO: Verify if stop or disable is the correct method
             self.connection.stop()
 
     def cycleToPosition(self, targetPosition):
         pos = self.getCurrentPosition()
-        delta = (targetPosition - pos) + (targetPosition < pos) * len(self.last.params)
+        delta = (targetPosition - pos) + (targetPosition < pos) * len(
+            self.last.params
+        )
         for i in range(delta):
             self.handler.triggerNow()
             time.sleep(0.01)
@@ -188,8 +200,11 @@ class SIM_SLM(device.Device):
         # Found a table entry with a simple index. Trigger until that index
         # is reached.
         for t, h, args in table[startIndex:stopIndex]:
-            events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                           'SLM moving to index %d' % args)
+            events.publish(
+                events.UPDATE_STATUS_LIGHT,
+                "device waiting",
+                "SLM moving to index %d" % args,
+            )
             self.cycleToPosition(args)
 
     def examineActions(self, table):
@@ -201,18 +216,19 @@ class SIM_SLM(device.Device):
             return
 
         # Remove consecutive duplicates and position resets.
-        reducedParams = [p[0] for p in groupby(patternParams)
-                          if type(p[0]) is tuple]
+        reducedParams = [
+            p[0] for p in groupby(patternParams) if type(p[0]) is tuple
+        ]
         # Find the repeating unit in the sequence.
         sequenceLength = len(reducedParams)
         for length in range(2, len(reducedParams) // 2):
-            if reducedParams[0:length] == reducedParams[length:2*length]:
+            if reducedParams[0:length] == reducedParams[length:2 * length]:
                 sequenceLength = length
                 break
         sequence = reducedParams[0:sequenceLength]
         ## Tell the SLM to prepare the pattern sequence.
+        # TODO: This call has to be repatriated
         asyncResult = self.asproxy.set_sim_sequence(sequence)
-
 
         # Track sequence index set by last set of triggers.
         lastIndex = 0
@@ -226,7 +242,7 @@ class SIM_SLM(device.Device):
             # How many triggers?
             if type(action) is tuple and action != sequence[lastIndex]:
                 # Next pattern does not match last, so step one pattern.
-                    numTriggers = 1
+                numTriggers = 1
             elif type(action) is int:
                 if action >= lastIndex:
                     numTriggers = action - lastIndex
@@ -274,17 +290,22 @@ class SIM_SLM(device.Device):
         return self.connection.get_sequence_index()
 
     def getHandlers(self):
-        trigsource = self.config.get('triggersource', None)
-        trigline = self.config.get('triggerline', None)
-        dt = decimal.Decimal(self.config.get('settlingtime', 10))
+        trigsource = self.config.get("triggersource", None)
+        trigline = self.config.get("triggerline", None)
+        dt = decimal.Decimal(self.config.get("settlingtime", 10))
         result = []
         self.handler = cockpit.handlers.executor.DelegateTrigger(
-            "slm", "slm group", True,
-            {'examineActions': self.examineActions,
-             'getMovementTime': lambda *args: dt,
-             'executeTable': self.executeTable,
-             'setEnabled': self.setEnabled,
-             'getIsEnabled': self.getIsEnabled})
+            "slm",
+            "slm group",
+            True,
+            {
+                "examineActions": self.examineActions,
+                "getMovementTime": lambda *args: dt,
+                "executeTable": self.executeTable,
+                "setEnabled": self.setEnabled,
+                "getIsEnabled": self.getIsEnabled,
+            },
+        )
         self.handler.delegateTo(trigsource, trigline, 0, dt)
         result.append(self.handler)
         return result
@@ -297,12 +318,17 @@ class SIM_SLM(device.Device):
         powerButton = cockpit.gui.device.EnableButton(panel, self.handler)
         panel.Sizer.Add(powerButton, 0, wx.EXPAND)
         triggerButton = wx.Button(panel, label="step")
-        triggerButton.Bind(wx.EVT_BUTTON, lambda evt: self.handler.triggerNow())
+        triggerButton.Bind(
+            wx.EVT_BUTTON, lambda evt: self.handler.triggerNow()
+        )
         panel.Sizer.Add(triggerButton, 0, wx.EXPAND)
         # Add a position display.
-        posDisplay = cockpit.gui.device.MultilineDisplay(parent=panel, numLines=3)
-        posDisplay.Bind(wx.EVT_TIMER,
-                        lambda event: self.updatePositionDisplay(event))
+        posDisplay = cockpit.gui.device.MultilineDisplay(
+            parent=panel, numLines=3
+        )
+        posDisplay.Bind(
+            wx.EVT_TIMER, lambda event: self.updatePositionDisplay(event)
+        )
         panel.Sizer.Add(posDisplay)
         # Set up a timer to update value displays.
         self.updateTimer = wx.Timer(posDisplay)
@@ -317,14 +343,14 @@ class SIM_SLM(device.Device):
         return panel
 
     def updatePositionDisplay(self, event):
-        baseStr = 'angle:\t%s\nphase:\t%s\nwavel.:\t%s'
+        baseStr = "angle:\t%s\nphase:\t%s\nwavel.:\t%s"
         # Get the display object. It seems there is variation between
         # wx versions. With some versions, the display is obtained by
         #    event.GetEventObject().
         # With others, it is
         #    event.GetEventObject().GetOwner()
         display = event.GetEventObject()
-        if not hasattr(display, 'SetLabel'):
+        if not hasattr(display, "SetLabel"):
             display = display.GetOwner()
         self.position = self.getCurrentPosition()
         try:
@@ -345,15 +371,21 @@ class SIM_SLM(device.Device):
             self.setEnabled(False)
 
     def performSubscriptions(self):
-        #events.subscribe(events.USER_ABORT, self.onAbort)
-        events.subscribe(events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment)
-        events.subscribe(events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment)
+        # events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(
+            events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
+        )
+        events.subscribe(
+            events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment
+        )
 
     def wait(self, asyncResult, message):
         # Wait unti the SLM has finished an aynchronous task.
-        status = wx.ProgressDialog(parent = wx.GetApp().GetTopWindow(),
-                title = "Waiting for SLM",
-                message = message)
+        status = wx.ProgressDialog(
+            parent=wx.GetApp().GetTopWindow(),
+            title="Waiting for SLM",
+            message=message,
+        )
         status.Show()
         slmFailCount = 0
         slmFail = False
@@ -363,7 +395,7 @@ class SIM_SLM(device.Device):
                 slmFail = True
         status.Destroy()
         if slmFail:
-            raise Exception('SLM timeout.')
+            raise Exception("SLM timeout.")
 
     ### Context menu and handlers ###
     def menuCallback(self, index, item):
@@ -371,29 +403,38 @@ class SIM_SLM(device.Device):
         return func()
 
     def onRightMouse(self, event):
-        menu = cockpit.gui.device.Menu(self.menuItems.keys(), self.menuCallback)
+        menu = cockpit.gui.device.Menu(
+            self.menuItems.keys(), self.menuCallback
+        )
         menu.show(event)
 
     def testSIMSequence(self):
         inputs = cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
-                None,
-                'Generate a SIM sequence',
-                ['wavelength',
-                 'total angles',
-                 'total phases',
-                 'order\n0 for a then ph\n1 for ph then a'],
-                 (488, 3, 5, 0))
+            None,
+            "Generate a SIM sequence",
+            [
+                "wavelength",
+                "total angles",
+                "total phases",
+                "order\n0 for a then ph\n1 for ph then a",
+            ],
+            (488, 3, 5, 0),
+        )
         wavelength, angles, phases, order = [int(i) for i in inputs]
         if order == 0:
-            params = [(theta, phi, wavelength)
-                            for phi in range(phases)
-                            for theta in range(angles)]
+            params = [
+                (theta, phi, wavelength)
+                for phi in range(phases)
+                for theta in range(angles)
+            ]
         elif order == 1:
-            params = [(theta, phi, wavelength)
-                            for theta in range(angles)
-                            for phi in range(phases)]
+            params = [
+                (theta, phi, wavelength)
+                for theta in range(angles)
+                for phi in range(phases)
+            ]
         else:
-            raise ValueError('Order must be 0 or 1.')
+            raise ValueError("Order must be 0 or 1.")
         ## Tell the SLM to prepare the pattern sequence.
         asyncResult = self.asproxy.set_sim_sequence(params)
         self.wait(asyncResult, "SLM is generating pattern sequence.")
@@ -403,26 +444,39 @@ class SIM_SLM(device.Device):
         try:
             theta = self.connection.get_setting("sim_diffraction_angle")
         except:
-            raise Exception('Could not communicate with SLM service.')
-        newTheta = float(cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
+            raise Exception("Could not communicate with SLM service.")
+        newTheta = float(
+            cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
                 None,
-                'Set SIM diffraction angle',
-                ('Adjust diffraction angle to\nput spots at edge of pupil.\n'
-                 u'Current angle is %.2f°.' % theta ),
+                "Set SIM diffraction angle",
+                (
+                    "Adjust diffraction angle to\nput spots at edge of pupil.\n"
+                    "Current angle is %.2f°." % theta
+                ),
                 theta,
-                atMouse=True))
+                atMouse=True,
+            )
+        )
         self.connection.set_setting("sim_diffraction_angle", newTheta)
 
     def setModulationFactors(self):
         try:
             modulation_factors = self.connection.get_sim_modulation_factors()
         except:
-            raise Exception('Could not communicate with SLM service.')
-        new_modulation_factors = cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
+            raise Exception("Could not communicate with SLM service.")
+        new_modulation_factors = (
+            cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
                 None,
-                'Set SIM modulation factor',
+                "Set SIM modulation factor",
                 [str(wavelength) for wavelength in modulation_factors.keys()],
                 [factor for factor in modulation_factors.values()],
-                atMouse=True)
-        new_modulation_factors = {int(wavelength): factor for wavelength, factor in zip(modulation_factors.keys(), new_modulation_factors)}
+                atMouse=True,
+            )
+        )
+        new_modulation_factors = {
+            int(wavelength): factor
+            for wavelength, factor in zip(
+                modulation_factors.keys(), new_modulation_factors
+            )
+        }
         self.connection.set_sim_modulation_factors(new_modulation_factors)

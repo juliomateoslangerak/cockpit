@@ -113,6 +113,8 @@ class ExperimentConfigPanel(wx.Panel):
         self.allCameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
         self.allCameras.sort(key = lambda c: c.name)
 
+        self.channels = wx.GetApp().Channels
+
         ## Map of default settings as loaded from config.
         self.settings = self.loadConfig()
 
@@ -183,9 +185,13 @@ class ExperimentConfigPanel(wx.Panel):
         exposureSizer = wx.BoxSizer(wx.VERTICAL)
 
         ## Controls which set of exposure settings we enable.
-        self.shouldExposeSimultaneously = wx.CheckBox(
-                self, label = "Expose all cameras simultaneously")
-        exposureSizer.Add(self.shouldExposeSimultaneously, 0, wx.ALL, border=5)
+        self.exposureMode = wx.RadioBox(self, label="Exposure mode", choices=[
+            "Expose simultaneously",
+            "Expose sequentially",
+            "Expose channels"
+        ], majorDimension=1)
+        exposureSizer.Add(self.exposureMode, 0, wx.ALL, border=5)
+
         ## Panel for holding controls for when we expose every camera
         # simultaneously.
         self.simultaneousExposurePanel = wx.Panel(self, name="simultaneous exposures")
@@ -240,12 +246,45 @@ class ExperimentConfigPanel(wx.Panel):
             self.cameraToExposureTimes[camera] = times
         self.sequencedExposurePanel.SetSizerAndFit(sequenceSizer)        
         exposureSizer.Add(self.sequencedExposurePanel, 0, wx.ALL, border=5)
-        self.sizer.Add(exposureSizer)
 
-        # Toggle which panel is displayed based on the checkbox.
-        self.shouldExposeSimultaneously.Bind(wx.EVT_CHECKBOX, self.onExposureCheckbox)
-        self.shouldExposeSimultaneously.SetValue(self.settings['shouldExposeSimultaneously'])
-        self.onExposureCheckbox()
+        # Panel for when we expose channels.
+        self.channelExposurePanel = wx.Panel(self, name="channel sequence")
+        channelSizer = wx.FlexGridSizer(rows=len(self.channels.Names), cols=3, vgap=5, hgap=10)
+        channelSizer.AddGrowableCol(1)
+
+        # A dictionary containing the order in which each channel is acquired
+        self.channelsChecked = {}
+        self.channelsOrder = {}
+        self.channelsOrderPossible = []
+
+        for channel in self.channels.Names:
+            # Checkboxes to activate channels
+            channelCheckBox = wx.CheckBox(self.channelExposurePanel, label="")
+            self.channelsChecked[channel] = channelCheckBox
+            channelSizer.Add(channelCheckBox, flag=wx.ALL | wx.EXPAND, border=2)
+            channelCheckBox.Bind(wx.EVT_CHECKBOX, self.onChannelCheckBoxToggle)
+
+            # Channel labels
+            channelLabel = wx.StaticText(self.channelExposurePanel, label=channel)
+            channelSizer.Add(channelLabel, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=2)
+
+            # Choice of acquisition order
+            choice = wx.Choice(self.channelExposurePanel, choices=[])
+            choice.SetSelection(-1)
+            choice.Disable()
+            self.channelsOrder[channel] = choice
+            channelSizer.Add(choice, flag=wx.ALL | wx.EXPAND, border=2)
+            choice.Bind(wx.EVT_CHOICE, self.onChannelOrderChoice)
+
+        self.channelExposurePanel.SetSizerAndFit(channelSizer)
+        exposureSizer.Add(self.channelExposurePanel, 0, wx.ALL, border=5)
+
+        # Toggle which panel is displayed based on the radio box.
+        self.exposureMode.  Bind(wx.EVT_RADIOBOX, self.onExposureMode)
+        self.exposureMode.SetSelection(self.settings['exposureMode'])
+        self.onExposureMode()
+
+        self.sizer.Add(exposureSizer)
 
         self.filepath_panel = FilepathPanel(self)
         self.filepath_panel.SetTemplate(self.settings['filenameTemplate'])
@@ -266,6 +305,31 @@ class ExperimentConfigPanel(wx.Panel):
         
         self.SetSizerAndFit(self.sizer)
 
+    def onChannelCheckBoxToggle(self, event):
+        possibles = []
+        p = 1
+        for channel, checkbox in self.channelsChecked.items():
+            self.channelsOrder[channel].SetSelection(-1)
+            if checkbox.IsChecked():
+                self.channelsOrder[channel].Enable()
+                possibles.append(p)
+                p += 1
+            else:
+                self.channelsOrder[channel].Disable()
+        for choice in self.channelsOrder.values():
+            choice.SetItems([str(i) for i in possibles])
+            choice.SetSelection(-1)
+        self.channelsOrderPossible = possibles
+
+    def onChannelOrderChoice(self, event):
+        selectedChoice = event.GetEventObject()
+        selectedValue = event.GetString()
+        for choice in self.channelsOrder.values():
+            if (
+                choice is not selectedChoice
+                and choice.GetStringSelection() == selectedValue
+            ):
+                choice.SetSelection(-1)
 
     ## Load values from config, and validate them -- since devices may get
     # changed out from under us, rendering some config entries (e.g. dealing
@@ -275,7 +339,7 @@ class ExperimentConfigPanel(wx.Panel):
                 'numReps': '1',
                 'repDuration': '0',
                 'sequencedExposureSettings': [['' for l in self.allLights] for c in self.allCameras],
-                'shouldExposeSimultaneously': True,
+                'exposureMode': 0,
                 'simultaneousExposureTimes': ['' for l in self.allLights],
                 'sliceHeight': '.15',
                 'stackHeight': '4',
@@ -320,20 +384,19 @@ class ExperimentConfigPanel(wx.Panel):
         self.SetSizerAndFit(self.sizer)
         self.resizeCallback(self)
 
-
-    ## User toggled the exposure controls; show/hide the panels as
-    # appropriate.
-    def onExposureCheckbox(self, event = None):
-        val = self.shouldExposeSimultaneously.GetValue()
+    ## User changed the exposure mode
+    def onExposureMode(self, event=None):
+        val = self.exposureMode.GetSelection()
         # Show the relevant light panel. Disable the unused panel to
         # prevent validation of its controls.
-        self.simultaneousExposurePanel.Show(val)
-        self.simultaneousExposurePanel.Enable(val)
-        self.sequencedExposurePanel.Show(not val)
-        self.sequencedExposurePanel.Enable(not val)
+        self.simultaneousExposurePanel.Show(val == 0)
+        self.simultaneousExposurePanel.Enable(val == 0)
+        self.sequencedExposurePanel.Show(val == 1)
+        self.sequencedExposurePanel.Enable(val == 1)
+        self.channelExposurePanel.Show(val == 2)
+        self.channelExposurePanel.Enable(val == 2)
         self.SetSizerAndFit(self.sizer)
         self.resizeCallback(self)
-
 
     ## User clicked the "Use current settings" button; fill out the 
     # simultaneous-exposure settings text boxes with the current
@@ -426,7 +489,8 @@ class ExperimentConfigPanel(wx.Panel):
             return True
 
         exposureSettings = []
-        if self.shouldExposeSimultaneously.GetValue():
+
+        if self.exposureMode.GetSelection() == 0:
             # A single exposure event with all cameras and lights.
             lightTimePairs = []
             for i, light in enumerate(self.allLights):
@@ -442,7 +506,8 @@ class ExperimentConfigPanel(wx.Panel):
                     return True
                 
             exposureSettings = [(cameras, lightTimePairs)]
-        else:
+
+        elif self.exposureMode.GetSelection() == 1:
             # A separate exposure for each camera.
             for camera in cameras:
                 cameraSettings = self.cameraToExposureTimes[camera]
@@ -454,7 +519,37 @@ class ExperimentConfigPanel(wx.Panel):
                     if timeControl.GetValue():
                         settings.append((light, guiUtils.tryParseNum(timeControl, decimal.Decimal)))
                 exposureSettings.append(([camera], settings))
-                
+
+        elif self.exposureMode.GetSelection() == 2:
+            # Check that there are active channels and they all have an order
+            if not any(c.IsChecked() for c in self.channelsChecked.values()):
+                wx.MessageDialog(self, "No channels are enabled, so the experiment cannot be run.",
+                                 style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK).ShowModal()
+                return True
+            if not all(c.GetStringSelection() for c in self.channelsOrder.values()):
+                wx.MessageDialog(self, "Not all channels have an order, so the experiment cannot be run.",
+                                 style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK).ShowModal()
+                return True
+
+            unsortedExposureSettings = {}
+            for channel, checkbox, order in zip(self.channels.Names, self.channelsChecked.values(), self.channelsOrder.values()):
+                if checkbox.IsChecked():
+                    channelSettings = self.channels.Get(channel)
+                    cameras = []
+                    for cam_handler in self.allCameras:
+                        if channelSettings[cam_handler.name]:
+                            cameras.append(cam_handler)
+                    lightTimePairs = []
+                    for light_handler in self.allLights:
+                        if channelSettings[light_handler.name]["isEnabled"]:
+                            lightTimePairs.append((
+                                light_handler,
+                                decimal.Decimal(float(channelSettings[light_handler.name]["exposureTime"]))
+                            ))
+                    unsortedExposureSettings[order.GetSelection()] = (cameras, lightTimePairs)
+
+            exposureSettings = [unsortedExposureSettings[i] for i in sorted(unsortedExposureSettings.keys())]
+
         altitude = cockpit.interfaces.stageMover.getPositionForAxis(2)
         # Default to "current is bottom"
         altBottom = altitude
@@ -511,7 +606,7 @@ class ExperimentConfigPanel(wx.Panel):
                 'numReps': self.numReps.GetValue(),
                 'repDuration': self.repDuration.GetValue(),
                 'sequencedExposureSettings': sequencedExposureSettings,
-                'shouldExposeSimultaneously': self.shouldExposeSimultaneously.GetValue(),
+                'exposureMode': self.exposureMode.GetSelection(),
                 'simultaneousExposureTimes': simultaneousTimes,
                 'sliceHeight': self.sliceHeight.GetValue(),
                 'stackHeight': self.stackHeight.GetValue(),

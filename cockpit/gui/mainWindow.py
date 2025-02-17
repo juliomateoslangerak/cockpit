@@ -57,8 +57,6 @@
 import io
 import os.path
 import pkg_resources
-import subprocess
-import sys
 import typing
 from configparser import ConfigParser
 from itertools import chain
@@ -81,8 +79,9 @@ from cockpit.gui import keyboard
 import cockpit.util.userConfig
 from cockpit.gui import viewFileDropTarget
 from cockpit.gui import mainPanels
-from cockpit.util import valueLogger
-from cockpit.util import csv_plotter
+from cockpit.util.csv_plotter import CSVPlotter
+from cockpit.util.intensity import IntensityProfilerFrame
+from cockpit.util.valueLogger import ValueLogger
 
 
 ROW_SPACER = 12
@@ -437,22 +436,27 @@ class WindowsMenu(wx.Menu):
         menu_item = self.Append(wx.ID_ANY, item='Reset window positions')
         self.Bind(wx.EVT_MENU, self.OnResetWindowPositions, menu_item)
 
-        # A separator between the window menu items and the other
-        # extra windows.
+        # A separator between "Reset window positions" and the Cockpit
+        # window menu items.
+        self.AppendSeparator()
+        self._first_cockpit_window_pos = self.GetMenuItemCount()
+        self._next_cockpit_window_pos = self.GetMenuItemCount()
+
+        # A separator between the Cockpit window menu items and the
+        # other extra windows.
         self.AppendSeparator()
 
         # Add item to launch valueLogViewer (XXX: this should be
         # handled by some sort of plugin system and not hardcoded).
         menu_item = self.Append(wx.ID_ANY, "Launch ValueLogViewer")
-        logs = valueLogger.ValueLogger.getLogFiles()
-        if not logs:
+        self.Bind(wx.EVT_MENU, self.OnLaunchValueLogViewer, menu_item)
+        if not ValueLogger.getLogFiles():
             menu_item.Enable(False)
-        else:
-            shell = sys.platform == 'win32'
-            args = [sys.executable, csv_plotter.__file__] + logs
-            self.Bind(wx.EVT_MENU,
-                      lambda e: subprocess.Popen(args, shell=shell),
-                      menu_item)
+
+        # Add item to launch SIM Intensity profile (XXX: this should
+        # be handled by some sort of plugin system and not hardcoded).
+        menu_item = self.Append(wx.ID_ANY, "Launch SIM Intensity Profile")
+        self.Bind(wx.EVT_MENU, self.OnLaunchSIMIntensityProfile, menu_item)
 
         # This is only for the piDIO and executor, both of which are a
         # window to set lines high/low.  We should probably have a
@@ -482,21 +486,40 @@ class WindowsMenu(wx.Menu):
         main_window = wx.GetApp().GetTopWindow()
         all_windows = {w for w in wx.GetTopLevelWindows() if w is not main_window}
 
+        new_menu_items = False
         for window in all_windows.difference(self._id_to_window.values()):
-            if not window.Title:
-                # We have bogus top-level windows because of the use
-                # of AuiManager on the logging window (see issue #617)
-                # so skip windows without a title.
+            ## Windows with this attribute need to exist but may be
+            ## hidden (see #745)
+            should_be_listed = getattr(window, 'LIST_AS_COCKPIT_WINDOW', False)
+            if not should_be_listed:
                 continue
             menu_item = wx.MenuItem(self, wx.ID_ANY, window.Title)
             self.Bind(wx.EVT_MENU, self.OnWindowTitle, menu_item)
             self._id_to_window[menu_item.Id] = window
 
-            # Place this menu item after the "Reset window positions"
-            # but before the log viewer and debug window.
-            position = len(self._id_to_window)
-            self.Insert(position, menu_item)
+            # Place this menu item between the separators that group
+            # the cockpit windows.
+            self.Insert(self._next_cockpit_window_pos, menu_item)
+            self._next_cockpit_window_pos += 1
+            new_menu_items = True
 
+        if new_menu_items:
+            self._SortCockpitWindowMenuItems()
+
+
+    def _SortCockpitWindowMenuItems(self) -> None:
+        # Remove menu items from the menu, pair them with the window,
+        # sort the menu items based on the window name, and then
+        # re-insert the menu items by order.
+        menu_item_and_window_pairs = []
+        for menu_item_id, window in self._id_to_window.items():
+            menu_item = self.Remove(menu_item_id)
+            menu_item_and_window_pairs.append((menu_item, window))
+
+        menu_item_and_window_pairs.sort(key=lambda x: x[1].GetTitle())
+
+        for i, (menu_item, _) in enumerate(menu_item_and_window_pairs):
+            self.Insert(self._first_cockpit_window_pos + i, menu_item)
 
     def OnResetWindowPositions(self, event: wx.CommandEvent) -> None:
         del event
@@ -524,6 +547,16 @@ class WindowsMenu(wx.Menu):
         # coordinates.
         if wx.Display.GetFromWindow(window) == wx.NOT_FOUND:
             window.SetPosition(wx.GetMousePosition())
+
+    def OnLaunchValueLogViewer(self, event: wx.CommandEvent) -> None:
+        log_files = ValueLogger.getLogFiles()
+        window = CSVPlotter(None)
+        window.add_data_sources(log_files, defer_open=True)
+        window.Show()
+
+    def OnLaunchSIMIntensityProfile(self, event: wx.CommandEvent) -> None:
+        window = IntensityProfilerFrame(wx.GetApp().MainWindow)
+        window.Show()
 
 
 class MainWindow(wx.Frame):

@@ -22,21 +22,21 @@
 """This device module is a reinterpretation of boulderSLM in order to work with the newer implementation of
 microscope's SLM"""
 
-from collections import OrderedDict
 import decimal
-from cockpit.devices import device
+import time
+from collections import OrderedDict
 from itertools import groupby
-from threading import Lock
+
+import numpy as np
 import Pyro4
 import wx
 
-from cockpit import events
 import cockpit.gui.device
 import cockpit.gui.dialogs.getNumberDialog
 import cockpit.handlers.executor
-import time
 import cockpit.util
-
+from cockpit import events
+from cockpit.devices import device
 
 class _LastParameters:
     """A class to keep a record of last SIM parameters using async calls."""

@@ -304,7 +304,7 @@ class SIM_SLM(device.Device):
             display = display.GetOwner()
         self.position = self.getCurrentPosition()
         try:
-            parms = self.last.params[self.position]
+            parms = self.sequenceParameters[self.position]
             display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
         except (IndexError, TypeError):
             # SLM parms updated since last position fetched, or lastParms is None.

@@ -134,6 +134,7 @@ class SIM_SLM(device.Device):
 
     def onExit(self) -> None:
         if self.connection is not None:
+            self.connection.disable()
             self.connection._pyroRelease()
         super().onExit()
 

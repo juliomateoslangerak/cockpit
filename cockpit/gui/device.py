@@ -177,8 +177,8 @@ class Menu(wx.Menu):
         super().__init__()
         for i, item in enumerate(menuItems):
             if len(item):
-                self.Append(i, item, '')
-                self.Bind(wx.EVT_MENU,  lambda event, index=i, item=item:menuCallback(index, item), id= i)
+                self.Append(i + 1, item, '')
+                self.Bind(wx.EVT_MENU, lambda event, index=i, item=item:menuCallback(index, item), id=i + 1)
             else:
                 self.AppendSeparator()
 

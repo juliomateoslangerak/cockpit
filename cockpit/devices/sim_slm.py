@@ -89,8 +89,8 @@ class SIM_SLM(device.Device):
         self.numPhases = 5
         self.numAngles = 3
 
-        self.kk = None
-        self.ll = None
+        self._kk = None
+        self._ll = None
         self.sequenceParameters = []
 
         # GUI properties.
@@ -117,7 +117,7 @@ class SIM_SLM(device.Device):
             raise Warning("No modulation factors defined in config.")
 
         self.shape = self.connection.get_shape()
-        self.kk, self.ll = np.meshgrid(
+        self._kk, self._ll = np.meshgrid(
             np.arange(self.shape[0]),
             np.arange(self.shape[1]),
         )
@@ -326,7 +326,7 @@ class SIM_SLM(device.Device):
                 * np.cos(
                     ph
                     + TWO_PI
-                    * (np.cos(th) * self.kk + np.sin(th) * self.ll)
+                    * (np.cos(th) * self._kk + np.sin(th) * self._ll)
                     / pp
                 )
             ).astype(np.float32)

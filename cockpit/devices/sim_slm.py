@@ -78,10 +78,18 @@ class SIM_SLM(device.Device):
         self.slmTimeout = 10
         self.slmRetryLimit = 3
         self.shape = None
+        self.pixelPitch = None
 
         # SIM-specific properties.
         self.diffractionAngle = None
         self.modulationFactors = {}
+        self.simPhaseOffset = 0.0
+        self.simAngleOffset = TWO_PI / 5.0
+        self.numPhases = 5
+        self.numAngles = 3
+
+        self.kk = None
+        self.ll = None
         self.sequenceParameters = []
 
         # GUI properties.
@@ -127,19 +135,7 @@ class SIM_SLM(device.Device):
     def setEnabled(self, state):
         """Enable or disable the SLM."""
         if state:
-            # TODO: This call has to be repatriated
-            # Enable the hardware.
-            self.connection.run()
-            # Often, after calling connection.run(), the SLM pattern and the image
-            # index reported are not synchronised until a few triggers have been
-            # sent, so we need to compensate for this. We do the best we can,
-            # but any other trigger-device activity during this call can mean that
-            # we miss the target frame by +/- 1.
-            for i in range(3):
-                self.handler.triggerNow()
-                time.sleep(0.01)
-            # Cycle to the target position.
-            self.cycleToPosition(targetPosition)
+            self.connection.enable()
         else:
             # Disable the SLM.
             # TODO: Verify if stop or disable is the correct method
@@ -150,7 +146,7 @@ class SIM_SLM(device.Device):
         delta = (targetPosition - pos) + (targetPosition < pos) * len(
             self.sequenceParameters
         )
-        for i in range(delta):
+        for _ in range(delta):
             self.handler.triggerNow()
             time.sleep(0.01)
 
@@ -180,10 +176,10 @@ class SIM_SLM(device.Device):
         # Find the repeating unit in the sequence.
         sequenceLength = len(reducedParams)
         for length in range(2, len(reducedParams) // 2):
-            if reducedParams[0:length] == reducedParams[length:2 * length]:
+            if reducedParams[:length] == reducedParams[length:2 * length]:
                 sequenceLength = length
                 break
-        sequence = reducedParams[0:sequenceLength]
+        sequence = reducedParams[:sequenceLength]
 
         self.setSIMSequence(sequence)
 
@@ -222,7 +218,7 @@ class SIM_SLM(device.Device):
                 t = table.addToggle(t, triggerHandler)
                 t += table.toggleTime
             """
-            for trig in range(numTriggers):
+            for _ in range(numTriggers):
                 t = table.addToggle(t, self.handler)
                 t += table.toggleTime
 
@@ -231,10 +227,10 @@ class SIM_SLM(device.Device):
                 lastIndex = lastIndex % sequenceLength
         table.clearBadEntries()
         # Store the parameters used to generate the sequence.
-        self.connection.run()
         self.sequenceParameters = sequence
+        self.connection.run_queue()
         # Fire several triggers to ensure that the sequence is loaded.
-        for i in range(12):
+        for _ in range(12):
             self.handler.triggerNow()
             time.sleep(0.01)
         # Ensure that we're at position 0.
@@ -298,7 +294,6 @@ class SIM_SLM(device.Device):
         return panel
 
     def updatePositionDisplay(self, event):
-        baseStr = "angle:\t%s\nphase:\t%s\nwavel.:\t%s"
         # Get the display object. It seems there is variation between
         # wx versions. With some versions, the display is obtained by
         #    event.GetEventObject().
@@ -310,11 +305,10 @@ class SIM_SLM(device.Device):
         self.position = self.getCurrentPosition()
         try:
             parms = self.last.params[self.position]
+            display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
         except (IndexError, TypeError):
             # SLM parms updated since last position fetched, or lastParms is None.
             parms = None
-        if parms:
-            display.SetLabel(baseStr % parms)
 
     def onPrepareForExperiment(self, *args):
         self.position = self.getCurrentPosition()
@@ -401,9 +395,9 @@ class SIM_SLM(device.Device):
         new_modulation_factors = (
             cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
                 None,
-                "Set SIM modulation factor",
-                [str(wavelength) for wavelength in modulation_factors.keys()],
-                [factor for factor in modulation_factors.values()],
+                "Set SIM modulation factors",
+                [str(w) for w in modulation_factors.keys()],
+                list(modulation_factors.values()),
                 atMouse=True,
             )
         )

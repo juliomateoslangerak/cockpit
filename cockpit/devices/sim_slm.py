@@ -53,6 +53,7 @@ class SIM_SLM(device.Device):
         [slm]
         type: cockpit.devices.sim_slm.SIM_SLM
         uri: PYRO:sim_slm@slmhost:8000
+        pixelPitch: 15.0
         diffractionAngle: 0.45
         modulationFactors: 488: 190
                            561: 180
@@ -102,9 +103,11 @@ class SIM_SLM(device.Device):
             uri = "PYRO:pyroSLM@%s:%d" % (self.ipAddress, self.port)
         self.connection = Pyro4.Proxy(uri)
 
-        self.diffractionAngle = self.config.get("diffractionAngle", None)
+        self.diffractionAngle = float(
+            self.config.get("diffractionangle", None)
+        )
 
-        for vdef in self.config.get("modulationFactors", "").split("\n"):
+        for vdef in self.config.get("modulationfactors", "").split("\n"):
             if vdef == "":
                 continue
             w, f = vdef.strip("\n").split(":")
@@ -112,6 +115,20 @@ class SIM_SLM(device.Device):
 
         if not self.modulationFactors:
             raise Warning("No modulation factors defined in config.")
+
+        self.shape = self.connection.get_shape()
+        self.kk, self.ll = np.meshgrid(
+            np.arange(self.shape[0]),
+            np.arange(self.shape[1]),
+        )
+
+        try:
+            self.pixelPitch = self.connection.get_pixel_pitch()
+        except AttributeError:
+            self.pixelPitch = float(self.config.get("pixelpitch", None))
+
+        if not self.pixelPitch:
+            raise Warning("No pixel pitch defined in config.")
 
     def onExit(self) -> None:
         if self.connection is not None:
@@ -137,9 +154,7 @@ class SIM_SLM(device.Device):
         if state:
             self.connection.enable()
         else:
-            # Disable the SLM.
-            # TODO: Verify if stop or disable is the correct method
-            self.connection.stop()
+            self.connection.disable()
 
     def cycleToPosition(self, targetPosition):
         pos = self.getCurrentPosition()
@@ -238,13 +253,12 @@ class SIM_SLM(device.Device):
         self.position = self.getCurrentPosition()
 
     def getCurrentPosition(self):
-        return self.connection.get_sequence_index()
+        return self.connection.get_pattern_idx()
 
     def getHandlers(self):
         trigsource = self.config.get("triggersource", None)
         trigline = self.config.get("triggerline", None)
         dt = decimal.Decimal(self.config.get("settlingtime", 10))
-        result = []
         self.handler = cockpit.handlers.executor.DelegateTrigger(
             "slm",
             "slm group",
@@ -257,9 +271,70 @@ class SIM_SLM(device.Device):
                 "getIsEnabled": self.getIsEnabled,
             },
         )
-        self.handler.delegateTo(trigsource, trigline, 0, dt)
-        result.append(self.handler)
-        return result
+        if trigline is not None and trigsource is not None:
+            self.handler.delegateTo(trigsource, trigline, 0, dt)
+        return [self.handler]
+
+    # SIM-specific methods
+    def setSIMSequence(self, anglePhaseWavelength):
+        """Generate a SIM sequence from a list of parameters.
+        angle_phase_wavelength is a list where each element is a tuple of the
+        form (angle_number, phase_number, wavelength).
+        """
+        num_phases = 0
+        num_angles = 0
+        wavelengths = []
+        for angle, phase, wavelength in anglePhaseWavelength:
+            num_phases = max(num_phases, phase + 1)
+            num_angles = max(num_angles, angle + 1)
+            if wavelength not in wavelengths:
+                wavelengths.append(wavelength)
+
+        phases = [
+            self.simPhaseOffset + n * TWO_PI / num_phases
+            for n in range(num_phases)
+        ]
+        angles = [
+            self.simAngleOffset + n * TWO_PI / num_angles
+            for n in range(num_angles)
+        ]
+
+        # Calculate line pitches for each wavelength, once.
+        # d = m * wavelength / np.sin theta
+        # 1/1000 since wavelength in nm, pixel pitch in microns.
+        pitches = {
+            w: w / (1000.0 * np.sin(self.diffractionAngle * TWO_PI / 360.0))
+            for w in wavelengths
+        }
+
+        patterns = np.zeros(
+            (len(anglePhaseWavelength), *self.shape),
+            dtype=np.float32,
+        )
+        wavelengthSeq = []
+        for i, (angle, phase, wavelength) in enumerate(anglePhaseWavelength):
+            # retardation for equal powers in 0 and combined +/-1 orders
+            modulation = self.modulationFactors[wavelength] / 360.0
+
+            pp = pitches[wavelength] / self.pixelPitch
+            th = angles[angle]
+            ph = phases[phase]
+            # Create a stripe float pattern
+            patterns[i] = (
+                (0.5 * modulation)
+                + (0.5 * modulation)
+                * np.cos(
+                    ph
+                    + TWO_PI
+                    * (np.cos(th) * self.kk + np.sin(th) * self.ll)
+                    / pp
+                )
+            ).astype(np.float32)
+            # Lose two LSBs and pass through the LUT for given wavelength.
+            wavelengthSeq.append(wavelength)
+
+        self.sequenceParameters = anglePhaseWavelength
+        self.connection.queue_patterns(patterns, wavelengthSeq)
 
     ### UI functions ###
     def makeUI(self, parent):
@@ -269,9 +344,7 @@ class SIM_SLM(device.Device):
         powerButton = cockpit.gui.device.EnableButton(panel, self.handler)
         panel.Sizer.Add(powerButton, 0, wx.EXPAND)
         triggerButton = wx.Button(panel, label="step")
-        triggerButton.Bind(
-            wx.EVT_BUTTON, lambda evt: self.handler.triggerNow()
-        )
+        triggerButton.Bind(wx.EVT_BUTTON, lambda evt: self.onStep(evt))
         panel.Sizer.Add(triggerButton, 0, wx.EXPAND)
         # Add a position display.
         posDisplay = cockpit.gui.device.MultilineDisplay(
@@ -292,6 +365,9 @@ class SIM_SLM(device.Device):
         posDisplay.Disable()
         powerButton.manageStateOf((triggerButton, posDisplay))
         return panel
+
+    def onStep(self, event):
+        self.connection.trigger()
 
     def updatePositionDisplay(self, event):
         # Get the display object. It seems there is variation between
@@ -369,10 +445,7 @@ class SIM_SLM(device.Device):
         self.setSIMSequence(params)
 
     def setDiffractionAngle(self):
-        try:
-            theta = self.connection.get_setting("sim_diffraction_angle")
-        except:
-            raise Exception("Could not communicate with SLM service.")
+        theta = self.diffractionAngle
         newTheta = float(
             cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
                 None,
@@ -385,13 +458,10 @@ class SIM_SLM(device.Device):
                 atMouse=True,
             )
         )
-        self.connection.set_setting("sim_diffraction_angle", newTheta)
+        self.diffractionAngle = newTheta
 
     def setModulationFactors(self):
-        try:
-            modulation_factors = self.connection.get_sim_modulation_factors()
-        except:
-            raise Exception("Could not communicate with SLM service.")
+        modulation_factors = self.modulationFactors
         new_modulation_factors = (
             cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
                 None,
@@ -402,9 +472,9 @@ class SIM_SLM(device.Device):
             )
         )
         new_modulation_factors = {
-            int(wavelength): factor
+            int(wavelength): int(factor)
             for wavelength, factor in zip(
                 modulation_factors.keys(), new_modulation_factors
             )
         }
-        self.connection.set_sim_modulation_factors(new_modulation_factors)
+        self.modulationFactors = new_modulation_factors

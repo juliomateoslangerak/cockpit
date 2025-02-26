@@ -38,40 +38,7 @@ import cockpit.util
 from cockpit import events
 from cockpit.devices import device
 
-class _LastParameters:
-    """A class to keep a record of last SIM parameters using async calls."""
-
-    def __init__(self, slm):
-        self.slm = slm
-        self._params = None
-        self._result = None
-        self._lock = Lock()
-
-    @property
-    def params(self):
-        """Return the last recorded SIM parameters."""
-        if self._result and self._result.ready:
-            # Updated parameters are available.
-            with self._lock:
-                try:
-                    self._params = self._result.value
-                except:
-                    pass
-                finally:
-                    self._result = None
-        return self._params
-
-    @params.setter
-    def params(self, value):
-        """Set recorded parameters explicitly."""
-        with self._lock:
-            self._result = None
-            self._params = value
-
-    def update(self):
-        """Dispatch async call to update record from hardware."""
-        if self.slm.asproxy:
-            self._result = self.slm.asproxy.get_sim_sequence()
+TWO_PI = 2.0 * np.pi
 
 
 class SIM_SLM(device.Device):
@@ -106,16 +73,16 @@ class SIM_SLM(device.Device):
 
         # General device properties.
         self.connection = None
-        self.asproxy = None
         self.position = None
         self.wasPowered = None
         self.slmTimeout = 10
         self.slmRetryLimit = 3
-        self.last = _LastParameters(self)
+        self.shape = None
 
         # SIM-specific properties.
         self.diffractionAngle = None
         self.modulationFactors = {}
+        self.sequenceParameters = []
 
         # GUI properties.
         self.menuItems = None
@@ -126,8 +93,6 @@ class SIM_SLM(device.Device):
         else:
             uri = "PYRO:pyroSLM@%s:%d" % (self.ipAddress, self.port)
         self.connection = Pyro4.Proxy(uri)
-        self.asproxy = Pyro4.Proxy(uri)
-        self.asproxy._pyroAsync()
 
         self.diffractionAngle = self.config.get("diffractionAngle", None)
 
@@ -141,9 +106,8 @@ class SIM_SLM(device.Device):
             raise Warning("No modulation factors defined in config.")
 
     def onExit(self) -> None:
-        for proxy in [self.connection, self.asproxy]:
-            if proxy is not None:
-                proxy._pyroRelease()
+        if self.connection is not None:
+            self.connection._pyroRelease()
         super().onExit()
 
     def finalizeInitialization(self):
@@ -163,13 +127,7 @@ class SIM_SLM(device.Device):
     def setEnabled(self, state):
         """Enable or disable the SLM."""
         if state:
-            # Enable.
             # TODO: This call has to be repatriated
-            if self.last.params == self.getSIMSequence():
-                # Hardware and software sequences match
-                targetPosition = self.getCurrentPosition()
-            else:
-                targetPosition = 0
             # Enable the hardware.
             self.connection.run()
             # Often, after calling connection.run(), the SLM pattern and the image
@@ -190,7 +148,7 @@ class SIM_SLM(device.Device):
     def cycleToPosition(self, targetPosition):
         pos = self.getCurrentPosition()
         delta = (targetPosition - pos) + (targetPosition < pos) * len(
-            self.last.params
+            self.sequenceParameters
         )
         for i in range(delta):
             self.handler.triggerNow()
@@ -226,9 +184,8 @@ class SIM_SLM(device.Device):
                 sequenceLength = length
                 break
         sequence = reducedParams[0:sequenceLength]
-        ## Tell the SLM to prepare the pattern sequence.
-        # TODO: This call has to be repatriated
-        asyncResult = self.asproxy.set_sim_sequence(sequence)
+
+        self.setSIMSequence(sequence)
 
         # Track sequence index set by last set of triggers.
         lastIndex = 0
@@ -273,11 +230,9 @@ class SIM_SLM(device.Device):
             if lastIndex >= sequenceLength:
                 lastIndex = lastIndex % sequenceLength
         table.clearBadEntries()
-        # Wait until SLM has finished generating and loading patterns.
-        self.wait(asyncResult, "SLM is generating pattern sequence.")
         # Store the parameters used to generate the sequence.
-        self.last.params = sequence
         self.connection.run()
+        self.sequenceParameters = sequence
         # Fire several triggers to ensure that the sequence is loaded.
         for i in range(12):
             self.handler.triggerNow()
@@ -357,7 +312,6 @@ class SIM_SLM(device.Device):
             parms = self.last.params[self.position]
         except (IndexError, TypeError):
             # SLM parms updated since last position fetched, or lastParms is None.
-            self.last.update()
             parms = None
         if parms:
             display.SetLabel(baseStr % parms)
@@ -378,24 +332,6 @@ class SIM_SLM(device.Device):
         events.subscribe(
             events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment
         )
-
-    def wait(self, asyncResult, message):
-        # Wait unti the SLM has finished an aynchronous task.
-        status = wx.ProgressDialog(
-            parent=wx.GetApp().GetTopWindow(),
-            title="Waiting for SLM",
-            message=message,
-        )
-        status.Show()
-        slmFailCount = 0
-        slmFail = False
-        while not asyncResult.wait(timeout=self.slmTimeout) and not slmFail:
-            slmFailCount += 1
-            if slmFailCount >= self.slmRetryLimit:
-                slmFail = True
-        status.Destroy()
-        if slmFail:
-            raise Exception("SLM timeout.")
 
     ### Context menu and handlers ###
     def menuCallback(self, index, item):
@@ -435,10 +371,8 @@ class SIM_SLM(device.Device):
             ]
         else:
             raise ValueError("Order must be 0 or 1.")
-        ## Tell the SLM to prepare the pattern sequence.
-        asyncResult = self.asproxy.set_sim_sequence(params)
-        self.wait(asyncResult, "SLM is generating pattern sequence.")
-        self.last.update()
+
+        self.setSIMSequence(params)
 
     def setDiffractionAngle(self):
         try:

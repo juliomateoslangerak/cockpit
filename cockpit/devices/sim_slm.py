@@ -91,6 +91,8 @@ class SIM_SLM(device.Device):
 
         self._kk = None
         self._ll = None
+        self._patterns = None
+        self._wavelengths = None
         self.sequenceParameters = []
 
         # GUI properties.
@@ -196,7 +198,8 @@ class SIM_SLM(device.Device):
                 break
         sequence = reducedParams[:sequenceLength]
 
-        self.setSIMSequence(sequence)
+        self.computeSIMSequence(sequence)
+        self.sendPatterns()
 
         # Track sequence index set by last set of triggers.
         lastIndex = 0
@@ -276,7 +279,7 @@ class SIM_SLM(device.Device):
         return [self.handler]
 
     # SIM-specific methods
-    def setSIMSequence(self, anglePhaseWavelength):
+    def computeSIMSequence(self, anglePhaseWavelength):
         """Generate a SIM sequence from a list of parameters.
         angle_phase_wavelength is a list where each element is a tuple of the
         form (angle_number, phase_number, wavelength).
@@ -334,7 +337,8 @@ class SIM_SLM(device.Device):
             wavelengthSeq.append(wavelength)
 
         self.sequenceParameters = anglePhaseWavelength
-        self.connection.queue_patterns(patterns, wavelengthSeq)
+        self._patterns = patterns
+        self._wavelengths = wavelengthSeq
 
     ### UI functions ###
     def makeUI(self, parent):
@@ -369,6 +373,10 @@ class SIM_SLM(device.Device):
     def onStep(self, event):
         self.connection.trigger()
 
+    def sendPatterns(self):
+        if self._patterns is not None:
+            self.connection.queue_patterns(self._patterns, self._wavelengths)
+
     def updatePositionDisplay(self, event):
         # Get the display object. It seems there is variation between
         # wx versions. With some versions, the display is obtained by
@@ -379,12 +387,14 @@ class SIM_SLM(device.Device):
         if not hasattr(display, "SetLabel"):
             display = display.GetOwner()
         self.position = self.getCurrentPosition()
-        try:
+        if self.position is None:
+            display.SetLabel("No queue\nrunning")
+        elif not self.sequenceParameters:
+            display.SetLabel("No sequence\ngenerated.\nPlease set one.")
+        else:
             parms = self.sequenceParameters[self.position]
             display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
-        except (IndexError, TypeError):
-            # SLM parms updated since last position fetched, or lastParms is None.
-            parms = None
+
 
     def onPrepareForExperiment(self, *args):
         self.position = self.getCurrentPosition()
@@ -442,7 +452,9 @@ class SIM_SLM(device.Device):
         else:
             raise ValueError("Order must be 0 or 1.")
 
-        self.setSIMSequence(params)
+        self.computeSIMSequence(params)
+        self.sendPatterns()
+        self.connection.run_queue()
 
     def setDiffractionAngle(self):
         theta = self.diffractionAngle

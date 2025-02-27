@@ -60,7 +60,7 @@ class SIM_SLM(device.Device):
                            647: 170
         triggerSource: NAME_OF_EXECUTOR_DEVICE
         triggerLine: 2
-        settlingtime: 10
+        settlingTime: 10
 
     """
 

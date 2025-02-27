@@ -461,16 +461,15 @@ class SIM_SLM(device.Device):
         self.connection.run_queue()
 
     def setDiffractionAngle(self, event):
-        theta = self.diffractionAngle
-        newTheta = float(
+        self.diffractionAngle = float(
             cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
                 None,
                 "Set SIM diffraction angle",
                 (
                     "Adjust diffraction angle to\nput spots at edge of pupil.\n"
-                    "Current angle is %.2f°." % theta
+                    "Current angle is %.2f°." % self.diffractionAngle
                 ),
-                theta,
+                self.diffractionAngle,
                 atMouse=True,
             )
         )

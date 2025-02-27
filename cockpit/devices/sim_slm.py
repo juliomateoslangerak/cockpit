@@ -65,7 +65,7 @@ class SIM_SLM(device.Device):
     """
 
     _config_types = {
-        "settlingtime": float,
+        "settlingTime": float,
         "triggerLine": int,
     }
 

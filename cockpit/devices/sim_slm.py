@@ -418,10 +418,6 @@ class SIM_SLM(device.Device):
         )
 
     ### Context menu and handlers ###
-    def menuCallback(self, index, item):
-        func = self.menuItems[item]
-        return func()
-
     def onRightMouse(self, event):
         menu = wx.Menu()
         for item, callback in self.menuItems:

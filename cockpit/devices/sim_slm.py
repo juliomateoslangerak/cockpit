@@ -24,7 +24,6 @@ microscope's SLM"""
 
 import decimal
 import time
-from collections import OrderedDict
 from itertools import groupby
 
 import numpy as np

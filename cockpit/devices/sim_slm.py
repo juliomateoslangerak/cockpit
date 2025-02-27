@@ -473,7 +473,6 @@ class SIM_SLM(device.Device):
                 atMouse=True,
             )
         )
-        self.diffractionAngle = newTheta
 
     def setModulationFactors(self, event):
         modulation_factors = self.modulationFactors

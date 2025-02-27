@@ -31,12 +31,16 @@ import numpy as np
 import Pyro4
 import wx
 
-import cockpit.gui.device
 import cockpit.gui.dialogs.getNumberDialog
+import cockpit.gui.guiUtils
 import cockpit.handlers.executor
 import cockpit.util
 from cockpit import events
 from cockpit.devices import device
+from cockpit.gui.device import (
+    EnableButton,
+    DEFAULT_SIZE
+)
 
 TWO_PI = 2.0 * np.pi
 
@@ -141,13 +145,11 @@ class SIM_SLM(device.Device):
     def finalizeInitialization(self):
         # A mapping of context-menu entries to functions.
         # Define in tuples - easier to read and reorder.
-        menuTuples = (
+        self.menuItems = [
             ("Generate SIM sequence", self.testSIMSequence),
             ("SIM diff. angle", self.setDiffractionAngle),
             ("SIM modulation factor", self.setModulationFactors),
-        )
-        # Store as ordered dict for easy item->func lookup.
-        self.menuItems = OrderedDict(menuTuples)
+        ]
 
     def getIsEnabled(self):
         return self.connection.get_is_enabled()
@@ -346,29 +348,32 @@ class SIM_SLM(device.Device):
         panel = wx.Panel(parent, style=wx.BORDER_RAISED)
         panel.SetDoubleBuffered(True)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
-        powerButton = cockpit.gui.device.EnableButton(panel, self.handler)
+        powerButton = EnableButton(panel, self.handler)
         panel.Sizer.Add(powerButton, 0, wx.EXPAND)
         triggerButton = wx.Button(panel, label="step")
         triggerButton.Bind(wx.EVT_BUTTON, lambda evt: self.onStep(evt))
         panel.Sizer.Add(triggerButton, 0, wx.EXPAND)
-        # Add a position display.
-        posDisplay = cockpit.gui.device.MultilineDisplay(
-            parent=panel, numLines=3
+        # Add a status info display.
+        statusDisplay = wx.StaticText(
+            parent=panel,
+            style=wx.ALIGN_CENTRE | wx.ST_NO_AUTORESIZE,
+            size=(DEFAULT_SIZE[0], 3 * DEFAULT_SIZE[1]),
         )
-        posDisplay.Bind(
-            wx.EVT_TIMER, lambda event: self.updatePositionDisplay(event)
+        statusDisplay.SetFont(statusDisplay.GetFont().Smaller())
+        statusDisplay.Bind(
+            wx.EVT_TIMER, lambda event: self.updateStatusDisplay(event)
         )
-        panel.Sizer.Add(posDisplay)
+        panel.Sizer.Add(statusDisplay)
         # Set up a timer to update value displays.
-        self.updateTimer = wx.Timer(posDisplay)
+        self.updateTimer = wx.Timer(statusDisplay)
         self.updateTimer.Start(1000)
         # Changed my mind. SIM diffraction angle is an advanced parameter,
         # so it now lives in a right-click menu rather than on a button.
         panel.Bind(wx.EVT_CONTEXT_MENU, self.onRightMouse)
         # Controls other than powerButton only enabled when SLM is enabled.
         triggerButton.Disable()
-        posDisplay.Disable()
-        powerButton.manageStateOf((triggerButton, posDisplay))
+        statusDisplay.Disable()
+        powerButton.manageStateOf((triggerButton, statusDisplay))
         return panel
 
     def onStep(self, event):
@@ -396,7 +401,6 @@ class SIM_SLM(device.Device):
             parms = self.sequenceParameters[self.position]
             display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
 
-
     def onPrepareForExperiment(self, *args):
         self.position = self.getCurrentPosition()
         self.wasPowered = self.getIsEnabled()
@@ -420,12 +424,16 @@ class SIM_SLM(device.Device):
         return func()
 
     def onRightMouse(self, event):
-        menu = cockpit.gui.device.Menu(
-            self.menuItems.keys(), self.menuCallback
-        )
-        menu.show(event)
+        menu = wx.Menu()
+        for item, callback in self.menuItems:
+            if item:
+                menu_item = menu.Append(wx.ID_ANY, item)
+                menu.Bind(wx.EVT_MENU, callback, menu_item)
+            else:
+                menu.AppendSeparator()
+        cockpit.gui.guiUtils.placeMenuAtMouse(event.GetEventObject(), menu)
 
-    def testSIMSequence(self):
+    def testSIMSequence(self, event):
         inputs = cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
             None,
             "Generate a SIM sequence",
@@ -457,7 +465,7 @@ class SIM_SLM(device.Device):
         self.sendPatterns()
         self.connection.run_queue()
 
-    def setDiffractionAngle(self):
+    def setDiffractionAngle(self, event):
         theta = self.diffractionAngle
         newTheta = float(
             cockpit.gui.dialogs.getNumberDialog.getNumberFromUser(
@@ -473,7 +481,7 @@ class SIM_SLM(device.Device):
         )
         self.diffractionAngle = newTheta
 
-    def setModulationFactors(self):
+    def setModulationFactors(self, event):
         modulation_factors = self.modulationFactors
         new_modulation_factors = (
             cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(

@@ -76,6 +76,7 @@ class SIM_SLM(device.Device):
         super().__init__(name, config)
 
         # General device properties.
+        self.handler = None
         self.connection = None
         self.position = None
         self.wasPowered = None
@@ -195,7 +196,7 @@ class SIM_SLM(device.Device):
         # Find the repeating unit in the sequence.
         sequenceLength = len(reducedParams)
         for length in range(2, len(reducedParams) // 2):
-            if reducedParams[:length] == reducedParams[length:2 * length]:
+            if reducedParams[:length] == reducedParams[length : 2 * length]:
                 sequenceLength = length
                 break
         sequence = reducedParams[:sequenceLength]

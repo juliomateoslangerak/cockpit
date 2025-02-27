@@ -36,10 +36,7 @@ import cockpit.handlers.executor
 import cockpit.util
 from cockpit import events
 from cockpit.devices import device
-from cockpit.gui.device import (
-    EnableButton,
-    DEFAULT_SIZE
-)
+from cockpit.gui.device import EnableButton, DEFAULT_SIZE
 
 TWO_PI = 2.0 * np.pi
 

@@ -199,7 +199,7 @@ class SIM_SLM(device.Device):
                 break
         sequence = reducedParams[:sequenceLength]
 
-        self.computeSIMSequence(sequence)
+        self.compute3DSIMSequence(sequence)
         self.sendPatterns()
 
         # Track sequence index set by last set of triggers.
@@ -280,7 +280,7 @@ class SIM_SLM(device.Device):
         return [self.handler]
 
     # SIM-specific methods
-    def computeSIMSequence(self, anglePhaseWavelength):
+    def compute3DSIMSequence(self, anglePhaseWavelength):
         """Generate a SIM sequence from a list of parameters.
         angle_phase_wavelength is a list where each element is a tuple of the
         form (angle_number, phase_number, wavelength).
@@ -378,7 +378,7 @@ class SIM_SLM(device.Device):
         if self._patterns is not None:
             self.connection.queue_patterns(self._patterns, self._wavelengths)
 
-    def updatePositionDisplay(self, event):
+    def updateStatusDisplay(self, event):
         # Get the display object. It seems there is variation between
         # wx versions. With some versions, the display is obtained by
         #    event.GetEventObject().
@@ -453,7 +453,7 @@ class SIM_SLM(device.Device):
         else:
             raise ValueError("Order must be 0 or 1.")
 
-        self.computeSIMSequence(params)
+        self.compute3DSIMSequence(params)
         self.sendPatterns()
         self.connection.run_queue()
 

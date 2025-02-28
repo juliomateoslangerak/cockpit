@@ -388,13 +388,13 @@ class SIM_SLM(device.Device):
         display = event.GetEventObject()
         if not hasattr(display, "SetLabel"):
             display = display.GetOwner()
-        self.position = self.getCurrentPosition()
-        if self.position is None:
+        currPosition = self.getCurrentPosition()
+        if currPosition is None:
             display.SetLabel("No queue\nrunning")
         elif not self.sequenceParameters:
             display.SetLabel("No sequence\ngenerated.\nPlease set one.")
         else:
-            parms = self.sequenceParameters[self.position]
+            parms = self.sequenceParameters[currPosition]
             display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
 
     def onPrepareForExperiment(self, *args):

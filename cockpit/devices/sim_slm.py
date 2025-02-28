@@ -372,7 +372,8 @@ class SIM_SLM(device.Device):
         return panel
 
     def onStep(self, event):
-        self.connection.trigger()
+        if self.connection.is_queue_running():
+            self.connection.trigger()
 
     def sendPatterns(self):
         if self._patterns is not None:

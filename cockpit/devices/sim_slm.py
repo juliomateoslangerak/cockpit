@@ -139,15 +139,6 @@ class SIM_SLM(device.Device):
             self.connection._pyroRelease()
         super().onExit()
 
-    def finalizeInitialization(self):
-        # A mapping of context-menu entries to functions.
-        # Define in tuples - easier to read and reorder.
-        self.menuItems = [
-            ("Generate SIM sequence", self.testSIMSequence),
-            ("SIM diff. angle", self.setDiffractionAngle),
-            ("SIM modulation factor", self.setModulationFactors),
-        ]
-
     def getIsEnabled(self):
         return self.connection.get_is_enabled()
 
@@ -342,6 +333,14 @@ class SIM_SLM(device.Device):
 
     ### UI functions ###
     def makeUI(self, parent):
+        # Define the UI elements
+        # The items to appear in the context menu.
+        self.menuItems = [
+            ("Generate SIM sequence", self.testSIMSequence),
+            ("SIM diff. angle", self.setDiffractionAngle),
+            ("SIM modulation factor", self.setModulationFactors),
+        ]
+        # Create the main device panel.
         panel = wx.Panel(parent, style=wx.BORDER_RAISED)
         panel.SetDoubleBuffered(True)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)

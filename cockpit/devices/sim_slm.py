@@ -360,7 +360,7 @@ class SIM_SLM(device.Device):
         panel.Sizer.Add(statusDisplay)
         # Set up a timer to update value displays.
         self.updateTimer = wx.Timer(statusDisplay)
-        self.updateTimer.Start(1000)
+        self.updateTimer.Start(500)
         # Changed my mind. SIM diffraction angle is an advanced parameter,
         # so it now lives in a right-click menu rather than on a button.
         panel.Bind(wx.EVT_CONTEXT_MENU, self.onRightMouse)

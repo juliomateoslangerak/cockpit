@@ -264,6 +264,7 @@ class SIM_SLM(device.Device):
             },
         )
         if trigline is not None and trigsource is not None:
+            # We dont want to delegate the trigger for testing purposes
             self.handler.delegateTo(trigsource, trigline, 0, dt)
         return [self.handler]
 

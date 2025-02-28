@@ -143,11 +143,15 @@ class SIM_SLM(device.Device):
         return self.connection.get_is_enabled()
 
     def setEnabled(self, state):
-        """Enable or disable the SLM."""
-        if state:
+        """Enable or disable the SLM. We store the current pattern and wavelength to restore it later."""
+        if state:  # Enable
             self.connection.enable()
-        else:
+            if self.lastPosition is not None:
+                self.connection.run_queue(self.lastPosition)
+        else:  # Disable
+            self.lastPosition = self.getCurrentPosition()
             self.connection.disable()
+            self.connection.apply_flat_pattern()
 
     def cycleToPosition(self, targetPosition):
         pos = self.getCurrentPosition()
@@ -238,12 +242,6 @@ class SIM_SLM(device.Device):
         # Store the parameters used to generate the sequence.
         self.sequenceParameters = sequence
         self.connection.run_queue()
-        # Fire several triggers to ensure that the sequence is loaded.
-        for _ in range(12):
-            self.handler.triggerNow()
-            time.sleep(0.01)
-        # Ensure that we're at position 0.
-        self.cycleToPosition(0)
         self.lastPosition = self.getCurrentPosition()
 
     def getCurrentPosition(self):

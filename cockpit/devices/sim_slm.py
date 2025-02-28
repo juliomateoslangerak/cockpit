@@ -75,7 +75,7 @@ class SIM_SLM(device.Device):
         # General device properties.
         self.handler = None
         self.connection = None
-        self.position = None
+        self.lastPosition = None
         self.wasPowered = None
         self.slmTimeout = 10
         self.slmRetryLimit = 3
@@ -244,7 +244,7 @@ class SIM_SLM(device.Device):
             time.sleep(0.01)
         # Ensure that we're at position 0.
         self.cycleToPosition(0)
-        self.position = self.getCurrentPosition()
+        self.lastPosition = self.getCurrentPosition()
 
     def getCurrentPosition(self):
         return self.connection.get_pattern_idx()
@@ -398,7 +398,7 @@ class SIM_SLM(device.Device):
             display.SetLabel("angle:\t%s\nphase:\t%s\nwavel.:\t%s" % parms)
 
     def onPrepareForExperiment(self, *args):
-        self.position = self.getCurrentPosition()
+        self.lastPosition = self.getCurrentPosition()
         self.wasPowered = self.getIsEnabled()
 
     def cleanupAfterExperiment(self, *args):

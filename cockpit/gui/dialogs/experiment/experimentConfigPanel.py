@@ -280,7 +280,7 @@ class ExperimentConfigPanel(wx.Panel):
         exposureSizer.Add(self.channelExposurePanel, 0, wx.ALL, border=5)
 
         # Toggle which panel is displayed based on the radio box.
-        self.exposureMode.  Bind(wx.EVT_RADIOBOX, self.onExposureMode)
+        self.exposureMode.Bind(wx.EVT_RADIOBOX, self.onExposureMode)
         self.exposureMode.SetSelection(self.settings['exposureMode'])
         self.onExposureMode()
 

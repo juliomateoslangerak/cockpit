@@ -526,14 +526,13 @@ class ExperimentConfigPanel(wx.Panel):
                 wx.MessageDialog(self, "No channels are enabled, so the experiment cannot be run.",
                                  style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK).ShowModal()
                 return True
-            if not all(c.GetStringSelection() for c in self.channelsOrder.values()):
-                wx.MessageDialog(self, "Not all channels have an order, so the experiment cannot be run.",
-                                 style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK).ShowModal()
-                return True
-
             unsortedExposureSettings = {}
             for channel, checkbox, order in zip(self.channels.Names, self.channelsChecked.values(), self.channelsOrder.values()):
                 if checkbox.IsChecked():
+                    if order.GetSelection() == -1:
+                        wx.MessageDialog(self, "Channel %s has no order, so the experiment cannot be run." % channel,
+                                         style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK).ShowModal()
+                        return True
                     channelSettings = self.channels.Get(channel)
                     cameras = []
                     for cam_handler in self.allCameras:

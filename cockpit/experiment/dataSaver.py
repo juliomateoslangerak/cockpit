@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-## Copyright (C) 2021 University of Oxford
+## Copyright (C) 2021 University of Oxford, CNRS
 ##
 ## This file is part of Cockpit.
 ##
@@ -53,6 +53,11 @@ from cockpit import events
 import cockpit.util.datadoc
 import cockpit.util.threads
 
+import zarr
+import numcodecs
+from ome_zarr import writer, scale
+from ome_zarr.io import parse_url
+
 import numpy
 import queue
 import threading
@@ -67,7 +72,7 @@ uniqueID = 0
 
 ## This class simply records all data received during an experiment and saves
 # it to disk in MRC format.
-class DataSaver:
+class MrcDataSaver:
     ## \param cameras List of CameraHandler instances for the cameras that
     #         will be generating images
     # \param numReps How many times the experiment will be repeated.
@@ -506,6 +511,325 @@ class DataSaver:
                 handle.write(paddedBuffer)
             except Exception as e:
                 print ("Error writing image:",e)
+                raise e
+
+            self.imagesKept[cameraIndex] += 1
+            self.lastImageTime = time.time()
+
+            curMin, curMax = self.minMaxVals[cameraIndex]
+            self.minMaxVals[cameraIndex] = (min(curMin, imageMin),
+                                            max(curMax, imageMax))
+
+        # Update the status text. But first, check for abort/experiment
+        # completion, since we may actually be done now and we don't want
+        # a misleading status text.
+        if self.shouldAbort or self.amDone:
+            return
+        self.statusThread.newImage(cameraIndex)
+
+
+    ## Return a list of the filenames we are writing to.
+    def getFilenames(self):
+        return self.filenames
+
+
+## This class simply records all data received during an experiment and saves
+# it to disk in ome-zarr format.
+class ZarrDataSaver:
+    ## \param cameras List of CameraHandler instances for the cameras that
+    #         will be generating images
+    # \param numReps How many times the experiment will be repeated.
+    # \param repDuration How long each rep lasts.
+    # \param cameraToImagesPerRep Maps camera handlers to how many images to
+    #        expect for that camera in a single repeat of the experiment.
+    # \param cameraToIgnoredImageIndices Maps camera handlers to indices of
+    #        images that we don't actually want to keep.
+    # \param runThread Thread that is executing the experiment. When it exits,
+    #        we know to stop expecting more images.
+    # \param savePath Path to save the incoming data to.
+    # \param pixelSizeXY Size of the XY "pixel".
+    # \param pixelSizeZ Size of the Z "pixel" (i.e. distance between Z slices).
+    # \param omeMetadata OME-XML Metadata to be included in the OME-Zarr file.
+    # \param downscale Downscaling factor for x and y axes
+    # \param maxLayer Number of downscalings. We are defaulting here to 2
+    # \param downscaleMethod Downscaling method. Default is 'nearest'
+    # \param chunkShape Output chunk shape
+    # \param compression Compressor to be used, defaults to numcodecs.Blosc()
+    # \param overwrite Overwrite existing files
+    def __init__(self, cameras, numReps, repDuration, cameraToImagesPerRep,
+                 cameraToIgnoredImageIndices, runThread, savePath, pixelSizeXY, pixelSizeZ,
+                 omeMetadata=None, downscale=2, maxLayer=2, downscaleMethod='nearest',
+                 chunkShape=(1, 1024, 1024), compression=numcodecs.Blosc(), overwrite=True
+                 ):
+        self.cameras = cameras
+        self.numReps = numReps
+        self.repDuration = repDuration
+        self.cameraToImagesPerRep = cameraToImagesPerRep
+        self.cameraToIgnoredImageIndices = cameraToIgnoredImageIndices
+        self.runThread = runThread
+
+        global uniqueID
+        # Unique ID for our instance
+        self.uniqueID = uniqueID
+        uniqueID += 1
+        # Assign a number to each camera, for indexing into our data array
+        # later, and figure out how many images per camera we'll actually be
+        # *keeping*.
+        ## We need to establish a consistent ordering for cameras so that
+        # each image gets stored in the correct part of the file. This
+        # maps camera handlers to indices.
+        self.cameraToIndex = {}
+        ## Maps camera handlers to total images kept per rep.
+        self.cameraToImagesKeptPerRep = {}
+        for i, camera in enumerate(self.cameras):
+            self.cameraToIndex[camera] = i
+            self.cameraToImagesKeptPerRep[camera] = \
+                (self.cameraToImagesPerRep[camera]
+                 - len(self.cameraToIgnoredImageIndices[camera]))
+        # We need this for the upper bound on the array of data we write.
+        self.maxImagesPerRep = max(self.cameraToImagesKeptPerRep.values())
+
+        # Maps ints to cameras; the ints represent the order in which the
+        # images are stored.
+        self.indexToCamera = {v: k for k, v in self.cameraToIndex.items()}
+        # Timestamp of the first image we receive.
+        # We need this so we can rebase the timestamps of images to
+        # to be relative to the beginning of the experiment -- Python
+        # timestamps can't be stored directly as 32-bit floating points without
+        # losing a lot of precision. And we want to store image timestamps in
+        # the extended header, to help us identify when frames get dropped.
+        self.firstTimestamp = None
+
+        # Time at which we last received an image, so we know when images
+        # have stopped arriving.
+        self.lastImageTime = time.time()
+        self.startTime = time.time()
+
+        self.pixelSizeXY = pixelSizeXY
+        self.pixelSizeZ = pixelSizeZ
+
+        # ome-zarr specific settings
+        self.scaler = scale.Scaler(
+            downscale=downscale,
+            max_layer=maxLayer,
+            method=downscaleMethod
+        )
+        self.coordinateTransforms = [
+            [{'scale': [pixelSizeZ, pixelSizeXY, pixelSizeXY], 'type': 'scale'}],
+            [{'scale': [pixelSizeZ, pixelSizeXY * downscale, pixelSizeXY * downscale], 'type': 'scale'}],
+        ]
+
+        self.storageOptions = {
+            "chunks": chunkShape,
+            "compression": compression,
+            "overwrite": overwrite,
+        }
+
+        self.savePath = savePath
+        # Parse the url as a zarr store. Note that "mode = 'w'" enables writing to this store.
+        self.zarrStore = parse_url(self.savePath, mode='w').store
+        self.zarrRoot = zarr.open_group(self.zarrStore)
+
+        # List of how many images we've received, on a per-camera basis.
+        self.imagesReceived = [0] * len(self.cameras)
+        # List of how many images we've written, on a per-camera basis.
+        self.imagesKept = [0] * len(self.cameras)
+        # List of functions that receive image data and feed it into
+        # self.imagesReceived.
+        self.lambdas = []
+        # List of (min, max) tuples, on a per-camera basis, tracking
+        # the dimmest and brightest pixels.
+        self.minMaxVals = []
+
+        # True if we should stop collecting data.
+        self.shouldAbort = False
+        # True if we are done collecting data.
+        self.amDone = False
+        # Queue of (camera index, image data, timestamp) tuples for images
+        # that need to be saved
+        self.imageQueue = queue.Queue()
+
+        # Use dye name if available, otherwise use camera name.
+        names = [camera.dye or camera.name for camera in self.cameras]
+        totals = []
+        for camera in self.cameras:
+            totals.append(self.cameraToImagesKeptPerRep[camera] * self.numReps)
+        # Thread that handles updating the UI.
+        self.statusThread = StatusUpdateThread(
+            names, totals, self.numReps,
+            self.repDuration
+        )
+
+        # Start the data-saving thread.
+        self.saveData()
+
+    # Subscribe to the new-camera-image events for the cameras we care about.
+    # Save the functions we generate for handling the subscriptions, so we can
+    # unsubscribe later. Initialize self.minMaxVals. Start our status-update
+    # thread.
+    def startCollecting(self):
+        for camera in self.cameras:
+            def func(data, metadata, camera=camera):
+                return self.onImage(self.cameraToIndex[camera], data, metadata)
+            self.lambdas.append(func)
+            events.subscribe(events.NEW_IMAGE % camera.name, func)
+
+            self.minMaxVals.append((float('inf'), float('-inf')))
+        events.subscribe(events.USER_ABORT, self.onAbort)
+        self.statusThread.start()
+
+    # User aborted; stop saving data.
+    def onAbort(self):
+        self.shouldAbort = True
+        self.statusThread.shouldStop = True
+
+    # Wait for the runThread to finish, then wait a bit longer in case some
+    # images are laggardly, before we close our filehandles.
+    def executeAndSave(self):
+        # Joining the thread doesn't actually work until it has started,
+        # hence the delay here.
+        time.sleep(.5)
+        self.runThread.join()
+
+        # Wait until it's been a bit without getting any more images in, or
+        # until we have all the images we expected to get for each camera.
+        while ((time.time() - self.lastImageTime < self.repDuration+1.0)
+               or not self.imageQueue.empty()):
+            amDone = True
+            for camera in self.cameras:
+                total = self.imagesKept[self.cameraToIndex[camera]]
+                target = self.cameraToImagesKeptPerRep[camera] * self.numReps
+                if total != target:
+                    # There exists a camera for which we do not have all
+                    # images yet.
+                    amDone = False
+                    break
+            if amDone or self.shouldAbort:
+                break
+            time.sleep(.01)
+        self.amDone = True
+
+        self.cleanup()
+
+    # Clean up once saving is completed.
+    def cleanup(self):
+        self.statusThread.shouldStop = True
+        for i, camera in enumerate(self.cameras):
+            events.unsubscribe(events.NEW_IMAGE % camera.name, self.lambdas[i])
+        events.unsubscribe(events.USER_ABORT, self.onAbort)
+
+    # Receive new data, and add it to the queue.
+    def onImage(self, cameraIndex, imageData, metadata):
+        self.imageQueue.put((cameraIndex, imageData, metadata))
+
+    # Continually poll our imageQueue and save data to the file.
+    @cockpit.util.threads.callInNewThread
+    def saveData(self):
+        while not self.amDone:
+            if self.shouldAbort:
+                # Do nothing.
+                return
+            cameraIndex, imageData, metadata = self.imageQueue.get()
+            timestamp = metadata['timestamp']
+            if self.firstTimestamp is None:
+                self.firstTimestamp = timestamp
+            # Store the timestamp as a rebased 32-bit float; we can't use
+            # 64-bit due to the file format restriction, and if we don't
+            # rebase then the numbers are big enough that we lose decimal
+            # precision.
+            timestamp = timestamp - self.firstTimestamp
+            self.writeImage(cameraIndex, imageData, timestamp)
+
+    # Write a single image to the file.
+    def writeImage(self, cameraIndex, imageData, timestamp):
+        self.imagesReceived[cameraIndex] += 1
+        camera = self.indexToCamera[cameraIndex]
+        # First determine if we actually want to keep this image.
+        if ((self.imagesReceived[cameraIndex]
+             % self.cameraToImagesPerRep[camera])
+            in self.cameraToIgnoredImageIndices[camera]):
+            # This image is one that should be discarded.
+            return
+
+        # Calculate the time and Z indices for the new image. This will in turn
+        # help us to calculate which file to write to and the offset of the
+        # image in the file.
+        numImages = self.imagesKept[cameraIndex]
+        timepoint = numImages // self.maxImagesPerRep
+        fileIndex = timepoint // self.maxRepsPerFile
+        # Rebase the timepoint to be relative to the beginning of this specific
+        # file.
+        timepoint -= fileIndex * self.maxRepsPerFile
+        zIndex = numImages % self.cameraToImagesKeptPerRep[camera]
+
+        numCameras = len(self.cameras)
+        planeIndex = (int(timepoint * self.maxImagesPerRep * numCameras)
+                      + (zIndex * numCameras) + cameraIndex)
+
+
+        height, width = imageData.shape
+
+        # Pad with zeros. I wouldn't normally think this would be
+        # necessary, but we get "invalid argument" errors when writing
+        # to the filehandle if we don't.
+        # \todo Figure out why this is necessary.
+        paddedBuffer = numpy.zeros((self.maxHeight, self.maxWidth),
+                                   dtype=numpy.uint16)
+        paddedBuffer[:height, :width] = imageData
+
+        imageMin = imageData.min()
+        imageMax = imageData.max()
+
+        ex_wavelength = self.cameraToExcitation[camera]
+        em_wavelength = camera.wavelength
+
+        with self.fileLocks[fileIndex]:
+            handle = self.filehandles[fileIndex]
+
+            ## The extended header has the following structure per
+            ## plane (see issue #290):
+            ##
+            ##     8 32bit signed integers whose meaning we don't
+            ##     know.  Often are all set to zero.
+            ##
+            ##     Followed by 32 32bit floats.  We only what the
+            ##     first 14 are:
+            ##
+            ##     photosensor reading (typically in mV)
+            ##     elapsed time (seconds since experiment began)
+            ##     x stage coordinates
+            ##     y stage coordinates
+            ##     z stage coordinates
+            ##     minimum intensity
+            ##     maximum intensity
+            ##     mean intensity
+            ##     exposure time (seconds)
+            ##     neutral density (fraction of 1 or percentage)
+            ##     excitation wavelength
+            ##     emission wavelength
+            ##     intensity scaling (usually 1)
+            ##     energy conversion factor (usually 1)
+            ##
+            ## Experience from inspecting actual dv files from API
+            ## systems, tells us that we can leave most of them at
+            ## zero.
+            intMetadataBuffer = self.intMetadataBuffers[fileIndex]
+            floatMetadataBuffer = self.floatMetadataBuffers[fileIndex]
+            floatMetadataBuffer[1] = timestamp
+            floatMetadataBuffer[5] = imageMin
+            floatMetadataBuffer[6] = imageMax
+            # TODO floatMetadataBuffer[8] could be exposure time in seconds
+            floatMetadataBuffer[10] = ex_wavelength
+            floatMetadataBuffer[11] = em_wavelength
+
+            try:
+                handle.seek(metadataOffset)
+                handle.write(intMetadataBuffer)
+                handle.write(floatMetadataBuffer)
+                handle.seek(dataOffset)
+                handle.write(paddedBuffer)
+            except Exception as e:
+                print("Error writing image:",e)
                 raise e
 
             self.imagesKept[cameraIndex] += 1

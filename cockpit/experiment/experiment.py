@@ -257,13 +257,29 @@ class Experiment:
                     cameraToExcitation[camera] = max(cameraToExcitation[camera],
                                                      max_wavelength)
 
-            saver = dataSaver.DataSaver(self.cameras, self.numReps,
-                                        self.repDuration,
-                                        self.cameraToImageCount,
-                                        self.cameraToIgnoredImageIndices,
-                                        self._run_thread, self.savePath,
-                                        self.sliceHeight, self.generateTitles(),
-                                        cameraToExcitation)
+            if self.savePath.endswith(".dv"):
+                saver = dataSaver.MrcDataSaver(self.cameras, self.numReps,
+                                            self.repDuration,
+                                            self.cameraToImageCount,
+                                            self.cameraToIgnoredImageIndices,
+                                            self._run_thread, self.savePath,
+                                            self.sliceHeight, self.generateTitles(),
+                                            cameraToExcitation)
+            elif self.savePath.endswith(".zarr"):
+                saver = dataSaver.ZarrDataSaver(
+                    cameras=self.cameras,
+                    numReps=self.numReps,
+                    repDuration=self.repDuration,
+                    cameraToImagesPerRep=self.cameraToImageCount,
+                    cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
+                    runThread=self._run_thread,
+                    savePath=self.savePath,
+                    pixelSizeXY=wx.GetApp().Objectives.GetPixelSize(),
+                    pixelSizeZ=self.sliceHeight,
+                )
+            else:
+                raise RuntimeError("Unsupported file format %s" % self.savePath)
+
             saver.startCollecting()
             saveThread = threading.Thread(target=saver.executeAndSave,
                                           name="Experiment-execute-save")
@@ -523,7 +539,6 @@ class Experiment:
     def expose(self, curTime, cameras, lightTimePairs, table):
         # First, determine which cameras are not ready to be exposed, because
         # they may have seen light they weren't supposed to see (due to
-
         # bleedthrough from other cameras' exposures). These need
         # to be triggered (and we need to record that we want to throw away
         # those images) before we can proceed with the real exposure.

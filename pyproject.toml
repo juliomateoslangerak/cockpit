@@ -32,6 +32,7 @@ dependencies = [
     "pyserial",
     "scipy",
     "wxPython>=4.1",
+    "ome-zarr"
 ]
 
 [project.gui-scripts]

@@ -490,24 +490,28 @@ class ExperimentConfigPanel(wx.Panel):
 
         exposureSettings = []
 
-        if self.exposureMode.GetSelection() == 0:
-            # A single exposure event with all cameras and lights.
-            lightTimePairs = []
-            for i, light in enumerate(self.allLights):
-                if (self.allLights[i].getIsEnabled() and
-                        self.lightExposureTimes[i].GetValue()):
-                    lightTimePairs.append(
-                        (light, guiUtils.tryParseNum(self.lightExposureTimes[i], decimal.Decimal)))
-                    
-            if lightTimePairs == [] :
-                if not guiUtils.getUserPermission(
-                    ("No enabled light has a define exposure time.") +
-                    "Are you sure you want to continue?"):
-                    return True
-                
+        if self.exposureMode.GetStringSelection() == 'Expose simultaneously':
+            lightTimePairs = [
+                (
+                    light,
+                    guiUtils.tryParseNum(
+                        self.lightExposureTimes[i], decimal.Decimal
+                    ),
+                )
+                for i, light in enumerate(self.allLights)
+                if (
+                    self.allLights[i].getIsEnabled()
+                    and self.lightExposureTimes[i].GetValue()
+                )
+            ]
+            if not lightTimePairs and not guiUtils.getUserPermission(
+                "No enabled light has a define exposure time. Are you sure you want to continue?"
+            ):
+                return True
+
             exposureSettings = [(cameras, lightTimePairs)]
 
-        elif self.exposureMode.GetSelection() == 1:
+        elif self.exposureMode.GetStringSelection() == "Expose sequentially":
             # A separate exposure for each camera.
             for camera in cameras:
                 cameraSettings = self.cameraToExposureTimes[camera]
@@ -520,7 +524,7 @@ class ExperimentConfigPanel(wx.Panel):
                         settings.append((light, guiUtils.tryParseNum(timeControl, decimal.Decimal)))
                 exposureSettings.append(([camera], settings))
 
-        elif self.exposureMode.GetSelection() == 2:
+        elif self.exposureMode.GetStringSelection() == "Expose channels":
             # Check that there are active channels and they all have an order
             if not any(c.IsChecked() for c in self.channelsChecked.values()):
                 wx.MessageDialog(self, "No channels are enabled, so the experiment cannot be run.",
@@ -535,16 +539,25 @@ class ExperimentConfigPanel(wx.Panel):
                         return True
                     channelSettings = self.channels.Get(channel)
                     cameras = []
-                    for cam_handler in self.allCameras:
-                        if channelSettings[cam_handler.name]:
-                            cameras.append(cam_handler)
-                    lightTimePairs = []
-                    for light_handler in self.allLights:
-                        if channelSettings[light_handler.name]["isEnabled"]:
-                            lightTimePairs.append((
-                                light_handler,
-                                decimal.Decimal(float(channelSettings[light_handler.name]["exposureTime"]))
-                            ))
+                    cameras.extend(
+                        cam_handler
+                        for cam_handler in self.allCameras
+                        if channelSettings[cam_handler.name]
+                    )
+                    lightTimePairs = [
+                        (
+                            light_handler,
+                            decimal.Decimal(
+                                float(
+                                    channelSettings[light_handler.name][
+                                        "exposureTime"
+                                    ]
+                                )
+                            ),
+                        )
+                        for light_handler in self.allLights
+                        if channelSettings[light_handler.name]["isEnabled"]
+                    ]
                     unsortedExposureSettings[order.GetSelection()] = (cameras, lightTimePairs)
 
             exposureSettings = [unsortedExposureSettings[i] for i in sorted(unsortedExposureSettings.keys())]

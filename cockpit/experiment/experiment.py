@@ -267,7 +267,7 @@ class Experiment:
                                             cameraToExcitation)
             elif self.savePath.endswith(".zarr"):
                 saver = dataSaver.ZarrDataSaver(
-                    cameras=self.cameras,
+                    exposureSettings=self.exposureSettings,
                     numReps=self.numReps,
                     repDuration=self.repDuration,
                     cameraToImagesPerRep=self.cameraToImageCount,
@@ -275,7 +275,7 @@ class Experiment:
                     runThread=self._run_thread,
                     savePath=self.savePath,
                     pixelSizeXY=wx.GetApp().Objectives.GetPixelSize(),
-                    pixelSizeZ=self.sliceHeight,
+                    sliceHeight=self.sliceHeight,
                 )
             else:
                 raise RuntimeError("Unsupported file format %s" % self.savePath)

@@ -257,14 +257,19 @@ class Experiment:
                     cameraToExcitation[camera] = max(cameraToExcitation[camera],
                                                      max_wavelength)
 
-            if self.savePath.endswith(".dv"):
-                saver = dataSaver.MrcDataSaver(self.cameras, self.numReps,
-                                            self.repDuration,
-                                            self.cameraToImageCount,
-                                            self.cameraToIgnoredImageIndices,
-                                            self._run_thread, self.savePath,
-                                            self.sliceHeight, self.generateTitles(),
-                                            cameraToExcitation)
+            if self.savePath.endswith((".dv", ".mrc")):
+                saver = dataSaver.MrcDataSaver(
+                    cameras=self.cameras,
+                    numReps=self.numReps,
+                    repDuration=self.repDuration,
+                    cameraToImagesPerRep=self.cameraToImageCount,
+                    cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
+                    runThread=self._run_thread,
+                    savePath=self.savePath,
+                    pixelSizeZ=self.sliceHeight,
+                    titles=self.generateTitles(),
+                    cameraToExcitation=cameraToExcitation
+                )
             elif self.savePath.endswith(".zarr"):
                 saver = dataSaver.ZarrDataSaver(
                     exposureSettings=self.exposureSettings,

@@ -313,18 +313,13 @@ class Experiment:
                     "Unsupported file format %s" % self.savePath
                 )
 
-            saver.startCollecting()
-            saveThread = threading.Thread(
-                target=saver.executeAndSave, name="Experiment-execute-save"
-            )
-            saveThread.start()
             generatedFilenames.append(saver.getFilenames())
 
         self.runThread.start()
 
         cleanup_thread = threading.Thread(
             target=self.cleanup,
-            args=[self.runThread, saveThread],
+            args=[self.runThread, saver.saveThread],
             name="Experiment-cleanup",
         )
         cleanup_thread.start()

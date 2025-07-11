@@ -57,10 +57,6 @@ from microscope import UnsupportedFeatureError
 
 import zarr
 
-zarr.config.set({"async.concurrency": "thread"})
-# from ome_zarr import writer, scale
-# from ome_zarr.io import parse_url
-
 import numpy
 import queue
 import threading
@@ -342,6 +338,13 @@ class MrcDataSaver:
 
         # Start the data-saving thread.
         self.saveData()
+
+        self.startCollecting()
+        self.saveThread = threading.Thread(
+            target=self.executeAndSave, name="Experiment-execute-save"
+        )
+        self.saveThread.start()
+
 
     ## Subscribe to the new-camera-image events for the cameras we care about.
     # Save the functions we generate for handling the subscriptions, so we can
@@ -640,14 +643,6 @@ class ZarrDataSaver:
         self._lastImageTime = time.time()
         self._startTime = time.time()
 
-        # Some experiments are triggering images that are not ment to be kept.
-        # For each camera, find the number of images that are going to be kept
-        self._cameraToImagesKeptPerRep = {
-            camera: self._cameraToImagesPerRep[camera]
-            - len(self._cameraToIgnoredImageIndices[camera])
-            for camera in self._cameraToImagesPerRep
-        }
-
         # Exposure settings are List of ([cameras], [(light, exposure time)])
         # tuples describing how to take images. We need to transform this into
         # a list of channels, which is a list of (camera, [light, exposure time])
@@ -656,12 +651,46 @@ class ZarrDataSaver:
         for cameras, exposure in self._exposureSettings:
             self._channels.extend((camera, exposure) for camera in cameras)
 
+        # Some experiments are triggering images that are not ment to be kept.
+        # For each camera, find the number of images that are going to be kept
+        self._cameraToImagesKeptPerRep = {
+            camera: self._cameraToImagesPerRep[camera]
+            - len(self._cameraToIgnoredImageIndices[camera])
+            for camera in self._cameraToImagesPerRep
+        }
+
         # Map cameras to the channel index where they are used
         self._camerasToChannelIds()
 
         # Calculate what are going to be the shapes of the channels
         self._computeChannelShapes()
 
+        # We need to know how many images we are going to keep per camera
+        self._cameraToImagesKept = {
+            camera: imagesPerRep * self._numReps
+            for camera, imagesPerRep in self._cameraToImagesKeptPerRep.items()
+        }
+        # Dict to keep track of images we've received, on a per-camera basis.
+        self._imagesReceived = {
+            camera: 0 for camera in self._cameraToChannelIds
+        }
+        # Dict to keep track of how many images we've written, on a per-camera basis.
+        self._imagesKept = {camera: 0 for camera in self._cameraToChannelIds}
+
+        # List of functions that receive image data.
+        self._imageReceivingFuncs = []
+        for camera in self._cameraToChannelIds:
+
+            def func(data, metadata, camera=camera):
+                return self.onImage(camera, data, metadata)
+
+            self._imageReceivingFuncs.append(func)
+            events.subscribe(events.NEW_IMAGE % camera.name, func)
+
+        # Zarr specific settings
+        # Scaling and compression
+        self.compression = compression
+        self.overwrite = overwrite
         # zarr specific settings
         # Shape and chunking
         # We are initially creating a single timepoint array and are appending
@@ -680,10 +709,6 @@ class ZarrDataSaver:
             self.channelShapes[0][1],
             self.channelShapes[0][2],
         )
-        # Scaling and compression
-        self.compression = compression
-        self.overwrite = overwrite
-
         # self.scaler = scale.Scaler(
         #     downscale=downscale,
         #     max_layer=maxLayer,
@@ -697,76 +722,42 @@ class ZarrDataSaver:
         #     "compression": compression,
         #     "overwrite": overwrite,
         # }
-        self._zarrRoot = zarr.create_group(
-            store=self.savePath,
-            overwrite=self.overwrite,
-            attributes={
-                "ome": {
-                    "version": "0.5",
-                    "axes": [
-                        dict(name="t", type="time", unit="second"),
-                        dict(name="c", type="channel"),
-                        dict(name="z", type="space", unit="micrometer"),
-                        dict(name="y", type="space", unit="micrometer"),
-                        dict(name="x", type="space", unit="micrometer"),
-                    ],
-                }
-            },
-        )
-        self._zarrRootGroup_0 = self._zarrRoot.create_group(name="0")
-        self._zarrArray = self._zarrRootGroup_0.create_array(
-            name=self.savePath.split("/")[-1],
-            dimension_names=["time", "channel", "z", "x", "y"],
-            shape=self.singleTimePointShape,
-            chunks=self.chunkShape,
-            # compressor=self.compression,
-            overwrite=self.overwrite,
-            dtype="uint16",
-        )
+        # Create the zarr store
+        self._createZarrArray()
+
         # We also create a numpy ndarray to buffer images as they arrive so we
         # can write them to disk in a single call
         self._buffer = numpy.zeros(
             self.singleTimePointShape,
-            dtype="uint16",
+            dtype="uint16",  # TODO: verify if this is the right type
         )
         # A boolean dictionary to flag when the buffer is full
         self._bufferFull = {
             camera: False for camera in self._cameraToImagesKeptPerRep
         }
         # A ThreadLock to protect the buffer
+        # TODO: verify if we really need this lock, since we are using a single
+        # thread to write data to the buffer.
         self._bufferLock = threading.Lock()
 
-        # Dict to keep track of images we've received, on a per-camera basis.
-        self.imagesReceived = {
-            camera: 0 for camera in self._cameraToChannelIds
-        }
-        # Dict to keep track of how many images we've written, on a per-camera basis.
-        self._imagesKept = {camera: 0 for camera in self._cameraToChannelIds}
-        # List of functions that receive image data.
-        self.lambdas = []
-
-        # True if we should stop collecting data.
+        # Flag to indicate if we should stop collecting data because of user
+        # abort
         self.shouldAbort = False
-        # True if we are done collecting data.
+        # Flag to indicate if we should stop collecting data because experiment
+        # done.
         self.amDone = False
         # Queue of (camera index, image data, timestamp) tuples for images
         # that need to be saved
         self._imageQueue = queue.Queue()
 
-        # Use dye name if available, otherwise use camera name.
+        # Thread that handles updating the UI.
         # TODO: This might be simplified by passing to the StatusUpdateThread
         #  a dictionary with the camera name and the target number of images to be kept.
         #  Also because the total of expected images is used later in the executeAndSave method.
-        names = [
-            camera.dye or camera.name for camera in self._cameraToChannelIds
-        ]
-        self._cameraToImagesKept = {
-            camera: imagesPerRep * self._numReps
-            for camera, imagesPerRep in self._cameraToImagesKeptPerRep.items()
-        }
-        # Thread that handles updating the UI.
         self.statusThread = StatusUpdateThread(
-            names,
+            [
+                camera.dye or camera.name for camera in self._cameraToChannelIds
+            ],
             list(self._cameraToImagesKept.values()),
             self._numReps,
             self._repDuration,
@@ -774,6 +765,15 @@ class ZarrDataSaver:
 
         # Start the data-saving thread.
         self.saveData()
+
+        # Start our status-update thread.
+        events.subscribe(events.USER_ABORT, self.onAbort)
+        self.statusThread.start()
+
+        self.saveThread = threading.Thread(
+            target=self.executeAndSave, name="Experiment-execute-save"
+        )
+        self.saveThread.start()
 
     def _camerasToChannelIds(self):
         """
@@ -835,22 +835,6 @@ class ZarrDataSaver:
                 "The x and y dimensions are not the same for all channels"
             )
 
-    # Subscribe to the new-camera-image events for the cameras we care about.
-    # Save the functions we generate for handling the subscriptions, so we can
-    # unsubscribe later. Initialize self.minMaxVals. Start our status-update
-    # thread.
-    def startCollecting(self):
-        for camera in self._cameraToChannelIds:
-
-            def func(data, metadata, camera=camera):
-                return self.onImage(camera, data, metadata)
-
-            self.lambdas.append(func)
-            events.subscribe(events.NEW_IMAGE % camera.name, func)
-
-        events.subscribe(events.USER_ABORT, self.onAbort)
-        self.statusThread.start()
-
     # User aborted; stop saving data.
     def onAbort(self):
         self.shouldAbort = True
@@ -885,12 +869,41 @@ class ZarrDataSaver:
     def cleanup(self):
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self._cameraToChannelIds):
-            events.unsubscribe(events.NEW_IMAGE % camera.name, self.lambdas[i])
+            events.unsubscribe(events.NEW_IMAGE % camera.name, self._imageReceivingFuncs[i])
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
     # Receive new data, and add it to the queue.
     def onImage(self, camera, imageData, metadata):
         self._imageQueue.put((camera, imageData, metadata))
+
+    @cockpit.util.threads.callInMainThread
+    def _createZarrArray(self):
+        self._zarrRoot = zarr.create_group(
+            store=self.savePath,
+            overwrite=self.overwrite,
+            attributes={
+                "ome": {
+                    "version": "0.5",
+                    "axes": [
+                        dict(name="t", type="time", unit="second"),
+                        dict(name="c", type="channel"),
+                        dict(name="z", type="space", unit="micrometer"),
+                        dict(name="y", type="space", unit="micrometer"),
+                        dict(name="x", type="space", unit="micrometer"),
+                    ],
+                }
+            },
+        )
+        self._zarrRootGroup_0 = self._zarrRoot.create_group(name="0")
+        self._zarrArray = self._zarrRootGroup_0.create_array(
+            name=self.savePath.split("/")[-1],
+            dimension_names=["time", "channel", "z", "x", "y"],
+            shape=self.singleTimePointShape,
+            chunks=self.chunkShape,
+            # compressor=self.compression,
+            overwrite=self.overwrite,
+            dtype="uint16",
+        )
 
     # Continually poll our imageQueue and save data to the file.
     @cockpit.util.threads.callInNewThread
@@ -912,10 +925,10 @@ class ZarrDataSaver:
 
     # Write a single image to the file.
     def writeImage(self, camera, imageData, timestamp):
-        self.imagesReceived[camera] += 1
+        self._imagesReceived[camera] += 1
         # First determine if we actually want to keep this image.
         if (
-            self.imagesReceived[camera] % self._cameraToImagesPerRep[camera]
+                self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
         ) in self._cameraToIgnoredImageIndices[camera]:
             # This image is one that should be discarded.
             return
@@ -949,16 +962,7 @@ class ZarrDataSaver:
 
             # If we have all the images in the buffer we write them to disk
             if all(self._bufferFull.values()):
-                # if timeIndex == 0:
-                #     self._zarrArray[0] = self._buffer
-                # else:
-                # Append the new timepoint to the zarr array
-                zarrArray = zarr.open_array(self._zarrArray, mode="a")
-                zarrArray.append(self._buffer)
-                # Reset the flag
-                self._bufferFull = {
-                    camera: False for camera in self._cameraToImagesKeptPerRep
-                }
+                self.appendTimepoint()
 
         # Update the status text. But first, check for abort/experiment
         # completion, since we may actually be done now and we don't want
@@ -968,6 +972,19 @@ class ZarrDataSaver:
         self.statusThread.newImage(
             list(self._cameraToImagesKeptPerRep.keys()).index(camera)
         )
+
+    @cockpit.util.threads.callInMainThread
+    def appendTimepoint(self):
+        """
+        Append a new timepoint to the zarr array.
+        We call this in the main thread, so we can ensure it is run in the
+        asyncio event loop.
+        """
+        self._zarrArray.append(self._buffer)
+        # Reset the flag
+        self._bufferFull = {
+            camera: False for camera in self._cameraToImagesKeptPerRep
+        }
 
     ## Return a list of the filenames we are writing to.
     def getFilenames(self):

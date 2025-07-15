@@ -881,29 +881,61 @@ class ZarrDataSaver:
         self._zarrRoot = zarr.create_group(
             store=self.savePath,
             overwrite=self.overwrite,
-            attributes={
-                "ome": {
-                    "version": "0.5",
-                    "axes": [
-                        dict(name="t", type="time", unit="second"),
-                        dict(name="c", type="channel"),
-                        dict(name="z", type="space", unit="micrometer"),
-                        dict(name="y", type="space", unit="micrometer"),
-                        dict(name="x", type="space", unit="micrometer"),
-                    ],
-                }
-            },
+            attributes=self._constructOMEAttributes(),
         )
+        # A priori we could create an array directly in the root group,
+        # but like this we have more flexibility to add more arrays
+        # in the future, e.g. for a reference image in the middle of the
+        # z-stack, timelapses with different frequencies or in case cameras
+        # have different shapes.
         self._zarrRootGroup_0 = self._zarrRoot.create_group(name="0")
         self._zarrArray = self._zarrRootGroup_0.create_array(
-            name=self.savePath.split("/")[-1],
-            dimension_names=["time", "channel", "z", "x", "y"],
-            shape=self.singleTimePointShape,
+            name="0",
+            dimension_names=["t", "c", "z", "y", "x"],
+            shape=self.arrayShape,
             chunks=self.chunkShape,
             # compressor=self.compression,
             overwrite=self.overwrite,
             dtype="uint16",
         )
+
+    def _constructOMEAttributes(self):
+        omeMetadata = {
+            "ome": {
+                "version": "0.5",
+                # "series": ["0", "1"],  # TODO: Series are to be put here
+                "multiscales": [
+                    {
+                        "name": "5D",
+                        "axes": [
+                            dict(name="t", type="time", unit="second"),
+                            dict(name="c", type="channel"),
+                            dict(name="z", type="space", unit="micrometer"),
+                            dict(name="y", type="space", unit="micrometer"),
+                            dict(name="x", type="space", unit="micrometer"),
+                        ],
+                        "datasets": [
+                            {
+                                "path": "0",
+                                "coordinateTransformations": [
+                                    {
+                                        "type": "scale",
+                                        "scale": [
+                                            self._repDuration,
+                                            1.0,
+                                            self._sliceHeight,
+                                            self._pixelSizeXY,
+                                            self._pixelSizeXY
+                                        ]
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
+        }
+        return omeMetadata
 
     # Continually poll our imageQueue and save data to the file.
     @cockpit.util.threads.callInNewThread

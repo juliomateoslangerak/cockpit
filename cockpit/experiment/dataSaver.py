@@ -691,6 +691,7 @@ class ZarrDataSaver:
         # Scaling and compression
         self.compression = compression
         self.overwrite = overwrite
+
         # zarr specific settings
         # Shape and chunking
         self.arrayShape = (
@@ -720,17 +721,15 @@ class ZarrDataSaver:
         #     "compression": compression,
         #     "overwrite": overwrite,
         # }
-        # Create the zarr store
         self._createZarrArray()
 
         # A ThreadLock to protect some operations.
         self._threadLock = threading.Lock()
 
-        # Flag to indicate if we should stop collecting data because of user
-        # abort
+        ## Flag to indicate if we should stop collecting data because of:
+        # user abort
         self.shouldAbort = False
-        # Flag to indicate if we should stop collecting data because experiment
-        # done.
+        # experiment done.
         self.amDone = False
         # Queue of (camera index, image data, timestamp) tuples for images
         # that need to be saved
@@ -948,13 +947,13 @@ class ZarrDataSaver:
         if (
                 self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
         ) in self._cameraToIgnoredImageIndices[camera]:
-            # This image is one that should be discarded.
+            # This image should be discarded.
             return
 
         # Calculate the time and Z indices for the new image. This will in turn
         # help us to calculate which file to write to and the offset of the
         # image in the file.
-        imageIndex = self._imagesKept[camera]  #
+        imageIndex = self._imagesKept[camera]
         timeIndex = imageIndex // self._cameraToImagesKeptPerRep[camera]
         channelZReminder = imageIndex % self._cameraToImagesKeptPerRep[camera]
         channelIndex = self._cameraToChannelIds[camera][
@@ -992,12 +991,12 @@ class ZarrDataSaver:
         """
         self._zarrArray[timeIndex, channelIndex, zIndex] = imageData
 
-    ## Return a list of the filenames we are writing to.
+    # Return a list of the filenames we are writing to.
     def getFilenames(self):
         return self.savePath
 
 
-## This thread handles telling the saving status light to update twice per
+# This thread handles telling the saving status light to update twice per
 # second.
 class StatusUpdateThread(threading.Thread):
     def __init__(self, cameraNames, totals, numReps, repDuration):

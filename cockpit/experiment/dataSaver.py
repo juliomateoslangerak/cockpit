@@ -693,19 +693,17 @@ class ZarrDataSaver:
         self.overwrite = overwrite
         # zarr specific settings
         # Shape and chunking
-        # We are initially creating a single timepoint array and are appending
-        # stacks to it. The dimensions are in the order: T, C, Z, X, Y
-        self.singleTimePointShape = (
-            1,  # T: a single timepoint
+        self.arrayShape = (
+            self._numReps,  # T: timepoints
             len(self._channels),  # C: number of channels
             self.channelShapes[0][0],  # Z: number of slices
-            self.channelShapes[0][1],  # X
-            self.channelShapes[0][2],  # Y
+            self.channelShapes[0][1],  # Y
+            self.channelShapes[0][2],  # X
         )
         self.chunkShape = (
             1,
             1,
-            self.channelShapes[0][0],
+            1,
             self.channelShapes[0][1],
             self.channelShapes[0][2],
         )
@@ -725,20 +723,8 @@ class ZarrDataSaver:
         # Create the zarr store
         self._createZarrArray()
 
-        # We also create a numpy ndarray to buffer images as they arrive so we
-        # can write them to disk in a single call
-        self._buffer = numpy.zeros(
-            self.singleTimePointShape,
-            dtype="uint16",  # TODO: verify if this is the right type
-        )
-        # A boolean dictionary to flag when the buffer is full
-        self._bufferFull = {
-            camera: False for camera in self._cameraToImagesKeptPerRep
-        }
-        # A ThreadLock to protect the buffer
-        # TODO: verify if we really need this lock, since we are using a single
-        # thread to write data to the buffer.
-        self._bufferLock = threading.Lock()
+        # A ThreadLock to protect some operations.
+        self._threadLock = threading.Lock()
 
         # Flag to indicate if we should stop collecting data because of user
         # abort
@@ -981,20 +967,12 @@ class ZarrDataSaver:
             channelZReminder % self.channelShapes[0][0]
         )  # Only takes into account one possible z-shape per channel or camera
 
-        self._buffer[0, channelIndex, zIndex] = imageData
-
-        self._imagesKept[camera] += 1
-        self._lastImageTime = time.time()
-
-        # If it is the last image in the stack we flag the buffer as full
-        if channelZReminder == self._cameraToImagesKeptPerRep[camera] - 1:
-            self._bufferFull[camera] = True
-
-            # with self._bufferLock:
-
-            # If we have all the images in the buffer we write them to disk
-            if all(self._bufferFull.values()):
-                self.appendTimepoint()
+        with self._threadLock:
+            self.appendImageToZarr(
+                timeIndex, channelIndex, zIndex, imageData
+            )
+            self._imagesKept[camera] += 1
+            self._lastImageTime = time.time()
 
         # Update the status text. But first, check for abort/experiment
         # completion, since we may actually be done now and we don't want
@@ -1006,17 +984,13 @@ class ZarrDataSaver:
         )
 
     @cockpit.util.threads.callInMainThread
-    def appendTimepoint(self):
+    def appendImageToZarr(self, timeIndex, channelIndex, zIndex, imageData):
         """
-        Append a new timepoint to the zarr array.
+        Append a new image to the zarr array.
         We call this in the main thread, so we can ensure it is run in the
         asyncio event loop.
         """
-        self._zarrArray.append(self._buffer)
-        # Reset the flag
-        self._bufferFull = {
-            camera: False for camera in self._cameraToImagesKeptPerRep
-        }
+        self._zarrArray[timeIndex, channelIndex, zIndex] = imageData
 
     ## Return a list of the filenames we are writing to.
     def getFilenames(self):

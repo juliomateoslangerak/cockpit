@@ -284,6 +284,8 @@ class SIExperiment(experiment.Experiment):
             if z != prevZ:
                 if prevZ is not None:
                     motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevZ, z)
+                    motionTime *= 1000
+                    stabilizationTime *= 1000
                     # Hold flat.
                     table.addAction(curTime, self.zPositioner, prevZ)
                     # Move to the next position.
@@ -313,6 +315,8 @@ class SIExperiment(experiment.Experiment):
         table.addAction(curTime, self.zPositioner, prevZ)
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
                 self.zHeight, self.zStart)
+        motionTime *= 1000
+        stabilizationTime *= 1000
         table.addAction(curTime + motionTime, self.zPositioner, self.zStart)
         finalWaitTime = motionTime + stabilizationTime
 

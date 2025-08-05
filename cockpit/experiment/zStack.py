@@ -81,6 +81,8 @@ class ZStackExperiment(experiment.Experiment):
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
                 motionTime, stabilizationTime = self.zPositioner.getMovementTime(prevAltitude, zTarget)
+                motionTime *= 1000
+                stabilizationTime *= 1000
             curTime += motionTime
             table.addAction(curTime, self.zPositioner, zTarget)
             curTime += stabilizationTime
@@ -98,6 +100,8 @@ class ZStackExperiment(experiment.Experiment):
         # Move back to the start so we're ready for the next rep.
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
                 self.zHeight, 0)
+        motionTime *= 1000
+        stabilizationTime *= 1000
         curTime += motionTime
         table.addAction(curTime, self.zPositioner, self.zStart)
         # Hold flat for the stabilization time, and any time needed for

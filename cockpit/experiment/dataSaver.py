@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from tensorstore import dtype
 
 ## Copyright (C) 2021 University of Oxford, CNRS
 ##

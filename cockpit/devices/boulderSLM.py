@@ -20,7 +20,6 @@
 
 """Boulder SLM."""
 
-from collections import OrderedDict
 import decimal
 from cockpit.devices import device
 from itertools import groupby
@@ -31,6 +30,7 @@ import wx
 from cockpit import events
 import cockpit.gui.device
 import cockpit.gui.dialogs.getNumberDialog
+import cockpit.gui.guiUtils
 import cockpit.handlers.executor
 import time
 import cockpit.util
@@ -119,15 +119,6 @@ class BoulderSLM(device.Device):
             if proxy is not None:
                 proxy._pyroRelease()
         super().onExit()
-
-    def finalizeInitialization(self):
-        # A mapping of context-menu entries to functions.
-        # Define in tuples - easier to read and reorder.
-        menuTuples = (('Generate SIM sequence', self.testSIMSequence),
-                      ('SIM diff. angle', self.setDiffractionAngle),)
-        # Store as ordered dict for easy item->func lookup.
-        self.menuItems = OrderedDict(menuTuples)
-
 
     def getIsEnabled(self):
         return self.connection.get_is_enabled()
@@ -291,6 +282,8 @@ class BoulderSLM(device.Device):
         # Set up a timer to update value displays.
         self.updateTimer = wx.Timer(posDisplay)
         self.updateTimer.Start(1000)
+        #ensure that we bind the window destroy event to stop timer
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
         # Changed my mind. SIM diffraction angle is an advanced parameter,
         # so it now lives in a right-click menu rather than on a button.
         panel.Bind(wx.EVT_CONTEXT_MENU, self.onRightMouse)
@@ -300,6 +293,10 @@ class BoulderSLM(device.Device):
         powerButton.manageStateOf((triggerButton, posDisplay))
         return panel
 
+    #ensure that the timer is stopped on window destroy
+    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+        self.updateTimer.Stop()
+        event.Skip()
 
     def updatePositionDisplay(self, event):
         baseStr = 'angle:\t%s\nphase:\t%s\nwavel.:\t%s'
@@ -355,15 +352,15 @@ class BoulderSLM(device.Device):
             raise Exception('SLM timeout.')
 
 
-    ### Context menu and handlers ###
-    def menuCallback(self, index, item):
-        func = self.menuItems[item]
-        return func()
-
-
     def onRightMouse(self, event):
-        menu = cockpit.gui.device.Menu(self.menuItems.keys(), self.menuCallback)
-        menu.show(event)
+        menu = wx.Menu()
+        for label, method in [
+            ("Generate SIM sequence", self.testSIMSequence),
+            ("SIM diff. angle", self.setDiffractionAngle),
+        ]:
+            menu_item = menu.Append(wx.ID_ANY, item=label)
+            menu.Bind(wx.EVT_MENU, lambda evt: method, menu_item)
+        cockpit.gui.guiUtils.placeMenuAtMouse(event.GetEventObject(), menu)
 
 
     def testSIMSequence(self):

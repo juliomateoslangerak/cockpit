@@ -56,7 +56,7 @@ from microscope import UnsupportedFeatureError
 
 import zarr
 
-import numpy
+import numpy as np
 import queue
 import threading
 import time
@@ -205,9 +205,9 @@ class MrcDataSaver:
             # digits as needed, e.g. not doing ".001" when you're only going to
             # use 2 files.
             numFilehandles = int(
-                numpy.ceil(float(self.numReps) / self.maxRepsPerFile)
+                np.ceil(float(self.numReps) / self.maxRepsPerFile)
             )
-            numDigits = int(numpy.ceil(numpy.log10(numFilehandles)))
+            numDigits = int(np.ceil(np.log10(numFilehandles)))
             # Generates e.g. "%05d" if we need 5 digits, or "%01d" if we only
             # need 1.
             formatString = "%0" + str(numDigits) + "d"
@@ -253,7 +253,7 @@ class MrcDataSaver:
                     self.maxHeight,
                     self.maxWidth,
                 ),
-                numpy.uint16,
+                np.uint16,
                 pixelSizeXY,
                 pixelSizeZ,
                 wavelengths,
@@ -297,10 +297,10 @@ class MrcDataSaver:
             ## these arrays are small and there will be many image
             ## planes.  We do this to avoid memory fragmentation.
             self.intMetadataBuffers.append(
-                numpy.array([0] * numIntegers, dtype=numpy.int32)
+                np.array([0] * numIntegers, dtype=np.int32)
             )
-            floatMetadataBuffer = numpy.array(
-                [0.0] * numFloats, dtype=numpy.float32
+            floatMetadataBuffer = np.array(
+                [0.0] * numFloats, dtype=np.float32
             )
             floatMetadataBuffer[12] = 1.0  # intensity scaling
             self.floatMetadataBuffers.append(floatMetadataBuffer)
@@ -499,8 +499,8 @@ class MrcDataSaver:
         # necessary, but we get "invalid argument" errors when writing
         # to the filehandle if we don't.
         # \todo Figure out why this is necessary.
-        paddedBuffer = numpy.zeros(
-            (self.maxHeight, self.maxWidth), dtype=numpy.uint16
+        paddedBuffer = np.zeros(
+            (self.maxHeight, self.maxWidth), dtype=np.uint16
         )
         paddedBuffer[:height, :width] = imageData
 

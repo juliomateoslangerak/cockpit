@@ -60,9 +60,9 @@ import wx
 # functions.
 
 ## Altitude for slides.
-SLIDE_SAFETY = 7300
+SLIDE_SAFETY = 10
 ## Altitude for dishes.
-DISH_SAFETY = 5725
+DISH_SAFETY = 10
 
 
 ## This class provides a simple wrapper around the interfaces.stageMover's

@@ -77,7 +77,7 @@ class OffsetSites_Dialog(wx.Dialog):
                     label = "%s:" % label, defaultValue = '',
                     size = (60, -1), minSize = (100, -1),
                     border = 5,
-                    flags = wx.ALIGN_CENTRE | wx.ALL)
+                )
             )
         
         buttonBox = wx.BoxSizer(wx.HORIZONTAL)

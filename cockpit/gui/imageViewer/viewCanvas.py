@@ -970,7 +970,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         self.panX = panX
         self.panY = panY
         self.zoom = zoom
-        self.Refresh(0)
+        if self:
+            self.Refresh(0)
 
 
     def resetPixelScale(self):

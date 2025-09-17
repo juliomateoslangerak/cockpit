@@ -139,12 +139,12 @@ class Experiment:
         self.metadata = metadata
         self.savePath = savePath
 
-        self._run_thread = None
+        self.runThread = None
 
         # Check for save paths that don't actually have a final filename
         # (i.e. just point to a directory); those aren't valid.
         if not os.path.basename(self.savePath):
-            self.savePath = ''
+            self.savePath = ""
 
         ## List of all handlers we care about, so we can conveniently set them
         # up.
@@ -156,8 +156,9 @@ class Experiment:
         # Ensure all handlers are experiment-eligible.
         for handler in self.allHandlers:
             if not handler.getIsEligibleForExperiments():
-                raise RuntimeError("Handler [%s] is not usable in experiments."
-                                   % handler.name)
+                raise RuntimeError(
+                    "Handler [%s] is not usable in experiments." % handler.name
+                )
 
         ## Maps camera handlers to their minimum time between exposures.
         # Must be populated after exposure time has been set on camera.
@@ -201,8 +202,9 @@ class Experiment:
         # Check if the user is set to save to an already-existing file.
         if self.savePath and os.path.exists(self.savePath):
             if not guiUtils.getUserPermission(
-                    ("The file:\n%s\nalready exists. " % self.savePath) +
-                    "Are you sure you want to overwrite it?"):
+                ("The file:\n%s\nalready exists. " % self.savePath)
+                + "Are you sure you want to overwrite it?"
+            ):
                 return False
 
         global lastExperiment
@@ -210,24 +212,35 @@ class Experiment:
         self.sanityCheckEnvironment()
         self.prepareHandlers()
 
-        self.cameraToReadoutTime = {c: c.getTimeBetweenExposures(isExact = True)
-                                    for c in self.cameras}
+        self.cameraToReadoutTime = {
+            c: c.getTimeBetweenExposures(isExact=True) for c in self.cameras
+        }
         for camera, readTime in self.cameraToReadoutTime.items():
             if type(readTime) is not decimal.Decimal:
-                raise RuntimeError("Camera %s did not provide an exact (decimal.Decimal) readout time"
-                                   % camera.name)
+                raise RuntimeError(
+                    "Camera %s did not provide an exact (decimal.Decimal) readout time"
+                    % camera.name
+                )
 
         # Indicate any frame transfer cameras for reset at start of table.
         for camera in self.cameras:
-            if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
+            if (
+                camera.getExposureMode()
+                == cockpit.handlers.camera.TRIGGER_AFTER
+            ):
                 self.cameraToIsReady[camera] = False
 
         self.createValidActionTable()
-        if self.numReps > 1 and self.repDuration < self.table.lastActionTime / 1000:
-            warning = "Repeat duration is less than the time required to run " \
-                      "one repeat. Choose:" \
-                      "\n    'OK' to run repeats as fast as possible;" \
-                      "\n    'Cancel' to go back and change parameters."
+        if (
+            self.numReps > 1
+            and self.repDuration < self.table.lastActionTime / 1000
+        ):
+            warning = (
+                "Repeat duration is less than the time required to run "
+                "one repeat. Choose:"
+                "\n    'OK' to run repeats as fast as possible;"
+                "\n    'Cancel' to go back and change parameters."
+            )
             if not guiUtils.getUserPermission(warning):
                 return False
             #set repDuration to the last table action
@@ -236,12 +249,12 @@ class Experiment:
         if not self.lastMinuteActions():
             return False
 
-        self._run_thread = threading.Thread(target=self.execute,
-                                            name="Experiment-execute")
+        self.runThread = threading.Thread(
+            target=self.execute, name="Experiment-execute"
+        )
 
         saveThread = None
         if self.savePath and max(self.cameraToImageCount.values()):
-
             cameraToExcitation = {c: 0.0 for c in self.cameras}
             for cameras, lightTimePairs in self.exposureSettings:
                 ## If there's multiple light sources for the same
@@ -251,49 +264,57 @@ class Experiment:
                 ## pumping while but excitation for fluorescence is
                 ## with the higher wavelength.
                 if lightTimePairs:
-                    max_wavelength = max([l.wavelength for l,t in lightTimePairs])
+                    max_wavelength = max(
+                        [l.wavelength for l, t in lightTimePairs]
+                    )
                 else:
                     max_wavelength = 0.0
                 for camera in cameras:
                     if camera not in self.cameras:
                         continue
-                    cameraToExcitation[camera] = max(cameraToExcitation[camera],
-                                                     max_wavelength)
+                    cameraToExcitation[camera] = max(
+                        cameraToExcitation[camera], max_wavelength
+                    )
 
-            if self.savePath.endswith(".dv"):
-                saver = dataSaver.MrcDataSaver(self.cameras, self.numReps,
-                                            self.repDuration,
-                                            self.cameraToImageCount,
-                                            self.cameraToIgnoredImageIndices,
-                                            self._run_thread, self.savePath,
-                                            self.sliceHeight, self.generateTitles(),
-                                            cameraToExcitation)
-            elif self.savePath.endswith(".zarr"):
-                saver = dataSaver.ZarrDataSaver(
+            if self.savePath.endswith((".dv", ".mrc")):
+                saver = dataSaver.MrcDataSaver(
                     cameras=self.cameras,
                     numReps=self.numReps,
                     repDuration=self.repDuration,
                     cameraToImagesPerRep=self.cameraToImageCount,
                     cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
-                    runThread=self._run_thread,
+                    runThread=self.runThread,
+                    savePath=self.savePath,
+                    pixelSizeZ=self.sliceHeight,
+                    titles=self.generateTitles(),
+                    cameraToExcitation=cameraToExcitation,
+                )
+            elif self.savePath.endswith(".zarr"):
+                saver = dataSaver.ZarrDataSaver(
+                    exposureSettings=self.exposureSettings,
+                    numReps=self.numReps,
+                    repDuration=self.repDuration,
+                    cameraToImagesPerRep=self.cameraToImageCount,
+                    cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
+                    runThread=self.runThread,
                     savePath=self.savePath,
                     pixelSizeXY=wx.GetApp().Objectives.GetPixelSize(),
-                    pixelSizeZ=self.sliceHeight,
+                    sliceHeight=self.sliceHeight,
                 )
             else:
-                raise RuntimeError("Unsupported file format %s" % self.savePath)
+                raise RuntimeError(
+                    "Unsupported file format %s" % self.savePath
+                )
 
-            saver.startCollecting()
-            saveThread = threading.Thread(target=saver.executeAndSave,
-                                          name="Experiment-execute-save")
-            saveThread.start()
             generatedFilenames.append(saver.getFilenames())
 
-        self._run_thread.start()
+        self.runThread.start()
 
-        cleanup_thread = threading.Thread(target=self.cleanup,
-                                          args=[self._run_thread, saveThread],
-                                          name="Experiment-cleanup")
+        cleanup_thread = threading.Thread(
+            target=self.cleanup,
+            args=[self.runThread, saver.saveThread],
+            name="Experiment-cleanup",
+        )
         cleanup_thread.start()
         return True
 
@@ -320,12 +341,14 @@ class Experiment:
         cockpit.interfaces.stageMover.waitForStop()
         # TODO: Handling multiple movers on an axis is broken. Do not proceed if
         # anything but the innermost Z mover is selected. Needs a proper fix.
-        if (cockpit.interfaces.stageMover.mover.curHandlerIndex
-            < len(depot.getSortedStageMovers()[2])-1):
+        if (
+            cockpit.interfaces.stageMover.mover.curHandlerIndex
+            < len(depot.getSortedStageMovers()[2]) - 1
+        ):
             wx.MessageBox("Wrong axis mover selected.")
             raise Exception("Wrong axis mover selected.")
         # Prepare our position.
-        cockpit.interfaces.stageMover.goToZ(self.altBottom, shouldBlock = True)
+        cockpit.interfaces.stageMover.goToZ(self.altBottom, shouldBlock=True)
         self.zStart = cockpit.interfaces.stageMover.getAllPositions()[-1][-1]
         events.publish(events.PREPARE_FOR_EXPERIMENT, self)
         # Prepare cameras.
@@ -365,11 +388,15 @@ class Experiment:
             curIndex = 0
             shouldStop = False
             # Need to track delay introduced by dropping back to software timing.
-            delay = 0.
+            delay = 0.0
             while curIndex < len(self.table):
                 if curIndex > 0:
                     # Update the delay
-                    nextTime = delay + startTime + float(self.table[curIndex][0])/1000.
+                    nextTime = (
+                        delay
+                        + startTime
+                        + float(self.table[curIndex][0]) / 1000.0
+                    )
                     delay += max(0, time.time() - nextTime)
 
                 if self.shouldAbort:
@@ -382,7 +409,9 @@ class Experiment:
                 best = None
                 bestLen = 0
                 for executor in executors:
-                    numLines = executor.getNumRunnableLines(self.table, curIndex)
+                    numLines = executor.getNumRunnableLines(
+                        self.table, curIndex
+                    )
                     if best is None or numLines > bestLen:
                         best = executor
                         bestLen = numLines
@@ -399,17 +428,28 @@ class Experiment:
                     # No executor can run this line. See if we can fall back to software.
                     fn = None
                     t, h, action = self.table[curIndex]
-                    if h.deviceType == depot.CAMERA and 'softTrigger' in h.callbacks:
-                        fn = lambda: h.callbacks['softTrigger']()
+                    if (
+                        h.deviceType == depot.CAMERA
+                        and "softTrigger" in h.callbacks
+                    ):
+                        fn = lambda: h.callbacks["softTrigger"]()
                     elif h.deviceType == depot.STAGE_POSITIONER:
                         fn = lambda: h.moveAbsolute(action)
 
                     if fn is None:
-                        raise RuntimeError("Found a line that no executor could handle: %s" % str(self.table.actions[curIndex]))
+                        raise RuntimeError(
+                            "Found a line that no executor could handle: %s"
+                            % str(self.table.actions[curIndex])
+                        )
                     # Wait until this action is due.
                     if curIndex > 0:
-                        timeToNext = delay + startTime + float(self.table[curIndex][0]) / 1000. - time.time()
-                        time.sleep(max(0,timeToNext))
+                        timeToNext = (
+                            delay
+                            + startTime
+                            + float(self.table[curIndex][0]) / 1000.0
+                            - time.time()
+                        )
+                        time.sleep(max(0, timeToNext))
                     fn()
                     curIndex += 1
                 else:
@@ -418,12 +458,23 @@ class Experiment:
                     # to the handler, so any work it has to do does not add further
                     # delays.
                     if curIndex > 0:
-                        timeToNext = delay + startTime + float(self.table[curIndex][0]) / 1000. - time.time()
-                        time.sleep(max(0,timeToNext))
+                        timeToNext = (
+                            delay
+                            + startTime
+                            + float(self.table[curIndex][0]) / 1000.0
+                            - time.time()
+                        )
+                        time.sleep(max(0, timeToNext))
 
-                    events.executeAndWaitFor(events.EXPERIMENT_EXECUTION,
-                            best.executeTable, self.table, curIndex,
-                            curIndex + bestLen, numReps, repDuration)
+                    events.executeAndWaitFor(
+                        events.EXPERIMENT_EXECUTION,
+                        best.executeTable,
+                        self.table,
+                        curIndex,
+                        curIndex + bestLen,
+                        numReps,
+                        repDuration,
+                    )
                     curIndex += bestLen
 
             if shouldStop:
@@ -436,26 +487,31 @@ class Experiment:
                 time.sleep(max(0, waitTime))
         ## TODO: figure out how long we should wait for the last captures to complete.
         # For now, wait 1s.
-        time.sleep(1.)
+        time.sleep(1.0)
         _logger.info("Experiment.execute completed.")
         return True
 
     ## Wait for the provided thread(s) to finish, then clean up our handlers.
-    def cleanup(self, runThread = None, saveThread = None):
+    def cleanup(self, runThread=None, saveThread=None):
         if runThread is not None:
             runThread.join()
         if saveThread is not None and saveThread.is_alive():
-            events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting',
-                           'Waiting for saving to complete')
+            events.publish(
+                events.UPDATE_STATUS_LIGHT,
+                "device waiting",
+                "Waiting for saving to complete",
+            )
             saveThread.join()
         for handler in self.allHandlers:
             handler.cleanupAfterExperiment()
         events.publish(events.CLEANUP_AFTER_EXPERIMENT)
         if self.initialAltitude is not None:
             # Restore our initial altitude.
-            cockpit.interfaces.stageMover.goToZ(self.initialAltitude, shouldBlock = True)
+            cockpit.interfaces.stageMover.goToZ(
+                self.initialAltitude, shouldBlock=True
+            )
         events.publish(events.EXPERIMENT_COMPLETE)
-        events.publish(events.UPDATE_STATUS_LIGHT, 'device waiting', '')
+        events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
         # Ensure the saveThread's memory, which includes all the images
         # collected thus far, is garbage collected. Otherwise memory tends
         # to pile up and then the GC has more work to do, which can interfere
@@ -487,10 +543,16 @@ class Experiment:
                     typeToHandlers[handler.deviceType] = []
                 typeToHandlers[handler.deviceType].append(handler)
         titles = [
-                "Date & time: %s; pos: %s" % (
-                    time.strftime('%Y/%m/%d %H:%M:%S'),
-                    str(['%.2f' % p for p in (cockpit.interfaces.stageMover.getPosition())])
-                )
+            "Date & time: %s; pos: %s"
+            % (
+                time.strftime("%Y/%m/%d %H:%M:%S"),
+                str(
+                    [
+                        "%.2f" % p
+                        for p in (cockpit.interfaces.stageMover.getPosition())
+                    ]
+                ),
+            )
         ]
         # Append the metadata we were given to start.
         for i in range(0, len(self.metadata) + 80, 80):
@@ -499,22 +561,30 @@ class Experiment:
                 titles.append(substring)
 
         for deviceType, handlers in typeToHandlers.items():
-            handlers = sorted(handlers, key = lambda a: a.name)
+            handlers = sorted(handlers, key=lambda a: a.name)
             entries = []
             for handler in handlers:
                 text = handler.getSavefileInfo()
-                if handler in self.lightToExposureTime and self.lightToExposureTime[handler]:
-                    text += ': ' + ','.join(["%.3fms" % t for t in sorted(self.lightToExposureTime[handler]) ])
+                if (
+                    handler in self.lightToExposureTime
+                    and self.lightToExposureTime[handler]
+                ):
+                    text += ": " + ",".join(
+                        [
+                            "%.3fms" % t
+                            for t in sorted(self.lightToExposureTime[handler])
+                        ]
+                    )
                     # Record the exposure duration(s) of the light source.
                     # find associated power entries (if they have them)
-                    
+
                     for hand in depot.getHandlersInGroup(handler.groupName):
                         if hand.deviceType == depot.LIGHT_POWER:
                             text += " %3.3f mW" % hand.lastPower
                 if text:
                     entries.append(text)
             if entries:
-                entry = "[%s: %s]" % (deviceType, ';'.join(entries))
+                entry = "[%s: %s]" % (deviceType, ";".join(entries))
                 while len(entry) > 80:
                     # Must split it across lines.
 
@@ -525,7 +595,10 @@ class Experiment:
                     entry = entry[80:]
                 titles.append(entry)
         if len(titles) > 10:
-            raise RuntimeError("Have too much miscellaneous information to fit into the \"titles\" section of the MRC file (max 10 lines). Lines are:\n%s" % "\n".join(titles))
+            raise RuntimeError(
+                'Have too much miscellaneous information to fit into the "titles" section of the MRC file (max 10 lines). Lines are:\n%s'
+                % "\n".join(titles)
+            )
         return titles
 
     ## Add an exposure to the provided ActionTable. We're provided with the
@@ -558,7 +631,9 @@ class Experiment:
         exposureStartTime = curTime
         # Adjust the exposure start based on when the cameras are ready.
         for camera in cameras:
-            camExposureReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
+            camExposureReadyTime = self.getTimeWhenCameraCanExpose(
+                table, camera
+            )
             exposureStartTime = max(exposureStartTime, camExposureReadyTime)
 
         # Determine the maximum exposure time, which depends on our light
@@ -566,7 +641,7 @@ class Experiment:
         # ready to be triggered.
         maxExposureTime = 0
         if lightTimePairs:
-            maxExposureTime = max(lightTimePairs, key = lambda a: a[1])[1]
+            maxExposureTime = max(lightTimePairs, key=lambda a: a[1])[1]
         # Check cameras to see if they have minimum exposure times; take them
         # into account for when the exposure can end. Additionally, if they
         # are frame-transfer cameras, then we need to adjust maxExposureTime
@@ -574,14 +649,19 @@ class Experiment:
         # (while it is still reading out the previous frame).
 
         for camera in cameras:
-            maxExposureTime = max(maxExposureTime,
-                    camera.getMinExposureTime(isExact = True))
-            if camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER:
+            maxExposureTime = max(
+                maxExposureTime, camera.getMinExposureTime(isExact=True)
+            )
+            if (
+                camera.getExposureMode()
+                == cockpit.handlers.camera.TRIGGER_AFTER
+            ):
                 nextReadyTime = self.getTimeWhenCameraCanExpose(table, camera)
                 # Ensure camera is exposing for long enough to finish reading
                 # out the last frame.
-                maxExposureTime = max(maxExposureTime,
-                        nextReadyTime - exposureStartTime)
+                maxExposureTime = max(
+                    maxExposureTime, nextReadyTime - exposureStartTime
+                )
 
             # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
             # to ensure that all the pixels are exposed when we turn on the lights
@@ -595,8 +675,13 @@ class Experiment:
         # Note that a None value here means the user wanted to expose the
         # cameras without any special light.
         exposureEndTime = exposureStartTime + maxExposureTime
-        for light, exposureTime, in lightTimePairs:
-            if light is not None and light.name != 'Ambient':  # i.e. not ambient light
+        for (
+            light,
+            exposureTime,
+        ) in lightTimePairs:
+            if (
+                light is not None and light.name != "Ambient"
+            ):  # i.e. not ambient light
                 if camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
                     # Center with all pixels exposed
                     offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
@@ -604,7 +689,9 @@ class Experiment:
                     # Center the light exposure.
                     timeSlop = maxExposureTime - exposureTime
                     offset = timeSlop / 2
-                table.addAction(exposureEndTime - exposureTime - offset, light, True)
+                table.addAction(
+                    exposureEndTime - exposureTime - offset, light, True
+                )
                 table.addAction(exposureEndTime - offset, light, False)
             # Record this exposure time.
             if exposureTime not in self.lightToExposureTime[light]:
@@ -623,16 +710,29 @@ class Experiment:
             elif mode == cockpit.handlers.camera.TRIGGER_DURATION:
                 table.addAction(exposureStartTime, camera, True)
                 table.addAction(exposureEndTime, camera, False)
+            elif mode == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
+                # We added some security time to the readout time that
+                # we have to remove now
+                cameraExposureStartTime = (
+                    exposureStartTime
+                    - self.cameraToReadoutTime[camera]
+                    - decimal.Decimal(0.005)
+                )
+                table.addAction(cameraExposureStartTime, camera, True)
+                table.addAction(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_BEFORE:
                 table.addToggle(exposureStartTime, camera)
             elif mode == cockpit.handlers.camera.TRIGGER_SOFT:
                 table.addAction(exposureStartTime, camera, True)
             else:
-                raise Exception ('%s has no trigger mode set.' % camera)
+                raise Exception("%s has no trigger mode set." % camera)
             self.cameraToImageCount[camera] += 1
         for camera in self.cameras:
-            if (camera not in usedCams and
-                camera.getExposureMode() == cockpit.handlers.camera.TRIGGER_AFTER):
+            if (
+                camera not in usedCams
+                and camera.getExposureMode()
+                == cockpit.handlers.camera.TRIGGER_AFTER
+            ):
                 # Camera is a continuous-exposure/frame-transfer camera
                 # and therefore saw light it shouldn't have; invalidate it.
                 self.cameraToIsReady[camera] = False
@@ -645,28 +745,34 @@ class Experiment:
     def resetCams(self, curTime, cameras, table):
         resetEndTime = curTime
         for camera in cameras:
-            exposureStart = max(curTime, self.getTimeWhenCameraCanExpose(table, camera))
+            exposureStart = max(
+                curTime, self.getTimeWhenCameraCanExpose(table, camera)
+            )
             # Cameras that have a pre-set exposure time can only use that
             # exposure time for clearing the sensor, hence why we take the
             # maximum of the min exposure time and the current exposure time.
             # \todo Is it possible for getExposureTime() to be less than
             # getMinExposureTime()? That would be a bug, right?
-            minExposureTime = max(decimal.Decimal('.1'),
-                                  camera.getMinExposureTime(isExact = True),
-                                  camera.getExposureTime(isExact = True))
+            minExposureTime = max(
+                decimal.Decimal(".1"),
+                camera.getMinExposureTime(isExact=True),
+                camera.getExposureTime(isExact=True),
+            )
             exposureMode = camera.getExposureMode()
             if exposureMode == cockpit.handlers.camera.TRIGGER_AFTER:
                 table.addToggle(exposureStart + minExposureTime, camera)
             elif exposureMode == cockpit.handlers.camera.TRIGGER_DURATION:
                 table.addAction(exposureStart, camera, True)
                 table.addAction(exposureStart + minExposureTime, camera, False)
-            else: # TRIGGER_BEFORE case
+            else:  # TRIGGER_BEFORE case
                 table.addToggle(exposureStart, camera)
             resetEndTime = max(resetEndTime, exposureStart + minExposureTime)
             self.cameraToImageCount[camera] += 1
-            self.cameraToIgnoredImageIndices[camera].add(self.cameraToImageCount[camera])
+            self.cameraToIgnoredImageIndices[camera].add(
+                self.cameraToImageCount[camera]
+            )
             self.cameraToIsReady[camera] = True
-        return resetEndTime + decimal.Decimal('1e-6')
+        return resetEndTime + decimal.Decimal("1e-6")
 
     ## Given a camera handle, return the next time that it will be safe
     # to start an exposure with that camera, based on its last trigger time,
@@ -696,7 +802,7 @@ class Experiment:
             # The camera actually finished exposing (and started reading
             # out) some time after lastUseTime, depending on its declared
             # exposure time.
-            nextUseTime += camera.getExposureTime(isExact = True)
+            nextUseTime += camera.getExposureTime(isExact=True)
         nextUseTime += self.cameraToReadoutTime[camera] + decimal.Decimal(0.1)
         return nextUseTime
 
@@ -706,16 +812,17 @@ class Experiment:
         exposureTime = 0
         for cameras, lightTimePairs in self.exposureSettings:
             if camera in cameras and lightTimePairs:
-                exposureTime = max(exposureTime, max(lightTimePairs, key = lambda a: a[1])[1])
+                exposureTime = max(
+                    exposureTime, max(lightTimePairs, key=lambda a: a[1])[1]
+                )
         return exposureTime
 
     def is_running(self):
-        """Is this experiment running?
-        """
-        if self._run_thread is None:
+        """Is this experiment running?"""
+        if self.runThread is None:
             return False
         else:
-            return self._run_thread.is_alive()
+            return self.runThread.is_alive()
 
 
 ## Return a list of the files generated by the most recent experiment.

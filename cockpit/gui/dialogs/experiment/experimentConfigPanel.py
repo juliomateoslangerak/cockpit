@@ -426,6 +426,7 @@ class ExperimentConfigPanel(wx.Panel):
                 parent=self,
             )
             return True
+        # TODO: check that the filename is valid
 
         exposureSettings = []
         if self.shouldExposeSimultaneously.GetValue():

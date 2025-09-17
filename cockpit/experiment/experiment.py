@@ -709,16 +709,6 @@ class Experiment:
             elif mode == cockpit.handlers.camera.TRIGGER_DURATION:
                 table.addAction(exposureStartTime, camera, True)
                 table.addAction(exposureEndTime, camera, False)
-            elif mode == cockpit.handlers.camera.TRIGGER_DURATION_PSEUDOGLOBAL:
-                # We added some security time to the readout time that
-                # we have to remove now
-                cameraExposureStartTime = (
-                    exposureStartTime
-                    - self.cameraToReadoutTime[camera]
-                    - decimal.Decimal(0.005)
-                )
-                table.addAction(cameraExposureStartTime, camera, True)
-                table.addAction(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_BEFORE:
                 table.addToggle(exposureStartTime, camera)
             elif mode == cockpit.handlers.camera.TRIGGER_SOFT:

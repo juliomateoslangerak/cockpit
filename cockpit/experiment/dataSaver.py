@@ -55,6 +55,7 @@ import cockpit.util.threads
 from microscope import UnsupportedFeatureError
 
 import zarr
+import numcodecs
 
 import numpy as np
 import queue

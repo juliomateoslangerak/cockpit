@@ -64,7 +64,6 @@ from cockpit.devices.dummies import (
     DummyDSP,
     DummyLaser,
     DummyStage,
-    DummyStage,
 )
 from cockpit.devices.objective import ObjectiveDevice
 from cockpit.devices.server import CockpitServer

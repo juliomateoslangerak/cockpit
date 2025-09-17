@@ -27,6 +27,8 @@ from datetime import datetime
 
 import os.path
 
+import wx
+
 DELIMITER = ';'
 
 class ValueLogger:

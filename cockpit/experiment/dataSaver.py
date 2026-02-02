@@ -873,13 +873,7 @@ class ZarrDataSaver:
             overwrite=self.overwrite,
             attributes=self._constructOMEAttributes(),
         )
-        # A priori we could create an array directly in the root group,
-        # but like this we have more flexibility to add more arrays
-        # in the future, e.g. for a reference image in the middle of the
-        # z-stack, timelapses with different frequencies or in case cameras
-        # have different shapes.
-        self._zarrRootGroup_0 = self._zarrRoot.create_group(name="0")
-        self._zarrArray = self._zarrRootGroup_0.create_array(
+        self._zarrArray = self._zarrRoot.create_array(
             name="0",
             dimension_names=["t", "c", "z", "y", "x"],
             shape=self.arrayShape,

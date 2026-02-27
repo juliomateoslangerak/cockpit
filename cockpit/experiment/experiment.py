@@ -50,23 +50,21 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-from microscope import ElectronicShutteringMode
-
-from cockpit.experiment import dataSaver
-from cockpit import depot
-from cockpit import events
-from cockpit.gui import guiUtils
-
-import cockpit.handlers.camera
-import cockpit.interfaces.stageMover
-
 import decimal
 import gc
 import logging
 import os
 import threading
 import time
+
 import wx
+from microscope import ElectronicShutteringMode
+
+import cockpit.handlers.camera
+import cockpit.interfaces.stageMover
+from cockpit import depot, events
+from cockpit.experiment import dataSaver
+from cockpit.gui import guiUtils
 
 
 _logger = logging.getLogger(__name__)
@@ -81,9 +79,9 @@ lastExperiment = None
 # multiple files.
 generatedFilenames = []
 
+
 def isRunning():
-    """Is an experiment running?
-    """
+    """Is an experiment running?"""
     if lastExperiment is None:
         return False
     else:
@@ -91,6 +89,7 @@ def isRunning():
 
 
 ## This class is the root class for generating and running experiments.
+
 
 # You should make a subclass of this class to implement a specific experiment
 # type.
@@ -116,10 +115,19 @@ class Experiment:
     # *Altitudes* refer to the net position of the Z stage, and are used
     # by the stagemover.
     # *z* values refer to the position of the zPositioner specified in the args.
-    def __init__(self, numReps, repDuration,
-            zPositioner, altBottom, zHeight, sliceHeight,
-            exposureSettings, otherHandlers = [],
-            metadata = '', savePath = ''):
+    def __init__(
+        self,
+        numReps,
+        repDuration,
+        zPositioner,
+        altBottom,
+        zHeight,
+        sliceHeight,
+        exposureSettings,
+        otherHandlers=[],
+        metadata="",
+        savePath="",
+    ):
         self.numReps = numReps
         self.repDuration = repDuration
         self.zPositioner = zPositioner
@@ -242,8 +250,8 @@ class Experiment:
             )
             if not guiUtils.getUserPermission(warning):
                 return False
-            #set repDuration to the last table action
-            self.repDuration= float(self.table.lastActionTime) / 1000.0
+            # set repDuration to the last table action
+            self.repDuration = float(self.table.lastActionTime) / 1000.0
 
         if not self.lastMinuteActions():
             return False
@@ -664,9 +672,12 @@ class Experiment:
 
             # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
             # to ensure that all the pixels are exposed when we turn on the lights
-            elif camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
-                maxExposureTime += (self.cameraToReadoutTime[camera] + decimal.Decimal(0.1))
-
+            elif (
+                camera.getShutteringMode() == ElectronicShutteringMode.ROLLING
+            ):
+                maxExposureTime += self.cameraToReadoutTime[
+                    camera
+                ] + decimal.Decimal(0.1)
 
         # Open the shutters for the specified exposure times, centered within
         # the max exposure time. If camera has a rolling shutter, centered in the time frame
@@ -681,9 +692,14 @@ class Experiment:
             if (
                 light is not None and light.name != "Ambient"
             ):  # i.e. not ambient light
-                if camera.getShutteringMode() == ElectronicShutteringMode.ROLLING:
+                if (
+                    camera.getShutteringMode()
+                    == ElectronicShutteringMode.ROLLING
+                ):
                     # Center with all pixels exposed
-                    offset = decimal.Decimal(0.05)  # This is half of the time that was added for security to maxExposureTime
+                    offset = decimal.Decimal(
+                        0.05
+                    )  # This is half of the time that was added for security to maxExposureTime
                 else:
                     # Center the light exposure.
                     timeSlop = maxExposureTime - exposureTime

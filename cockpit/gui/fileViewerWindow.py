@@ -50,12 +50,11 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-from cockpit.gui import imageSequenceViewer
 import cockpit.util.datadoc
+from cockpit.gui import imageSequenceViewer
 
 
-
-## This viewer loads a file and shows the images in it. 
+## This viewer loads a file and shows the images in it.
 class FileViewer(imageSequenceViewer.ImageSequenceViewer):
     def __init__(self, filename, *args, **kwargs):
         doc = cockpit.util.datadoc.DataDoc(filename)

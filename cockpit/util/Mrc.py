@@ -56,7 +56,7 @@ Mrc2 class section wise file/array I/O
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 
 
-import numpy as N
+import numpy as np
 
 
 def bindFile(fn, writable=0):
@@ -73,7 +73,7 @@ def bindFile(fn, writable=0):
 
     return a.data_withMrc(fn)
 
-class ndarray_inMrcFile(N.ndarray):
+class ndarray_inMrcFile(np.ndarray):
     def __array_finalize__(self,obj):
         self.Mrc = getattr(obj, 'Mrc', None)
 
@@ -88,7 +88,7 @@ class Mrc:
         if extHdrSize and extHdrSize % 1024:
             raise ValueError("extended header size needs to be integer multiple of 1024")
 
-        self.m = N.memmap(path, mode=mode)
+        self.m = np.memmap(path, mode=mode)
         self.h = self.m[:1024]
 
         self.hdr = makeHdrArray(self.h)
@@ -157,7 +157,7 @@ class Mrc:
         type_descr = [("int",   "%s%di4"%(byteorder,self.numInts)),
                       ("float", "%s%df4"%(byteorder,self.numFloats))]
 
-        self.extHdrArray = N.recarray(shape=nz, dtype=type_descr, buf=self.e)
+        self.extHdrArray = np.recarray(shape=nz, dtype=type_descr, buf=self.e)
         if self.isByteSwapped:
             self.extHdrArray = self.extHdrArray.newbyteorder()
 
@@ -176,16 +176,16 @@ class Mrc:
         if header_shape != adjusted_shape:
             print(("** WARNING **: file truncated - shape from header: %s."
                    " Expected to get %i pixels but got %i pixels")
-                  % (header_shape, N.prod(header_shape), self.data.size))
+                  % (header_shape, np.prod(header_shape), self.data.size))
 
             ## In some cases, this may require the introduction of
             ## blank/padding data (see cockpit bug #289).  In such
             ## cases, we need to expand the data first which will lead
             ## to a N.array being returned instead of N.memmap.
-            if self.data.size != N.prod(adjusted_shape):
-                blanks = N.full(N.prod(adjusted_shape) - self.data.size,
-                                N.nan, dtype=self.data.dtype)
-                self.data = N.concatenate((self.data, blanks))
+            if self.data.size != np.prod(adjusted_shape):
+                blanks = np.full(np.prod(adjusted_shape) - self.data.size,
+                                 np.nan, dtype=self.data.dtype)
+                self.data = np.concatenate((self.data, blanks))
 
         self.data.shape = adjusted_shape
 
@@ -216,9 +216,9 @@ class Mrc:
         """do some basic checks like filesize, ..."""
         shape = self.data.shape
         b = self.data.dtype.itemsize
-        eb = N.prod( shape ) * b
+        eb = np.prod(shape) * b
         ab = len(self.d)
-        secb = N.prod( shape[-2:] ) * b
+        secb = np.prod(shape[-2:]) * b
 
         anSecs = ab / float(secb)
         enSecs = eb / float(secb)
@@ -336,9 +336,9 @@ def save(a, fn, ifExists='ask', zAxisOrder=None,
 
     if calcMMM:
         def minMaxMedian(array):
-            return (N.min(array), N.max(array), N.median(array))
+            return (np.min(array), np.max(array), np.median(array))
         def minMax(array):
-            return (N.min(array), N.max(array))
+            return (np.min(array), np.max(array))
 
         wAxis = axisOrderStr(m.hdr).find('w')
         if wAxis < 0:
@@ -529,7 +529,7 @@ class Mrc2:
 
     def _initFromExistingFile(self):
         self.seekHeader()
-        hdrArray =  N.rec.fromfile(self._f, dtype=mrcHdr_dtype, shape=1)
+        hdrArray =  np.rec.fromfile(self._f, dtype=mrcHdr_dtype, shape=1)
 
         self.hdr = implement_hdr( hdrArray )
 
@@ -551,7 +551,7 @@ class Mrc2:
             type_descr = [
                 ("int",   "%s%di4"%(byteorder,self._extHdrNumInts)),
                 ("float", "%s%df4"%(byteorder,self._extHdrNumFloats))]
-            self._extHdrArray = N.rec.fromfile(
+            self._extHdrArray = np.rec.fromfile(
                 self._f, dtype=type_descr, shape=nSecs)
             if self._fileIsByteSwapped:
                 self._extHdrArray.newbyteorder()
@@ -566,12 +566,12 @@ class Mrc2:
         self._shape = (nsecs, ny,nx) # todo: wavelengths , times
         self._shape2d = self._shape[-2:]
         self._dtype  = MrcMode2dtype( self.hdr.PixelType )
-        self._secByteSize = self._dtype.itemsize * N.prod( self._shape2d )
+        self._secByteSize = self._dtype.itemsize * np.prod(self._shape2d)
 
     def setHdrForShapeType(self, shape, type ):
         mrcmode = dtype2MrcMode(type)
         self.hdr.PixelType =  mrcmode
-        self.hdr.Num = shape[-1],shape[-2],  N.prod(shape[:-2])
+        self.hdr.Num = shape[-1],shape[-2],  np.prod(shape[:-2])
         self._initWhenHdrArraySet()
 
 
@@ -592,7 +592,7 @@ class Mrc2:
             type_descr = [
                 ("int",   "%s%di4"%(byteorder,self._extHdrNumInts)),
                 ("float", "%s%df4"%(byteorder,self._extHdrNumFloats))]
-            self._extHdrArray = N.recarray(nSecs, dtype=type_descr)
+            self._extHdrArray = np.recarray(nSecs, dtype=type_descr)
 
             self.extInts   = self._extHdrArray.field('int')
             self.extFloats = self._extHdrArray.field('float')
@@ -625,7 +625,7 @@ class Mrc2:
         if i is not None:
             self.seekSec(i)
 
-        a = N.fromfile(self._f, self._dtype, N.prod(self._shape2d))
+        a = np.fromfile(self._f, self._dtype, np.prod(self._shape2d))
         a.shape = self._shape2d
         return a
 
@@ -644,7 +644,7 @@ class Mrc2:
         if i is not None:
             self.seekSec(i)
 
-        a = N.fromfile(self._f, self._dtype, nz*N.prod(self._shape2d))
+        a = np.fromfile(self._f, self._dtype, nz * np.prod(self._shape2d))
         a.shape = (nz,)+self._shape2d
         return a
 
@@ -684,12 +684,12 @@ def minExtHdrSize(nSecs, bytesPerSec):
 
 
 def MrcMode2dtype(mode):
-    PixelTypes = (N.uint8, N.int16, N.float32,
-                  N.float32,
-                  N.complex64,
-                  N.int16,
-                  N.uint16,
-                  N.int32
+    PixelTypes = (np.uint8, np.int16, np.float32,
+                  np.float32,
+                  np.complex64,
+                  np.int16,
+                  np.uint16,
+                  np.int32
                   )
 
     if mode<0 or mode>7:
@@ -698,17 +698,17 @@ def MrcMode2dtype(mode):
     return PixelTypes[ int(mode) ]
 
 def dtype2MrcMode(dtype):
-    if dtype == N.uint8:
+    if dtype == np.uint8:
         return 0
-    if dtype == N.int16:
+    if dtype == np.int16:
         return 1
-    if dtype == N.float32:
+    if dtype == np.float32:
         return 2
-    if dtype == N.complex64:
+    if dtype == np.complex64:
         return 4
-    if dtype == N.uint16:
+    if dtype == np.uint16:
         return 6
-    if dtype == N.int32:
+    if dtype == np.int32:
         return 7
     raise TypeError("MRC does not support %s (%s)"% (dtype.name, dtype))
 
@@ -795,7 +795,7 @@ def makeHdrArray(buffer=None):
         import weakref
         h = weakref.proxy( h )
     else:
-        h = N.recarray(1, mrcHdr_dtype)
+        h = np.recarray(1, mrcHdr_dtype)
     return implement_hdr(h)
 
 # class function
@@ -945,7 +945,7 @@ def init_simple(hdr, mode, nxOrShape, ny=None, nz=None):
             nz,ny,nx  = nxOrShape
         else:
             ny,nx  = nxOrShape[-2:]
-            nz     = N.prod(nxOrShape[:-2])
+            nz     = np.prod(nxOrShape[:-2])
 
     else:
         nx = nxOrShape
@@ -1067,17 +1067,17 @@ def adjusted_data_shape(numel, shape):
     """
     numel = int(numel)
     shape = tuple([int(s) for s in shape])
-    if numel == N.prod(shape):
+    if numel == np.prod(shape):
         return shape # data is complete, nothing to do
     elif numel == 0:
         return tuple([0] * len(shape)) # special case with empty data
-    elif numel > N.prod(shape):
+    elif numel > np.prod(shape):
         raise ValueError(("data too large (%i elements) for proposed shape %s"
                           % (numel, str(shape))))
 
     shape = list(shape)
     for i in range(len(shape)):
-        stride = int(N.prod(shape[i+1:]))
+        stride = int(np.prod(shape[i + 1:]))
         if numel >= stride:
             shape[i] = numel // stride
             if numel % stride:
@@ -1094,7 +1094,7 @@ def adjusted_data_shape(numel, shape):
     return tuple(shape)
 
 
-mrcHdr_dtype = N.dtype(
+mrcHdr_dtype = np.dtype(
     [
         ("Num", "i4", (3,)),
         ("PixelType", "i4"),
@@ -1130,6 +1130,6 @@ mrcHdr_dtype = N.dtype(
         ("wave", "i2", (5,)),  # Wavelength 1, in nm.
         ("zxy0", "f4", (3,)),  # X origin, in µm.
         ("NumTitles", "i4"),  # Number of titles. Valid numbers are between 0 and 10.
-        ("title", "a80", (10,)),  # Title 1. 80 characters long.
+        # ("title", "a80", (10,)),  # Title 1. 80 characters long.
     ]
 )

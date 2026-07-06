@@ -65,7 +65,6 @@ And some of its modules are:
 
 """
 
-
 import importlib.resources
 import sys
 import traceback
@@ -80,7 +79,7 @@ import cockpit.events
 ## that is correct on all platforms, including windows.
 
 IMAGES_PATH = str(
-    importlib.resources.files('cockpit') / 'resources' / 'images'
+    importlib.resources.files("cockpit") / "resources" / "images"
 )
 
 

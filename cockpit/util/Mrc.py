@@ -1139,7 +1139,7 @@ def adjusted_data_shape(numel, shape):
 
     shape = list(shape)
     for i in range(len(shape)):
-        stride = int(np.prod(shape[i + 1:]))
+        stride = int(np.prod(shape[i + 1 :]))
         if numel >= stride:
             shape[i] = numel // stride
             if numel % stride:

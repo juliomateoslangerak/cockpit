@@ -43,7 +43,6 @@ from cockpit.gui.safeControls import EVT_SAFE_CONTROL_COMMIT, SetPointGauge
 from cockpit.interfaces import stageMover
 from cockpit.util.colors import wavelengthToColor
 
-
 _VIEWPANEL_SIZE = wx.Size(250, 250)
 
 _SITE_COLOURS = {"red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255)}
@@ -1160,9 +1159,11 @@ class StageControlXY(wx.Panel):
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
-            lambda e: varctrl_step_x.set_value(e.EventData[1])
-            if e.EventData[0] == 0
-            else e.Skip(),
+            lambda e: (
+                varctrl_step_x.set_value(e.EventData[1])
+                if e.EventData[0] == 0
+                else e.Skip()
+            ),
         )
         sizer_step_x.Add(varctrl_step_x, 1, wx.LEFT, 5)
         ## y
@@ -1182,9 +1183,11 @@ class StageControlXY(wx.Panel):
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
-            lambda e: varctrl_step_y.set_value(e.EventData[1])
-            if e.EventData[0] == 1
-            else e.Skip(),
+            lambda e: (
+                varctrl_step_y.set_value(e.EventData[1])
+                if e.EventData[0] == 1
+                else e.Skip()
+            ),
         )
         sizer_step_y.Add(varctrl_step_y, 1, wx.LEFT, 5)
         ## common
@@ -1303,9 +1306,11 @@ class StageControlZ(wx.Panel):
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
-            lambda e: varctrl_step_z.set_value(e.EventData[1])
-            if e.EventData[0] == 2
-            else e.Skip(),
+            lambda e: (
+                varctrl_step_z.set_value(e.EventData[1])
+                if e.EventData[0] == 2
+                else e.Skip()
+            ),
         )
         sizer_step_z.Add(varctrl_step_z, 1, wx.LEFT, 5)
         sizer.Add(sizer_step_z, 0, wx.EXPAND | wx.TOP, 10)
@@ -1794,6 +1799,7 @@ class DialogSafeties(wx.Dialog):
 
 class TouchScreenWindow(wx.Frame):
     LIST_AS_COCKPIT_WINDOW = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._set_properties()

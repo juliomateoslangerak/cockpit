@@ -54,13 +54,13 @@
 # responsible for setting up the user interface; it assume that the
 # devices have already been initialized.
 
+import importlib.metadata
 import io
 import os.path
 import typing
 from configparser import ConfigParser
 from itertools import chain
 
-import pkg_resources
 import wx
 import wx.adv
 
@@ -778,7 +778,7 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
     info = wx.adv.AboutDialogInfo()
     info.SetName("Cockpit")
 
-    info.SetVersion(pkg_resources.get_distribution("cockpit").version)
+    info.SetVersion(importlib.metadata.version("cockpit"))
     info.SetDescription("Hardware agnostic microscope user interface")
     info.SetCopyright(
         "Copyright © 2020\n"

@@ -27,7 +27,6 @@ components, it as been moved here.
 
 """
 
-
 import re
 import typing
 
@@ -35,7 +34,6 @@ import wx
 
 import cockpit.events
 from cockpit.handlers.objective import ObjectiveHandler
-
 
 EVT_OBJECTIVE_CHANGED = wx.PyEventBinder(wx.NewEventType())
 
@@ -81,6 +79,7 @@ class Objectives(wx.EvtHandler):
 
     def GetNamesSorted(self) -> typing.List[str]:
         """List of all objective names sorted by magnification."""
+
         # FIXME: we should not do this.  Instead, objective device and
         # handlers should have a magnification field (see issue #139).
         def parse_magnification(name):

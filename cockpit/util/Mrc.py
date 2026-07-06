@@ -1130,6 +1130,6 @@ mrcHdr_dtype = N.dtype(
         ("wave", "i2", (5,)),  # Wavelength 1, in nm.
         ("zxy0", "f4", (3,)),  # X origin, in µm.
         ("NumTitles", "i4"),  # Number of titles. Valid numbers are between 0 and 10.
-        ("title", "a80", (10,)),  # Title 1. 80 characters long.
+        ("title", "S80", (10,)),  # Title 1. 80 characters long.
     ]
 )

@@ -50,14 +50,16 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-from cockpit import depot
-from cockpit.gui import guiUtils
-import cockpit.util.userConfig
-from cockpit.experiment import zStack
-
 import threading
 import time
+
 import wx
+
+import cockpit.util.userConfig
+from cockpit import depot
+from cockpit.experiment import zStack
+from cockpit.gui import guiUtils
+
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Example opto script"

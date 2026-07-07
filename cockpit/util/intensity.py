@@ -25,15 +25,19 @@ This can be used on its own from the command line, or can be included
 as part of another wx app.
 """
 
-from contextlib import contextmanager
+
 import gc
+from contextlib import contextmanager
 from itertools import chain
-from cockpit.util.Mrc import Mrc
-import numpy as np
 from operator import add
+
+import numpy as np
 import wx
-from wx.lib.floatcanvas import FloatCanvas
 import wx.lib.plot as plot
+from wx.lib.floatcanvas import FloatCanvas
+
+from cockpit.util.Mrc import Mrc
+
 
 ICON_SIZE = (16, 16)
 BITMAP_SIZE = (512, 512)
@@ -196,7 +200,7 @@ class IntensityProfiler:
                 xOffset = x0 - n // 2
                 yOffset = y0 - n // 2
             peakPosition = np.argmax(middle)
-            z, y, x = np.unravel_index(peakPosition, middle.shape)
+            (z, y, x) = np.unravel_index(peakPosition, middle.shape)
             self._beadCentre = (x + xOffset, y + yOffset)
             return self._beadCentre
 

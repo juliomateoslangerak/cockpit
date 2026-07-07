@@ -65,17 +65,17 @@ the menu bar.  Namely, this window provides:
 
 """
 
-import Pyro4
 import time
+from itertools import chain
 
-from cockpit import depot
-from cockpit.devices import device
-from cockpit import events
+import numpy as np
+import Pyro4
+
 import cockpit.handlers.executor
 import cockpit.handlers.imager
 import cockpit.util.threads
-import numpy as np
-from itertools import chain
+from cockpit import depot, events
+from cockpit.devices import device
 
 
 class ExecutorDevice(device.Device):
@@ -198,7 +198,6 @@ class ExecutorDevice(device.Device):
     ## Actually execute the events in an experiment ActionTable, starting at
     # startIndex and proceeding up to but not through stopIndex.
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
-
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
         actions = self._adaptActions(actions)

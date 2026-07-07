@@ -114,6 +114,7 @@ from OpenGL.GL import (
     glViewport,
 )
 
+
 ## This module contains the Tile and MegaTile classes, along with some
 # supporting functions and constants.
 
@@ -154,7 +155,6 @@ class Tile:
         metadata,
         shouldDelayAllocation=False,
     ):
-
         ## Array of pixel brightnesses
         self.textureData = textureData
         ## XYZ position tuple, in microns. NB the Z portion is ignored
@@ -322,7 +322,7 @@ class Tile:
         picTexRatio_x = float(pic_nx) / tex_nx
         picTexRatio_y = float(pic_ny) / tex_ny
 
-        x, y = self.pos[:2]
+        (x, y) = self.pos[:2]
 
         glBindTexture(GL_TEXTURE_2D, self.texture)
         glBegin(GL_QUADS)

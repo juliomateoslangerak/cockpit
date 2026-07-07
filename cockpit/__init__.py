@@ -64,10 +64,10 @@ import sys
 import threading
 import time
 import traceback
-import wx
 from typing import List
 
 import Pyro4
+import wx
 
 import cockpit.config
 import cockpit.depot
@@ -80,6 +80,7 @@ import cockpit.interfaces.channels
 import cockpit.interfaces.imager
 import cockpit.interfaces.stageMover
 import cockpit.util.userConfig
+
 
 _logger = logging.getLogger(__name__)
 

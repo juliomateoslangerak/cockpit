@@ -25,7 +25,6 @@ import cockpit.handlers.stagePositioner
 
 
 class testStagePositioner(unittest.TestCase):
-
     def setUp(self):
         self.callbacks = unittest.mock.MagicMock()
         self.args = {

@@ -54,14 +54,16 @@ import string
 import wx
 import wx.lib.newevent
 
+
 ## @package cockpit.gui.guiUtils
 # This module contains many functions related to the GUI, mostly for setting
 # up UI elements and updating various status displays.
 
 # Create a custom event for validation errors.
-CockpitValidationErrorEvent, EVT_COCKPIT_VALIDATION_ERROR = (
-    wx.lib.newevent.NewCommandEvent()
-)
+(
+    CockpitValidationErrorEvent,
+    EVT_COCKPIT_VALIDATION_ERROR,
+) = wx.lib.newevent.NewCommandEvent()
 
 
 class _BaseValidator(wx.Validator):

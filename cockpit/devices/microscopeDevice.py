@@ -45,36 +45,37 @@ For connection via a controller::
 
 import collections.abc
 import logging
+import re
+import time
 import typing
 
 import Pyro4
 import wx
-import time
-from cockpit import events
-from cockpit.devices import device
-from cockpit import depot
+from microscope import AxisLimits
+
 import cockpit.gui.device
 import cockpit.handlers.deviceHandler
+import cockpit.handlers.digitalioHandler
 import cockpit.handlers.filterHandler
 import cockpit.handlers.lightPower
 import cockpit.handlers.lightSource
-import cockpit.handlers.digitalioHandler
 import cockpit.util.colors
-import cockpit.util.userConfig
-import cockpit.util.threads
 import cockpit.util.listener
-from cockpit.util import valueLogger
+import cockpit.util.threads
+import cockpit.util.userConfig
+from cockpit import depot, events
+from cockpit.devices import device
 from cockpit.gui.device import SettingsEditor
 from cockpit.handlers.stagePositioner import PositionerHandler
 from cockpit.interfaces import stageMover
-import re
-from microscope import AxisLimits
+from cockpit.util import valueLogger
+
 
 _logger = logging.getLogger(__name__)
 
 
 # Pseudo-enum to track whether device defaults in place.
-DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT = range(3)
+(DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
 
 
 class MicroscopeBase(device.Device):
@@ -816,7 +817,7 @@ class MicroscopeDIO(MicroscopeBase):
     def receiveData(self, *args):
         """This function is called when input line state is received from
         the hardware."""
-        (line, state), timestamp = args
+        ((line, state), timestamp) = args
         if self.IOMap[line]:
             # this is meant to be an output line!
             raise Exception("Input signal received on an output digital line")
@@ -981,7 +982,7 @@ class MicroscopeValueLogger(MicroscopeBase):
     def receiveData(self, *args):
         """This function is called when sensors push data from the remote and
         return data from the hardware."""
-        data, timestamp = args
+        (data, timestamp) = args
         events.publish(events.VALUELOGGER_INPUT, data)
         self.logger.log(data)
 

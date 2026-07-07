@@ -32,6 +32,7 @@ import sys
 
 import cockpit.config
 
+
 # Strings used for IP address and port in config. files.
 IPSTR = "ipaddress"  # ConfigParser makes keys lower case
 PORTSTR = "port"

@@ -51,17 +51,17 @@
 
 import decimal
 
-from cockpit import depot
-from cockpit.handlers import deviceHandler
-from cockpit import events
 import cockpit.handlers.imager
 import cockpit.interfaces.imager
 import cockpit.util.colors
+from cockpit import depot, events
+from cockpit.handlers import deviceHandler
+
 
 ## Available trigger modes for triggering the camera.
 # Trigger at the end of an exposure; trigger before the exposure;
 # trigger for the duration of the exposure.
-TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT = range(4)
+(TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT) = range(4)
 
 
 ## This handler is for cameras, of course. Cameras provide images to the

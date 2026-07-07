@@ -51,11 +51,11 @@
 
 """Standard Z stack experiment."""
 
-from cockpit.experiment import actionTable
-from cockpit.experiment import experiment
-
 import decimal
 import math
+
+from cockpit.experiment import actionTable, experiment
+
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Z-stack"
@@ -80,11 +80,10 @@ class ZStackExperiment(experiment.Experiment):
             zTarget = self.zStart + self.sliceHeight * zIndex
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
-                motionTime, stabilizationTime = (
-                    self.zPositioner.getMovementTime(prevAltitude, zTarget)
-                )
-                motionTime *= 1000
-                stabilizationTime *= 1000
+                (
+                    motionTime,
+                    stabilizationTime,
+                ) = self.zPositioner.getMovementTime(prevAltitude, zTarget)
             curTime += motionTime
             table.addAction(curTime, self.zPositioner, zTarget)
             curTime += stabilizationTime

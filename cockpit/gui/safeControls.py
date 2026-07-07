@@ -32,15 +32,18 @@ can present hazards, e.g. lasers. Safe controls:
 """
 
 import copy
+
 import wx
 import wx.lib.delayedresult as delayedresult
-from cockpit.gui.guiUtils import FloatValidator
-
 import wx.lib.newevent
 
-SafeControlCommitEvent, EVT_SAFE_CONTROL_COMMIT = (
-    wx.lib.newevent.NewCommandEvent()
-)
+from cockpit.gui.guiUtils import FloatValidator
+
+
+(
+    SafeControlCommitEvent,
+    EVT_SAFE_CONTROL_COMMIT,
+) = wx.lib.newevent.NewCommandEvent()
 SafeControlPendingEvent, EVT_SAFE_CONTROL_PENDING = wx.lib.newevent.NewEvent()
 
 

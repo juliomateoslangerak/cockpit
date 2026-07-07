@@ -53,20 +53,21 @@
 pixel values and then multiply them by a gain factor).
 """
 
-from cockpit.experiment import actionTable
 import decimal
-from cockpit import events
-from cockpit.experiment import experiment
-from cockpit.gui import guiUtils
+import threading
+import time
+
+import numpy
+import wx
+
 import cockpit.handlers.camera
 import cockpit.util.datadoc
 import cockpit.util.threads
 import cockpit.util.userConfig
+from cockpit import events
+from cockpit.experiment import actionTable, experiment
+from cockpit.gui import guiUtils
 
-import numpy
-import threading
-import time
-import wx
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Offset/gain correction file"
@@ -346,7 +347,6 @@ from cockpit.gui.guiUtils import FLOATVALIDATOR, INTVALIDATOR
 
 ## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(wx.Panel):
-
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
 

@@ -36,6 +36,7 @@ import typing
 
 import Pyro4
 
+
 _PROGRAM_NAME = "cockpit"
 
 

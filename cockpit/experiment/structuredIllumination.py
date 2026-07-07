@@ -51,21 +51,22 @@
 
 """Runs SIM experiments."""
 
-from cockpit.experiment import actionTable
-from cockpit import depot
-from cockpit.experiment import experiment
-from cockpit.gui import guiUtils
-import cockpit.util.Mrc
-import cockpit.util.datadoc
-import cockpit.util.userConfig
-
 import decimal
 import math
-import numpy
 import os
-import tempfile
 import shutil
+import tempfile
+
+import numpy
 import wx
+
+import cockpit.util.datadoc
+import cockpit.util.Mrc
+import cockpit.util.userConfig
+from cockpit import depot
+from cockpit.experiment import actionTable, experiment
+from cockpit.gui import guiUtils
+
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Structured Illumination"
@@ -278,9 +279,10 @@ class SIExperiment(experiment.Experiment):
             if angle != prevAngle and prevAngle is not None:
                 if self.angleHandler is not None:
                     theta = self.angleHandler.indexedPosition(angle)
-                    motionTime, stabilizationTime = (
-                        self.angleHandler.getMovementTime(prevAngle, theta)
-                    )
+                    (
+                        motionTime,
+                        stabilizationTime,
+                    ) = self.angleHandler.getMovementTime(prevAngle, theta)
                     # Move to the next position.
                     table.addAction(
                         curTime + motionTime, self.angleHandler, theta
@@ -294,9 +296,10 @@ class SIExperiment(experiment.Experiment):
 
             if phase != prevPhase and prevPhase is not None:
                 if self.phaseHandler is not None:
-                    motionTime, stabilizationTime = (
-                        self.phaseHandler.getMovementTime(prevPhase, phase)
-                    )
+                    (
+                        motionTime,
+                        stabilizationTime,
+                    ) = self.phaseHandler.getMovementTime(prevPhase, phase)
                     # Hold flat.
                     table.addAction(curTime, self.phaseHandler, prevPhase)
                     # Move to the next position.
@@ -312,11 +315,10 @@ class SIExperiment(experiment.Experiment):
 
             if z != prevZ:
                 if prevZ is not None:
-                    motionTime, stabilizationTime = (
-                        self.zPositioner.getMovementTime(prevZ, z)
-                    )
-                    motionTime *= 1000
-                    stabilizationTime *= 1000
+                    (
+                        motionTime,
+                        stabilizationTime,
+                    ) = self.zPositioner.getMovementTime(prevZ, z)
                     # Hold flat.
                     table.addAction(curTime, self.zPositioner, prevZ)
                     # Move to the next position.

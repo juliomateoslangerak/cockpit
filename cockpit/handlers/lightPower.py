@@ -51,9 +51,10 @@
 
 import logging
 
+import cockpit.util.userConfig
 from cockpit import depot
 from cockpit.handlers import deviceHandler
-import cockpit.util.userConfig
+
 
 _logger = logging.getLogger(__name__)
 

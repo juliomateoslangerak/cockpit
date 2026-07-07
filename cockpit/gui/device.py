@@ -25,16 +25,18 @@ Class definitions for labels and value displays with default formatting.
 """
 
 import sys
-
 from collections import OrderedDict
+
 import wx
 import wx.propgrid
-from cockpit.handlers.deviceHandler import STATES
-import cockpit.util.userConfig
+
 import cockpit.util.threads
+import cockpit.util.userConfig
 from cockpit import events
 from cockpit.events import DEVICE_STATUS
-from cockpit.gui import EvtEmitter, EVT_COCKPIT
+from cockpit.gui import EVT_COCKPIT, EvtEmitter
+from cockpit.handlers.deviceHandler import STATES
+
 
 ## @package cockpit.gui.device
 # Defines classes for common controls used by cockpit devices.

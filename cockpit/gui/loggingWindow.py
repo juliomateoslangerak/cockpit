@@ -56,6 +56,7 @@ import threading
 import wx
 import wx.aui
 
+
 _logger = logging.getLogger(__name__)
 
 

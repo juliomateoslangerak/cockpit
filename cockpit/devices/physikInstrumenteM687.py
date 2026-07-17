@@ -65,7 +65,6 @@ import cockpit.util.userConfig
 from cockpit import events
 from cockpit.devices.device import Device
 
-
 LIMITS_PAT = r"(?P<limits>\(\s*\(\s*[-]?\d*\s*,\s*[-]?\d*\s*\)\s*,\s*\(\s*[-]?\d*\s*\,\s*[-]?\d*\s*\)\))"
 
 ## TODO:  Test with hardware.

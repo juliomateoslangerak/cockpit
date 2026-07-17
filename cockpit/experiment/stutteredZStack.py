@@ -55,7 +55,6 @@ import cockpit.util.userConfig
 from cockpit import events
 from cockpit.experiment import zStack
 
-
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Stuttered Z-stack"
 

@@ -24,7 +24,6 @@ from ctypes import c_float
 import numpy
 from OpenGL.GL import *
 
-
 CIRCLE_SEGMENTS = 32
 PI = 3.141592654
 

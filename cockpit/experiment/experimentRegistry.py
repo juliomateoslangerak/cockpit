@@ -67,7 +67,6 @@ from cockpit.experiment import (
     zStack,
 )
 
-
 ## List of registered modules.
 registeredModules = [
     zStack,

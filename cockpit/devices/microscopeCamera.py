@@ -43,12 +43,11 @@ from cockpit.experiment import experiment
 from cockpit.handlers.objective import ObjectiveHandler
 from cockpit.interfaces.imager import pauseVideo
 
-
 _logger = logging.getLogger(__name__)
 
 
 # Pseudo-enum to track whether device defaults in place.
-(DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT) = range(3)
+DEFAULTS_NONE, DEFAULTS_PENDING, DEFAULTS_SENT = range(3)
 
 
 def _config_to_ROI(roi_str: str):
@@ -328,7 +327,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def receiveData(self, *args):
         """This function is called when data is received from the hardware."""
-        (image, timestamp) = args
+        image, timestamp = args
         if not experiment.isRunning():
             wavelength = None
             if self.handler.wavelength is not None:

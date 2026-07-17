@@ -81,7 +81,6 @@ import cockpit.interfaces.imager
 import cockpit.interfaces.stageMover
 import cockpit.util.userConfig
 
-
 _logger = logging.getLogger(__name__)
 
 

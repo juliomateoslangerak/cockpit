@@ -62,7 +62,6 @@ import wx
 
 from cockpit.util import Mrc
 
-
 ## Maps dimensional axes to their labels.
 DIMENSION_LABELS = ["Wavelength", "Time", "Z", "Y", "X"]
 

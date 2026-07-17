@@ -31,7 +31,6 @@ import matplotlib
 import numpy as np
 import wx
 
-
 matplotlib.use("WXAgg")
 import matplotlib.dates
 from matplotlib import colors
@@ -41,7 +40,6 @@ from matplotlib.backends.backend_wxagg import (
     NavigationToolbar2WxAgg as NavigationToolbar,
 )
 from matplotlib.figure import Figure
-
 
 DEBUG = False
 

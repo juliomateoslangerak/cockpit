@@ -20,7 +20,6 @@
 
 from cockpit.experiment import structuredIllumination
 
-
 EXPERIMENT_NAME = "2D Structured Illumination"
 
 EXPERIMENT_CLASS = structuredIllumination.SIExperiment

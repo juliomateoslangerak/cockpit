@@ -62,7 +62,6 @@ from cockpit import depot, events
 from cockpit.gui import guiUtils
 from cockpit.gui.dialogs.experiment import experimentConfigPanel
 
-
 ## Minimum size of controls (counting their labels)
 CONTROL_SIZE = (280, -1)
 ## Minimum size of text input fields.
@@ -350,7 +349,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
     # cycle that minimizes total travel time. Return a tuple of
     # (total number of site lists, mapping of cycle number to site list).
     def chooseSiteVisitOrder(self):
-        (baseIndices, frequencies) = self.sitesPanel.getSitesList()
+        baseIndices, frequencies = self.sitesPanel.getSitesList()
         # Check for sites that have been deleted
         baseOrder = []
         baseFrequencies = []

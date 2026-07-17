@@ -69,7 +69,6 @@ import cockpit.util.datadoc
 import cockpit.util.threads
 from cockpit import events
 
-
 ## @package cockpit.gui.imageViewer.viewCanvas
 # This module provides a canvas for displaying camera images.
 
@@ -77,7 +76,7 @@ from cockpit import events
 HISTOGRAM_HEIGHT = 40
 
 ## Drag modes
-(DRAG_NONE, DRAG_CANVAS, DRAG_BLACKPOINT, DRAG_WHITEPOINT, DRAG_ROI) = range(5)
+DRAG_NONE, DRAG_CANVAS, DRAG_BLACKPOINT, DRAG_WHITEPOINT, DRAG_ROI = range(5)
 
 
 class BaseGL:

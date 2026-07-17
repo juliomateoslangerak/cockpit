@@ -49,20 +49,24 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+from cockpit import events
+import cockpit.util.datadoc
+import cockpit.util.threads
+from microscope import UnsupportedFeatureError
+
+import zarr
+import numcodecs
+
+import numpy as np
 import queue
 import threading
 import time
 
-import numcodecs
-import numpy as np
 import wx
-import zarr
-from microscope import UnsupportedFeatureError
 
 import cockpit.util.datadoc
 import cockpit.util.threads
 from cockpit import events
-
 
 ## Unique ID for identifying saver instances
 uniqueID = 0
@@ -496,8 +500,8 @@ class MrcDataSaver:
         # necessary, but we get "invalid argument" errors when writing
         # to the filehandle if we don't.
         # \todo Figure out why this is necessary.
-        paddedBuffer = numpy.zeros(
-            (self.maxHeight, self.maxWidth), dtype=numpy.uint16
+        paddedBuffer = np.zeros(
+            (self.maxHeight, self.maxWidth), dtype=np.uint16
         )
         paddedBuffer[:height, :width] = imageData
 

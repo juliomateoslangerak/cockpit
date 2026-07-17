@@ -58,9 +58,8 @@ import cockpit.util.threads
 from cockpit import depot, events
 from cockpit.experiment import experiment
 
-
 ## Default viewer dimensions.
-(VIEW_WIDTH, VIEW_HEIGHT) = (512, 552)
+VIEW_WIDTH, VIEW_HEIGHT = (512, 552)
 
 
 class ViewPanel(wx.Panel):

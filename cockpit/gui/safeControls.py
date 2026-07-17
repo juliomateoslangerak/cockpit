@@ -16,7 +16,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-""" safeControls
+"""safeControls
 
 This module provides a number controls for safe control of devices.
 
@@ -38,7 +38,6 @@ import wx.lib.delayedresult as delayedresult
 import wx.lib.newevent
 
 from cockpit.gui.guiUtils import FloatValidator
-
 
 (
     SafeControlCommitEvent,

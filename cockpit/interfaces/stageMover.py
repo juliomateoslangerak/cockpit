@@ -62,7 +62,6 @@ import cockpit.util.threads
 from cockpit import depot, events
 from cockpit.util import userConfig
 
-
 AxisLimits = typing.Tuple[float, float]
 StageLimits = typing.Tuple[AxisLimits, AxisLimits, AxisLimits]
 

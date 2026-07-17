@@ -67,7 +67,6 @@ import cockpit.util.userConfig
 from cockpit import depot
 from cockpit.gui import guiUtils
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -367,6 +366,15 @@ class ExperimentConfigPanel(wx.Panel):
 
         self.sizer.Add(exposureSizer)
 
+        # Toggle which panel is displayed based on the checkbox.
+        self.shouldExposeSimultaneously.Bind(
+            wx.EVT_CHECKBOX, self.onExposureCheckbox
+        )
+        self.shouldExposeSimultaneously.SetValue(
+            self.settings["shouldExposeSimultaneously"]
+        )
+        self.onExposureCheckbox()
+
         self.filepath_panel = FilepathPanel(self)
         self.filepath_panel.SetTemplate(self.settings["filenameTemplate"])
         self.filepath_panel.UpdateFilename()
@@ -512,9 +520,9 @@ class ExperimentConfigPanel(wx.Panel):
         if module in self.experimentModuleToPanel:
             # Have specific parameters for this experiment type; store them
             # too.
-            settings[
-                "experimentSpecificValues"
-            ] = self.experimentModuleToPanel[module].getSettingsDict()
+            settings["experimentSpecificValues"] = (
+                self.experimentModuleToPanel[module].getSettingsDict()
+            )
 
         # Get the filepath to save settings to.
         dialog = wx.FileDialog(

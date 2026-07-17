@@ -69,7 +69,6 @@ from cockpit import events
 from cockpit.experiment import actionTable, experiment, offsetGainCorrection
 from cockpit.gui import guiUtils
 
-
 matplotlib.use("WXAgg")
 import threading
 
@@ -77,7 +76,6 @@ import matplotlib.backends.backend_wxagg
 import matplotlib.figure
 import numpy
 import wx
-
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Response map correction file"
@@ -468,9 +466,9 @@ class ExperimentUI(wx.Panel):
             rowSizer,
             "Keep the raw data in addition to the averaged files.",
         )
-        self.responseArgs[
-            "responseMapShouldPreserveIntermediaryFiles"
-        ] = control
+        self.responseArgs["responseMapShouldPreserveIntermediaryFiles"] = (
+            control
+        )
         sizer.Add(rowSizer)
         self.SetSizerAndFit(sizer)
 

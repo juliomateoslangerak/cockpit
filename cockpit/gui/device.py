@@ -37,7 +37,6 @@ from cockpit.events import DEVICE_STATUS
 from cockpit.gui import EVT_COCKPIT, EvtEmitter
 from cockpit.handlers.deviceHandler import STATES
 
-
 ## @package cockpit.gui.device
 # Defines classes for common controls used by cockpit devices.
 

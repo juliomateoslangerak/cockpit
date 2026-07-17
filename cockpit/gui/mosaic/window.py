@@ -77,7 +77,6 @@ from cockpit import depot, events
 from cockpit.gui.mosaic import canvas
 from cockpit.gui.primitive import Primitive
 
-
 ## Valid colors to use for site markers.
 SITE_COLORS = [
     ("green", (0, 1, 0)),

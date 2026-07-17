@@ -28,7 +28,6 @@ import cockpit.handlers.stagePositioner
 from cockpit import events
 from cockpit.devices import device
 
-
 NAME_STRING = "aerotech mover"
 LIMITS_PAT = r"(?P<limits>\(?\s*[-]?\d*\s*,\s*[-]?\d*\s*\)?)"
 

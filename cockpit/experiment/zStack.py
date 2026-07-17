@@ -56,7 +56,6 @@ import math
 
 from cockpit.experiment import actionTable, experiment
 
-
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Z-stack"
 

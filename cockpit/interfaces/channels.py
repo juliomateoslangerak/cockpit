@@ -27,7 +27,6 @@ import wx
 
 import cockpit.events
 
-
 EVT_CHANNEL_ADDED = wx.PyEventBinder(wx.NewEventType())
 EVT_CHANNEL_REMOVED = wx.PyEventBinder(wx.NewEventType())
 

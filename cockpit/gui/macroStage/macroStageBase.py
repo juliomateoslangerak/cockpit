@@ -61,7 +61,6 @@ import cockpit.gui.freetype
 import cockpit.interfaces.stageMover
 from cockpit import events
 
-
 ## @package cockpit.gui.macroStage
 # This module contains the MacroStageBase base class, used by the MacroStageXY
 # and MacroStageZ classes, as well as some shared constants.

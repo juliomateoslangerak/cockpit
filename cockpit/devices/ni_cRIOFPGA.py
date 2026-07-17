@@ -73,7 +73,6 @@ import cockpit.util.threads
 from cockpit import depot, events
 from cockpit.devices import executorDevices
 
-
 COCKPIT_AXES = {"x": 0, "y": 1, "z": 2, "SI angle": -1}
 FPGA_IDLE_STATE = 3
 FPGA_ABORTED_STATE = 4

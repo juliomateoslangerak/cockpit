@@ -63,7 +63,6 @@ from cockpit import events
 from cockpit.gui.macroStage import macroStageBase
 from cockpit.gui.primitive import Primitive
 
-
 _logger = logging.getLogger(__name__)
 
 

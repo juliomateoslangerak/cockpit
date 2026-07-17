@@ -23,7 +23,6 @@ import os
 import os.path
 import pprint
 
-
 _logger = logging.getLogger(__name__)
 
 

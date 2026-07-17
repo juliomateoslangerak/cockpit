@@ -54,7 +54,6 @@ import wx
 
 import cockpit.gui.guiUtils
 
-
 ## @package dialogs.offsetSitesDialog
 # This module contains the \link dialogs.offsetSitesDialog.OffsetSites_Dialog
 # OffsetSites_Dialog \endlink

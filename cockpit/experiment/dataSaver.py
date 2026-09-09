@@ -49,19 +49,18 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-from cockpit import events
-import cockpit.util.datadoc
-import cockpit.util.threads
-from microscope import UnsupportedFeatureError
-
-import zarr
-
-import numpy as np
 import queue
 import threading
 import time
 
+import numpy as np
 import wx
+import zarr
+from microscope import UnsupportedFeatureError
+
+import cockpit.util.datadoc
+import cockpit.util.threads
+from cockpit import events
 
 
 ## Unique ID for identifying saver instances
@@ -165,12 +164,12 @@ class MrcDataSaver:
             / 1024.0
             / 1024.0
         )
-        #Now check that there are less than 2^15 -1 images per channel as
-        #dv files can't index more than this.
-        if (self.maxRepsPerFile * self.maxImagesPerRep) > (2**15)-1:
-            #then ensure that we split files at the end of a time point
+        # Now check that there are less than 2^15 -1 images per channel as
+        # dv files can't index more than this.
+        if (self.maxRepsPerFile * self.maxImagesPerRep) > (2**15) - 1:
+            # then ensure that we split files at the end of a time point
             # // operator is floor division
-            self.maxRepsPerFile = ((2**15)-1) // self.maxImagesPerRep
+            self.maxRepsPerFile = ((2**15) - 1) // self.maxImagesPerRep
         # Sanity check.
         self.maxRepsPerFile = max(self.maxRepsPerFile, 1)
         ## Whether or not we need to split the data into multiple files.
@@ -299,9 +298,7 @@ class MrcDataSaver:
             self.intMetadataBuffers.append(
                 np.array([0] * numIntegers, dtype=np.int32)
             )
-            floatMetadataBuffer = np.array(
-                [0.0] * numFloats, dtype=np.float32
-            )
+            floatMetadataBuffer = np.array([0.0] * numFloats, dtype=np.float32)
             floatMetadataBuffer[12] = 1.0  # intensity scaling
             self.floatMetadataBuffers.append(floatMetadataBuffer)
 
@@ -349,7 +346,6 @@ class MrcDataSaver:
             target=self.executeAndSave, name="Experiment-execute-save"
         )
         self.saveThread.start()
-
 
     ## Subscribe to the new-camera-image events for the cameras we care about.
     # Save the functions we generate for handling the subscriptions, so we can
@@ -745,9 +741,7 @@ class ZarrDataSaver:
         #  a dictionary with the camera name and the target number of images to be kept.
         #  Also because the total of expected images is used later in the executeAndSave method.
         self.statusThread = StatusUpdateThread(
-            [
-                camera.dye or camera.name for camera in self._cameraToChannelIds
-            ],
+            [camera.dye or camera.name for camera in self._cameraToChannelIds],
             list(self._cameraToImagesKept.values()),
             self._numReps,
             self._repDuration,
@@ -859,7 +853,9 @@ class ZarrDataSaver:
     def cleanup(self):
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self._cameraToChannelIds):
-            events.unsubscribe(events.NEW_IMAGE % camera.name, self._imageReceivingFuncs[i])
+            events.unsubscribe(
+                events.NEW_IMAGE % camera.name, self._imageReceivingFuncs[i]
+            )
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
     # Receive new data, and add it to the queue.
@@ -909,8 +905,8 @@ class ZarrDataSaver:
                                             1.0,
                                             self._sliceHeight,
                                             self._pixelSizeXY,
-                                            self._pixelSizeXY
-                                        ]
+                                            self._pixelSizeXY,
+                                        ],
                                     }
                                 ],
                             }
@@ -944,7 +940,7 @@ class ZarrDataSaver:
         self._imagesReceived[camera] += 1
         # First determine if we actually want to keep this image.
         if (
-                self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
+            self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
         ) in self._cameraToIgnoredImageIndices[camera]:
             # This image should be discarded.
             return
@@ -966,9 +962,7 @@ class ZarrDataSaver:
         )  # Only takes into account one possible z-shape per channel or camera
 
         with self._threadLock:
-            self.appendImageToZarr(
-                timeIndex, channelIndex, zIndex, imageData
-            )
+            self.appendImageToZarr(timeIndex, channelIndex, zIndex, imageData)
             self._imagesKept[camera] += 1
             self._lastImageTime = time.time()
 

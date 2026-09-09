@@ -49,20 +49,19 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-from cockpit import events
-import cockpit.util.datadoc
-import cockpit.util.threads
-from microscope import UnsupportedFeatureError
-
-import zarr
-import numcodecs
-
-import numpy as np
 import queue
 import threading
 import time
 
+import numcodecs
+import numpy as np
 import wx
+import zarr
+from microscope import UnsupportedFeatureError
+
+import cockpit.util.datadoc
+import cockpit.util.threads
+from cockpit import events
 
 
 ## Unique ID for identifying saver instances
@@ -166,12 +165,12 @@ class MrcDataSaver:
             / 1024.0
             / 1024.0
         )
-        #Now check that there are less than 2^15 -1 images per channel as
-        #dv files can't index more than this.
-        if (self.maxRepsPerFile * self.maxImagesPerRep) > (2**15)-1:
-            #then ensure that we split files at the end of a time point
+        # Now check that there are less than 2^15 -1 images per channel as
+        # dv files can't index more than this.
+        if (self.maxRepsPerFile * self.maxImagesPerRep) > (2**15) - 1:
+            # then ensure that we split files at the end of a time point
             # // operator is floor division
-            self.maxRepsPerFile = ((2**15)-1) // self.maxImagesPerRep
+            self.maxRepsPerFile = ((2**15) - 1) // self.maxImagesPerRep
         # Sanity check.
         self.maxRepsPerFile = max(self.maxRepsPerFile, 1)
         ## Whether or not we need to split the data into multiple files.
@@ -300,9 +299,7 @@ class MrcDataSaver:
             self.intMetadataBuffers.append(
                 np.array([0] * numIntegers, dtype=np.int32)
             )
-            floatMetadataBuffer = np.array(
-                [0.0] * numFloats, dtype=np.float32
-            )
+            floatMetadataBuffer = np.array([0.0] * numFloats, dtype=np.float32)
             floatMetadataBuffer[12] = 1.0  # intensity scaling
             self.floatMetadataBuffers.append(floatMetadataBuffer)
 
@@ -350,7 +347,6 @@ class MrcDataSaver:
             target=self.executeAndSave, name="Experiment-execute-save"
         )
         self.saveThread.start()
-
 
     ## Subscribe to the new-camera-image events for the cameras we care about.
     # Save the functions we generate for handling the subscriptions, so we can
@@ -500,8 +496,9 @@ class MrcDataSaver:
         # necessary, but we get "invalid argument" errors when writing
         # to the filehandle if we don't.
         # \todo Figure out why this is necessary.
-        paddedBuffer = numpy.zeros((self.maxHeight, self.maxWidth),
-                                   dtype=numpy.uint16)
+        paddedBuffer = numpy.zeros(
+            (self.maxHeight, self.maxWidth), dtype=numpy.uint16
+        )
         paddedBuffer[:height, :width] = imageData
 
         imageMin = imageData.min()
@@ -556,15 +553,17 @@ class MrcDataSaver:
                 handle.seek(dataOffset)
                 handle.write(paddedBuffer)
             except Exception as e:
-                print ("Error writing image:",e)
+                print("Error writing image:", e)
                 raise e
 
             self.imagesKept[cameraIndex] += 1
             self.lastImageTime = time.time()
 
             curMin, curMax = self.minMaxVals[cameraIndex]
-            self.minMaxVals[cameraIndex] = (min(curMin, imageMin),
-                                            max(curMax, imageMax))
+            self.minMaxVals[cameraIndex] = (
+                min(curMin, imageMin),
+                max(curMax, imageMax),
+            )
 
         # Update the status text. But first, check for abort/experiment
         # completion, since we may actually be done now and we don't want
@@ -572,7 +571,6 @@ class MrcDataSaver:
         if self.shouldAbort or self.amDone:
             return
         self.statusThread.newImage(cameraIndex)
-
 
     ## Return a list of the filenames we are writing to.
     def getFilenames(self):
@@ -602,11 +600,25 @@ class ZarrDataSaver:
     # \param chunkShape Output chunk shape
     # \param compression Compressor to be used, defaults to numcodecs.Blosc()
     # \param overwrite Overwrite existing files
-    def __init__(self, cameras, numReps, repDuration, cameraToImagesPerRep,
-                 cameraToIgnoredImageIndices, runThread, savePath, pixelSizeXY, pixelSizeZ,
-                 omeMetadata=None, downscale=2, maxLayer=2, downscaleMethod='nearest',
-                 chunkShape=(1, 1024, 1024), compression=numcodecs.Blosc(), overwrite=True
-                 ):
+    def __init__(
+        self,
+        cameras,
+        numReps,
+        repDuration,
+        cameraToImagesPerRep,
+        cameraToIgnoredImageIndices,
+        runThread,
+        savePath,
+        pixelSizeXY,
+        pixelSizeZ,
+        omeMetadata=None,
+        downscale=2,
+        maxLayer=2,
+        downscaleMethod="nearest",
+        chunkShape=(1, 1024, 1024),
+        compression=numcodecs.Blosc(),
+        overwrite=True,
+    ):
         self.cameras = cameras
         self.numReps = numReps
         self.repDuration = repDuration
@@ -629,9 +641,9 @@ class ZarrDataSaver:
         self.cameraToImagesKeptPerRep = {}
         for i, camera in enumerate(self.cameras):
             self.cameraToIndex[camera] = i
-            self.cameraToImagesKeptPerRep[camera] = \
-                (self.cameraToImagesPerRep[camera]
-                 - len(self.cameraToIgnoredImageIndices[camera]))
+            self.cameraToImagesKeptPerRep[camera] = self.cameraToImagesPerRep[
+                camera
+            ] - len(self.cameraToIgnoredImageIndices[camera])
         # We need this for the upper bound on the array of data we write.
         self.maxImagesPerRep = max(self.cameraToImagesKeptPerRep.values())
 
@@ -656,13 +668,25 @@ class ZarrDataSaver:
 
         # ome-zarr specific settings
         self.scaler = scale.Scaler(
-            downscale=downscale,
-            max_layer=maxLayer,
-            method=downscaleMethod
+            downscale=downscale, max_layer=maxLayer, method=downscaleMethod
         )
         self.coordinateTransforms = [
-            [{'scale': [pixelSizeZ, pixelSizeXY, pixelSizeXY], 'type': 'scale'}],
-            [{'scale': [pixelSizeZ, pixelSizeXY * downscale, pixelSizeXY * downscale], 'type': 'scale'}],
+            [
+                {
+                    "scale": [pixelSizeZ, pixelSizeXY, pixelSizeXY],
+                    "type": "scale",
+                }
+            ],
+            [
+                {
+                    "scale": [
+                        pixelSizeZ,
+                        pixelSizeXY * downscale,
+                        pixelSizeXY * downscale,
+                    ],
+                    "type": "scale",
+                }
+            ],
         ]
 
         self.storageOptions = {
@@ -673,7 +697,7 @@ class ZarrDataSaver:
 
         self.savePath = savePath
         # Parse the url as a zarr store. Note that "mode = 'w'" enables writing to this store.
-        self.zarrStore = parse_url(self.savePath, mode='w').store
+        self.zarrStore = parse_url(self.savePath, mode="w").store
         self.zarrRoot = zarr.open_group(self.zarrStore)
 
         # List of how many images we've received, on a per-camera basis.
@@ -702,8 +726,7 @@ class ZarrDataSaver:
             totals.append(self.cameraToImagesKeptPerRep[camera] * self.numReps)
         # Thread that handles updating the UI.
         self.statusThread = StatusUpdateThread(
-            names, totals, self.numReps,
-            self.repDuration
+            names, totals, self.numReps, self.repDuration
         )
 
         # Start the data-saving thread.
@@ -715,12 +738,14 @@ class ZarrDataSaver:
     # thread.
     def startCollecting(self):
         for camera in self.cameras:
+
             def func(data, metadata, camera=camera):
                 return self.onImage(self.cameraToIndex[camera], data, metadata)
+
             self.lambdas.append(func)
             events.subscribe(events.NEW_IMAGE % camera.name, func)
 
-            self.minMaxVals.append((float('inf'), float('-inf')))
+            self.minMaxVals.append((float("inf"), float("-inf")))
         events.subscribe(events.USER_ABORT, self.onAbort)
         self.statusThread.start()
 
@@ -734,13 +759,14 @@ class ZarrDataSaver:
     def executeAndSave(self):
         # Joining the thread doesn't actually work until it has started,
         # hence the delay here.
-        time.sleep(.5)
+        time.sleep(0.5)
         self.runThread.join()
 
         # Wait until it's been a bit without getting any more images in, or
         # until we have all the images we expected to get for each camera.
-        while ((time.time() - self.lastImageTime < self.repDuration+1.0)
-               or not self.imageQueue.empty()):
+        while (
+            time.time() - self.lastImageTime < self.repDuration + 1.0
+        ) or not self.imageQueue.empty():
             amDone = True
             for camera in self.cameras:
                 total = self.imagesKept[self.cameraToIndex[camera]]
@@ -752,7 +778,7 @@ class ZarrDataSaver:
                     break
             if amDone or self.shouldAbort:
                 break
-            time.sleep(.01)
+            time.sleep(0.01)
         self.amDone = True
 
         self.cleanup()
@@ -776,7 +802,7 @@ class ZarrDataSaver:
                 # Do nothing.
                 return
             cameraIndex, imageData, metadata = self.imageQueue.get()
-            timestamp = metadata['timestamp']
+            timestamp = metadata["timestamp"]
             if self.firstTimestamp is None:
                 self.firstTimestamp = timestamp
             # Store the timestamp as a rebased 32-bit float; we can't use
@@ -791,9 +817,10 @@ class ZarrDataSaver:
         self.imagesReceived[cameraIndex] += 1
         camera = self.indexToCamera[cameraIndex]
         # First determine if we actually want to keep this image.
-        if ((self.imagesReceived[cameraIndex]
-             % self.cameraToImagesPerRep[camera])
-            in self.cameraToIgnoredImageIndices[camera]):
+        if (
+            self.imagesReceived[cameraIndex]
+            % self.cameraToImagesPerRep[camera]
+        ) in self.cameraToIgnoredImageIndices[camera]:
             # This image is one that should be discarded.
             return
 
@@ -809,9 +836,11 @@ class ZarrDataSaver:
         zIndex = numImages % self.cameraToImagesKeptPerRep[camera]
 
         numCameras = len(self.cameras)
-        planeIndex = (int(timepoint * self.maxImagesPerRep * numCameras)
-                      + (zIndex * numCameras) + cameraIndex)
-
+        planeIndex = (
+            int(timepoint * self.maxImagesPerRep * numCameras)
+            + (zIndex * numCameras)
+            + cameraIndex
+        )
 
         height, width = imageData.shape
 
@@ -1065,9 +1094,7 @@ class ZarrDataSaver:
         #  a dictionary with the camera name and the target number of images to be kept.
         #  Also because the total of expected images is used later in the executeAndSave method.
         self.statusThread = StatusUpdateThread(
-            [
-                camera.dye or camera.name for camera in self._cameraToChannelIds
-            ],
+            [camera.dye or camera.name for camera in self._cameraToChannelIds],
             list(self._cameraToImagesKept.values()),
             self._numReps,
             self._repDuration,
@@ -1179,7 +1206,9 @@ class ZarrDataSaver:
     def cleanup(self):
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self._cameraToChannelIds):
-            events.unsubscribe(events.NEW_IMAGE % camera.name, self._imageReceivingFuncs[i])
+            events.unsubscribe(
+                events.NEW_IMAGE % camera.name, self._imageReceivingFuncs[i]
+            )
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
     # Receive new data, and add it to the queue.
@@ -1229,8 +1258,8 @@ class ZarrDataSaver:
                                             1.0,
                                             self._sliceHeight,
                                             self._pixelSizeXY,
-                                            self._pixelSizeXY
-                                        ]
+                                            self._pixelSizeXY,
+                                        ],
                                     }
                                 ],
                             }
@@ -1264,7 +1293,7 @@ class ZarrDataSaver:
         self._imagesReceived[camera] += 1
         # First determine if we actually want to keep this image.
         if (
-                self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
+            self._imagesReceived[camera] % self._cameraToImagesPerRep[camera]
         ) in self._cameraToIgnoredImageIndices[camera]:
             # This image should be discarded.
             return
@@ -1286,9 +1315,7 @@ class ZarrDataSaver:
         )  # Only takes into account one possible z-shape per channel or camera
 
         with self._threadLock:
-            self.appendImageToZarr(
-                timeIndex, channelIndex, zIndex, imageData
-            )
+            self.appendImageToZarr(timeIndex, channelIndex, zIndex, imageData)
             self._imagesKept[camera] += 1
             self._lastImageTime = time.time()
 

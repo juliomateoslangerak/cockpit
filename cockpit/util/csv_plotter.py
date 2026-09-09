@@ -34,7 +34,6 @@ import wx
 
 matplotlib.use("WXAgg")
 import matplotlib.dates
-from matplotlib import colors
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import (

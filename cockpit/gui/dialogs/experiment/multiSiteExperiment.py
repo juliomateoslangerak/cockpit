@@ -62,6 +62,7 @@ from cockpit import depot, events
 from cockpit.gui import guiUtils
 from cockpit.gui.dialogs.experiment import experimentConfigPanel
 
+
 ## Minimum size of controls (counting their labels)
 CONTROL_SIZE = (280, -1)
 ## Minimum size of text input fields.

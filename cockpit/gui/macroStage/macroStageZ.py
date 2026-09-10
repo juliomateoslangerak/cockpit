@@ -61,6 +61,7 @@ import cockpit.util.userConfig
 from cockpit import events
 from cockpit.gui.macroStage import macroStageBase
 
+
 _logger = logging.getLogger(__name__)
 
 

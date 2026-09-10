@@ -60,6 +60,7 @@ import cockpit.util.threads
 from cockpit import events
 from cockpit.devices import device
 
+
 _logger = logging.getLogger(__name__)
 
 

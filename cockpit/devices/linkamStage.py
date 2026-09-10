@@ -37,6 +37,7 @@ from cockpit.devices.device import Device
 from cockpit.devices.microscopeDevice import MicroscopeBase
 from cockpit.util import valueLogger
 
+
 DEFAULT_LIMITS = ((0, 0), (11000, 3000))
 LOGGING_PERIOD = 30
 

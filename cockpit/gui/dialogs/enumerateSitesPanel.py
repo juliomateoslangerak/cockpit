@@ -56,6 +56,7 @@ import wx
 import cockpit.gui.guiUtils
 import cockpit.interfaces.stageMover
 
+
 _logger = logging.getLogger(__name__)
 
 

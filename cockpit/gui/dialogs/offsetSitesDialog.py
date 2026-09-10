@@ -54,6 +54,7 @@ import wx
 
 import cockpit.gui.guiUtils
 
+
 ## @package dialogs.offsetSitesDialog
 # This module contains the \link dialogs.offsetSitesDialog.OffsetSites_Dialog
 # OffsetSites_Dialog \endlink
@@ -82,7 +83,6 @@ class OffsetSites_Dialog(wx.Dialog):
                     size=(60, -1),
                     minSize=(100, -1),
                     border=5,
-                    flags=wx.ALIGN_CENTRE | wx.ALL,
                 )
             )
 

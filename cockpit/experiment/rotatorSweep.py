@@ -27,6 +27,7 @@ from cockpit import depot
 from cockpit.experiment import actionTable, experiment
 from cockpit.gui import guiUtils
 
+
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "RotatorSweep"
 

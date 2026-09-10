@@ -39,6 +39,7 @@ import wx.lib.newevent
 
 from cockpit.gui.guiUtils import FloatValidator
 
+
 (
     SafeControlCommitEvent,
     EVT_SAFE_CONTROL_COMMIT,

@@ -37,6 +37,7 @@ from wx.lib.floatcanvas import FloatCanvas
 
 from cockpit.util.Mrc import Mrc
 
+
 ICON_SIZE = (16, 16)
 BITMAP_SIZE = (512, 512)
 

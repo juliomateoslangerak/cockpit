@@ -43,6 +43,7 @@ from cockpit.experiment import experiment
 from cockpit.handlers.objective import ObjectiveHandler
 from cockpit.interfaces.imager import pauseVideo
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -139,9 +140,9 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def performSubscriptions(self):
         """Perform subscriptions for this camera."""
-        events.subscribe(
-            events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment
-        )
+        # events.subscribe(
+        #     events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment
+        # )
         events.subscribe(events.OBJECTIVE_CHANGE, self.onObjectiveChange)
 
     def onObjectiveChange(self, handler: ObjectiveHandler) -> None:

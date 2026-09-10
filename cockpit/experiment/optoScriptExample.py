@@ -60,6 +60,7 @@ from cockpit import depot
 from cockpit.experiment import zStack
 from cockpit.gui import guiUtils
 
+
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Example opto script"
 

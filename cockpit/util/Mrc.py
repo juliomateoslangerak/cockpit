@@ -192,7 +192,7 @@ class Mrc:
             ## In some cases, this may require the introduction of
             ## blank/padding data (see cockpit bug #289).  In such
             ## cases, we need to expand the data first which will lead
-            ## to a np.array being returned instead of np.memmap.
+            ## to a N.array being returned instead of N.memmap.
             if self.data.size != np.prod(adjusted_shape):
                 blanks = np.full(
                     np.prod(adjusted_shape) - self.data.size,

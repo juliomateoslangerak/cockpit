@@ -49,24 +49,19 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-from cockpit import events
-import cockpit.util.datadoc
-import cockpit.util.threads
-from microscope import UnsupportedFeatureError
-
-import zarr
-import numcodecs
-
-import numpy as np
 import queue
 import threading
 import time
 
+import numcodecs
+import numpy as np
 import wx
+import zarr
 
 import cockpit.util.datadoc
 import cockpit.util.threads
 from cockpit import events
+
 
 ## Unique ID for identifying saver instances
 uniqueID = 0
@@ -1160,7 +1155,7 @@ class ZarrDataSaver:
             channel_shape[0] != self.channelShapes[0][0]
             for channel_shape in self.channelShapes
         ):
-            raise UnsupportedFeatureError(
+            raise NotImplementedError(
                 "The number of slices is not the same for all channels"
             )
 
@@ -1172,7 +1167,7 @@ class ZarrDataSaver:
             or channel_shape[2] != self.channelShapes[0][2]
             for channel_shape in self.channelShapes
         ):
-            raise UnsupportedFeatureError(
+            raise NotImplementedError(
                 "The x and y dimensions are not the same for all channels"
             )
 

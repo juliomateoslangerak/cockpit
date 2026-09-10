@@ -55,6 +55,7 @@ import wx
 import cockpit.gui.guiUtils
 import cockpit.interfaces.stageMover
 
+
 ## @package safetyMinDialog.py
 # This package contains the SafetyMin_Dialog class and associated constants and
 # functions.

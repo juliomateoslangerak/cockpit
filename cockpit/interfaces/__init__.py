@@ -35,6 +35,7 @@ import wx
 import cockpit.events
 from cockpit.handlers.objective import ObjectiveHandler
 
+
 EVT_OBJECTIVE_CHANGED = wx.PyEventBinder(wx.NewEventType())
 
 

@@ -96,8 +96,8 @@ class SimplePiezo(Device):
             True,
             {
                 "getMovementTime": lambda x, start, delta: (
-                    Decimal(0.05),
-                    Decimal(0.05),
+                    Decimal(0.03),
+                    Decimal(0.01),
                 )
             },
             axis,

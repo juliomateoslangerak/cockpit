@@ -69,6 +69,7 @@ from cockpit import events
 from cockpit.experiment import actionTable, experiment, offsetGainCorrection
 from cockpit.gui import guiUtils
 
+
 matplotlib.use("WXAgg")
 import threading
 
@@ -76,6 +77,7 @@ import matplotlib.backends.backend_wxagg
 import matplotlib.figure
 import numpy
 import wx
+
 
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Response map correction file"

@@ -56,6 +56,7 @@ import math
 
 from cockpit.experiment import actionTable, experiment
 
+
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Z-stack"
 
@@ -101,6 +102,8 @@ class ZStackExperiment(experiment.Experiment):
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
             self.zHeight, 0
         )
+        motionTime *= 1000
+        stabilizationTime *= 1000
         curTime += motionTime
         table.addAction(curTime, self.zPositioner, self.zStart)
         # Hold flat for the stabilization time, and any time needed for

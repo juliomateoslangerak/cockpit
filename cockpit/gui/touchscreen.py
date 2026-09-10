@@ -43,6 +43,7 @@ from cockpit.gui.safeControls import EVT_SAFE_CONTROL_COMMIT, SetPointGauge
 from cockpit.interfaces import stageMover
 from cockpit.util.colors import wavelengthToColor
 
+
 _VIEWPANEL_SIZE = wx.Size(250, 250)
 
 _SITE_COLOURS = {"red": (255, 0, 0), "green": (0, 255, 0), "blue": (0, 0, 255)}

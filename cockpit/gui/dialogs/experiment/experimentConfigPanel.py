@@ -67,6 +67,7 @@ import cockpit.util.userConfig
 from cockpit import depot
 from cockpit.gui import guiUtils
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -365,15 +366,6 @@ class ExperimentConfigPanel(wx.Panel):
         self.onExposureMode()
 
         self.sizer.Add(exposureSizer)
-
-        # Toggle which panel is displayed based on the checkbox.
-        self.shouldExposeSimultaneously.Bind(
-            wx.EVT_CHECKBOX, self.onExposureCheckbox
-        )
-        self.shouldExposeSimultaneously.SetValue(
-            self.settings["shouldExposeSimultaneously"]
-        )
-        self.onExposureCheckbox()
 
         self.filepath_panel = FilepathPanel(self)
         self.filepath_panel.SetTemplate(self.settings["filenameTemplate"])

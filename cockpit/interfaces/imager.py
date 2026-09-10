@@ -61,6 +61,7 @@ import cockpit.util.threads
 from cockpit import events
 from cockpit.handlers.imager import ImagerHandler
 
+
 ## This module provides an interface for taking images with the current
 # active cameras and light sources. It's used only outside of experiment
 # mode.

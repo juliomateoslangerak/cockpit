@@ -65,6 +65,7 @@ import cockpit.util.threads
 from cockpit import events
 from cockpit.gui.mosaic.tile import MegaTile, Tile
 
+
 _logger = logging.getLogger(__name__)
 
 

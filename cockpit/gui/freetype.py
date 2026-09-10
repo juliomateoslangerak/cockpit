@@ -103,6 +103,7 @@ from OpenGL.GL import (
     glVertex2f,
 )
 
+
 _FONT_PATH = importlib.resources.files("cockpit").joinpath(
     "resources/fonts/UniversalisADFStd-Regular.otf"
 )

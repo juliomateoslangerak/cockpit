@@ -24,6 +24,7 @@ import wx
 from cockpit.experiment import structuredIllumination
 from cockpit.gui import guiUtils
 
+
 EXPERIMENT_NAME = "SIM Flux"
 
 EXPERIMENT_CLASS = structuredIllumination.SIExperiment

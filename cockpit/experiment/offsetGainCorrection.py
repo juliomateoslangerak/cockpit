@@ -68,6 +68,7 @@ from cockpit import events
 from cockpit.experiment import actionTable, experiment
 from cockpit.gui import guiUtils
 
+
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Offset/gain correction file"
 

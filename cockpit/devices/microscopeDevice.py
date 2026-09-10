@@ -70,6 +70,7 @@ from cockpit.handlers.stagePositioner import PositionerHandler
 from cockpit.interfaces import stageMover
 from cockpit.util import valueLogger
 
+
 _logger = logging.getLogger(__name__)
 
 

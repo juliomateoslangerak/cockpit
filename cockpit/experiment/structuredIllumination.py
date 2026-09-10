@@ -67,6 +67,7 @@ from cockpit import depot
 from cockpit.experiment import actionTable, experiment
 from cockpit.gui import guiUtils
 
+
 ## Provided so the UI knows what to call this experiment.
 EXPERIMENT_NAME = "Structured Illumination"
 
@@ -350,6 +351,8 @@ class SIExperiment(experiment.Experiment):
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
             self.zHeight, self.zStart
         )
+        motionTime *= 1000
+        stabilizationTime *= 1000
         table.addAction(curTime + motionTime, self.zPositioner, self.zStart)
         finalWaitTime = motionTime + stabilizationTime
 

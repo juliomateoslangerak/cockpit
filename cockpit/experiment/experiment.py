@@ -66,6 +66,7 @@ from cockpit import depot, events
 from cockpit.experiment import dataSaver
 from cockpit.gui import guiUtils
 
+
 _logger = logging.getLogger(__name__)
 
 

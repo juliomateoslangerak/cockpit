@@ -114,6 +114,7 @@ from OpenGL.GL import (
     glViewport,
 )
 
+
 ## This module contains the Tile and MegaTile classes, along with some
 # supporting functions and constants.
 

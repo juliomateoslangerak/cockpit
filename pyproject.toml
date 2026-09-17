@@ -27,7 +27,7 @@ dependencies = [
     "Pyro4>=4.22",
     "freetype-py",
     "matplotlib",
-    "microscope>=0.7",
+    "microscope @ git+https://github.com/python-microscope/microscope.git",
     "numpy",
     "pyserial",
     "scipy",

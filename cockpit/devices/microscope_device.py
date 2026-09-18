@@ -462,15 +462,27 @@ class _MicroscopeStageAxis:
             for Y, or 2 for Z).
         units_per_micron: the number of units, or steps, used by the
             device per µm.
+        velocity: the velocity at which the stage is moving in µm per
+            millisecond
+        settling_time: the time it takes the stage to stabilize once it
+            reaches the requested position. In milliseconds
         stage_name: the name of the stage device, used to construct
             the handler name.
     """
 
     def __init__(
-        self, axis, index: int, units_per_micron: float, stage_name: str
+        self,
+        axis,
+        index: int,
+        units_per_micron: float,
+        velocity: float,
+        settling_time: float,
+        stage_name: str,
     ) -> None:
         self._axis = axis
         self._units_per_micron = units_per_micron
+        self._velocity = velocity
+        self._settling_time = settling_time
         self._name = "%d %s" % (index, stage_name)
 
         limits = AxisLimits(
@@ -500,12 +512,8 @@ class _MicroscopeStageAxis:
     def get_handler(self) -> PositionerHandler:
         return self._handler
 
-    def get_movement_time(self, index: int, start: float, end: float) -> float:
-        dt = float(self.config.get("settling_time", 10)) # um
-        vel = float(self.config.get("velocity", 1000)) # um/s
-        if hasattr(self._axis, 'velocity'):
-            vel = self._axis.velocity
-        return abs(end - start) / vel, dt
+    def get_movement_time(self, axis, start, end):
+        return abs(end - start) / self._velocity, self._settling_time
 
     def get_position(self, index: int) -> float:
         """Get the position for the specified axis."""
@@ -554,15 +562,15 @@ class MicroscopeStage(MicroscopeBase):
       x_axis_name: X
       y_axis_name: Y
       # Each step is 0.1µm, therefore 10 steps per µm
-      x_units_per_micron: 10 # 1 step == 0.1µm
-      y_units_per_micron: 10 # 1 step == 0.1µm
+      x-units-per-micron: 10 # 1 step == 0.1µm
+      y-units-per-micron: 10 # 1 step == 0.1µm
 
       [Z stage]
       type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeZStage@192.168.0.2:7002
       z_axis_name: Z
       # Each step is 25nm, therefore 40 steps per µm
-      x_units_per_micron: 40
+      x-units-per-micron: 40
 
     """
 

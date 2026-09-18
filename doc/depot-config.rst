@@ -82,8 +82,8 @@ Stages
 Stages have some specific requirements.  In general stages require
 names for the axis, and scaling information to match stage units to
 real world units.  Additionally, stages also require a
-``movement_time`` parameter which accounts for the time of an actual
-movement, and the time for the system to settle after the movement.
+``velocity`` in µm/sec parameter which accounts for speed of the stage,
+and the time for the system to settle after the movement in millisec.
 For example, a 3 axis stage might have:
 
 .. code:: ini
@@ -96,7 +96,12 @@ For example, a 3 axis stage might have:
   x_units_per_micron: 1
   y_units_per_micron: 1
   z_units_per_micron: 1
-  movement_time: 0.03 0.03
+  x_velocity: 100
+  y_velocity: 100
+  z_velocity: 30
+  x_settling_time: 10
+  y_settling_time: 10
+  z_settling_time: 10
 
 Additionally, stages which are to be used in a synchronous manner with
 rapid image stacks, usually Z axis, require either digital or analogue

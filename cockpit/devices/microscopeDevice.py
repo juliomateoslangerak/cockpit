@@ -469,10 +469,18 @@ class _MicroscopeStageAxis:
     """
 
     def __init__(
-        self, axis, index: int, units_per_micron: float, stage_name: str
+        self,
+        axis,
+        index: int,
+        units_per_micron: float,
+        velocity: float,
+        settling_time: float,
+        stage_name: str,
     ) -> None:
         self._axis = axis
         self._units_per_micron = units_per_micron
+        self._velocity = velocity
+        self._settling_time = settling_time
         self._name = "%d %s" % (index, stage_name)
 
         limits = AxisLimits(
@@ -502,11 +510,9 @@ class _MicroscopeStageAxis:
         )
 
     def getMovementTime(self, axis, start, end):
-        dt = float(self.config.get("settlingtime", 10)) # um
-        vel = float(self.config.get("velocity", 1000)) # um/s
-        if hasattr(self._axis, 'velocity'):
-            vel = self._axis.velocity
-        return (Decimal(abs(end - start) / vel), Decimal(dt))
+        return Decimal(abs(end - start) / self._velocity), Decimal(
+            self._settling_time
+        )
 
     def getHandler(self) -> PositionerHandler:
         return self._handler
@@ -560,13 +566,20 @@ class MicroscopeStage(MicroscopeBase):
       # Each step is 0.1µm, therefore 10 steps per µm
       x-units-per-micron: 10 # 1 step == 0.1µm
       y-units-per-micron: 10 # 1 step == 0.1µm
-
+      # Add the velocity of the axes in µm/s
+      x-velocity: 100
+      y-velocity: 100
+      # Add the settling time in milliseconds
+Fi
       [Z stage]
       type: cockpit.devices.microscopeDevice.MicroscopeStage
       uri: PYRO:SomeZStage@192.168.0.2:7002
       z-axis-name: Z
       # Each step is 25nm, therefore 40 steps per µm
-      x-units-per-micron: 40
+      z-units-per-micron: 40
+      # velocity and settling time
+      z-velocity: 10
+      z-settling-time: 10
 
     """
 
@@ -622,11 +635,42 @@ class MicroscopeStage(MicroscopeBase):
                     % units_config_name
                 )
 
+            velocity_config_name = one_letter_name + "-velocity"
+            if velocity_config_name not in self.config:
+                raise Exception(
+                    "missing '%s' value in the configuration"
+                    % velocity_config_name
+                )
+            velocity = float(self.config[velocity_config_name])
+            if velocity <= 0.0:
+                raise ValueError(
+                    "'%s' configuration must be a positive value"
+                    % velocity_config_name
+                )
+
+            settling_time_config_name = one_letter_name + "-settling-time"
+            if settling_time_config_name not in self.config:
+                raise Exception(
+                    "missing '%s' value in the configuration"
+                    % settling_time_config_name
+                )
+            settling_time = float(self.config[settling_time_config_name])
+            if settling_time <= 0.0:
+                raise ValueError(
+                    "'%s' configuration must be a positive value"
+                    % settling_time_config_name
+                )
+
             their_axis = their_axes_map[their_name]
             cockpit_index = stageMover.AXIS_MAP[one_letter_name]
             self._axes.append(
                 _MicroscopeStageAxis(
-                    their_axis, cockpit_index, units_per_micron, self.name
+                    axis=their_axis,
+                    index=cockpit_index,
+                    units_per_micron=units_per_micron,
+                    velocity=velocity,
+                    settling_time=settling_time,
+                    stage_name=self.name,
                 )
             )
             handled_axis_names.add(their_name)

@@ -1390,10 +1390,13 @@ class StatusUpdateThread(threading.Thread):
             curCount = self.imagesReceived[i]
             maxCount = self.totals[i]
             statusText.append("%s: %d/%d" % (name, curCount, maxCount))
-        if (sum(self.imagesReceived) % (maxCount / self.numReps)) == 0:
-            # we are between reps
-            repTime = (time.time() - self.startTime) % self.repDuration
-            timeleft = self.repDuration - repTime
+        if self.repDuration > 0 and (
+            sum(self.imagesReceived) % (maxCount / self.numReps)
+        ) == 0:
+            # We are between reps.  Negating the elapsed time before the
+            # modulo gives the time left until the next multiple of
+            # repDuration, i.e. the start of the next rep.
+            timeleft = -(time.time() - self.startTime) % self.repDuration
             statusText.append("waiting %.0fs for next repeat" % timeleft)
         events.publish(
             events.UPDATE_STATUS_LIGHT, "image count", " | ".join(statusText)

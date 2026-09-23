@@ -5,7 +5,7 @@ import microscope.testsuite.devices as testdevices
 from microscope.simulators.stage_aware_camera import simulated_setup_from_image
 
 DEVICE_SERVER_PORT = 8000
-SIMULATION_IMAGE_FILEPATH = 'merged-zaber-rgb.jpg'
+SIMULATION_IMAGE_FILEPATH = 'workshop_components/Fused_RGB.jpg'
 
 
 DEVICES = [

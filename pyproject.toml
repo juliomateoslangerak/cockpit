@@ -35,10 +35,14 @@ dependencies = [
     ## the setuptools distribution.
     "setuptools; python_version >= '3.12'",
     "wxPython>=4.1",
-    "zarr>=3.1.1"
+    "zarr>=3.1.1",
     # For the workshop
-    "stardist"
-    "tensorflow-cpu"
+    "stardist",
+    "tensorflow[and-cuda]",
+    "huggingface-hub",
+    "torch",
+    "torchvision",
+    "albumentations"
 ]
 
 [project.gui-scripts]

@@ -173,7 +173,8 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
     ])
 
     img = transform(image=img)["image"]  # (INPUT_SIZE, INPUT_SIZE, Z)
-    img = np.clip(img, 0.0, 1.0)
+    # img = np.clip(img, 0.0, 1.0)
+    img = np.repeat(img[:, :, np.newaxis], 5, axis=-1)
 
     tensor = torch.from_numpy(img).permute(2, 0, 1).float()  # (Z, H, W)
     return tensor.unsqueeze(0)                                # (1, Z, H, W)

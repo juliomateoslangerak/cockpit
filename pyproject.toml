@@ -40,8 +40,11 @@ dependencies = [
     "stardist",
     "tensorflow[and-cuda]",
     "huggingface-hub",
-    "torch",
-    "torchvision",
+    # Linux: CUDA 12.1 (replace X.Y.Z with your desired version)
+    "torch @ https://download.pytorch.org/whl/cu121/torch-2.3.0%2Bcu121-cp312-cp312-linux_x86_64.whl; sys_platform == 'linux'",
+    "torch; sys_platform != 'linux'",
+    "torchvision @ https://download.pytorch.org/whl/cu121/torchvision-0.18.0%2Bcu121-cp312-cp312-linux_x86_64.whl; sys_platform == 'linux'",
+    "torchvision; sys_platform != 'linux'",
     "albumentations"
 ]
 

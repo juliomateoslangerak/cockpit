@@ -18,12 +18,23 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
+import wx
 import wx.py.shell
 
 
 class ShellWindow(wx.py.shell.ShellFrame):
     SHOW_DEFAULT = False
     LIST_AS_COCKPIT_WINDOW = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # wx.py forces a white background but leaves the foreground to
+        # the system default, which is white in dark mode (wx >= 3.3)
+        # making the text invisible.  Set a black default foreground
+        # and reapply the styles so that it propagates to all of them.
+        self.shell.StyleSetForeground(wx.stc.STC_STYLE_DEFAULT, wx.BLACK)
+        self.shell.setStyles(wx.py.editwindow.FACES)
+        self.shell.SetCaretForeground(wx.BLACK)
 
 
 def makeWindow(parent):

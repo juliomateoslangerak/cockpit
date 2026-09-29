@@ -12,6 +12,7 @@
 - we put a researcher in front of the microscope
 
 # What is smart microscopy?
+https://onlinelibrary.wiley.com/doi/full/10.1111/jmi.13282
 
 # How does it work
 
@@ -57,6 +58,13 @@
 - Autofocus
 - Adaptive optics
 
+## Environment driven
+## Quality driven
+## Event driven
+## Target driven
+## Information driven
+## 
+
 ## Whare's Wally
 
 ## When is Wally arriving
@@ -64,6 +72,13 @@
 ## Where is Wally going
 
 - https://smartmicroscopy.org/posts/2026-09-keeping-the-tail-in-frame-lilittool-a-tracking-software-for-smart-light-sheet-microscopy
+
+## Perturb Wally
+
+- Microscope hardware
+- Perturbations
+- Data Storage
+- Communications
 
 ## Automatically choice of representative objects
 

@@ -1,0 +1,4 @@
+format:
+  revealjs:
+    title: "<span class='flow_big'>Smart microscopy:</span><br>principles, implementations and applications"
+    subtitle: "<span style='font-size: 0.8em;'>Julio Mateos Langerak</span>"

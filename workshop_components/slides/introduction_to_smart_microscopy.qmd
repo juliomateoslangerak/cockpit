@@ -1,0 +1,78 @@
+# Microscopy is all about compromises
+
+# Spatial resolution vs sample health
+
+# Time resolution vs throughput
+
+# Microscopy is all about compromises
+
+# How do we "*think*" our microscope experiments
+
+- We program a blind routine or
+- we put a researcher in front of the microscope
+
+# What is smart microscopy?
+
+# How does it work
+
+                 acquire
+                    │
+                    ▼
+              image analysis
+                    │
+             ┌──────┴──────┐
+             │             │
+        interesting?     nothing?
+             │             │
+             ▼             ▼
+      high-res imaging   move on
+             │
+             ▼
+       update experiment
+
+# Getting started: commercial solutions
+
+## Zeiss
+
+## Leica
+
+## Evident (formerly Olympus)
+
+## Nikon
+
+## ImScooper
+
+# Getting started: non-commercial solutions
+
+## MicroManager / Pycro-Manager
+
+## ImSwitch
+
+## Cockpit-Microscope
+
+# Example applications
+
+## Commercial applications
+- Abberior Instruments FLEXPOSURE and MINFLUX
+- Autofocus
+- Adaptive optics
+
+## Whare's Wally
+
+## When is Wally arriving
+
+## Where is Wally going
+
+- https://smartmicroscopy.org/posts/2026-09-keeping-the-tail-in-frame-lilittool-a-tracking-software-for-smart-light-sheet-microscopy
+
+## Automatically choice of representative objects
+
+## Optogenetic stimulation
+
+# Where to go from here
+- Contact your local microscopy core facility colleagues
+- RT-mfm GT-Smile
+- GdR Smart microscopy
+- Go to MiFoBio 2027
+- Euro BioImaging Smart Microscopy Experts Group
+- https://smartmicroscopy.org/

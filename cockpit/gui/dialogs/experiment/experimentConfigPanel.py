@@ -55,14 +55,13 @@ import decimal
 import json
 import logging
 import os.path
-import time
 import traceback
 import typing
 
 import wx
 
 import cockpit.experiment.experimentRegistry
-import cockpit.interfaces.stageMover
+import cockpit.experiment.spec
 import cockpit.util.userConfig
 from cockpit import depot
 from cockpit.gui import guiUtils
@@ -571,10 +570,23 @@ class ExperimentConfigPanel(wx.Panel):
     ## Run the experiment per the user's settings.
     def runExperiment(self):
         # Returns True to close dialog box, None or False otherwise.
+        spec = self.getExperimentSpec()
+        if spec is None:
+            return True
+        try:
+            self.runner = spec.build()
+            return self.runner.run(confirm=guiUtils.getUserPermission)
+        except Exception:
+            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
+            return False
+
+    ## Return an ExperimentSpec describing the user's settings, or None if
+    # the settings are unusable (the user has already been told why).
+    # \param useFilenameTemplate If True, the spec keeps the filename
+    #        template so it can be expanded each time the experiment is
+    #        built (e.g. per site). Otherwise the current filename is used.
+    def getExperimentSpec(self, useFilenameTemplate=False):
         self.saveSettings()
-        # Find the Z mover with the smallest range of motion, assumed
-        # to be our experiment mover.
-        mover = wx.GetApp().Depot.getSortedStageMovers()[2][-1]
         # Only use active cameras and enabled lights.
         # Must do list(filter) because we will iterate over the list
         # many times.
@@ -590,7 +602,7 @@ class ExperimentConfigPanel(wx.Panel):
                 style=(wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK),
                 parent=self,
             )
-            return True
+            return None
         # TODO: check that the filename is valid
 
         exposureSettings = []
@@ -612,7 +624,7 @@ class ExperimentConfigPanel(wx.Panel):
             if not lightTimePairs and not guiUtils.getUserPermission(
                 "No enabled light has a define exposure time. Are you sure you want to continue?"
             ):
-                return True
+                return None
 
             exposureSettings = [(cameras, lightTimePairs)]
 
@@ -644,7 +656,7 @@ class ExperimentConfigPanel(wx.Panel):
                     "No channels are enabled, so the experiment cannot be run.",
                     style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK,
                 ).ShowModal()
-                return True
+                return None
             unsortedExposureSettings = {}
             for channel, checkbox, order in zip(
                 self.channels.Names,
@@ -659,7 +671,7 @@ class ExperimentConfigPanel(wx.Panel):
                             % channel,
                             style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK,
                         ).ShowModal()
-                        return True
+                        return None
                     channelSettings = self.channels.Get(channel)
                     cameras = []
                     cameras.extend(
@@ -691,52 +703,42 @@ class ExperimentConfigPanel(wx.Panel):
                 for i in sorted(unsortedExposureSettings.keys())
             ]
 
-        altitude = cockpit.interfaces.stageMover.getPositionForAxis(2)
-        # Default to "current is bottom"
-        altBottom = altitude
-        zHeight = guiUtils.tryParseNum(self.stackHeight, float)
-        if self.zPositionMode.GetStringSelection() == "Current is center":
-            altBottom = altitude - zHeight / 2
-        elif self.zPositionMode.GetStringSelection() == "Use saved top/bottom":
-            altBottom = cockpit.interfaces.stageMover.mover.SavedBottom
-            zHeight = cockpit.interfaces.stageMover.mover.SavedTop - altBottom
-
-        sliceHeight = guiUtils.tryParseNum(self.sliceHeight, float)
-        if zHeight == 0:
-            # 2D mode.
-            zHeight = 1e-6
-            sliceHeight = 1e-6
-
         try:
-            savePath = self.filepath_panel.GetPath()
+            # Raises if the filename is empty.
+            self.filepath_panel.GetPath()
         except Exception:
             cockpit.gui.ExceptionBox(
                 "Failed to get filename for data.", parent=self
             )
-            return True
+            return None
+        if useFilenameTemplate:
+            filenameTemplate = self.filepath_panel.GetTemplate()
+        else:
+            filenameTemplate = self.filepath_panel.GetFilename()
 
-        params = {
-            "numReps": guiUtils.tryParseNum(self.numReps),
-            "repDuration": guiUtils.tryParseNum(self.repDuration, float),
-            "zPositioner": mover,
-            "altBottom": altBottom,
-            "zHeight": zHeight,
-            "sliceHeight": sliceHeight,
-            "exposureSettings": exposureSettings,
-            "savePath": savePath,
-        }
         experimentType = self.experimentType.GetStringSelection()
         module = self.experimentStringToModule[experimentType]
+        extraParams = {}
         if module in self.experimentModuleToPanel:
             # Add on the special parameters needed by this experiment type.
-            params = self.experimentModuleToPanel[module].augmentParams(params)
+            extraParams = self.experimentModuleToPanel[module].augmentParams(
+                extraParams
+            )
 
-        try:
-            self.runner = module.EXPERIMENT_CLASS(**params)
-            return self.runner.run(confirm=guiUtils.getUserPermission)
-        except Exception:
-            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
-            return False
+        return cockpit.experiment.spec.ExperimentSpec(
+            experimentClass=module.EXPERIMENT_CLASS,
+            exposureSettings=exposureSettings,
+            numReps=guiUtils.tryParseNum(self.numReps),
+            repDuration=guiUtils.tryParseNum(self.repDuration, float),
+            zMode=cockpit.experiment.spec.ZMode(
+                self.zPositionMode.GetStringSelection()
+            ),
+            zHeight=guiUtils.tryParseNum(self.stackHeight, float),
+            sliceHeight=guiUtils.tryParseNum(self.sliceHeight, float),
+            saveDir=self.filepath_panel.GetDirectory(),
+            filenameTemplate=filenameTemplate,
+            extraParams=extraParams,
+        )
 
     ## Generate a dict of our current settings.
     def getSettingsDict(self):
@@ -806,14 +808,9 @@ class FilepathPanel(wx.Panel):
         self.SetSizer(grid)
 
     def UpdateFilename(self, mappings: typing.Mapping[str, str] = {}) -> None:
-        all_mappings = {
-            "date": time.strftime("%Y%m%d"),
-            "time": time.strftime("%H%M%S"),
-            **mappings,
-        }
-
-        template = self._template_ctrl.GetValue()
-        basename = template.format_map(Default(**all_mappings))
+        basename = cockpit.experiment.spec.expandFilename(
+            self._template_ctrl.GetValue(), mappings
+        )
         self._fname_ctrl.SetValue(basename)
 
     def _OnUpdateFilename(self, evt: wx.CommandEvent) -> None:
@@ -828,13 +825,15 @@ class FilepathPanel(wx.Panel):
             raise Exception("Filename is empty")
         return os.path.join(dirname, basename)
 
+    def GetDirectory(self) -> str:
+        return self._dir_ctrl.GetPath()
+
+    def GetFilename(self) -> str:
+        return self._fname_ctrl.GetValue()
+
     def GetTemplate(self) -> str:
         return self._template_ctrl.GetValue()
 
     def SetTemplate(self, template: str) -> None:
         self._template_ctrl.SetValue(template)
 
-
-class Default(dict):
-    def __missing__(self, key):
-        return f"{{key}}"

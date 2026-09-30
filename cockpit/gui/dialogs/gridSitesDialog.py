@@ -121,7 +121,7 @@ class GridSitesDialog(wx.Dialog):
         buttonBox = wx.BoxSizer(wx.HORIZONTAL)
 
         cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        cancelButton.SetToolTipString("Close this window")
+        cancelButton.SetToolTip("Close this window")
         buttonBox.Add(cancelButton, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
         startButton = wx.Button(self, wx.ID_OK, "Mark sites")

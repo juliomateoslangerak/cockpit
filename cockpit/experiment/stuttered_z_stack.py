@@ -83,10 +83,8 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         self.sample_rates = sample_rates
         self.should_abort = False
 
-        events.subscribe(events.USER_ABORT, self.on_abort)
-
+    ## User aborted.
     def on_abort(self):
-        """User aborted."""
         self.should_abort = True
 
     def execute(self):

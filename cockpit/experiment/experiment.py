@@ -97,17 +97,24 @@ def isRunning():
         return lastExperiment.is_running()
 
 
-## This class is the root class for generating and running experiments.
-
-
 # You should make a subclass of this class to implement a specific experiment
 # type.
 class Experiment:
-    ## This constructor accepts certain parameters that will be shared
-    # by all experiment types.
+    # Base class for running one acquisition.
+    #
+    # An `Experiment` is created with fully resolved values (absolute Z
+    # position, final save path), turns them into an action table and runs it
+    # on the hardware. It is single-use. Subclasses, such as
+    # `cockpit.experiment.zStack.ZStackExperiment`, define the action table.
+    #
+    # To describe an experiment that can be run more than once, or at several
+    # stage sites, use `cockpit.experiment.experimentSpecs.ExperimentSpec` and
+    # `cockpit.experiment.experimentSpecs.MultiSiteSpec`; they create
+    # `Experiment` instances when run. Multi-site experiments are run by
+    # `cockpit.experiment.multiSiteRunner.MultiSiteRunner`.
+    #
     # \param numReps Number of repetitions of the experiment to perform.
     # \param repDuration Amount of time to spend on each repetition, or
-
     #        0 to spend as little as possible. In seconds.
     # \param zPositioner StagePositioner handler to use to move in Z.
     # \param altBottom Altitude of the stage at the bottom of the stack.

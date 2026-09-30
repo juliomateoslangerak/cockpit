@@ -18,30 +18,60 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Widget-free description of an experiment.
+"""Widget-free descriptions of experiments.
 
-An `ExperimentSpec` holds everything needed to create an `Experiment`,
-except what can only be known at the moment it is run: the current stage
-position (for Z stacks relative to it) and values used to fill in the
-filename template (date, time, cycle, site, ...).  This lets experiments
-be defined once, from the GUI or from a script, and then built and run
-any number of times, e.g. at every site of a multi-site experiment.
+Experiments are split into what to do and how to do it:
+
+- The specs in this module describe an experiment. They are reusable and
+  hold values that are only resolved when the experiment runs, such as a Z
+  stack relative to the current stage position, or a filename template.
+  Define them from a script or, as the GUI dialogs do, from widgets.
+
+  - `ExperimentSpec` describes one acquisition. `build()` creates the
+    `cockpit.experiment.experiment.Experiment` for the current stage
+    position.
+  - `MultiSiteSpec` describes an `ExperimentSpec` repeated over stage
+    sites and cycles.
+
+- The runners do the work and are single-use:
+
+  - `cockpit.experiment.experiment.Experiment` (and its subclasses, e.g.
+    `zStack.ZStackExperiment`) runs one acquisition at one position.
+  - `cockpit.experiment.multiSiteRunner.MultiSiteRunner` visits the sites
+    of a `MultiSiteSpec`, building and running an `Experiment` at each.
+
+Both specs have a `run(confirm)` shortcut which starts its runner and
+returns it, so that callers can `wait()` for it to finish. `confirm` is
+called with a message whenever the user would be asked to confirm
+something, e.g. overwriting a file; see `Experiment.run`.
 
 Example, from the cockpit shell::
 
     from decimal import Decimal
-    from cockpit.experiment import spec, zStack
+    from cockpit.experiment import experimentSpecs as specs, zStack
+    from cockpit.interfaces import stageMover
 
-    s = spec.ExperimentSpec(
+    siteExperiment = specs.ExperimentSpec(
         zStack.ZStackExperiment,
         exposureSettings=[([camera], [(light, Decimal(50))])],
-        zMode=spec.ZMode.CENTER,
+        zMode=specs.ZMode.CENTER,
         zHeight=5,
         sliceHeight=0.5,
         saveDir="/data/run1",
-        filenameTemplate="{date}-{time}.mrc",
+        filenameTemplate="{date}-{time}_t{cycle}_p{site}.mrc",
     )
-    s.run(confirm=lambda message: True)
+
+    # A single acquisition here.
+    siteExperiment.run(confirm=lambda message: True).wait()
+
+    # The same acquisition at every G2/M site, every 10 minutes.
+    runner = specs.MultiSiteSpec(
+        siteExperiment,
+        sites=stageMover.sitesInGroup("G2/M"),
+        numCycles=10,
+        cycleDurations=[600],
+    ).run(confirm=lambda message: True)
+    runner.wait()
 """
 
 import dataclasses
@@ -52,6 +82,7 @@ import typing
 
 import cockpit.interfaces.stageMover
 from cockpit import depot
+from cockpit.experiment import multiSiteRunner
 
 
 class ZMode(enum.Enum):
@@ -163,3 +194,77 @@ class ExperimentSpec:
         if experiment.run(confirm):
             return experiment
         return None
+
+
+def parseLightFrequency(text: str) -> typing.Tuple[int, int]:
+    """Parse "frequency" or "frequency + offset" into (frequency, offset).
+
+    A light with frequency 5 is used on cycles 0, 5, 10, ...; with
+    "5 + 1" it is used on cycles 1, 6, 11, ...
+    """
+    if "+" in text:
+        frequency, offset = [int(s) for s in text.split("+")]
+    else:
+        frequency, offset = int(text), 0
+    if frequency < 1 or not 0 <= offset < frequency:
+        raise ValueError(
+            "Invalid light frequency '%s': need frequency >= 1 and"
+            " 0 <= offset < frequency" % text
+        )
+    return frequency, offset
+
+
+@dataclasses.dataclass
+class MultiSiteSpec:
+    ## Experiment to run at each site.
+    siteExperiment: ExperimentSpec
+    ## Site IDs, see cockpit.interfaces.stageMover.
+    sites: typing.List[int]
+    ## Visit sites[i] every frequencies[i]-th cycle. None means every cycle.
+    frequencies: typing.Optional[typing.List[int]] = None
+    numCycles: int = 1
+    ## Minimum time, in seconds, between the start of consecutive cycles.
+    # Used in sequence: [60, 120] makes cycles alternate between one and
+    # two minutes.
+    cycleDurations: typing.Sequence[float] = (0,)
+    ## Seconds to wait before the first cycle.
+    delayBeforeStarting: float = 0
+    ## Seconds to wait after moving to a site before imaging it.
+    delayBeforeImaging: float = 0
+    ## Reorder the sites to minimise travel time.
+    optimizeOrder: bool = True
+    ## Maps light handlers to (frequency, offset), see parseLightFrequency.
+    # Lights not in the mapping are used on every cycle.
+    lightFrequencies: typing.Optional[dict] = None
+    ## Power off all POWER_CONTROL devices at the end.
+    powerDownWhenDone: bool = False
+
+    ## Raise ValueError if the experiment cannot be run.
+    def sanityCheck(self):
+        if not self.sites:
+            raise ValueError("No sites selected.")
+        if self.frequencies is not None:
+            if len(self.frequencies) != len(self.sites):
+                raise ValueError("Need one frequency per site.")
+            if any(f < 1 for f in self.frequencies):
+                raise ValueError("Site frequencies must be at least 1.")
+        if self.numCycles < 1:
+            raise ValueError("Need at least one cycle.")
+        if not self.cycleDurations:
+            raise ValueError("Need at least one cycle duration.")
+        # Verify that all sites are reachable; the user may have restarted
+        # cockpit (thus resetting motion safeties) and then loaded a list
+        # of sites which we cannot now reach.
+        for siteId in self.sites:
+            if not cockpit.interfaces.stageMover.doesSiteExist(siteId):
+                raise ValueError("Site %s does not exist." % siteId)
+            if not cockpit.interfaces.stageMover.canReachSite(siteId):
+                raise ValueError("Site %s cannot be reached." % siteId)
+
+    ## Start a MultiSiteRunner in the background and return it.
+    # \param confirm See cockpit.experiment.experiment.Experiment.run. It is
+    #        called from the runner's thread.
+    def run(self, confirm=None):
+        runner = multiSiteRunner.MultiSiteRunner(self)
+        runner.run(confirm)
+        return runner

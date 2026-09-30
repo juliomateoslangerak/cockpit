@@ -465,8 +465,6 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
             if self.shouldAbort:
                 break
-            if self.shouldAbort:
-                break
 
         self.cleanUp()
 

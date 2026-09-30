@@ -731,8 +731,12 @@ class ExperimentConfigPanel(wx.Panel):
             # Add on the special parameters needed by this experiment type.
             params = self.experimentModuleToPanel[module].augmentParams(params)
 
-        self.runner = module.EXPERIMENT_CLASS(**params)
-        return self.runner.run()
+        try:
+            self.runner = module.EXPERIMENT_CLASS(**params)
+            return self.runner.run(confirm=guiUtils.getUserPermission)
+        except Exception:
+            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
+            return False
 
     ## Generate a dict of our current settings.
     def getSettingsDict(self):

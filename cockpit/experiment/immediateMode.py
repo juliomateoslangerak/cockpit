@@ -122,9 +122,9 @@ class ImmediateModeExperiment(experiment.Experiment):
 
     ## This experiment will generate images, which need to be saved.
     ## Assume we use all active cameras and light sources.
-    def run(self):
+    def run(self, confirm=None):
         self.cameraToImageCount = {c: self.imagesPerRep for c in self.cameras}
-        return super().run()
+        return super().run(confirm)
 
     ## Run the experiment. Return True if it was successful. This will call
     # self.executeRep() iteratively, taking care of the time to pass between

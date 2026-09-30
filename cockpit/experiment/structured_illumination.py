@@ -583,7 +583,7 @@ class SIExperiment(experiment.Experiment):
                 "\n    'OK' to run as is;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not gui_utils.get_user_permission(warning):
+            if not self.confirm(warning):
                 return False
         return True
 

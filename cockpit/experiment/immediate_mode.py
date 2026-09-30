@@ -126,7 +126,7 @@ class ImmediateModeExperiment(experiment.Experiment):
     def create_valid_action_table(self):
         pass
 
-    def run(self):
+    def run(self, confirm=None):
         """This experiment will generate images, which need to be saved.
 
         Assume we use all active cameras and light sources.
@@ -134,7 +134,7 @@ class ImmediateModeExperiment(experiment.Experiment):
         self.camera_to_image_count = {
             c: self.images_per_rep for c in self.cameras
         }
-        return super().run()
+        return super().run(confirm)
 
     def execute(self):
         """Run the experiment.

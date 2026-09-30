@@ -64,7 +64,6 @@ import cockpit.handlers.camera
 import cockpit.interfaces.stage_mover
 from cockpit import depot, events
 from cockpit.experiment import data_saver
-from cockpit.gui import gui_utils
 
 
 _logger = logging.getLogger(__name__)
@@ -78,6 +77,16 @@ last_experiment = None
 # viewed in the UI. A list of lists, since each experiment can generate
 # multiple files.
 generated_filenames = []
+
+
+class ExperimentCancelled(Exception):
+    """Raised when an experiment needs a confirmation that was refused."""
+
+
+def _refuse_confirmation(message):
+    # Default confirmation policy for experiments run without a GUI: never
+    # guess what the user would want, fail loudly instead.
+    raise ExperimentCancelled(message)
 
 
 def is_running():
@@ -152,6 +161,9 @@ class Experiment:
         self.save_path = save_path
 
         self.run_thread = None
+        self.cleanup_thread = None
+        ## Callable(message) -> bool used to ask for confirmation.  Set by run.
+        self.confirm = _refuse_confirmation
 
         # Check for save paths that don't actually have a final filename
         # (i.e. just point to a directory); those aren't valid.
@@ -207,15 +219,22 @@ class Experiment:
         """Cancel the experiment, if it's running."""
         self.should_abort = True
 
-    def run(self):
+    def run(self, confirm=None):
         """Run the experiment.
 
         We spin off the actual execution and cleanup into separate threads.
+
+        Args:
+            confirm (callable): Callable taking a message and returning
+            True if the experiment should proceed. The GUI passes
+            guiUtils.getUserPermission. If None, any situation requiring
+            confirmation raises ExperimentCancelled.
         """
-        # Returns True to close config dialog box, False or None otherwise.
-        # Check if the user is set to save to an already-existing file.
+        # Returns True if the experiment was started, False otherwise.
+        if confirm is not None:
+            self.confirm = confirm
         if self.save_path and os.path.exists(self.save_path):
-            if not gui_utils.get_user_permission(
+            if not self.confirm(
                 ("The file:\n%s\nalready exists. " % self.save_path)
                 + "Are you sure you want to overwrite it?"
             ):
@@ -256,7 +275,7 @@ class Experiment:
                 "\n    'OK' to run repeats as fast as possible;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not gui_utils.get_user_permission(warning):
+            if not self.confirm(warning):
                 return False
             # set rep_duration to the last table action
             self.rep_duration = float(self.table.last_action_time) / 1000.0
@@ -322,16 +341,25 @@ class Experiment:
                 )
 
             generated_filenames.append(saver.get_filenames())
+            save_thread = saver.save_thread
 
         self.run_thread.start()
 
-        cleanup_thread = threading.Thread(
+        self.cleanup_thread = threading.Thread(
             target=self.cleanup,
             args=[self.run_thread, saver.save_thread],
             name="Experiment-cleanup",
         )
-        cleanup_thread.start()
+        self.cleanup_thread.start()
         return True
+
+    ## Block until the experiment, including saving and cleanup, has
+    # finished. Return True if it finished, False on timeout.
+    def wait(self, timeout=None):
+        if self.cleanup_thread is None:
+            return True
+        self.cleanup_thread.join(timeout)
+        return not self.cleanup_thread.is_alive()
 
     def create_valid_action_table(self):
         """Create an ActionTable by calling self.generate_actions, and give our
@@ -365,8 +393,7 @@ class Experiment:
             cockpit.interfaces.stage_mover.mover.cur_handler_index
             < len(depot.get_sorted_stage_movers()[2]) - 1
         ):
-            wx.MessageBox("Wrong axis mover selected.")
-            raise Exception("Wrong axis mover selected.")
+            raise RuntimeError("Wrong axis mover selected.")
         # Prepare our position.
         cockpit.interfaces.stage_mover.go_to_z(
             self.alt_bottom, should_block=True
@@ -537,6 +564,7 @@ class Experiment:
                 "Waiting for saving to complete",
             )
             save_thread.join()
+        events.unsubscribe(events.USER_ABORT, self.on_abort)
         for handler in self.all_handlers:
             handler.cleanup_after_experiment()
         events.publish(events.CLEANUP_AFTER_EXPERIMENT)

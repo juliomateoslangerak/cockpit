@@ -62,6 +62,7 @@ import typing
 import wx
 
 import cockpit.experiment.experiment_registry
+import cockpit.experiment.spec
 import cockpit.interfaces.stage_mover
 import cockpit.util.user_config
 from cockpit import depot
@@ -87,7 +88,7 @@ class ExperimentConfigPanel(wx.Panel):
     form of an embeddable wx.Panel and a selection of functions.
 
     To use the panel, create an instance of ExperimentConfigPanel and insert it
-    into your GUI. Call its runExperiment function when you are ready to start
+    into your GUI. Call its run_experiment function when you are ready to start
     the experiment.
 
     The parent is required to implement on_experiment_panel_resize so that changes
@@ -594,7 +595,27 @@ class ExperimentConfigPanel(wx.Panel):
     def run_experiment(self):
         """Run the experiment per the user's settings."""
         # Returns True to close dialog box, None or False otherwise.
+        spec = self.get_experiment_spec()
+        if spec is None:
+            return True
+        try:
+            self.runner = spec.build()
+            return self.runner.run(confirm=gui_utils.get_user_permission)
+        except Exception:
+            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
+            return False
+
+    def get_experiment_spec(self, use_filename_template=False):
+        """Return an ExperimentSpec describing the user's settings, or None if
+        the settings are unusable (the user has already been told why).
+
+        Args:
+            use_filename_template (bool): If True, the spec keeps the filename
+                template so it can be expanded each time the experiment is
+                built (e.g. per site). Otherwise the current filename is used.
+        """
         self.save_settings()
+
         # Find the Z mover with the smallest range of motion, assumed
         # to be our experiment mover.
         mover = wx.GetApp().depot.get_sorted_stage_movers()[2][-1]
@@ -613,7 +634,7 @@ class ExperimentConfigPanel(wx.Panel):
                 style=(wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK),
                 parent=self,
             )
-            return True
+            return None
         # TODO: check that the filename is valid
 
         exposure_settings = []
@@ -714,58 +735,74 @@ class ExperimentConfigPanel(wx.Panel):
                 for i in sorted(unsorted_exposure_settings.keys())
             ]
 
-        altitude = cockpit.interfaces.stage_mover.get_position_for_axis(2)
-        # Default to "current is bottom"
-        alt_bottom = altitude
-        z_height = gui_utils.try_parse_num(self.stack_height, float)
-        if self.z_position_mode.GetStringSelection() == "Current is center":
-            alt_bottom = altitude - z_height / 2
-        elif (
-            self.z_position_mode.GetStringSelection() == "Use saved top/bottom"
-        ):
-            alt_bottom = cockpit.interfaces.stage_mover.mover.saved_bottom
-            z_height = (
-                cockpit.interfaces.stage_mover.mover.saved_top - alt_bottom
-            )
-
-        slice_height = gui_utils.try_parse_num(self.slice_height, float)
-        if z_height == 0:
-            # 2D mode.
-            z_height = 1e-6
-            slice_height = 1e-6
+        # altitude = cockpit.interfaces.stage_mover.get_position_for_axis(2)
+        # # Default to "current is bottom"
+        # alt_bottom = altitude
+        # z_height = gui_utils.try_parse_num(self.stack_height, float)
+        # if self.z_position_mode.GetStringSelection() == "Current is center":
+        #     alt_bottom = altitude - z_height / 2
+        # elif (
+        #     self.z_position_mode.GetStringSelection() == "Use saved top/bottom"
+        # ):
+        #     alt_bottom = cockpit.interfaces.stage_mover.mover.saved_bottom
+        #     z_height = (
+        #         cockpit.interfaces.stage_mover.mover.saved_top - alt_bottom
+        #     )
+        #
+        # slice_height = gui_utils.try_parse_num(self.slice_height, float)
+        # if z_height == 0:
+        #     # 2D mode.
+        #     z_height = 1e-6
+        #     slice_height = 1e-6
 
         try:
-            save_path = self.filepath_panel.get_path()
+            # Raises if the filename is empty.
+            self.filepath_panel.get_path()
         except Exception:
             cockpit.gui.ExceptionBox(
                 "Failed to get filename for data.", parent=self
             )
-            return True
+            return None
 
-        params = {
-            "num_reps": gui_utils.try_parse_num(self.num_reps),
-            "rep_duration": gui_utils.try_parse_num(self.rep_duration, float),
-            "z_positioner": mover,
-            "alt_bottom": alt_bottom,
-            "z_height": z_height,
-            "slice_height": slice_height,
-            "exposure_settings": exposure_settings,
-            "save_path": save_path,
-        }
+        if use_filename_template:
+            filename_template = self.filepath_panel.get_template()
+        else:
+            filename_template = self.filepath_panel.get_filename()
+
+        # params = {
+        #     "num_reps": gui_utils.try_parse_num(self.num_reps),
+        #     "rep_duration": gui_utils.try_parse_num(self.rep_duration, float),
+        #     "z_positioner": mover,
+        #     "alt_bottom": alt_bottom,
+        #     "z_height": z_height,
+        #     "slice_height": slice_height,
+        #     "exposure_settings": exposure_settings,
+        #     "save_path": save_path,
+        # }
         experiment_type = self.experiment_type.GetStringSelection()
         module = self.experiment_string_to_module[experiment_type]
+        extra_params = {}
+
         if module in self.experiment_module_to_panel:
             # Add on the special parameters needed by this experiment type.
-            params = self.experiment_module_to_panel[module].augment_params(
-                params
+            extra_params = self.experiment_module_to_panel[module].augment_params(
+                extra_params
             )
 
-        try:
-            self.runner = module.EXPERIMENT_CLASS(**params)
-            return self.runner.run(confirm=gui_utils.get_user_permission)
-        except Exception:
-            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
-            return False
+        return cockpit.experiment.spec.ExperimentSpec(
+            experimentClass=module.EXPERIMENT_CLASS,
+            exposureSettings=exposure_settings,
+            numReps=gui_utils.try_parse_num(self.num_reps),
+            repDuration=gui_utils.try_parse_num(self.rep_duration, float),
+            zMode=cockpit.experiment.spec.ZMode(
+                self.z_position_mode.GetStringSelection()
+            ),
+            zHeight=gui_utils.try_parse_num(self.stack_height, float),
+            sliceHeight=gui_utils.try_parse_num(self.slice_height, float),
+            saveDir=self.filepath_panel.GetDirectory(),
+            filenameTemplate=filename_template,
+            extraParams=extra_params,
+        )
 
     def get_settings_dict(self):
         """Generate a dict of our current settings."""
@@ -835,14 +872,9 @@ class FilepathPanel(wx.Panel):
         self.SetSizer(grid)
 
     def update_filename(self, mappings: typing.Mapping[str, str] = {}) -> None:
-        all_mappings = {
-            "date": time.strftime("%Y%m%d"),
-            "time": time.strftime("%H%M%S"),
-            **mappings,
-        }
-
-        template = self._template_ctrl.GetValue()
-        basename = template.format_map(Default(**all_mappings))
+        basename = cockpit.experiment.spec.expand_filename(
+            self._template_ctrl.GetValue(), mappings
+        )
         self._filename_ctrl.SetValue(basename)
 
     def _on_update_filename(self, evt: wx.CommandEvent) -> None:
@@ -856,6 +888,12 @@ class FilepathPanel(wx.Panel):
         if not basename:
             raise Exception("Filename is empty")
         return os.path.join(dirname, basename)
+
+    def get_directory(self) -> str:
+        return self._dir_ctrl.GetPath()
+
+    def get_filename(self) -> str:
+        return self._filename_ctrl.GetValue()
 
     def get_template(self) -> str:
         return self._template_ctrl.GetValue()

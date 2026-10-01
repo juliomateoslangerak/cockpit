@@ -49,6 +49,8 @@ BMP_SIZE = (16, 16)
 # A mapping of matplotlib colour to a base image index.
 I_TO_C = {}
 for i, c in enumerate(plt.rcParams["axes.prop_cycle"].by_key()["color"]):
+    if isinstance(c, str):
+        c = matplotlib.colors.to_rgb(c)
     I_TO_C[i + 1] = [int(flt * 255) for flt in c]
 
 

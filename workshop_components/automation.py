@@ -150,6 +150,8 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
     """
     if array.dtype == np.uint16:
         img = array.astype(np.float32) / 65535.0
+    elif array.dtype == np.uint8:
+        img = array.astype(np.float32) / 255.0
     else:
         img = array.astype(np.float32)
 

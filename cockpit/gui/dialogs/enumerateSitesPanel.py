@@ -117,7 +117,10 @@ class EnumerateSitesPanel(wx.Panel):
         # Construct the input list of sites
         sitesString = self.sites.GetValue()
         if sitesString == "Most recent site":
-            return ([-1], [1])
+            sites = cockpit.interfaces.stageMover.getAllSites()
+            if not sites:
+                return ([], [])
+            return ([sites[-1].uniqueID], [1])
         try:
             siteTokens = self.sites.GetValue().split(",")
             baseIndices = []
@@ -149,4 +152,4 @@ class EnumerateSitesPanel(wx.Panel):
                 'Invalid site list "%s"; returning no sites',
                 self.sites.GetValue(),
             )
-            return []
+            return ([], [])

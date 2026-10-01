@@ -496,6 +496,16 @@ def getAllSites() -> typing.List[int]:
     return list(mover.idToSite.values())
 
 
+## Return the IDs of the sites in the given group, in the order they were
+# saved.
+def sitesInGroup(group) -> typing.List[int]:
+    return [
+        site.uniqueID
+        for site in mover.idToSite.values()
+        if site.group == group
+    ]
+
+
 ## Return True if there's a site with the specified ID.
 def doesSiteExist(siteId):
     return siteId in mover.idToSite

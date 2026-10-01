@@ -64,7 +64,6 @@ import cockpit.handlers.camera
 import cockpit.interfaces.stageMover
 from cockpit import depot, events
 from cockpit.experiment import dataSaver
-from cockpit.gui import guiUtils
 
 
 _logger = logging.getLogger(__name__)
@@ -80,6 +79,16 @@ lastExperiment = None
 generatedFilenames = []
 
 
+class ExperimentCancelled(Exception):
+    """Raised when an experiment needs a confirmation that was refused."""
+
+
+def _refuseConfirmation(message):
+    # Default confirmation policy for experiments run without a GUI: never
+    # guess what the user would want, fail loudly instead.
+    raise ExperimentCancelled(message)
+
+
 def isRunning():
     """Is an experiment running?"""
     if lastExperiment is None:
@@ -88,17 +97,24 @@ def isRunning():
         return lastExperiment.is_running()
 
 
-## This class is the root class for generating and running experiments.
-
-
 # You should make a subclass of this class to implement a specific experiment
 # type.
 class Experiment:
-    ## This constructor accepts certain parameters that will be shared
-    # by all experiment types.
+    # Base class for running one acquisition.
+    #
+    # An `Experiment` is created with fully resolved values (absolute Z
+    # position, final save path), turns them into an action table and runs it
+    # on the hardware. It is single-use. Subclasses, such as
+    # `cockpit.experiment.zStack.ZStackExperiment`, define the action table.
+    #
+    # To describe an experiment that can be run more than once, or at several
+    # stage sites, use `cockpit.experiment.experimentSpecs.ExperimentSpec` and
+    # `cockpit.experiment.experimentSpecs.MultiSiteSpec`; they create
+    # `Experiment` instances when run. Multi-site experiments are run by
+    # `cockpit.experiment.multiSiteRunner.MultiSiteRunner`.
+    #
     # \param numReps Number of repetitions of the experiment to perform.
     # \param repDuration Amount of time to spend on each repetition, or
-
     #        0 to spend as little as possible. In seconds.
     # \param zPositioner StagePositioner handler to use to move in Z.
     # \param altBottom Altitude of the stage at the bottom of the stack.
@@ -147,6 +163,9 @@ class Experiment:
         self.savePath = savePath
 
         self.runThread = None
+        self.cleanupThread = None
+        ## Callable(message) -> bool used to ask for confirmation.  Set by run.
+        self.confirm = _refuseConfirmation
 
         # Check for save paths that don't actually have a final filename
         # (i.e. just point to a directory); those aren't valid.
@@ -204,11 +223,17 @@ class Experiment:
 
     ## Run the experiment. We spin off the actual execution and cleanup
     # into separate threads.
-    def run(self):
-        # Returns True to close config dialog box, False or None otherwise.
+    # \param confirm Callable taking a message and returning True if the
+    #        experiment should proceed. The GUI passes
+    #        guiUtils.getUserPermission. If None, any situation requiring
+    #        confirmation raises ExperimentCancelled.
+    def run(self, confirm=None):
+        # Returns True if the experiment was started, False otherwise.
+        if confirm is not None:
+            self.confirm = confirm
         # Check if the user is set to save to an already-existing file.
         if self.savePath and os.path.exists(self.savePath):
-            if not guiUtils.getUserPermission(
+            if not self.confirm(
                 ("The file:\n%s\nalready exists. " % self.savePath)
                 + "Are you sure you want to overwrite it?"
             ):
@@ -248,7 +273,7 @@ class Experiment:
                 "\n    'OK' to run repeats as fast as possible;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not guiUtils.getUserPermission(warning):
+            if not self.confirm(warning):
                 return False
             # set repDuration to the last table action
             self.repDuration = float(self.table.lastActionTime) / 1000.0
@@ -314,16 +339,25 @@ class Experiment:
                 )
 
             generatedFilenames.append(saver.getFilenames())
+            saveThread = saver.saveThread
 
         self.runThread.start()
 
-        cleanup_thread = threading.Thread(
+        self.cleanupThread = threading.Thread(
             target=self.cleanup,
-            args=[self.runThread, saver.saveThread],
+            args=[self.runThread, saveThread],
             name="Experiment-cleanup",
         )
-        cleanup_thread.start()
+        self.cleanupThread.start()
         return True
+
+    ## Block until the experiment, including saving and cleanup, has
+    # finished. Return True if it finished, False on timeout.
+    def wait(self, timeout=None):
+        if self.cleanupThread is None:
+            return True
+        self.cleanupThread.join(timeout)
+        return not self.cleanupThread.is_alive()
 
     ## Create an ActionTable by calling self.generateActions, and give our
     # Devices a chance to sign off on it.
@@ -352,8 +386,7 @@ class Experiment:
             cockpit.interfaces.stageMover.mover.curHandlerIndex
             < len(depot.getSortedStageMovers()[2]) - 1
         ):
-            wx.MessageBox("Wrong axis mover selected.")
-            raise Exception("Wrong axis mover selected.")
+            raise RuntimeError("Wrong axis mover selected.")
         # Prepare our position.
         cockpit.interfaces.stageMover.goToZ(self.altBottom, shouldBlock=True)
         self.zStart = cockpit.interfaces.stageMover.getAllPositions()[-1][-1]
@@ -395,6 +428,7 @@ class Experiment:
             curIndex = 0
             shouldStop = False
             # Need to track delay introduced by dropping back to software timing.
+            delay = 0.0
             delay = 0.0
             while curIndex < len(self.table):
                 if curIndex > 0:
@@ -509,6 +543,7 @@ class Experiment:
                 "Waiting for saving to complete",
             )
             saveThread.join()
+        events.unsubscribe(events.USER_ABORT, self.onAbort)
         for handler in self.allHandlers:
             handler.cleanupAfterExperiment()
         events.publish(events.CLEANUP_AFTER_EXPERIMENT)

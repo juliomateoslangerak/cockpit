@@ -150,6 +150,8 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
     """
     if array.dtype == np.uint16:
         img = array.astype(np.float32) / 65535.0
+    elif array.dtype == np.uint8:
+        img = array.astype(np.float32) / 255.0
     else:
         img = array.astype(np.float32)
 
@@ -221,8 +223,8 @@ def find_nuclei(
     centers = []
     for coord in details["coord"]:
         # Stardist swaps dimensions
-        x0, x1 = int(np.floor(coord[1].min())) - edge, int(np.ceil(coord[1].max())) + edge
-        y0, y1 = int(np.floor(coord[0].min())) - edge, int(np.ceil(coord[0].max())) + edge
+        x0, x1 = int(np.floor(coord[0].min())) - edge, int(np.ceil(coord[0].max())) + edge
+        y0, y1 = int(np.floor(coord[1].min())) - edge, int(np.ceil(coord[1].max())) + edge
         x_center = x0 + (x1 - x0) // 2
         y_center = y0 + (y1 - y0) // 2
         # skip nuclei touching the image border
@@ -296,9 +298,10 @@ class NucleiStageFinder:
             # loop over centers found in image
             for crop, center in zip(crops, centers):
                 # covert pos to microns and add stage pos.
+                # TODO: check axis logic
                 nucleus_abs_pos = (
-                    curr_stage_pos[0] + (acquired_image.shape[0] / 2 - center[0]) * self.pixel_size,
-                    curr_stage_pos[1] + (acquired_image.shape[1] / 2 - center[1]) * self.pixel_size
+                    curr_stage_pos[0] + (acquired_image.shape[1] / 2 - center[1]) * self.pixel_size,
+                    curr_stage_pos[1] + (acquired_image.shape[0] / 2 - center[0]) * self.pixel_size
                 )
 
                 site_color, phase = predict_nucleus(crop, self.ccc_model, self.ccc_mean_std)

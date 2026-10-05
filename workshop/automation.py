@@ -343,6 +343,8 @@ class NucleiStageFinder:
         if (len(stageMover.sitesInGroup(self.stage_class)) >= self.max_sites or
                 self.scan_start_time + self.timeout_seconds > datetime.datetime.now()):
             self.unsubscribe()
+            if mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
+                mosaic_window.toggleMosaic()
 
     def unsubscribe(self):
         events.unsubscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
@@ -363,30 +365,31 @@ class NucleiStageFinder:
 
 
     def run_experiment(self):
-        mosaic_window.toggleMosaic()
+        if self.scan_start_location is None:
+            self.scan_start_location = stageMover.getPosition()
         if cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog is None:
             raise Exception("Experiment dialog was not configured.")
         if self.experiment_specs is None:
             self.experiment_specs = cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog.panel.getExperimentSpec()
-        sites = stageMover.sitesInGroup(
-            self.stage_class
-        )[:self.max_sites]
-        multi_site_spec = experimentSpecs.MultiSiteSpec(
-            siteExperiment = self.experiment_specs,
-            sites = sites,
-            numCycles = 5,
-            cycleDurations = [10],
-            delayBeforeStarting = 0,
-            delayBeforeImaging = 0,
-            optimizeOrder = False,
-            lightFrequencies = None,
-        )
+        sites = [s.uniqueID for s in stageMover.getAllSites()]
+        if sites:
+            multi_site_spec = experimentSpecs.MultiSiteSpec(
+                siteExperiment = self.experiment_specs,
+                sites = sites,
+                numCycles = 5,
+                cycleDurations = [10],
+                delayBeforeStarting = 0,
+                delayBeforeImaging = 0,
+                optimizeOrder = False,
+                lightFrequencies = None,
+            )
 
-        print(f"Imaging sites: {sites}")
-        multi_site_spec.sites = sites
-        runner = multiSiteRunner.MultiSiteRunner(multi_site_spec)
-        runner.run(confirm=lambda: True)
-        runner.wait()
+            print(f"Imaging sites: {sites}")
+            multi_site_spec.sites = sites
+            runner = multiSiteRunner.MultiSiteRunner(multi_site_spec)
+            runner.run(confirm=lambda x: True)
+            runner.wait()
+
         stageMover.deleteAllSites()
         stageMover.goTo(self.scan_start_location)
 
@@ -395,9 +398,9 @@ class NucleiStageFinder:
             print("Running scan")
             self.run_scan()
 
-            while mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
-                print("Waiting for mosaic thread to finish")
-                time.sleep(1)
+            # while mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
+            #     print("Waiting for mosaic thread to finish")
+            time.sleep(10)
 
             print("Mosaic thread is not alive, running experiment")
             self.run_experiment()

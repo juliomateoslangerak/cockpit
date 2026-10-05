@@ -341,7 +341,7 @@ class NucleiStageFinder:
                 )
         # print(f"Found {len(stageMover.sitesInGroup(self.stage_class))} sites")
         if (len(stageMover.sitesInGroup(self.stage_class)) >= self.max_sites or
-                self.scan_start_time + self.timeout_seconds > datetime.datetime.now()):
+                self.scan_start_time + self.timeout_seconds < datetime.datetime.now()):
             self.unsubscribe()
             if mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
                 mosaic_window.toggleMosaic()

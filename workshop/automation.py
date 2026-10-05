@@ -305,7 +305,6 @@ class NucleiStageFinder:
         events.subscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
 
     ## Receive a new image and process it to find nuclei
-    # @cockpit.util.threads.callInNewThread
     def on_image(self, acquired_image, *args):
         curr_stage_pos = stageMover.getPosition()
 
@@ -363,7 +362,6 @@ class NucleiStageFinder:
         self.subscribe()
         mosaic_window.toggleMosaic()
 
-
     def run_experiment(self):
         if self.scan_start_location is None:
             self.scan_start_location = stageMover.getPosition()
@@ -394,6 +392,7 @@ class NucleiStageFinder:
         stageMover.deleteAllSites()
         stageMover.goTo(self.scan_start_location)
 
+    @cockpit.util.threads.callInNewThread
     def run_smart(self, nr_of_iterations=5):
         for i in range(nr_of_iterations):
             print("Running scan")
@@ -401,7 +400,7 @@ class NucleiStageFinder:
 
             # while mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
             #     print("Waiting for mosaic thread to finish")
-            time.sleep(10)
+            time.sleep(5)
 
             print("Mosaic thread is not alive, running experiment")
             self.run_experiment()

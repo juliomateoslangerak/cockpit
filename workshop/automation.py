@@ -369,8 +369,8 @@ class NucleiStageFinder:
             raise Exception("Experiment dialog was not configured.")
 
         self.experiment_specs = cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog.panel.getExperimentSpec()
-        all_sites = stageMover.getAllSites()
-        sites = [s.uniqueID for s in all_sites[:min(len(all_sites), self.max_sites)]]
+        all_sites = stageMover.sitesInGroup(self.stage_class)
+        sites = [s for s in all_sites[:min(len(all_sites), self.max_sites)]]
         if sites:
             multi_site_spec = experimentSpecs.MultiSiteSpec(
                 siteExperiment = self.experiment_specs,

@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 # Short example script of attaching to cockpit to find nuclei in DAPI images.
 # Copyright Ian Dobbie, Julio Mateos Langerak 2021
+import datetime
 import json
 import pathlib
+import time
 
 import wx
 
@@ -17,13 +19,27 @@ import albumentations
 
 # some imports to get at cockpit functions
 from cockpit import depot, events
+from cockpit.gui.dialogs.experiment import multiSiteExperiment
+from cockpit.experiment import multiSiteRunner, experimentSpecs
 import cockpit.util.threads
 from cockpit.interfaces import stageMover
 
+mosaic_window = next(
+    (
+        win
+        for win in wx.GetTopLevelWindows()
+        if win.GetTitle() == "Mosaic view"
+    ),
+    None,
+)
+if mosaic_window is None:
+    raise ValueError("No mosaic window open. Please open a mosaic window.")
 
 HUGGINGFACE_REPO = "thomas-bonte/cell_cycle_classification"
-MODEL_SUBFOLDER = "20241101-055937-4998324"
-MODEL_FILENAME = "early_stopping_cycle_classification.pt"
+# MODEL_SUBFOLDER = "20241101-055937-4998324"
+MODEL_SUBFOLDER = "20261001-112625-local"
+# MODEL_FILENAME = "early_stopping_cycle_classification.pt"
+MODEL_FILENAME = "early_stopping_fucci_vae.pt"
 MEAN_STD_FILENAME = "mean_std.json"
 
 IN_CHANNELS = 1       # 1 DAPI channel × 5 z-slices
@@ -158,12 +174,12 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
     img = np.moveaxis(img, 0, -1)  # (H, W, Z) — albumentations expects HWC
 
     transform = albumentations.Compose([
-        albumentations.Normalize(
-            mean=mean_std["mean"],
-            std=mean_std["std"],
-            max_pixel_value=1.0,
-            p=1.0,
-        ),
+        # albumentations.Normalize(
+        #     mean=mean_std["mean"],
+        #     std=mean_std["std"],
+        #     max_pixel_value=1.0,
+        #     p=1.0,
+        # ),
         albumentations.PadIfNeeded(
             min_height=DATA_SET_SIZE,
             min_width=DATA_SET_SIZE,
@@ -176,9 +192,8 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
 
     img = transform(image=img)["image"]  # (INPUT_SIZE, INPUT_SIZE, Z)
     # img = np.clip(img, 0.0, 1.0)
-    img = np.repeat(img[:, :, np.newaxis], 5, axis=-1)
-
-    tensor = torch.from_numpy(img).permute(2, 0, 1).float()  # (Z, H, W)
+    img = np.repeat(img[:, :, np.newaxis], repeats=IN_CHANNELS, axis=-1)
+    tensor = torch.from_numpy(img).permute(2, 0, 1).float()   # (Z, H, W)
     return tensor.unsqueeze(0)                                # (1, Z, H, W)
 
 
@@ -273,14 +288,20 @@ class NucleiStageFinder:
     def __init__(self, *args, **kwargs):
         # useful values form cockpit objects
         self.pixel_size = wx.GetApp().Objectives.GetPixelSize()
-        self.site_size = 20
+        self.site_size = 50
         self.camera = depot.getDeviceWithName("camera")
         self.stardist_model = load_stardist_model()
         self.ccc_model, self.ccc_mean_std = load_ccc_model()
+        self.experiment_specs = None
+        self.stage_class = "S"
+        self.max_sites = 3
+        self.scan_start_time = None
+        self.scan_start_location = None
+        self.timeout_seconds = datetime.timedelta(seconds=10)
 
-    # start finding Nuclei in images.
-    def start(self):
+    def subscribe(self):
         # subscribe to new image event and call onImage
+        self.scan_start_time = datetime.datetime.now()
         events.subscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
 
     ## Receive a new image and process it to find nuclei
@@ -305,7 +326,7 @@ class NucleiStageFinder:
                 )
 
                 site_color, phase = predict_nucleus(crop, self.ccc_model, self.ccc_mean_std)
-                print(f"at pos: {nucleus_abs_pos}, phase: {phase}")
+                # print(f"at pos: {nucleus_abs_pos}, phase: {phase}")
 
                 # append Z positon to get xyz pos.
                 site_pos = [nucleus_abs_pos[0], nucleus_abs_pos[1], curr_stage_pos[2]]
@@ -318,7 +339,65 @@ class NucleiStageFinder:
                         size=self.site_size
                     )
                 )
+        # print(f"Found {len(stageMover.sitesInGroup(self.stage_class))} sites")
+        if (len(stageMover.sitesInGroup(self.stage_class)) >= self.max_sites or
+                self.scan_start_time + self.timeout_seconds > datetime.datetime.now()):
+            self.unsubscribe()
 
-    # stop finding Nuclei in images.
-    def stop(self):
+    def unsubscribe(self):
         events.unsubscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
+
+    def run_scan(self, max_sites = None, timeout_seconds = None):
+        if max_sites is not None:
+            self.max_sites = max_sites
+        if timeout_seconds is not None:
+            self.timeout_seconds = timeout_seconds
+        if self.scan_start_location is None:
+            self.scan_start_location = stageMover.getPosition()
+        stageMover.goTo(self.scan_start_location)
+
+        stageMover.deleteAllSites()
+
+        self.subscribe()
+        mosaic_window.toggleMosaic()
+
+
+    def run_experiment(self):
+        mosaic_window.toggleMosaic()
+        if cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog is None:
+            raise Exception("Experiment dialog was not configured.")
+        if self.experiment_specs is None:
+            self.experiment_specs = cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog.panel.getExperimentSpec()
+        sites = stageMover.sitesInGroup(
+            self.stage_class
+        )[:self.max_sites]
+        multi_site_spec = experimentSpecs.MultiSiteSpec(
+            siteExperiment = self.experiment_specs,
+            sites = sites,
+            numCycles = 5,
+            cycleDurations = [10],
+            delayBeforeStarting = 0,
+            delayBeforeImaging = 0,
+            optimizeOrder = False,
+            lightFrequencies = None,
+        )
+
+        print(f"Imaging sites: {sites}")
+        multi_site_spec.sites = sites
+        runner = multiSiteRunner.MultiSiteRunner(multi_site_spec)
+        runner.run(confirm=lambda: True)
+        runner.wait()
+        stageMover.deleteAllSites()
+        stageMover.goTo(self.scan_start_location)
+
+    def run_smart(self, nr_of_iterations=5):
+        for i in range(nr_of_iterations):
+            print("Running scan")
+            self.run_scan()
+
+            while mosaic_window.mosaicThread is not None and mosaic_window.mosaicThread.is_alive():
+                print("Waiting for mosaic thread to finish")
+                time.sleep(1)
+
+            print("Mosaic thread is not alive, running experiment")
+            self.run_experiment()

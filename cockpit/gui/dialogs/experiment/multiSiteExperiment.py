@@ -372,11 +372,11 @@ class MultiSiteExperimentDialog(wx.Dialog):
     # telling the user why, if the settings are unusable.
     def getMultiSiteSpec(self):
         sites, frequencies = self.sitesPanel.getSitesList()
-        if not sites:
-            self.showError(
-                "You must select sites before running the experiment."
-            )
-            return None
+        # if not sites:
+        #     self.showError(
+        #         "You must select sites before running the experiment."
+        #     )
+        #     return None
         try:
             numCycles = int(self.numCycles.GetValue())
             cycleDurations = [
@@ -423,11 +423,11 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 and self.shouldPowerDownWhenDone.GetValue()
             ),
         )
-        try:
-            spec.sanityCheck()
-        except ValueError as e:
-            self.showError("Experiment cancelled:\n\n%s" % e)
-            return None
+        # try:
+        #     spec.sanityCheck()
+        # except ValueError as e:
+        #     self.showError("Experiment cancelled:\n\n%s" % e)
+        #     return None
         return spec
 
     ## Start the experiment. It runs in a background thread so the user can

@@ -498,7 +498,6 @@ def deleteAllSites():
     uniqueSiteIndex = 0
 
 
-
 ## Retrieve the sites as a list.
 def getAllSites() -> typing.List[int]:
     return list(mover.idToSite.values())

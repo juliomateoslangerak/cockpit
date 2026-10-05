@@ -367,7 +367,7 @@ class NucleiStageFinder:
         if cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog is None:
             raise Exception("Experiment dialog was not configured.")
         if self.experiment_specs is None:
-            self.experiment_specs = cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog.getSingleSiteSpec()
+            self.experiment_specs = cockpit.gui.dialogs.experiment.singleSiteExperiment.dialog.panel.getExperimentSpec()
         sites = stageMover.sitesInGroup(
             self.stage_class
         )[:self.max_sites]

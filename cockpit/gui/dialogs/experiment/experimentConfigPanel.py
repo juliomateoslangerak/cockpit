@@ -621,10 +621,10 @@ class ExperimentConfigPanel(wx.Panel):
                     and self.lightExposureTimes[i].GetValue()
                 )
             ]
-            if not lightTimePairs and not guiUtils.getUserPermission(
-                "No enabled light has a define exposure time. Are you sure you want to continue?"
-            ):
-                return None
+            # if not lightTimePairs and not guiUtils.getUserPermission(
+            #     "No enabled light has a define exposure time. Are you sure you want to continue?"
+            # ):
+            #     return None
 
             exposureSettings = [(cameras, lightTimePairs)]
 

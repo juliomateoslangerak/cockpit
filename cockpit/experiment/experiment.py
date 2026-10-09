@@ -467,6 +467,8 @@ class Experiment:
                         fn = lambda: h.callbacks["soft_trigger"]()
                     elif h.device_type == depot.STAGE_POSITIONER:
                         fn = lambda: h.move_absolute(action)
+                    elif h.device_type == depot.LIGHT_TOGGLE:
+                        fn = lambda: h.set_enabled(action)
 
                     if fn is None:
                         raise RuntimeError(

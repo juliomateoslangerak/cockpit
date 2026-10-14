@@ -76,17 +76,17 @@ class CockpitServer(device.Device):
     def __init__(self, name, config={}):
         super().__init__(name, config)
         ## IP address of the cockpit computer.
-        if not (hasattr(self, "ipAddress")):
-            self.ipAddress = "127.0.0.1"
+        if not (hasattr(self, "ip_address")):
+            self.ip_address = "127.0.0.1"
         ## Name used to represent us to the outside world.
         self.name = "mui"
         ## Auto-incrementing port ID.
-        self.uniquePortID = 7700
+        self.unique_port_id = 7700
         ## Maps registered functions to the ServerDaemon instances
         # used to serve them.
-        self.funcToDaemon = {}
+        self.func_to_daemon = {}
 
-    def getHandlers(self):
+    def get_handlers(self):
         return [
             cockpit.handlers.server.ServerHandler(
                 "Cockpit server",
@@ -95,26 +95,28 @@ class CockpitServer(device.Device):
             )
         ]
 
-    ## Register a new function. Create a daemon to listen to calls
-    # on the appropriate port; those calls will be forwarded to
-    # the registered function. Return a URI used to connect to that
-    # daemon from outside.
-    def register(self, func, localIP=None):
-        self.uniquePortID += 1
-        ipAddress = self.ipAddress
-        if localIP is not None:
-            # Use the alternate address instead.
-            ipAddress = localIP
-        daemon = ServerDaemon(self.name, func, self.uniquePortID, ipAddress)
-        self.funcToDaemon[func] = daemon
-        daemon.serve()
-        return "PYRO:%s@%s:%d" % (self.name, ipAddress, self.uniquePortID)
+    def register(self, func, local_ip=None):
+        """Register a new function.
 
-    ## Stop a daemon.
+        Create a daemon to listen to calls on the appropriate port; those calls
+        will be forwarded to the registered function. Return a URI used to
+        connect to that daemon from outside.
+        """
+        self.unique_port_id += 1
+        ip_address = self.ip_address
+        if local_ip is not None:
+            # Use the alternate address instead.
+            ip_address = local_ip
+        daemon = ServerDaemon(self.name, func, self.unique_port_id, ip_address)
+        self.func_to_daemon[func] = daemon
+        daemon.serve()
+        return "PYRO:%s@%s:%d" % (self.name, ip_address, self.unique_port_id)
+
     def unregister(self, func):
-        if func in self.funcToDaemon:
-            self.funcToDaemon[func].stop()
-            del self.funcToDaemon[func]
+        """Stop a daemon."""
+        if func in self.func_to_daemon:
+            self.func_to_daemon[func].stop()
+            del self.func_to_daemon[func]
 
 
 class ServerDaemon:
@@ -124,13 +126,13 @@ class ServerDaemon:
         self.daemon = Pyro4.Daemon(port=port, host=host)
         self.daemon.register(self, name)
 
-    ## Handle function calls by forwarding them to self.func.
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def serve(self):
+        """Handle function calls by forwarding them to self.func."""
         self.daemon.requestLoop()
 
-    ## Stop the daemon.
     def stop(self):
+        """Stop the daemon."""
         # Per the documentation, these functions must be called
         # in separate threads, or else the process will hang.
         threading.Thread(target=self.daemon.close, name="server-close").start()
@@ -138,11 +140,13 @@ class ServerDaemon:
             target=self.daemon.shutdown, name="server-shutdown"
         ).start()
 
-    ## Receive a function call from outside.
-    # Note that if our caller throws an exception, then we do not propagate
-    # it to the client; the assumption is that it's our fault and there's
-    # nothing the client can do about the failure.
     def receiveData(self, *args):
+        """Receive a function call from outside.
+
+        Note that if our caller throws an exception, then we do not propagate
+        it to the client; the assumption is that it's our fault and there's
+        nothing the client can do about the failure.
+        """
         try:
             self.func(*args)
         except Exception as e:

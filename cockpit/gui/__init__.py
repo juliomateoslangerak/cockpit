@@ -29,17 +29,17 @@ Some of subpackages are:
 
 - :mod:`cockpit.gui.camera`: handles the display of images received
   from the camera(s).  It depends heavily on the
-  :mod:`cockpit.gui.imageViewer`.
+  :mod:`cockpit.gui.image_viewer`.
 
 - :mod:`cockpit.gui.dialogs`: contains all dialog subclasses and any
   widgets that are specific to them.  This includes the experiment
   setup dialogs.
 
-- :mod:`cockpit.gui.imageViewer`: generic code for displaying pixel
+- :mod:`cockpit.gui.image_viewer`: generic code for displaying pixel
   arrays to the screen.  It includes a histogram for black/white
   scaling, zoom and drag, etc.
 
-- :mod:`cockpit.gui.macroStage`: the Macro Stage window gives the user
+- :mod:`cockpit.gui.macro_stage`: the Macro stage window gives the user
   a high-level overview of where they are with respect to the motion
   limits of their stage.
 
@@ -52,7 +52,7 @@ And some of its modules are:
 - :mod:`cockpit.gui.fileViewerWindow`: displays MRC files; this code
   is invoked when an MRC file is dragged onto the main window.
 
-- :mod:`cockpit.gui.guiUtils`: utility functions for setting up and
+- :mod:`cockpit.gui.gui_utils`: utility functions for setting up and
   running the UI.
 
 - :mod:`cockpit.gui.keyboard`: binds keyboard shortcuts to windows.
@@ -84,8 +84,8 @@ IMAGES_PATH = str(
 
 
 ## A single event type for all cockpit.events. The original cockpit
-## event data is passed back as CockpitEvent.EventData.
-CockpitEvent, EVT_COCKPIT = wx.lib.newevent.NewEvent()
+## event data is passed back as cockpit_event.EventData.
+cockpit_event, EVT_COCKPIT = wx.lib.newevent.NewEvent()
 
 
 class EvtEmitter(wx.EvtHandler):
@@ -117,28 +117,28 @@ class EvtEmitter(wx.EvtHandler):
         super().__init__()
         self._cockpit_event_type = cockpit_event_type
         cockpit.events.subscribe(
-            self._cockpit_event_type, self._EmitCockpitEvent
+            self._cockpit_event_type, self._emit_cockpit_event
         )
 
         ## Destroy() is not called when the parent is destroyed, see
         ## https://github.com/wxWidgets/Phoenix/issues/630 so we need
         ## to handle this ourselves.
-        parent.Bind(wx.EVT_WINDOW_DESTROY, self._OnParentDestroy)
+        parent.Bind(wx.EVT_WINDOW_DESTROY, self._on_parent_destroy)
 
-    def _EmitCockpitEvent(self, *args, **kwargs):
-        self.AddPendingEvent(CockpitEvent(EventData=args))
+    def _emit_cockpit_event(self, *args, **kwargs):
+        self.AddPendingEvent(cockpit_event(EventData=args))
 
-    def _Unsubscribe(self):
+    def _unsubscribe(self):
         cockpit.events.unsubscribe(
-            self._cockpit_event_type, self._EmitCockpitEvent
+            self._cockpit_event_type, self._emit_cockpit_event
         )
 
-    def _OnParentDestroy(self, event):
-        self._Unsubscribe()
+    def _on_parent_destroy(self, event):
+        self._unsubscribe()
         event.Skip()
 
     def Destroy(self):
-        self._Unsubscribe()
+        self._unsubscribe()
         return super().Destroy()
 
 

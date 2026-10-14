@@ -76,7 +76,7 @@ class Drawer(device.Device):
     def __init__(self, name, config):
         super().__init__(name, config)
 
-    def parseConfig(self, config=None):
+    def parse_config(self, config=None):
         if config is not None:
             self.config = config
         else:
@@ -96,9 +96,9 @@ class Drawer(device.Device):
                 settings.append(DrawerSettings(key, cameras, dyes, wls))
         return settings
 
-    def getHandlers(self):
+    def get_handlers(self):
         # Just return an empty handler for now. It will be configured
         # after the cameras have been initialized.
-        settings = self.parseConfig()
+        settings = self.parse_config()
         self.handler = DrawerHandler("drawer", "miscellaneous", settings, 0)
         return [self.handler]

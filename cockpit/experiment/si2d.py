@@ -18,19 +18,20 @@
 ## You should have received a copy of the GNU General Public License
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
-from cockpit.experiment import structuredIllumination
+from cockpit.experiment import structured_illumination
 
 
 EXPERIMENT_NAME = "2D Structured Illumination"
 
-EXPERIMENT_CLASS = structuredIllumination.SIExperiment
+EXPERIMENT_CLASS = structured_illumination.SIExperiment
 
 
-## Generate the UI for special parameters used by this experiment.
-class ExperimentUI(structuredIllumination.BaseSIMExperimentUI):
+class ExperimentUI(structured_illumination.BaseSIMExperimentUI):
+    """Generate the UI for special parameters used by this experiment."""
+
     _CONFIG_KEY_SUFFIX = "SIExperiment2D"
 
-    def augmentParams(self, params):
-        params = super().augmentParams(params)
-        params["numPhases"] = 3
+    def augment_params(self, params):
+        params = super().augment_params(params)
+        params["num_phases"] = 3
         return params

@@ -22,7 +22,7 @@ import re
 
 from cockpit import depot, events
 from cockpit.devices import device
-from cockpit.handlers.lightSource import LightHandler
+from cockpit.handlers.light_source import LightHandler
 
 
 class ShutterDevice(device.Device):
@@ -36,48 +36,50 @@ class ShutterDevice(device.Device):
         else:
             self.lights = None
 
-    def finalizeInitialization(self):
-        ## Replace lights strings with their handlers.
+    def finalize_initialization(self):
+        """Replace lights strings with their handlers."""
         handlers = []
         for name in self.lights:
-            h = depot.getHandler(name, depot.LIGHT_TOGGLE)
+            h = depot.get_handler(name, depot.LIGHT_TOGGLE)
             if h:
                 handlers.append(h)
         self.lights = handlers
         # Register this shutter with the LightHandler class.
-        LightHandler.addShutter(self, self.lights)
+        LightHandler.add_shutter(self, self.lights)
 
     def initialize(self):
         pass
 
-    def performSubscriptions(self):
+    def perform_subscriptions(self):
         events.subscribe(
-            events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
+            events.PREPARE_FOR_EXPERIMENT, self.on_prepare_for_experiment
         )
         events.subscribe(
-            events.EXPERIMENT_COMPLETE, self.onCleanupAfterExperiment
+            events.EXPERIMENT_COMPLETE, self.on_cleanup_after_experiment
         )
-        events.subscribe(events.LIGHT_SOURCE_ENABLE, self.onLightSourceEnable)
+        events.subscribe(
+            events.LIGHT_SOURCE_ENABLE, self.on_light_source_enable
+        )
 
-    def enableTrigger(self, enable=True):
+    def enable_trigger(self, enable=True):
         if enable:
             print("Shutter %s enabled." % self.name)
         else:
             print("Shutter %s disabled." % self.name)
 
-    def onLightSourceEnable(self, handler, enab):
-        if enab and handler in self.lights:
+    def on_light_source_enable(self, handler, enable):
+        if enable and handler in self.lights:
             # One of our lights has been enabled.  Make sure that we respond to triggers.
-            self.enableTrigger()
-        elif not enab and not any([l.getIsEnabled() for l in self.lights]):
+            self.enable_trigger()
+        elif not enable and not any([l.get_is_enabled() for l in self.lights]):
             # All of our lights are disabled.
-            self.enableTrigger(False)
+            self.enable_trigger(False)
 
-    def setExposureTime(self, t):
+    def set_exposure_time(self, t):
         print("Shutter %s exposure time set to %s." % (self.name, t))
 
-    def onPrepareForExperiment(self, experiment):
-        self.enableTrigger()
+    def on_prepare_for_experiment(self, experiment):
+        self.enable_trigger()
 
-    def onCleanupAfterExperiment(self):
+    def on_cleanup_after_experiment(self):
         pass

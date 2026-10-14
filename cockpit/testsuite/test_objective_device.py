@@ -55,14 +55,14 @@ class TestObjective(unittest.TestCase):
             "lensid": "10611",
         }
         obj = cockpit.devices.objective.ObjectiveDevice("60x water", config)
-        handlers = obj.getHandlers()
+        handlers = obj.get_handlers()
         self.assertEqual(len(handlers), 1)
         for attr, expected in [
             ("pixel_size", 0.1),
             ("transform", (1, 0, 0)),
             ("offset", (-100, 50, 0)),
             ("colour", (1.0, 0.5, 0.5)),
-            ("lens_ID", 10611),
+            ("lens_id", 10611),
         ]:
             self.assertEqual(getattr(handlers[0], attr), expected)
 

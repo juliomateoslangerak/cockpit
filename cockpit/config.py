@@ -79,15 +79,15 @@ class CockpitConfig(configparser.ConfigParser):
         )
 
     def _mixin_cmd_line_options(self, options):
-        ## Multiple depot config files behave different from cockpit
-        ## config files in that sections with same name are not merged
-        ## or overload one another.  We don't because we believe it to
-        ## be too error prone.  Similarly, we don't want to try read
-        ## default depot files if there's depot files mentioned
-        ## anywhere else.
-        ## 1. If specified via command line, then read only those.
-        ## 2. If defined in any of the cockpit config files, read only those.
-        ## 3. Otherwise, read and merge the system and user default.
+        """Multiple depot config files behave different from cockpit config
+        files in that sections with same name are not merged or overload one
+        another. We don't because we believe it to be too error prone.
+        Similarly, we don't want to try read default depot files if there's
+        depot files mentioned anywhere else.
+        1. If specified via command line, then read only those.
+        2. If defined in any of the cockpit config files, read only those.
+        3. Otherwise, read and merge the system and user default.
+        """
         if options.depot_files:
             self._set_depot_files(options.depot_files)
         elif self.has_option("global", "depot-files"):
@@ -113,7 +113,7 @@ class CockpitConfig(configparser.ConfigParser):
 
 
 class DepotConfig(configparser.ConfigParser):
-    """Config for a :class:`DeviceDepot`.
+    """config for a :class:`DeviceDepot`.
 
     Unlike Python's ``ConfigParser``, it will raise an exception if
     there's multiple devices (sections with same name), even if they
@@ -187,7 +187,7 @@ def _default_cockpit_config():
             "dishAltitude": "7570",
             "slideAltitude": "7370",
             "slideTouchdownAltitude": "7900",
-            ## XXX: these two things are used in the touchscreen code
+            ## XXX: these two things are used in the touch_screen code
             ## but they never had a default.
             # 'loadPosition' : '',
             # 'unloadPosition' : '',
@@ -245,11 +245,12 @@ def _default_user_config_dir():
 
 
 def _default_user_config_files(fname):
-    ## In the case of user config, there is always only one directory.
-    ## However, for system config case there may be multiple.  Having
-    ## *_user_config_* return a string and *_system_config_* return a
-    ## list of strings is messy and error prone, so we return a list
-    ## even in the case of *_user_config_*.
+    """In the case of user config, there is always only one directory.
+    However, for system config case there may be multiple. Having
+    *_user_config_* return a string and *_system_config_* return a list of
+    strings is messy and error prone, so we return a list even in the case of
+    *_user_config_*.
+    """
     return [os.path.join(_default_user_config_dir(), fname)]
 
 
@@ -295,6 +296,15 @@ def _parse_paths(paths):
     return [_parse_path(s) for s in paths.split("\n") if s]
 
 
+## Module paths that have been renamed, mapped to their current paths, so
+## that existing depot configs using the old ``type:`` value still load.
+_LEGACY_TYPE_MODULES = {
+    "cockpit.devices.physikInstrumente_M687": (
+        "cockpit.devices.physik_instrumente_m687"
+    ),
+}
+
+
 def _parse_type(full_name):
     """``ConfigParser`` type converter for class fully-qualified names.
 
@@ -313,6 +323,7 @@ def _parse_type(full_name):
         else:
             module_name = "builtins"
 
+    module_name = _LEGACY_TYPE_MODULES.get(module_name, module_name)
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 

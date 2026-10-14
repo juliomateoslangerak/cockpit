@@ -66,32 +66,35 @@ class Objectives(wx.EvtHandler):
         self._handlers = list(handlers)
         self._current = self._handlers[0]
 
-    def GetHandlers(self) -> typing.List[ObjectiveHandler]:
+    def get_handlers(self) -> typing.List[ObjectiveHandler]:
         """:class:`ObjectiveHandler` for all objectives."""
         return self._handlers.copy()
 
-    def GetCurrent(self) -> ObjectiveHandler:
+    def get_current(self) -> ObjectiveHandler:
         """:class:`ObjectiveHandler` for current objective."""
         return self._current
 
-    def GetNames(self) -> typing.List[str]:
+    def get_names(self) -> typing.List[str]:
         """Names for all objectives."""
         return [h.name for h in self._handlers]
 
-    def GetNamesSorted(self) -> typing.List[str]:
+    def get_names_sorted(self) -> typing.List[str]:
         """List of all objective names sorted by magnification."""
 
-        # FIXME: we should not do this.  Instead, objective device and
-        # handlers should have a magnification field (see issue #139).
         def parse_magnification(name):
+            """FIXME: we should not do this.
+
+            Instead, objective device and handlers should have a magnification
+            field (see issue #139).
+            """
             match = re.search(r"^([0-9.])+x", name)
             if match is None:
                 raise Exception("failed to parse magnification from %s" % name)
             return float(match[1])
 
-        return sorted(self.GetNames(), key=parse_magnification)
+        return sorted(self.get_names(), key=parse_magnification)
 
-    def ChangeObjective(self, name: str) -> None:
+    def change_objective(self, name: str) -> None:
         try:
             self._current = next(
                 filter(lambda h: h.name == name, self._handlers)
@@ -105,18 +108,18 @@ class Objectives(wx.EvtHandler):
         # transforms so we need to publish a cockpit event as well.
         cockpit.events.publish(cockpit.events.OBJECTIVE_CHANGE, self._current)
 
-    def GetName(self) -> str:
+    def get_name(self) -> str:
         """Convenience getter for name of current objective."""
         return self._current.name
 
-    def GetPixelSize(self) -> float:
+    def get_pixel_size(self) -> float:
         """Convenience getter for pixel size of current objective."""
         return self._current.pixel_size
 
-    def GetOffset(self) -> typing.Tuple[int, int, int]:
+    def get_offset(self) -> typing.Tuple[int, int, int]:
         """Convenience getter for offset of current objective."""
         return self._current.offset
 
-    def GetColour(self) -> typing.Tuple[float, float, float]:
+    def get_colour(self) -> typing.Tuple[float, float, float]:
         """Convenience getter for colour of current objective."""
         return self._current.colour

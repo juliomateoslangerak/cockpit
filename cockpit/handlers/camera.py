@@ -55,7 +55,7 @@ import cockpit.handlers.imager
 import cockpit.interfaces.imager
 import cockpit.util.colors
 from cockpit import depot, events
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
 ## Available trigger modes for triggering the camera.
@@ -64,194 +64,210 @@ from cockpit.handlers import deviceHandler
 TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT = range(4)
 
 
-## This handler is for cameras, of course. Cameras provide images to the
-# microscope, and are assumed to be usable during experiments.
-class CameraHandler(deviceHandler.DeviceHandler):
-    ## Create the Handler.
-    # callbacks should fill in the following functions:
-    # - setEnabled(name, shouldEnable): Turn the camera "on" or "off".
-    # - getImageSize(name): Return a (width, height) tuple describing the size
-    #   in pixels of the image the camera takes.
-    # - getTimeBetweenExposures(name, isExact): Return the minimum time between
-    #   exposures for this camera, in milliseconds. If isExact is set, returns
-    #   a decimal.Decimal instance.
-    # - setExposureTime(name, time): Change the camera's exposure time to
-    #   the specified value, in milliseconds.
-    # - getExposureTime(name, isExact): Returns the time in milliseconds that
-    #   the camera is set to expose for when triggered. If isExact is set,
-    #   returns a decimal.Decimal instance.
-    # - getShutteringMode(name): Returns if the camera has a global or a rolling
-    #   electronic shuttering mode.
-    # - setROI(name, roi): Change the camera's region of interest to
-    #   the specified region.
-    # - getROI(name): Returns the current region of interest.
-    # - getSensorShape(name): Returns the camera's sensor shape.
-    # - prepareForExperiment(name, experiment): Get the camera ready for an
-    #   experiment.
-    # - Optional: getMinExposureTime(name): returns the minimum exposure time
-    #   the camera is capable of performing, in milliseconds. If not available,
-    #   0ms is used.
-    # \param exposureMode One of TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION.
-    #   The first two are for external-trigger cameras, which may be frame-transfer
-    #   (trigger at end of exposure, and expose continuously) or not
-    #   (trigger at beginning of exposure and expose for a pre-configured duration).
-    #   The last two are for external-exposure cameras,
-    #   which expose for as long as you tell them to, based on the TTL line.
-    # \param minExposureTime Minimum exposure duration, in milliseconds.
-    #   Typically only applicable if doExperimentsExposeContinuously is True.
+class CameraHandler(device.DeviceHandler):
+    r"""This handler is for cameras, of course.
+
+    Cameras provide images to the microscope, and are assumed to be usable
+    during experiments.
+
+    Callbacks should fill in the following functions:
+    - set_enabled(name, should_enable): Turn the camera "on" or "off".
+    - get_image_size(name): Return a (width, height) tuple describing the size
+      in pixels of the image the camera takes.
+    - get_time_between_exposures(name, is_exact): Return the minimum time between
+      exposures for this camera, in milliseconds. If is_exact is set, returns
+      a decimal.Decimal instance.
+    - set_exposure_time(name, time): Change the camera's exposure time to
+      the specified value, in milliseconds.
+    - get_exposure_time(name, is_exact): Returns the time in milliseconds that
+      the camera is set to expose for when triggered. If is_exact is set,
+      returns a decimal.Decimal instance.
+    - get_shuttering_mode(name): Returns if the camera has a global or a rolling
+      electronic shuttering mode.
+    - set_roi(name, roi): Change the camera's region of interest to
+      the specified region.
+    - get_roi(name): Returns the current region of interest.
+    - get_sensor_shape(name): Returns the camera's sensor shape.
+    - prepare_for_experiment(name, experiment): Get the camera ready for an
+      experiment.
+    - Optional: get_min_exposure_time(name): returns the minimum exposure time
+      the camera is capable of performing, in milliseconds. If not available,
+      0ms is used.
+
+    Args:
+        exposure_mode (int): One of TRIGGER_AFTER, TRIGGER_BEFORE,
+            TRIGGER_DURATION. The first two are for external-trigger cameras,
+            which may be frame-transfer (trigger at end of exposure, and expose
+            continuously) or not (trigger at beginning of exposure and expose
+            for a pre-configured duration). The last two are for
+            external-exposure cameras, which expose for as long as you tell
+            them to, based on the TTL line.
+        min_exposure_time (float): Minimum exposure duration, in milliseconds.
+            Typically only applicable if doExperimentsExposeContinuously is
+            True.
+    """
 
     ## Shortcuts to decorators defined in parent class.
-    reset_cache = deviceHandler.DeviceHandler.reset_cache
-    cached = deviceHandler.DeviceHandler.cached
+    reset_cache = device.DeviceHandler.reset_cache
+    cached = device.DeviceHandler.cached
 
     def __init__(
         self,
         name,
-        groupName,
+        group_name,
         callbacks,
-        exposureMode,
-        trigHandler=None,
-        trigLine=None,
+        exposure_mode,
+        trig_handler=None,
+        trig_line=None,
     ):
         # Note we assume that cameras are eligible for experiments.
-        super().__init__(name, groupName, True, callbacks, depot.CAMERA)
+        super().__init__(name, group_name, True, callbacks, depot.CAMERA)
         ## True if the camera is currently receiving images.
-        self.isEnabled = False
-        self._exposureMode = exposureMode
+        self.is_enabled = False
+        self._exposure_mode = exposure_mode
         self.wavelength = None
         self.dye = None
         # Set up trigger handling.
-        if trigHandler and trigLine:
-            h = trigHandler.registerDigital(self, trigLine)
-            self.triggerNow = h.triggerNow
+        if trig_handler and trig_line:
+            h = trig_handler.register_digital(self, trig_line)
+            self.trigger_now = h.trigger_now
         else:
-            softTrigger = self.callbacks.get("softTrigger", None)
-            self.triggerNow = lambda: softTrigger
-            if softTrigger:
-                depot.addHandler(
+            soft_trigger = self.callbacks.get("soft_trigger", None)
+            self.trigger_now = lambda: soft_trigger
+            if soft_trigger:
+                depot.add_handler(
                     cockpit.handlers.imager.ImagerHandler(
                         "%s imager" % name,
                         "imager",
-                        {"takeImage": softTrigger},
+                        {"take_image": soft_trigger},
                     )
                 )
 
-    def onSaveSettings(self):
-        return self.getIsEnabled()
+    def on_save_settings(self):
+        return self.get_is_enabled()
 
-    def onLoadSettings(self, settings):
+    def on_load_settings(self, settings):
         # Only change state if we need to as this is slow.
-        if self.getIsEnabled() != settings:
-            self.toggleState()
+        if self.get_is_enabled() != settings:
+            self.toggle_state()
 
     @property
     def color(self):
         if self.wavelength is not None:
-            return cockpit.util.colors.wavelengthToColor(self.wavelength, 0.8)
+            return cockpit.util.colors.wavelength_to_color(
+                self.wavelength, 0.8
+            )
         else:
             return (127,) * 3
 
     @property
-    def descriptiveName(self):
+    def descriptive_name(self):
         if self.dye is not None:
             return "%s (%s)" % (self.name, self.dye)
         else:
             return self.name
 
     @property
-    def exposureMode(self):
-        return self._exposureMode
+    def exposure_mode(self):
+        return self._exposure_mode
 
-    @exposureMode.setter
-    def exposureMode(self, triggerType):
+    @exposure_mode.setter
+    def exposure_mode(self, trigger_type):
         """Set exposure mode."""
-        self._exposureMode = triggerType
+        self._exposure_mode = trigger_type
 
-    def updateFilter(self, dye, wavelength=None):
-        ## Update the filter for this camera.
+    def update_filter(self, dye, wavelength=None):
+        """Update the filter for this camera."""
         self.dye = dye
         self.wavelength = wavelength
         events.publish(events.FILTER_CHANGE)
 
-    ## Invoke our callback, and let everyone know that a new camera is online.
-    @cockpit.interfaces.imager.pauseVideo
+    @cockpit.interfaces.imager.pause_video
     @reset_cache
-    def setEnabled(self, shouldEnable=True):
+    def set_enabled(self, should_enable=True):
+        """Invoke our callback, and let everyone know that a new camera is
+        online."""
         try:
-            self.isEnabled = self.callbacks["setEnabled"](
-                self.name, shouldEnable
+            self.is_enabled = self.callbacks["set_enabled"](
+                self.name, should_enable
             )
         except:
-            self.isEnabled = False
+            self.is_enabled = False
             raise
-        if self.isEnabled != shouldEnable:
+        if self.is_enabled != should_enable:
             raise Exception("Problem enabling device with handler %s" % self)
         # Subscribe / unsubscribe to the prepare-for-experiment event.
-        func = [events.unsubscribe, events.subscribe][shouldEnable]
-        func(events.PREPARE_FOR_EXPERIMENT, self.prepareForExperiment)
-        events.publish(events.CAMERA_ENABLE, self, self.isEnabled)
+        func = [events.unsubscribe, events.subscribe][should_enable]
+        func(events.PREPARE_FOR_EXPERIMENT, self.prepare_for_experiment)
+        events.publish(events.CAMERA_ENABLE, self, self.is_enabled)
 
-    ## Return self.isEnabled.
-    def getIsEnabled(self):
-        return self.isEnabled
+    def get_is_enabled(self):
+        """Return self.is_enabled."""
+        return self.is_enabled
 
-    ## Return the size, in pixels, of images we generated.
-    def getImageSize(self):
-        return self.callbacks["getImageSize"](self.name)
+    def get_image_size(self):
+        """Return the size, in pixels, of images we generated."""
+        return self.callbacks["get_image_size"](self.name)
 
-    ## Return the amount of time, in milliseconds, that must pass after
-    # ending one exposure before another can be started.
-    # If isExact is specified, then we return a decimal.Decimal value instead
-    # of a raw floating point value.
     @cached
-    def getTimeBetweenExposures(self, isExact=False):
-        return self.callbacks["getTimeBetweenExposures"](self.name, isExact)
+    def get_time_between_exposures(self, is_exact=False):
+        """Return the amount of time, in milliseconds, that must pass after
+        ending one exposure before another can be started.
 
-    ## Return the minimum allowed exposure time, in milliseconds.
+        If is_exact is specified, then we return a decimal.Decimal value instead
+        of a raw floating point value.
+        """
+        return self.callbacks["get_time_between_exposures"](
+            self.name, is_exact
+        )
+
     @cached
-    def getMinExposureTime(self, isExact=False):
+    def get_min_exposure_time(self, is_exact=False):
+        """Return the minimum allowed exposure time, in milliseconds."""
         val = 0
-        if "getMinExposureTime" in self.callbacks:
-            val = self.callbacks["getMinExposureTime"](self.name)
-        if isExact:
+        if "get_min_exposure_time" in self.callbacks:
+            val = self.callbacks["get_min_exposure_time"](self.name)
+        if is_exact:
             return decimal.Decimal(val)
         return val
 
-    ## Set a new exposure time, in milliseconds.
     @reset_cache
-    def setExposureTime(self, time):
-        return self.callbacks["setExposureTime"](self.name, time)
-
-    ## Return the camera's currently-set exposure time, in milliseconds.
-    # If isExact is specified, then we return a decimal.Decimal value instead
-    # of a raw floating point value.
-    @cached
-    def getExposureTime(self, isExact=False):
-        return self.callbacks["getExposureTime"](self.name, isExact)
+    def set_exposure_time(self, time):
+        """Set a new exposure time, in milliseconds."""
+        return self.callbacks["set_exposure_time"](self.name, time)
 
     @cached
-    def getShutteringMode(self):
-        return self.callbacks["getShutteringMode"](self.name)
+    def get_exposure_time(self, is_exact=False):
+        """Return the camera's currently-set exposure time, in milliseconds.
 
-    ## Do any necessary preparation for the camera to participate in an
+        If is_exact is specified, then we return a decimal.Decimal value instead
+        of a raw floating point value.
+        """
+        return self.callbacks["get_exposure_time"](self.name, is_exact)
+
+    @cached
+    def get_shuttering_mode(self):
+        return self.callbacks["get_shuttering_mode"](self.name)
+
     @reset_cache
-    def setROI(self, roi):
-        return self.callbacks["setROI"](self.name, roi)
+    def set_roi(self, roi):
+        """Do any necessary preparation for the camera to participate in an."""
+        return self.callbacks["set_roi"](self.name, roi)
 
     @cached
-    def getROI(self):
-        return self.callbacks["getROI"](self.name)
+    def get_roi(self):
+        return self.callbacks["get_roi"](self.name)
 
     @cached
-    def getSensorShape(self):
-        return self.callbacks["getSensorShape"](self.name)
+    def get_sensor_shape(self):
+        return self.callbacks["get_sensor_shape"](self.name)
 
-    ## Do any necessary preparation for the camera to participate in an
-    # experiment.
     @reset_cache
-    def prepareForExperiment(self, experiment):
-        return self.callbacks["prepareForExperiment"](self.name, experiment)
+    def prepare_for_experiment(self, experiment):
+        """Do any necessary preparation for the camera to participate in an
+        experiment."""
+        return self.callbacks["prepare_for_experiment"](self.name, experiment)
 
-    ## Simple getter.
-    def getExposureMode(self):
-        return self.exposureMode
+    def get_exposure_mode(self):
+        """Simple getter."""
+        return self.exposure_mode

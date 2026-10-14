@@ -53,10 +53,10 @@
 import wx
 
 import cockpit.gui.keyboard
-import cockpit.gui.viewFileDropTarget
+import cockpit.gui.view_file_drop_target
 import cockpit.util.threads
 from cockpit import depot, events
-from cockpit.gui.camera import viewPanel
+from cockpit.gui.camera import view_panel
 
 
 class CamerasWindow(wx.Frame):
@@ -73,8 +73,8 @@ class CamerasWindow(wx.Frame):
     def __init__(self, parent):
         super().__init__(parent, title="Camera views")
 
-        self.numCameras = len(
-            wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+        self.num_cameras = len(
+            wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
         )
 
         self.panel = wx.Panel(self)
@@ -84,40 +84,44 @@ class CamerasWindow(wx.Frame):
         self.sizer = wx.FlexGridSizer(2, 5, 5)
         ## List of ViewPanels we contain.
         self.views = []
-        for i in range(self.numCameras):
-            view = viewPanel.ViewPanel(self.panel)
+        for i in range(self.num_cameras):
+            view = view_panel.ViewPanel(self.panel)
             self.views.append(view)
 
-        events.subscribe(events.CAMERA_ENABLE, self.onCameraEnableEvent)
-        events.subscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
-        cockpit.gui.keyboard.setKeyboardHandlers(self)
+        events.subscribe(events.CAMERA_ENABLE, self.on_camera_enable_event)
+        events.subscribe(events.IMAGE_PIXEL_INFO, self.on_image_pixel_info)
+        cockpit.gui.keyboard.set_keyboard_handlers(self)
 
-        self.resetGrid()
+        self.reset_grid()
         self.SetDropTarget(
-            cockpit.gui.viewFileDropTarget.ViewFileDropTarget(self)
+            cockpit.gui.view_file_drop_target.ViewFileDropTarget(self)
         )
 
-    @cockpit.util.threads.callInMainThread
-    def onCameraEnableEvent(self, camera, enabled):
-        activeViews = [view for view in self.views if view.getIsEnabled()]
-        if enabled and camera not in [view.curCamera for view in activeViews]:
-            inactiveViews = set(self.views).difference(activeViews)
-            inactiveViews.pop().enable(camera)
+    @cockpit.util.threads.call_in_main_thread
+    def on_camera_enable_event(self, camera, enabled):
+        active_views = [view for view in self.views if view.get_is_enabled()]
+        if enabled and camera not in [
+            view.cur_camera for view in active_views
+        ]:
+            inactive_views = set(self.views).difference(active_views)
+            inactive_views.pop().enable(camera)
         elif not (enabled):
-            for view in activeViews:
-                if view.curCamera is camera:
+            for view in active_views:
+                if view.cur_camera is camera:
                     view.disable()
-        self.resetGrid()
+        self.reset_grid()
 
-    # When cameras are enabled/disabled, we resize the UI to suit. We
-    # want there to always be at least one unused ViewPanel so the
-    # window itself is visible but otherwise we keep only the enabled
-    # cameras to conserve screen real estate.
-    def resetGrid(self):
+    def reset_grid(self):
+        """When cameras are enabled/disabled, we resize the UI to suit.
+
+        We want there to always be at least one unused ViewPanel so the window
+        itself is visible but otherwise we keep only the enabled cameras to
+        conserve screen real estate.
+        """
         viewsToShow = []
         for view in self.views:
             view.Hide()
-            if view.getIsEnabled():
+            if view.get_is_enabled():
                 viewsToShow.append(view)
         # If there are no active views then display one empty panel.
         if not viewsToShow:
@@ -132,46 +136,46 @@ class CamerasWindow(wx.Frame):
         self.panel.SetSizerAndFit(self.sizer)
         self.SetClientSize(self.panel.GetSize())
 
-    ## Received information on the pixel under the mouse; update our title
-    # to include that information.
-    def onImagePixelInfo(self, coords, value):
+    def on_image_pixel_info(self, coords, value):
+        """Received information on the pixel under the mouse; update our title
+        to include that information."""
         self.SetTitle(
             "Camera views    (%d, %d): %d" % (coords[0], coords[1], value)
         )
 
-    ## Rescale each camera view.
-    def rescaleViews(self):
+    def rescale_views(self):
+        """Rescale each camera view."""
         for view in self.views:
-            if view.getIsEnabled():
-                view.canvas.resetPixelScale()
+            if view.get_is_enabled():
+                view.canvas.reset_pixel_scale()
 
 
 ## Global window singleton.
 window = None
 
 
-def makeWindow(parent):
+def make_window(parent):
     global window
     window = CamerasWindow(parent)
 
 
-## Simple passthrough.
-def rescaleViews():
+def rescale_views():
+    """Simple passthrough."""
     window.rescaleViews()
 
 
-## Retrieve the black- and white-points for a given camera's display.
-def getCameraScaling(camera):
+def get_camera_scaling(camera):
+    """Retrieve the black- and white-points for a given camera's display."""
     for view in window.views:
-        if view.curCamera is camera:
-            return view.getScaling()
+        if view.cur_camera is camera:
+            return view.get_scaling()
     raise RuntimeError(
         "Tried to get camera scalings for non-active camera [%s]" % camera.name
     )
 
 
-## Retrieve the image currently displayed by the specified camera.
-def getImageForCamera(camera):
+def get_image_for_camera(camera):
+    """Retrieve the image currently displayed by the specified camera."""
     for view in window.views:
-        if view.curCamera is camera:
-            return view.getPixelData()
+        if view.cur_camera is camera:
+            return view.get_pixel_data()

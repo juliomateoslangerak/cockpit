@@ -24,11 +24,11 @@ import Pyro4
 import wx
 
 import cockpit.gui.device
-import cockpit.handlers.filterHandler
+import cockpit.handlers.filter
 from cockpit import depot, events
-from cockpit.devices import microscopeDevice
-from cockpit.handlers.deviceHandler import STATES
-from cockpit.handlers.filterHandler import Filter, FilterHandler
+from cockpit.devices import microscope_device
+from cockpit.handlers.device import STATES
+from cockpit.handlers.filter import Filter, FilterHandler
 
 
 class ClaritySlideHandler(FilterHandler):
@@ -36,21 +36,21 @@ class ClaritySlideHandler(FilterHandler):
         """Subclass FilterHandler for Clarity slider position"""
         # This gives us a filter-like UI for the slider.
         super().__init__(*args, **kwargs)
-        # Over-ride the deviceType so that this handler is not added
+        # Over-ride the device_type so that this handler is not added
         # to the filters panel.
         self.deviceType = depot.GENERIC_DEVICE
 
-    def makeUI(self, *args):
+    def make_ui(self, *args):
         # return None to prevent the slide controls being placed in their
         # own panel - the Clarity device draws the UI for this handler.
         return None
 
 
-class Clarity(microscopeDevice.MicroscopeFilter):
+class Clarity(microscope_device.MicroscopeFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def checkStatus(self, event):
+    def check_status(self, event):
         busy = False
         try:
             status = self._proxy.get_status()
@@ -75,27 +75,27 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         for h in self.handlers:
             events.publish(events.DEVICE_STATUS, h, state)
             if state not in [STATES.error, STATES.busy]:
-                h.updateAfterMove()
+                h.update_after_move()
 
-    def setEnabled(self, state):
+    def set_enabled(self, state):
         if state:
             self._proxy.enable()
         else:
             self._proxy.disable()
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
-        super().getHandlers()
+        super().get_handlers()
         h = ClaritySlideHandler(
             self.name + "_slide",
             "clarity",
             False,
             {
-                "setPosition": self.set_slide_position,
-                "getPosition": self._proxy.get_slide_position,
-                "getFilters": self.get_slides_as_filters,
-                "getIsEnabled": self._proxy.get_is_enabled,
-                "setEnabled": self.setEnabled,
+                "set_position": self.set_slide_position,
+                "get_position": self._proxy.get_slide_position,
+                "get_filters": self.get_slides_as_filters,
+                "get_is_enabled": self._proxy.get_is_enabled,
+                "set_enabled": self.set_enabled,
             },
             [],
             [],
@@ -111,7 +111,7 @@ class Clarity(microscopeDevice.MicroscopeFilter):
     def get_slides_as_filters(self):
         return [Filter(k, v) for k, v in self._proxy.get_slides().items()]
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """Draw the Clarity's UI"""
         # Use an outer panel and a subpanel, so that the power button
         # can en/disable all other controls by managing the state of the
@@ -126,23 +126,23 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         panel = wx.Panel(outer)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         # power button
-        powerhandler = next(
+        power_handler = next(
             h for h in self.handlers if isinstance(h, ClaritySlideHandler)
         )
-        enable = cockpit.gui.device.EnableButton(outer, powerhandler)
+        enable = cockpit.gui.device.EnableButton(outer, power_handler)
         enable.SetLabel("enable")
         outer.Sizer.Add(enable, flag=wx.EXPAND)
-        enable.manageStateOf(panel)
+        enable.manage_state_of(panel)
         # Subpanel
         outer.Sizer.Add(panel)
         # slide selector
         panel.Sizer.AddSpacer(4)
         panel.Sizer.Add(wx.StaticText(panel, label="sectioning"))
-        panel.Sizer.Add(powerhandler.makeSelector(panel), flag=wx.EXPAND)
+        panel.Sizer.Add(power_handler.make_selector(panel), flag=wx.EXPAND)
         # # filter selector -- moved to filters panel
         # panel.Sizer.AddSpacer(4)
         # panel.Sizer.Add(wx.StaticText(panel, label='filter'))
-        # filterhandler = next(h for h in self.handlers if h is not powerhandler)
+        # filter_handler = next(h for h in self.handlers if h is not power_handler)
         # panel.Sizer.Add(filterhandler.makeSelector(panel), flag=wx.EXPAND)
         # Additional buttons
         panel.Sizer.AddSpacer(4)
@@ -153,7 +153,7 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         mode_selector = cockpit.gui.device.EnumChoice(panel)
         mode_selector.Set(self.describe_setting("mode")["values"])
         self.buttons["mode"] = mode_selector
-        mode_selector.setOnChoice(partial(self.set_setting, "mode"))
+        mode_selector.set_on_choice(partial(self.set_setting, "mode"))
         panel.Sizer.Add(mode_selector)
         # door status indicator
         cb = wx.CheckBox(panel, wx.ID_ANY, "door open")
@@ -163,14 +163,14 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         # Start a timer to report connection errors.
         self._timer = wx.Timer(panel)
         self._timer.Start(1000)
-        # ensure that we bind the window destry event to stop the timer
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        panel.Bind(wx.EVT_TIMER, self.checkStatus, self._timer)
+        # ensure that we bind the window destroy event to stop the timer
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+        panel.Bind(wx.EVT_TIMER, self.check_status, self._timer)
         panel.Fit()
         self.panel = panel
         return outer
 
-    # ensure that the timer is stopped on window destroy
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        """ensure that the timer is stopped on window destroy."""
         self._timer.Stop()
         event.Skip()

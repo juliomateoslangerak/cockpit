@@ -44,7 +44,7 @@
 # >>> FPGA._deviceInstance.advanceSLM(numSteps)
 # (where numSteps is an integer, the number of times to advance it).
 
-"""Exemple configuration
+"""exemple configuration
 [cRIO]
 type: cockpit.devices.ni_cRIOFPGA.NIcRIO
 ipAddress = 10.6.19.12

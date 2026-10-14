@@ -57,7 +57,7 @@ from cockpit.devices import device
 
 
 def _config_to_transform(tstr):
-    """Desribes a simple transform: (flip LR, flip UD, rotate 90)"""
+    """Describes a simple transform: (flip LR, flip UD, rotate 90)"""
     if tstr:
         return tuple([bool(int(t)) for t in tstr.strip("()").split(",")])
     else:

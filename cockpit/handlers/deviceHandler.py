@@ -193,7 +193,7 @@ class DeviceHandler:
             events.publish(events.DEVICE_STATUS, self, getIsEnabled())
 
     def finalizeInitialization(self):
-        """Do any final initaliaziton actions, now that all devices are set up,
+        """Do any final initialization actions, now that all devices are set up,
         all subscriptions have been made, and all initial publications are done."""
         pass
 

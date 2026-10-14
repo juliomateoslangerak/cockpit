@@ -193,7 +193,7 @@ class MainWindowPanel(wx.Panel):
         # Add filterwheel controls.
         rowSizer.Add(mainPanels.FilterControls(self))
 
-        # Make the UI elements for eveything else.
+        # Make the UI elements for everything else.
         for thing in ignoreThings:
             if thing in otherThings:
                 otherThings.remove(thing)

@@ -78,7 +78,7 @@ ALTITUDE_BUCKET_SIZE = 3
 ## Amount, in microns, of padding to add on either end of the mini-histogram
 MINI_HISTOGRAM_PADDING = 1
 
-# Size of secondar histogram if no fine motion stage in microns
+# Size of secondary histogram if no fine motion stage in microns
 SECONDARY_HISTOGRAM_SIZE = 50
 
 
@@ -269,7 +269,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         """Generate the larger of the two histograms."""
         minorLimits = cockpit.interfaces.stageMover.getIndividualSoftLimits(2)
         # Add the max range of motion of the first fine-motion controller.
-        # And subtract the lower limit if minor controller exisits.
+        # And subtract the lower limit if minor controller exists.
         if len(minorLimits) > 1:
             minorPos = cockpit.interfaces.stageMover.getAllPositions()[1][2]
             histogramMin = (
@@ -683,7 +683,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             canvasLoc = self.mapClickToCanvas(clickLoc)
             # Map the click location to one of our histograms or to the main scale.
             scale = (self.minY, self.maxY)
-            # if we are on the first hist then use the coarest mover if not
+            # if we are on the first hist then use the coarsest mover if not
             # then use the currently selected one.
             originalMover = cockpit.interfaces.stageMover.mover.curHandlerIndex
             cockpit.interfaces.stageMover.mover.curHandlerIndex = 0

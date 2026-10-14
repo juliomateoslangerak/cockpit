@@ -40,7 +40,7 @@ Cockpit device itself which then presumably talks to the hardware.
 For information on the required and optional callbacks for each
 handler check their source code.
 
-In short, Cockpit talks to a devide handler, the device handler talks
+In short, Cockpit talks to a device handler, the device handler talks
 a Cockpit device, and a Cockpit device talks to the hardware.
 
 Historical reasons

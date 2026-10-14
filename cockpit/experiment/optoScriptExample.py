@@ -118,7 +118,7 @@ class OptoExperiment(zStack.ZStackExperiment):
                 # User aborted experiment.
                 break
             # Create a new thread for activating each light in parallel.
-            # We could do this singlethreaded, but it would require an
+            # We could do this single-threaded, but it would require an
             # in-depth examination of self.lightToSequence to determine when
             # to turn on each light.
             threads = []

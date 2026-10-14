@@ -89,7 +89,7 @@ class _BaseValidator(wx.Validator):
         return True
 
     def _validate(self, value):
-        """Abstract - define in derived calss."""
+        """Abstract - define in derived class."""
         # Test a value. Raise an exception if it is not valid.
         pass
 

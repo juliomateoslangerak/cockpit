@@ -349,7 +349,7 @@ class LegacyDSP(ExecutorDevice):
         # The DSP executes an analogue movement profile, which is defined using
         # offsets relative to a baseline at the time the profile was initialized.
         # These offsets are encoded as unsigned integers, so at profile
-        # intialization, each analogue channel must be at or below the lowest
+        # initialization, each analogue channel must be at or below the lowest
         # value it needs to reach in the profile.
         lowestAnalogs = list(np.amin([x[1][1] for x in actions], axis=0))
         for line, lowest in enumerate(lowestAnalogs):

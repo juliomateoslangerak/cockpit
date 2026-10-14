@@ -418,14 +418,14 @@ class Mrc2:
         'w' for writing (truncating an existing file),
         ['a' does not really make sense here]
         Modes 'r+', 'w+' [and 'a+'] open the file for updating (note that 'w+' truncates the file).
-     ('b' for binary mode, is implicitely appended)
+     ('b' for binary mode, is implicitly appended)
     """
 
     def __init__(self, path, mode="r"):
         """
         path is filename
         mode: same as for Python's open function
-            ('b' is implicitely appended !)
+            ('b' is implicitly appended !)
             'r'   read-only
             'r+'  read-write
             'w'   write - erases old file !!

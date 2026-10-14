@@ -107,7 +107,7 @@ class LightPanel(wx.Panel):
         self.SetSizerAndFit(self.Sizer)
 
     def onTimer(self, evt):
-        """fucntion that wx.timer calls to check remote power."""
+        """function that wx.timer calls to check remote power."""
         self.lightPower.lastPower = self.lightPower.callbacks["getPower"]()
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:

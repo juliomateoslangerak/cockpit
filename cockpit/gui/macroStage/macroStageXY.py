@@ -115,7 +115,7 @@ def GoToXYZDialog(parent: wx.Window) -> None:
         return
 
     newPos = position_dialog.GetValue()
-    # Work out if we will be ouside the limits of the current stage
+    # Work out if we will be outside the limits of the current stage
     # This should be a method of the StageMover interface (see #616)
     position = cockpit.interfaces.stageMover.getPosition()
     posDelta = [
@@ -400,7 +400,7 @@ class MacroStageXY(macroStageBase.MacroStageBase):
                 primitive.render()
             glDisable(GL_LINE_STIPPLE)
 
-            # Draw possibloe stage positions for current objective
+            # Draw possible stage positions for current objective
             offset = wx.GetApp().Objectives.GetOffset()
             colour = wx.GetApp().Objectives.GetColour()
             glLineWidth(2)
@@ -542,7 +542,7 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         originalMover = cockpit.interfaces.stageMover.mover.curHandlerIndex
         # Quick hack to get deepsim working need to check if we can do it
         # properly.  Should really check to see if we can move, and by that
-        # distance with exisiting mover
+        # distance with existing mover
         cockpit.interfaces.stageMover.mover.curHandlerIndex = 0
 
         cockpit.interfaces.stageMover.goToXY(

@@ -161,7 +161,7 @@ class MicroscopeBase(device.Device):
             try:
                 desc = self.describe_setting(k)
             except:
-                print("%s ingoring unknown setting '%s'." % (self.name, k))
+                print("%s ignoring unknown setting '%s'." % (self.name, k))
                 continue
             if desc["type"] == "str":
                 pass
@@ -641,13 +641,13 @@ class MicroscopeStage(MicroscopeBase):
                 )
         # check if we need to poll for updates of position
         # This is usually required as there is a manual joystick which can move
-        # the stage without cockit knowing about it.
-        # Note: currently this varibale isnt checked, all stages are polled
+        # the stage without cockpit knowing about it.
+        # Note: currently this variable isnt checked, all stages are polled
         # in macrostageXY.
         self.pollStage = bool(self.config.get("poll-stage", False))
         if self.pollStage:
             if len(self._axes) == int(self.config.get("num-stage-axes", 0)):
-                # need to know in advance how many axis need to initilized
+                # need to know in advance how many axis need to initialized
                 self.pollInterval = float(self.config.get("poll-interval", 10))
                 self._positionCache = [0.0 for x in range(len(self._axes))]
 
@@ -679,10 +679,10 @@ class MicroscopeDIO(MicroscopeBase):
         self.labels = [""] * self.numLines
         self.IOMap = [None] * self.numLines
 
-        # read config entries if they exisit to
+        # read config entries if they exist to
         iomapConfig = self.config.get("iomap", [None] * self.numLines)
         if iomapConfig[0] is not None:
-            # config is deifned so read it into a bool variable,
+            # config is defined so read it into a bool variable,
             # else it is all [Nones]
             iomap = iomapConfig.split(",")
             for i, state in enumerate(iomap):
@@ -968,7 +968,7 @@ class MicroscopeValueLogger(MicroscopeBase):
             self.listener = cockpit.util.listener.Listener(
                 self._proxy, lambda *args: self.receiveData(*args)
             )
-            # log to record line state chnages
+            # log to record line state changes
             self.logger = valueLogger.ValueLogger(self.name, keys=self.labels)
         else:
             self.logger = valueLogger.PollingLogger(

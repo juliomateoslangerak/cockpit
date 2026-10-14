@@ -370,7 +370,7 @@ class Experiment:
         events.publish(events.PREPARE_FOR_EXPERIMENT, self)
         # Prepare cameras.
         for camera in self.cameras:
-            # We set the expsoure time here. This needs to be set before
+            # We set the exposure time here. This needs to be set before
             # the action table is generated, since the action table
             # uses camera.getExposureTime to figure out timings.
             exposureTime = float(self.getExposureTimeForCamera(camera))
@@ -653,7 +653,7 @@ class Experiment:
         """
         # First, determine which cameras are not ready to be exposed, because
         # they may have seen light they weren't supposed to see (due to
-        # bleedthrough from other cameras' exposures). These need
+        # bleed through from other cameras' exposures). These need
         # to be triggered (and we need to record that we want to throw away
         # those images) before we can proceed with the real exposure.
         camsToReset = set()

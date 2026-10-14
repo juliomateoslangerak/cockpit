@@ -149,7 +149,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_MOUSE_EVENTS, mouseCallback)
         # Do nothing on this event, to avoid flickering.
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: event)
-        # event on DPI chnage on high DPI screens, needed for Mac retina
+        # event on DPI change on high DPI screens, needed for Mac retina
         # displays.
         self.Bind(wx.EVT_DPI_CHANGED, self.onDPIchange)
         self.Bind(EVT_PROGRESS_START, self.createProgressDialog)

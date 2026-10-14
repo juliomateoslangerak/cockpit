@@ -29,7 +29,7 @@ from cockpit.handlers import deviceHandler
 
 
 class DigitalIOHandler(deviceHandler.DeviceHandler):
-    """A handler for Digital IO devcies."""
+    """A handler for Digital IO devices."""
 
     def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
         super().__init__(
@@ -56,7 +56,7 @@ class DigitalIOHandler(deviceHandler.DeviceHandler):
         for key in paths.keys():
             self.pathNameToButton[key].SetValue(paths[key])
         for i, state in enumerate(IOstate):
-            # proabbyl safer not to change IO state here
+            # probably safer not to change IO state here
             # self.callbacks['setIOstate'](i,state)
             if state:
                 self.callbacks["write line"](i, outputs[i])
@@ -100,7 +100,7 @@ class DigitalIOHandler(deviceHandler.DeviceHandler):
             # button is active so set the relevant DIO lines
             # take settings for this path
             settings = self.paths[path]
-            # loop throught DIO settings.
+            # loop through DIO settings.
             for object in settings[0].keys():
                 labels = self.callbacks["get labels"]()
                 line = labels.index(object)

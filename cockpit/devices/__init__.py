@@ -29,7 +29,7 @@ this package.  For example:
 .. code:: ini
 
     [XY stage]
-    type: cockpit.devices.microscopeDevice.MicroscopeStage
+    type: cockpit.devices.microscope_device.MicroscopeStage
     uri: PYRO:SomeXYStage@192.168.0.2:7001
     ...
 
@@ -40,7 +40,7 @@ device classes.
 The primary task that Cockpit devices are responsible for is creation
 of device handlers.  Each handler represents an abstract bit of
 hardware, for example a camera or stage mover.  The
-:meth:`Device.getHandlers()` method is expected to generate and return
+:meth:`Device.get_handlers()` method is expected to generate and return
 a list of handlers; the UI then interacts with these handlers when the
 user performs actions.  See the :mod:`cockpit.handlers` package for
 details.

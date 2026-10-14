@@ -1,0 +1,245 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+## Copyright (C) 2021 University of Oxford
+##
+## This file is part of Cockpit.
+##
+## Cockpit is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## Cockpit is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
+
+## Copyright 2013, The Regents of University of California
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions
+## are met:
+##
+## 1. Redistributions of source code must retain the above copyright
+##   notice, this list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above copyright
+##   notice, this list of conditions and the following disclaimer in
+##   the documentation and/or other materials provided with the
+##   distribution.
+##
+## 3. Neither the name of the copyright holder nor the names of its
+##   contributors may be used to endorse or promote products derived
+##   from this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+## LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+## FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+## COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+## INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+## BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+## LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+## CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+## POSSIBILITY OF SUCH DAMAGE.
+
+import cockpit.util.threads
+from cockpit import depot, events
+from cockpit.handlers import device
+
+
+class LightHandler(device.DeviceHandler):
+    """Handler for light source toggle buttons and exposure time settings.
+
+    It controls whether a given illumination source is currently active,
+    and for how long.
+
+    Callbacks should fill in the following functions:
+    - set_enabled(name, value): Turn this light source on or off.
+    - set_exposure_time(name, value): Set the exposure time for this light,
+      in milliseconds.
+    - get_exposure_time(name, value): Get the current exposure time for this
+      light, in milliseconds.
+    - setExposing(name, isOn): Optional. Sets the light on/off continuously
+      (i.e. without regard for what the camera(s) are doing).
+
+    Args:
+        wavelength (float): Wavelength of light the source emits, if
+            appropriate.
+        exposure_time (float): Default exposure time.
+        trigger_handler (DeviceHandler): Optional. Sets up an auxiliary trigger
+            source.
+        trigger_line (str): Optional. May be required by the auxiliary trigger
+            source.
+    """
+
+    ## Shortcuts to decorators defined in parent class.
+    reset_cache = device.DeviceHandler.reset_cache
+    cached = device.DeviceHandler.cached
+
+    ## Keep track of shutters in class variables.
+    __shutterToLights = {}  # 1:many
+    __lightToShutter = {}  # 1:1
+
+    @classmethod
+    def add_shutter(cls, shutter, lights=[]):
+        cls.__shutterToLights[shutter] = set(lights)
+        for l in lights:
+            cls.__lightToShutter[l] = shutter
+
+    def __init__(
+        self,
+        name,
+        group_name,
+        callbacks,
+        wavelength,
+        exposure_time,
+        trigger_handler=None,
+        trigger_line=None,
+    ):
+        # Note we assume all light sources are eligible for experiments.
+        # However there's no associated callbacks for a light source.
+        super().__init__(name, group_name, True, callbacks, depot.LIGHT_TOGGLE)
+        self.wavelength = float(wavelength or 0)
+        self.default_exposure_time = exposure_time
+        self.exposure_time = exposure_time
+        # Current enabled state
+        self.state = device.STATES.disabled
+        # Set up trigger handling.
+        if trigger_handler and trigger_line:
+            h = trigger_handler.register_digital(self, trigger_line)
+            self.trigger_now = h.trigger_now
+            if "setExposing" not in callbacks:
+                cb = lambda name, state: trigger_handler.set_digital(
+                    trigger_line, state
+                )
+                callbacks["on_abort"] = cb
+        else:
+            self.trigger_now = lambda: None
+
+        # Most lasers use bulb-type triggering. Ensure they're not left on after
+        # an abort event.
+        if trigger_handler and trigger_line:
+            on_abort = lambda *args: trigger_handler.set_digital(
+                trigger_line, False
+            )
+            events.subscribe(events.USER_ABORT, on_abort)
+
+    def make_initial_publications(self):
+        # Send state event to set initial state of any controls.
+        events.publish(events.DEVICE_STATUS, self, self.state)
+
+    def on_save_settings(self):
+        return {
+            "is_enabled": self.get_is_enabled(),
+            "exposure_time": self.get_exposure_time(),
+        }
+
+    def on_load_settings(self, settings):
+        # Only change settings if needed.
+        if self.get_exposure_time() != settings["exposure_time"]:
+            self.set_exposure_time(settings["exposure_time"])
+        if self.get_is_enabled() != settings["is_enabled"]:
+            self.toggle_state()
+
+    def set_enabled(self, set_state):
+        """Turn the laser on, off, or set continuous exposure."""
+        if self.state == device.STATES.constant != set_state:
+            if "setExposing" in self.callbacks:
+                self.callbacks["setExposing"](self.name, False)
+
+        if set_state == device.STATES.constant:
+            if self.state == set_state:
+                # Turn off the light
+                self.callbacks["set_enabled"](self.name, False)
+                # Update setState since used to set self.state later
+                set_state = device.STATES.disabled
+                events.publish(events.LIGHT_SOURCE_ENABLE, self, False)
+            else:
+                # Turn on the light continuously.
+                self.callbacks["set_enabled"](self.name, True)
+                if "setExposing" in self.callbacks:
+                    self.callbacks["setExposing"](self.name, True)
+                # We indicate that the light source is disabled to prevent
+                # it being switched off by an exposure, but this event is
+                # used to update controls, so we need to chain it with a
+                # manual update.
+                events.one_shot_subscribe(
+                    events.LIGHT_SOURCE_ENABLE,
+                    # FIXME: notifyListeners does not exist
+                    lambda *args: self.notifyListeners(self, set_state),
+                )
+                events.publish(events.LIGHT_SOURCE_ENABLE, self, False)
+        elif set_state == device.STATES.enabled:
+            self.callbacks["set_enabled"](self.name, True)
+            events.publish(events.LIGHT_SOURCE_ENABLE, self, True)
+        else:
+            self.callbacks["set_enabled"](self.name, False)
+            events.publish(events.LIGHT_SOURCE_ENABLE, self, False)
+        self.state = set_state
+
+    def get_is_enabled(self):
+        """Return True if we're enabled, False otherwise."""
+        return self.state == device.STATES.enabled
+
+    @cockpit.util.threads.call_in_new_thread
+    def set_exposing(self, args):
+        """Set the light source to continuous exposure, if we have that option."""
+        if not self.enable_lock.acquire(False):
+            return
+        self.notifyListeners(self, device.STATES.enabling)
+        try:
+            self.set_enabled(device.STATES.constant)
+        except Exception as e:
+            self.notifyListeners(self, device.STATES.error)
+            raise Exception(
+                "Problem encountered en/disabling %s:\n%s" % (self.name, e)
+            )
+        finally:
+            self.enable_lock.release()
+
+    @reset_cache
+    def set_exposure_time(self, value, outermost=True):
+        """Set a new exposure time, in milliseconds.
+
+        Also update the exposure time on lights that share the same shutter
+        if this is the outermost call.
+
+        Args:
+            value (float): New exposure time.
+            outermost (bool): Flag indicating that we should update others.
+        """
+        self.callbacks["set_exposure_time"](self.name, value)
+        # Publish event to update control labels.
+        events.publish(events.LIGHT_EXPOSURE_UPDATE, self)
+        # Update exposure times for lights that share the same shutter.
+        s = self.__class__.__lightToShutter.get(self, None)
+        self.exposure_time = value
+        if s and outermost:
+            if hasattr(s, "set_exposure_time"):
+                s.set_exposure_time(value)
+            for other in self.__class__.__shutterToLights[s].difference(
+                [self]
+            ):
+                other.set_exposure_time(value, outermost=False)
+                events.publish(events.LIGHT_EXPOSURE_UPDATE, other)
+
+    @cached
+    def get_exposure_time(self):
+        """Get the current exposure time, in milliseconds."""
+        return self.callbacks["get_exposure_time"](self.name)
+
+    @cached
+    def get_wavelength(self):
+        """Simple getter."""
+        return self.wavelength
+
+    def get_savefile_info(self):
+        """Let them know what wavelength we are."""
+        return str(self.wavelength)

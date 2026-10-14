@@ -50,25 +50,26 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 from cockpit import depot
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
-## This handler mostly just handles setting up incoming communications
-# from other programs.
-class ServerHandler(deviceHandler.DeviceHandler):
-    ## callbacks must include the following functions:
-    # - register(func): Registers the function to be called when our
-    #   owner receives incoming requests from outside on a specific
-    #   port that we decide.
-    # - unregister(func): Stops the provided function from receiving
-    #   outside events.
-    def __init__(self, name, groupName, callbacks):
-        super().__init__(name, groupName, False, callbacks, depot.SERVER)
+class ServerHandler(device.DeviceHandler):
+    """This handler mostly just handles setting up incoming communications from
+    other programs."""
 
-    ## Register a new function.
-    def register(self, func, localIp=None):
-        return self.callbacks["register"](func, localIp)
+    def __init__(self, name, group_name, callbacks):
+        """callbacks must include the following functions:
+        - register(func): Registers the function to be called when our owner
+          receives incoming requests from outside on a specific port that we
+          decide.
+        - unregister(func): Stops the provided function from receiving outside
+        events."""
+        super().__init__(name, group_name, False, callbacks, depot.SERVER)
 
-    ## Unregister a function, so it stops getting called.
+    def register(self, func, local_ip=None):
+        """Register a new function."""
+        return self.callbacks["register"](func, local_ip)
+
     def unregister(self, func):
+        """Unregister a function, so it stops getting called."""
         return self.callbacks["unregister"](func)

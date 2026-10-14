@@ -21,10 +21,10 @@
 import typing
 
 import cockpit.depot
-import cockpit.handlers.deviceHandler
+import cockpit.handlers.device
 
 
-class ObjectiveHandler(cockpit.handlers.deviceHandler.DeviceHandler):
+class ObjectiveHandler(cockpit.handlers.device.DeviceHandler):
     """Handler for a single objective.
 
     Args:
@@ -35,7 +35,7 @@ class ObjectiveHandler(cockpit.handlers.deviceHandler.DeviceHandler):
         transform:
         offset:
         colour:
-        lens_ID:
+        lens_id:
     """
 
     def __init__(
@@ -46,17 +46,17 @@ class ObjectiveHandler(cockpit.handlers.deviceHandler.DeviceHandler):
         transform: typing.Tuple[int, int, int],
         offset: typing.Tuple[int, int, int],
         colour: typing.Tuple[float, float, float],
-        lens_ID: int,
+        lens_id: int,
     ) -> None:
         super().__init__(
             name,
             group_name,
-            isEligibleForExperiments=False,
+            is_eligible_for_experiments=False,
             callbacks={},
-            deviceType=cockpit.depot.OBJECTIVE,
+            device_type=cockpit.depot.OBJECTIVE,
         )
         self.pixel_size = pixel_size
         self.transform = transform
         self.offset = offset
         self.colour = colour
-        self.lens_ID = lens_ID
+        self.lens_id = lens_id

@@ -53,10 +53,10 @@ import wx
 
 import cockpit.gui.camera.window
 import cockpit.gui.mosaic.window
-import cockpit.interfaces.stageMover
+import cockpit.interfaces.stage_mover
 
 
-def onChar(evt):
+def on_char(evt):
     if isinstance(evt.EventObject, wx.TextCtrl) or evt.KeyCode in [
         wx.WXK_TAB,
         wx.WXK_ESCAPE,
@@ -69,51 +69,51 @@ def onChar(evt):
         evt.Skip()
         return
     if evt.KeyCode == wx.WXK_NUMPAD_MULTIPLY:
-        cockpit.gui.camera.window.rescaleViews()
+        cockpit.gui.camera.window.rescale_views()
     elif evt.KeyCode == wx.WXK_NUMPAD_DIVIDE:
-        cockpit.interfaces.stageMover.changeMover()
+        cockpit.interfaces.stage_mover.change_mover()
     elif evt.KeyCode == wx.WXK_NUMPAD_DECIMAL:
-        cockpit.gui.mosaic.window.transferCameraImage()
+        cockpit.gui.mosaic.window.transfer_camera_image()
     elif evt.KeyCode == wx.WXK_NUMPAD_SUBTRACT:
-        cockpit.interfaces.stageMover.recenterFineMotion()
+        cockpit.interfaces.stage_mover.recenter_fine_motion()
     elif evt.KeyCode == wx.WXK_DOWN:
         # Z down
-        cockpit.interfaces.stageMover.step((0, 0, -1))
+        cockpit.interfaces.stage_mover.step((0, 0, -1))
     elif evt.KeyCode == wx.WXK_NUMPAD2:
         # Y down
-        cockpit.interfaces.stageMover.step((0, -1, 0))
+        cockpit.interfaces.stage_mover.step((0, -1, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD3:
         # Decrease delta
-        cockpit.interfaces.stageMover.changeStepSize(-1)
+        cockpit.interfaces.stage_mover.change_step_size(-1)
     elif evt.KeyCode == wx.WXK_NUMPAD4:
         # X up
-        cockpit.interfaces.stageMover.step((1, 0, 0))
+        cockpit.interfaces.stage_mover.step((1, 0, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD5:
         # Stop motion
         # TODO: was never handled.
         pass
     elif evt.KeyCode == wx.WXK_NUMPAD6:
         # X down
-        cockpit.interfaces.stageMover.step((-1, 0, 0))
+        cockpit.interfaces.stage_mover.step((-1, 0, 0))
     elif evt.KeyCode == wx.WXK_UP:
         # Z up
-        cockpit.interfaces.stageMover.step((0, 0, 1))
+        cockpit.interfaces.stage_mover.step((0, 0, 1))
     elif evt.KeyCode == wx.WXK_NUMPAD8:
         # Y up
-        cockpit.interfaces.stageMover.step((0, 1, 0))
+        cockpit.interfaces.stage_mover.step((0, 1, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD9:
         # Increase delta
-        cockpit.interfaces.stageMover.changeStepSize(1)
+        cockpit.interfaces.stage_mover.change_step_size(1)
     elif evt.KeyCode in [wx.WXK_NUMPAD_ADD, wx.WXK_NUMPAD0]:
         # Take image
-        wx.GetApp().Imager.takeImage()
+        wx.GetApp().imager.take_image()
     else:
         evt.Skip()
 
 
-## Given a wx.Window instance, set up keyboard controls for that instance.
-def setKeyboardHandlers(window):
-    accelTable = wx.AcceleratorTable(
+def set_keyboard_handlers(window):
+    """Given a wx.Window instance, set up keyboard controls for that instance."""
+    accel_table = wx.AcceleratorTable(
         [
             # Pop up a menu to help the user find hidden windows.
             (wx.ACCEL_CTRL, ord("M"), 6321),
@@ -121,13 +121,13 @@ def setKeyboardHandlers(window):
             (wx.ACCEL_CTRL, ord("P"), 6322),
         ]
     )
-    window.SetAcceleratorTable(accelTable)
-    window.Bind(wx.EVT_MENU, lambda e: showHideShell(window), id=6322)
-    window.Bind(wx.EVT_CHAR_HOOK, onChar)
+    window.SetAcceleratorTable(accel_table)
+    window.Bind(wx.EVT_MENU, lambda e: show_hide_shell(window), id=6322)
+    window.Bind(wx.EVT_CHAR_HOOK, on_char)
 
 
-# Function to show/hide the pythion shell window
-def showHideShell(parent):
+def show_hide_shell(parent):
+    """Function to show/hide the pythion shell window."""
     for window in wx.GetTopLevelWindows():
         if window.GetTitle() == "PyShell":
             window.Show(not window.IsShown())

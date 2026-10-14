@@ -52,12 +52,13 @@
 import re
 import time
 
-import cockpit.handlers.genericPositioner
-import cockpit.handlers.stagePositioner
+import cockpit.gui.gui_utils
+import cockpit.handlers.generic_positioner
+import cockpit.handlers.stage_positioner
 import cockpit.interfaces
 import cockpit.util.connection
 import cockpit.util.threads
-import cockpit.util.userConfig
+import cockpit.util.user_config
 from cockpit import events
 from cockpit.devices.device import Device
 
@@ -71,73 +72,73 @@ class Nanomover(Device):
     def __init__(self, name, config={}):
         super().__init__(name, config)
         ## Current stage position information.
-        self.curPosition = [14500, 14500, 14500]
+        self.cur_position = [14500, 14500, 14500]
         ## Connection to the Nanomover controller program.
         self.connection = None
         # Maps the cockpit's axis ordering (0: X, 1: Y, 2: Z) to the
         # XY stage's ordering (1: Y, 2: X,0: Z)
-        self.axisMapper = {0: 0, 1: 1, 2: 2}
+        self.axis_mapper = {0: 0, 1: 1, 2: 2}
         ## Cached copy of the stage's position. Initialized to an impossible
         # value; this will be modified in initialize.
-        self.positionCache = (10, 10, 10)
+        self.position_cache = (10, 10, 10)
         ## Maps cockpit axis ordering to a +-1 multiplier to apply to motion,
         # since some of our axes are flipped.
-        self.axisSignMapper = {0: 1, 1: 1, 2: 1}
+        self.axis_sign_mapper = {0: 1, 1: 1, 2: 1}
         ## Time of last action using the piezo; used for tracking if we should
         # disable closed loop.
         self.timeout = float(config.get("timeout", 0.1))
         try:
-            limitString = config.get("softlimits", "")
-            parsed = re.search(LIMITS_PAT, limitString)
+            limit_string = config.get("soft_limits", "")
+            parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
                 raise Exception("Bad config: Nanomover Limits.")
                 # No transform tuple
             else:
                 lstr = parsed.groupdict()["limits"]
-                self.softlimits = eval(lstr)
+                self.soft_limits = eval(lstr)
                 self.safeties = eval(lstr)
         except:
-            print("No softlimits section setting default limits")
-            self.softlimits = [[0, 25000], [0, 25000], [7300, 25000]]
+            print("No soft_limits section setting default limits")
+            self.soft_limits = [[0, 25000], [0, 25000], [7300, 25000]]
             self.safeties = [[0, 25000], [0, 25000], [7300, 25000]]
 
         # a useful middle position for after a home
-        self.middleXY = (
+        self.middle_xy = (
             (self.safeties[0][1] - self.safeties[0][0]) / 2.0,
             (self.safeties[0][1] - self.safeties[0][0]) / 2.0,
         )
-        events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(events.USER_ABORT, self.on_abort)
         events.subscribe(
-            events.COCKPIT_INIT_COMPLETE, self.promptExerciseStage
+            events.COCKPIT_INIT_COMPLETE, self.prompt_exercise_stage
         )
 
     def initialize(self):
         self.connection = cockpit.util.connection.Connection(
-            "nano", self.ipAddress, self.port
+            "nano", self.ip_address, self.port
         )
         self.connection.connect(self.receiveData)
-        self.curPosition[:] = self.connection.connection.posXYZ_OMX()
-        if self.curPosition == [0, 0, 0]:
+        self.cur_position[:] = self.connection.connection.posXYZ_OMX()
+        if self.cur_position == [0, 0, 0]:
             print("Homing Nanomover")
             self.connection.connection.startOMX()
             self.home()
-            cockpit.interfaces.stageMover.goToXY(
-                self.middleXY, shouldBlock=True
+            cockpit.interfaces.stage_mover.go_to_xy(
+                self.middle_xy, should_block=True
             )
 
-    ## We want to periodically exercise the XY stage to spread the grease
-    # around on its bearings; check how long it's been since the stage was
-    # last exercised, and prompt the user if it's been more than a week.
-    def promptExerciseStage(self):
-        lastExerciseTimestamp = cockpit.util.userConfig.getValue(
+    def prompt_exercise_stage(self):
+        """We want to periodically exercise the XY stage to spread the grease
+        around on its bearings; check how long it's been since the stage was
+        last exercised, and prompt the user if it's been more than a week."""
+        last_exercise_timestamp = cockpit.util.user_config.get_value(
             "NanomoverLastExerciseTimestamp", default=0
         )
-        curTime = time.time()
-        delay = curTime - lastExerciseTimestamp
-        daysPassed = delay / float(24 * 60 * 60)
-        if daysPassed > 7 and cockpit.gui.guiUtils.getUserPermission(
-            ("It has been %.1f days since " % daysPassed)
+        cur_time = time.time()
+        delay = cur_time - last_exercise_timestamp
+        days_passed = delay / float(24 * 60 * 60)
+        if days_passed > 7 and cockpit.gui.gui_utils.get_user_permission(
+            ("It has been %.1f days since " % days_passed)
             + "the stage was last exercised. Please exercise "
             + "the stage regularly.\n\nExercise stage?",
             "Please exercise the stage",
@@ -148,32 +149,34 @@ class Nanomover(Device):
             # slightly from the true safeties. Moving to the middle is
             # necessary to avoid the banned rectangles, in case the stage is
             # in them when we start.
-            initialPos = tuple(self.positionCache)
-            #            cockpit.interfaces.stageMover.goToXY((0, 0), shouldBlock = True)
+            initial_pos = tuple(self.position_cache)
+            #            cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block = True)
             for i in range(5):
                 print("Rep %d of 5..." % i)
-                for position in self.softlimits[0:2]:
-                    cockpit.interfaces.stageMover.goToXY(
-                        position, shouldBlock=True
+                for position in self.soft_limits[0:2]:
+                    cockpit.interfaces.stage_mover.go_to_xy(
+                        position, should_block=True
                     )
-            cockpit.interfaces.stageMover.goToXY(
-                self.middleXY, shouldBlock=True
+            cockpit.interfaces.stage_mover.go_to_xy(
+                self.middle_xy, should_block=True
             )
-            cockpit.interfaces.stageMover.goToXY(initialPos, shouldBlock=True)
+            cockpit.interfaces.stage_mover.go_to_xy(
+                initial_pos, should_block=True
+            )
             print("Exercising complete. Thank you!")
 
-            cockpit.util.userConfig.setValue(
+            cockpit.util.user_config.set_value(
                 "NanomoverLastExerciseTimestamp", time.time()
             )
 
-    def performSubscriptions(self):
-        events.subscribe(events.USER_ABORT, self.onAbort)
+    def perform_subscriptions(self):
+        events.subscribe(events.USER_ABORT, self.on_abort)
 
-    def makeInitialPublications(self):
-        self.publishPosition()
-        self.sendXYPositionUpdates()
+    def make_initial_publications(self):
+        self.publish_position()
+        self.send_xy_position_updates()
 
-    ## The XY Macro Stage view is painting itself; draw the banned
+    ## The XY Macro stage view is painting itself; draw the banned
     # rectangles as pink excluded zones.
     #    def onMacroStagePaint(self, stage):
     #        glColor3f(1, .6, .6)
@@ -185,40 +188,40 @@ class Nanomover(Device):
     #            stage.scaledVertex(x2, y1)
     #        glEnd()
 
-    def getHandlers(self):
+    def get_handlers(self):
         result = []
         for axis in range(3):
-            lowLimit, highLimit = self.safeties[axis]
-            softLowLimit, softHighLimit = self.softlimits[axis]
+            low_limit, high_limit = self.safeties[axis]
+            soft_low_limit, soft_high_limit = self.soft_limits[axis]
             result.append(
-                cockpit.handlers.stagePositioner.PositionerHandler(
+                cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d nanomover" % axis,
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.moveAbsolute,
-                        "moveRelative": self.moveRelative,
-                        "getPosition": self.getPosition,
+                        "move_absolute": self.move_absolute,
+                        "move_relative": self.move_relative,
+                        "get_position": self.get_position,
                     },
                     axis,
-                    (softLowLimit, softHighLimit),
-                    (lowLimit, highLimit),
+                    (soft_low_limit, soft_high_limit),
+                    (low_limit, high_limit),
                 )
             )
         return result
 
-    ## Publish the current stage position.
-    def publishPosition(self):
+    def publish_position(self):
+        """Publish the current stage position."""
         for axis in range(3):
             events.publish(events.STAGE_MOVER, axis)
 
-    ## Send updates on the XY stage's position, until it stops moving.
-    @cockpit.util.threads.callInNewThread
-    def sendXYPositionUpdates(self):
+    @cockpit.util.threads.call_in_new_thread
+    def send_xy_position_updates(self):
+        """Send updates on the XY stage's position, until it stops moving."""
         while True:
-            prevX, prevY = self.positionCache[:2]
-            x, y = self.getPosition(shouldUseCache=False)[:2]
-            delta = abs(x - prevX) + abs(y - prevY)
+            prev_x, prev_y = self.position_cache[:2]
+            x, y = self.get_position(should_use_cache=False)[:2]
+            delta = abs(x - prev_x) + abs(y - prev_y)
             if delta < 2:
                 # No movement since last time; done moving.
                 for axis in [0, 1]:
@@ -228,53 +231,53 @@ class Nanomover(Device):
                 events.publish(events.STAGE_MOVER, axis)
             time.sleep(0.1)
 
-    def getPosition(self, axis=None, shouldUseCache=True):
-        if not shouldUseCache:
+    def get_position(self, axis=None, should_use_cache=True):
+        if not should_use_cache:
             position = self.connection.connection.posXYZ_OMX()
-            x = float(position[self.axisMapper[0]]) * self.axisSignMapper[0]
-            y = float(position[self.axisMapper[1]]) * self.axisSignMapper[1]
-            z = float(position[self.axisMapper[2]]) * self.axisSignMapper[2]
-            self.positionCache = (x, y, z)
+            x = float(position[self.axis_mapper[0]]) * self.axis_sign_mapper[0]
+            y = float(position[self.axis_mapper[1]]) * self.axis_sign_mapper[1]
+            z = float(position[self.axis_mapper[2]]) * self.axis_sign_mapper[2]
+            self.position_cache = (x, y, z)
         if axis is None:
-            return self.positionCache
-        return self.positionCache[axis]
+            return self.position_cache
+        return self.position_cache[axis]
 
-    ## Receive information from the Nanomover control program.
     def receiveData(self, *args):
+        """Receive information from the Nanomover control program."""
         if args[0] == "nanoMotionStatus":
-            self.curPosition[:] = args[1]
-            self.publishPosition()
+            self.cur_position[:] = args[1]
+            self.publish_position()
             if args[-1] == "allStopped":
                 for i in range(3):
                     events.publish(events.STAGE_STOPPED, "%d nanomover" % i)
 
-    ## Move a specific axis to a given position.
-    def moveAbsolute(self, axis, pos):
-        self.sendXYPositionUpdates()
+    def move_absolute(self, axis, pos):
+        """Move a specific axis to a given position."""
+        self.send_xy_position_updates()
         self.connection.connection.moveOMX_axis(axis, pos)
 
-    ## Move a specific axis by a given amount.
-    def moveRelative(self, axis, delta):
-        self.sendXYPositionUpdates()
+    def move_relative(self, axis, delta):
+        """Move a specific axis by a given amount."""
+        self.send_xy_position_updates()
         self.connection.connection.moveOMX_dAxis(axis, delta)
 
-    ## User clicked the abort button; halt motion.
-    def onAbort(self, *args):
+    def on_abort(self, *args):
+        """User clicked the abort button; halt motion."""
         self.connection.connection.stopOMX()
 
-    # function to home stage if needed.
     def home(self):
-        # keep a copy of the softlimits.
-        #        realSoftlimits= copy.copy(self.softlimits)
-        #        self.softlimits = [[-25000, 25000],
+        """function to home stage if needed."""
+        # keep a copy of the soft_limits.
+        #        realSoftlimits= copy.copy(self.soft_limits)
+        #        self.soft_limits = [[-25000, 25000],
         #                           [-25000, 25000],
         #                           [7300, 50000]]
         # home the stage which moves to lrage negative positon until it
         # hits the hard limit switch
         self.connection.connection.findHome_OMX()
-        self.sendXYPositionUpdates()
-        self.positionCache = self.getPosition(shouldUseCache=False)
-        # reset softlimits to their original value
+        self.send_xy_position_updates()
+        self.position_cache = self.get_position(should_use_cache=False)
+        # reset soft_limits to their original value
 
 
-#        self.softlimits=realSoftlimits
+#        self.soft_limits=realSoftlimits

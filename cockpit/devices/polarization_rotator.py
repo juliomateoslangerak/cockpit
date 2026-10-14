@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+## Copyright (C) 2021 University of Oxford
+##
+## This file is part of Cockpit.
+##
+## Cockpit is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## Cockpit is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
+
+from cockpit import depot
+from cockpit.devices import device
+
+
+class PolarizationDevice(device.Device):
+    """Retarder/rotator Cockpit device.
+
+    The device class makes available a handler for SI experiments
+    which takes an integer argument in the action table that specifies
+    the SI angle index.  Upon examining the table, it replaces
+    instances of this handler with instances of whatever handler
+    drives the analogue out- put, having converted the angle index to
+    the required voltage.
+
+    Sample config entry:
+
+    .. code:: ini
+
+        [SI polarizer]
+        type: cockpit.devices.polarization_rotator.PolarizationDevice
+        analog_source: NAME_OF_EXECUTOR_DEVICE
+        analog_line: 1
+        si_voltages: 488: 0.915, 1.05, 1.23
+                    561: 1.32, 0.90, 1.12
+                    647: 1.18, 1.61, 0.97
+        idle_voltage: 1.0
+        offset: 0                # in volts
+        gain: 6553.6             # in ADU per volt
+
+    .. note::
+
+        For use in SI experiments the device must be named ``"SI
+        polarizer"``.
+
+    .. todo::
+
+        Identify the polarizer in some other way so that a specific
+        name is not required for the SI experiments.
+
+    """
+
+    _config_types = {
+        "idle_voltage": float,
+        "offset": float,
+        "gain": float,
+    }
+
+    def __init__(self, name, config={}):
+        super().__init__(name, config)
+
+    def get_handlers(self):
+        a_source = self.config.get("analog_source", None)
+        a_line = self.config.get("analog_line", None)
+        a_handler = depot.get_handler(a_source, depot.EXECUTOR)
+        if a_handler is None:
+            raise Exception("No control source.")
+        gain = self.config.get("gain", 1)
+        offset = self.config.get("offset", 0)
+        h = a_handler.register_analog(self, a_line, offset, gain)
+
+        # If there are indexed positions in the config, add them to the handler.
+        idlevoltage = self.config.get("idle_voltage", 0)
+        voltages = {}
+        for vdef in self.config.get("si_voltages", "").split("\n"):
+            if vdef == "":
+                continue
+            key, values = vdef.strip("\n").split(":")
+            voltages[key] = tuple([float(v) for v in values.split(",")])
+        if not set(["default", None]).intersection(voltages):
+            voltages[None] = 3 * [idlevoltage]
+        h.positions = voltages
+        return [h]

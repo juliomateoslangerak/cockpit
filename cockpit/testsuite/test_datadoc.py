@@ -21,23 +21,20 @@
 import tempfile
 import unittest
 
-import numpy
-import numpy.testing
+import numpy as np
 
 from cockpit.util import datadoc
 
 
 class TestWriteDataAsMrc(unittest.TestCase):
     def setUp(self):
-        self.data = numpy.array(range(256), dtype=numpy.uint8).reshape(
-            (16, 16)
-        )
+        self.data = np.array(range(256), dtype=np.uint8).reshape((16, 16))
 
     def assertWriteAndReadingBack(self):
         with tempfile.NamedTemporaryFile() as fh:
-            datadoc.writeDataAsMrc(self.data, fh.name)
+            datadoc.write_data_as_mrc(self.data, fh.name)
             doc = datadoc.DataDoc(fh.name)
-        numpy.testing.assert_equal(doc.getImageArray().squeeze(), self.data)
+        np.testing.assert_equal(doc.get_image_array().squeeze(), self.data)
 
     def test_write_and_read(self):
         """writeDataAsMRC can read back what it writes"""
@@ -47,7 +44,7 @@ class TestWriteDataAsMrc(unittest.TestCase):
         """writeDataAsMRC can handle data that is not C-contiguous"""
         # Some transformations will put the data in non C-contiguous
         # order (see issue #645) so test that we can handle it.
-        self.data = numpy.flipud(numpy.rot90(self.data))
+        self.data = np.flipud(np.rot90(self.data))
         # We could just copy the data in F-contiguous order but doing
         # the transformations shows how cockpit would get to them.
         self.assertFalse(self.data.flags["C_CONTIGUOUS"])

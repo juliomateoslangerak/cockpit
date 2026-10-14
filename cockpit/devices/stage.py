@@ -22,8 +22,8 @@ from decimal import Decimal
 
 from cockpit import depot
 from cockpit.devices.device import Device
-from cockpit.handlers import stagePositioner
-from cockpit.interfaces.stageMover import AXIS_MAP
+from cockpit.handlers import stage_positioner
+from cockpit.interfaces.stage_mover import AXIS_MAP
 
 
 class SimplePiezo(Device):
@@ -35,11 +35,12 @@ class SimplePiezo(Device):
 
         [zPiezo]                 # name
         type: cockpit.devices.stage.SimplePiezo        # this class
-        analogSource: asource    # an analogue source device name
-        analogLine: 0            # the line on the analogue source
+        analog_source: analog_source    # an analogue source device name
+        analog_line: 0            # the line on the analogue source
         offset: 0                # analogue units offset in experiment units, e.g. um
         gain: 262.144            # unit conversion gain, e.g. ADU per um
         min: 0                   # min axis range in experimental units
+        max: 1000                # max axis range in experimental units
         range: 250               # axis range in experimental units
 
     """
@@ -50,7 +51,7 @@ class SimplePiezo(Device):
         "range": int,
         "min": int,
         "max": int,
-        "stepmin": int,
+        "step_min": int,
         "offset": float,
         "gain": float,
     }
@@ -58,31 +59,31 @@ class SimplePiezo(Device):
     def __init__(self, name, config):
         super(SimplePiezo, self).__init__(name, config)
 
-    def getHandlers(self):
-        asource = self.config.get("analogsource", None)
-        aline = self.config.get("analogline", None)
-        aHandler = depot.getHandler(asource, depot.EXECUTOR)
-        if aHandler is None:
+    def get_handlers(self):
+        a_source = self.config.get("analog_source", None)
+        a_line = self.config.get("analog_line", None)
+        a_handler = depot.get_handler(a_source, depot.EXECUTOR)
+        if a_handler is None:
             raise Exception("No control source.")
         axis = AXIS_MAP[self.config.get("axis", 2)]
         offset = self.config.get("offset", 0)
         gain = self.config.get("gain", 1)
-        posMin = self.config.get("min", None)
-        posMax = self.config.get("max", None)
-        posRange = self.config.get("range", None)
-        haveMin, haveMax, haveRange = [
-            v is not None for v in [posMin, posMax, posRange]
+        pos_min = self.config.get("min", None)
+        pos_max = self.config.get("max", None)
+        pos_range = self.config.get("range", None)
+        have_min, have_max, have_range = [
+            v is not None for v in [pos_min, pos_max, pos_range]
         ]
-        if haveMin and haveMax:
+        if have_min and have_max:
             pass
-        elif (haveMin, haveMax, haveRange) == (True, False, True):
-            posMax = posMin + posRange
-        elif (haveMin, haveMax, haveRange) == (False, True, True):
-            posMin = posMax - posRange
-        elif (haveMin, haveMax, haveRange) == (False, False, True):
+        elif (have_min, have_max, have_range) == (True, False, True):
+            pos_max = pos_min + pos_range
+        elif (have_min, have_max, have_range) == (False, True, True):
+            pos_min = pos_max - pos_range
+        elif (have_min, have_max, have_range) == (False, False, True):
             # Assume range starts from zero.
-            posMin = 0
-            posMax = posRange
+            pos_min = 0
+            pos_max = pos_range
         else:
             raise Exception(
                 "No min, max or range specified for stage %s." % self.name
@@ -90,23 +91,23 @@ class SimplePiezo(Device):
 
         result = []
         # Create handler without movement callbacks.
-        handler = stagePositioner.PositionerHandler(
+        handler = stage_positioner.PositionerHandler(
             "%d %s" % (axis, self.name),
             "%d stage motion" % axis,
             True,
             {
-                "getMovementTime": lambda x, start, delta: (
+                "get_movement_time": lambda x, start, delta: (
                     Decimal(0.05),
                     Decimal(0.05),
                 )
             },
             axis,
-            (posMin, posMax),
-            (posMin, posMax),
+            (pos_min, pos_max),
+            (pos_min, pos_max),
         )
 
         # Connect handler to analogue source to populate movement callbacks.
-        handler.connectToAnalogSource(aHandler, aline, offset, gain)
+        handler.connect_to_analog_source(a_handler, a_line, offset, gain)
 
         result.append(handler)
         return result

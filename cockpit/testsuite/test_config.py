@@ -54,19 +54,19 @@ def patched_env(values):
 
 
 class MockConfigRead:
-    """Mocks ``ConfigParser.read`` to record requested filenames."""
+    """Mocks ``ConfigParser.read`` to record requested file_names."""
 
     def __init__(self):
         self.reset_mock()
 
     def reset_mock(self):
-        self.filenames = []
+        self.file_names = []
 
-    def __call__(self, filenames, encoding=None):
-        if isinstance(filenames, (str, bytes, os.PathLike)):
-            self.filenames.append(filenames)
+    def __call__(self, file_names, encoding=None):
+        if isinstance(file_names, (str, bytes, os.PathLike)):
+            self.file_names.append(file_names)
         else:
-            self.filenames.extend(filenames)
+            self.file_names.extend(file_names)
 
 
 def mock_cockpit_config_read(func):
@@ -147,10 +147,13 @@ class TempConfigBaseDir:
             config.write(fh)
 
     def __del__(self):
-        ## Very silly.  TemporaryDirectory will raise ResourceWarning
-        ## for implicitely cleaning up unless via context manager.  If
-        ## we don't use it a context manager, we need to explicitely
-        ## cleanup after ourselves or our tests get full of warnings.
+        """Very silly.
+
+        TemporaryDirectory will raise ResourceWarning for implicitly cleaning
+        up unless via context manager.  If we don't use it a context manager,
+        we need to explicitly cleanup after ourselves or our tests get full of
+        warnings.
+        """
         self._basedir.cleanup()
 
 
@@ -314,7 +317,7 @@ class TestLinuxPaths(unittest.TestCase):
 class TestConfigReading(unittest.TestCase):
     """Test what config files are read under different conditions.
 
-    This is done by mocking the read method and record the filenames.
+    This is done by mocking the read method and record the file_names.
     Ideally we should check what configuration we obtain at the end of
     the process, not which files get read and under what order.
     However, that's tricky because it would require us to patch the
@@ -329,7 +332,7 @@ class TestConfigReading(unittest.TestCase):
             read_mock: instance of our :class:``MockConfigRead``
             files: list of our :class:``TempConfigFile``
         """
-        self.assertEqual(read_mock.filenames, [f.path for f in files])
+        self.assertEqual(read_mock.file_names, [f.path for f in files])
 
     @mock_depot_config_read
     @mock_cockpit_config_read
@@ -345,12 +348,12 @@ class TestConfigReading(unittest.TestCase):
         call_cockpit()
         read_files = {
             "cockpit": {
-                "all": cockpit_read_mock.filenames,
+                "all": cockpit_read_mock.file_names,
                 "user": [],
                 "system": [],
             },
             "depot": {
-                "all": depot_read_mock.filenames,
+                "all": depot_read_mock.file_names,
                 "user": [],
                 "system": [],
             },
@@ -363,8 +366,8 @@ class TestConfigReading(unittest.TestCase):
             cockpit_read_mock.reset_mock()
             depot_read_mock.reset_mock()
             call_cockpit(option)
-            read_files["cockpit"][group] = cockpit_read_mock.filenames
-            read_files["depot"][group] = depot_read_mock.filenames
+            read_files["cockpit"][group] = cockpit_read_mock.file_names
+            read_files["depot"][group] = depot_read_mock.file_names
 
         for files in read_files.values():
             for group in ("all", "user", "system"):
@@ -398,7 +401,7 @@ class TestConfigReading(unittest.TestCase):
     def test_depot_files_ignored_in_config_file(self, depot_read_mock):
         """depot-files in --config-file is ignored if --depot-file is set
 
-        Depot conf files specified via command line don't just have
+        depot conf files specified via command line don't just have
         their values overload those on the cockpit files.  If they are
         specified on command line then no other gets read, not even
         those mentioned on cockpit config files specified via command
@@ -564,7 +567,7 @@ class TestDepotConfig(unittest.TestCase):
             )
 
     def test_read(self):
-        """Depot files are read and merged."""
+        """depot files are read and merged."""
         file1 = TempConfigFile("[dev1]\n" "type: bar\n" "foo: qux\n")
         file2 = TempConfigFile("[dev2]\n" "type: foo\n" "bar: grob\n")
         config = call_cockpit(
@@ -632,8 +635,8 @@ class TestDepotConfig(unittest.TestCase):
 
 class TestCommandLineOptions(unittest.TestCase):
     def test_debug(self):
-        ## Also get the default to make sure this test is not passing
-        ## just because something else is making debug the default.
+        """Also get the default to make sure this test is not passing just
+        because something else is making debug the default."""
         config_default = call_cockpit("--no-config-files")
         config_debug = call_cockpit("--no-config-files", "--debug")
         self.assertEqual(config_debug["log"]["level"], "debug")

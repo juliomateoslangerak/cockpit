@@ -20,35 +20,35 @@
 
 import unittest
 
-import numpy
+import numpy as np
 
-import cockpit.experiment.structuredIllumination as sim
+import cockpit.experiment.structured_illumination as sim
 
 
 class PostpadTestCase(unittest.TestCase):
     def test_pad_data(self):
-        data = numpy.ones((3,), dtype=numpy.uint16)
+        data = np.ones((3,), dtype=np.uint16)
         padded = sim.postpad_data(data, (10,))
         self.assertEqual(padded.size, 10)
         self.assertEqual(padded.shape, (10,))
         self.assertTrue((padded[[0, 2, 3, 9]] == [1, 1, 0, 0]).all())
 
-        data = numpy.ones((3,), dtype=numpy.double)
+        data = np.ones((3,), dtype=np.double)
         padded = sim.postpad_data(data, (10,))
         self.assertEqual(padded.size, 10)
         self.assertEqual(padded.shape, (10,))
         self.assertTrue((padded[[0, 2]] == [1.0, 1.0]).all())
-        self.assertTrue((numpy.isnan(padded[[3, 9]])).all())
+        self.assertTrue((np.isnan(padded[[3, 9]])).all())
 
-        data = numpy.ones((4, 3, 5))
+        data = np.ones((4, 3, 5))
         padded = sim.postpad_data(data, (5, 4, 5))
         self.assertEqual(padded.size, 100)
         self.assertEqual(padded.shape, (5, 4, 5))
         self.assertTrue(padded[:4, :3, :5].all())
-        self.assertTrue(numpy.isnan(padded[4:, :, :]).all())
-        self.assertTrue(numpy.isnan(padded[:, 3:, :]).all())
+        self.assertTrue(np.isnan(padded[4:, :, :]).all())
+        self.assertTrue(np.isnan(padded[:, 3:, :]).all())
 
-        data = numpy.ones((3,))
+        data = np.ones((3,))
         padded = sim.postpad_data(data, (3,))
         self.assertEqual(padded.size, 3)
 

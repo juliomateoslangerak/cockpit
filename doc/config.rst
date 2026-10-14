@@ -37,7 +37,7 @@ logging level, where to save data as default, and the location of
 other configuration files.  In most cases, the default values will be
 enough and users will not need to change these.
 
-Config file
+config file
 -----------
 
 Cockpit configuration file spans multiple sections, each section
@@ -65,7 +65,7 @@ channel-files
   List of files defining channel configurations to be loaded by
   default.  Each file can have any number of channels, later files
   overriding previous channels with the same name.  These files can be
-  created via the Channels menu on the menu bar.
+  created via the channels menu on the menu bar.
 
 config-dir
   Directory for the user configuration file, effectively a cache for
@@ -208,10 +208,10 @@ change of settings.
 
 .. _depot-config:
 
-Depot Configuration
+depot Configuration
 ===================
 
-Depot is the collection of devices available to the Cockpit program.
+depot is the collection of devices available to the Cockpit program.
 Each section of a depot configuration specifies a single device: the
 section name being the device name, while the options are the device
 configuration.  For example:
@@ -219,15 +219,15 @@ configuration.  For example:
 .. code:: ini
 
   [west]
-  type: cockpit.devices.microscopeCamera.MicroscopeCamera
+  type: cockpit.devices.microscope_camera.MicroscopeCamera
   uri: PYRO:WestCamera@127.0.0.1:8001
 
   [woody]
-  type: cockpit.devices.executorDevices.ExecutorDevice
+  type: cockpit.devices.executor_devices.ExecutorDevice
   uri: PYRO:Sheriff@192.168.0.2:8002
 
   [488nm]
-  type: cockpit.devices.microscopeDevice.MicroscopeLaser
+  type: cockpit.devices.microscope_device.MicroscopeLaser
   uri: PYRO:Deepstar488Laser@192.168.0.3:7001
   wavelength: 488
   triggerSource: woody

@@ -54,21 +54,27 @@ import typing
 import wx
 
 from cockpit import depot, events
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
-## This is a simple container class to describe a single drawer.
 class DrawerSettings:
-    ## All parameters except the drawer name are lists, and the lists refer to
-    # cameras in the same orders.
-    # \param name Name used to refer to the drawer.
-    # \param cameraNames Unique names for each camera. These are the same
-    #        across all drawers.
-    # \param dyeNames Names of dyes that roughly correspond to the wavelengths
-    #        that the cameras see.
-    # \param wavelengths Numerical wavelengths corresponding to the bandpass
-    #        filters in front of the cameras.
+    """This is a simple container class to describe a single drawer."""
+
     def __init__(self, name, cameraNames, dyeNames, wavelengths):
+        """Set up a drawer with its camera, dye, and wavelength settings.
+
+        All parameters except the drawer name are lists, and the lists refer to
+        cameras in the same orders.
+
+        Args:
+            name (str): Name used to refer to the drawer.
+            cameraNames (list): Unique names for each camera. These are the
+                same across all drawers.
+            dyeNames (list): Names of dyes that roughly correspond to the
+                wavelengths that the cameras see.
+            wavelengths (list): Numerical wavelengths corresponding to the
+                bandpass filters in front of the cameras.
+        """
         self.name = name
         self.cameraNames = cameraNames
         self.dyeNames = dyeNames
@@ -91,35 +97,43 @@ class DrawerSettings:
         self.cameraToWavelength = dict(zip(self.cameraNames, self.wavelengths))
 
 
-## This handler is responsible for tracking what kinds of light each camera
-# receives, via the drawer system.
-class DrawerHandler(deviceHandler.DeviceHandler):
-    ## We allow either for a set of pre-chosen filters (via DrawerSettings),
-    # or for a more variable approach with callbacks. If callbacks are
-    # supplied, they override the DrawerSettings if any.
-    # \param settings A list of DrawerSettings instances.
-    # \param settingIndex Index into settings list indicating the current mode.
+class DrawerHandler(device.DeviceHandler):
+    """This handler is responsible for tracking what kinds of light each camera
+    receives, via the drawer system."""
+
     def __init__(
         self,
         name: str,
-        groupName: str,
+        group_name: str,
         settings: typing.Sequence[DrawerSettings],
         settingIndex: int,
         callbacks={},
     ) -> None:
-        super().__init__(name, groupName, False, callbacks, depot.DRAWER)
+        """Set up the drawer handler.
+
+        We allow either for a set of pre-chosen filters (via DrawerSettings),
+        or for a more variable approach with callbacks.
+
+        If callbacks are supplied, they override the DrawerSettings if any.
+
+        Args:
+            settings (list): A list of DrawerSettings instances.
+            settingIndex (int): Index into settings list indicating the current
+                mode.
+        """
+        super().__init__(name, group_name, False, callbacks, depot.DRAWER)
         self.settings = settings
         self.settingIndex = settingIndex
 
         # Last thing to do is update UI to show default selections.
         initial_settings = self.settings[self.settingIndex]
-        events.oneShotSubscribe(
+        events.one_shot_subscribe(
             events.COCKPIT_INIT_COMPLETE,
             lambda: self.changeDrawer(initial_settings),
         )
 
-    ## Generate a row of buttons, one for each possible drawer.
-    def makeUI(self, parent) -> None:
+    def make_ui(self, parent) -> None:
+        """Generate a row of buttons, one for each possible drawer."""
         if not self.settings or len(self.settings) == 1:
             # Nothing to be done here.
             return None
@@ -149,11 +163,11 @@ class DrawerHandler(deviceHandler.DeviceHandler):
     def OnRadioBox(self, event: wx.CommandEvent) -> None:
         self.changeDrawer(self.settings[event.GetInt()])
 
-    ## Set dye and wavelength on each camera, and update our UI.
     def changeDrawer(self, newSetting: DrawerSettings) -> None:
+        """Set dye and wavelength on each camera, and update our UI."""
         for cname in newSetting.cameraNames:
-            handler = depot.getHandler(cname, depot.CAMERA)
-            handler.updateFilter(
+            handler = depot.get_handler(cname, depot.CAMERA)
+            handler.update_filter(
                 newSetting.cameraToDye[cname],
                 newSetting.cameraToWavelength[cname],
             )

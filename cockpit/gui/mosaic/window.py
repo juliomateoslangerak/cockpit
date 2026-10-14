@@ -224,7 +224,7 @@ class MosaicCommon:
             x1, x2 = safeties[0]
             y1, y2 = safeties[1]
             if hasattr(self, "offset"):
-                # once again consistancy of offset calculations.
+                # once again consistency of offset calculations.
                 x1 -= self.offset[0]
                 x2 -= self.offset[0]
                 y1 -= self.offset[1]
@@ -290,7 +290,7 @@ class MosaicCommon:
         glColor3f(0.4, 0.4, 0.4)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-        # Reflect x-cordinates.
+        # Reflect x-coordinates.
         glMultMatrixf([-1.0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
         for primitive in self.primitives:
             primitive.render()
@@ -312,7 +312,7 @@ class MosaicCommon:
         if offset:
             # if no offset defined we can't apply it!
             if hasattr(self, "offset"):
-                # sign consistancy! Here we have -(x-offset) = -x + offset!
+                # sign consistency! Here we have -(x-offset) = -x + offset!
                 x = x - self.offset[0]
                 y = y - self.offset[1]
 
@@ -376,7 +376,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         ## Camera used for making a mosaic
         self.camera = None
-        # toogle and array for trails
+        # toggle and array for trails
         self.trails = []
         self.displayTrails = False
 
@@ -586,7 +586,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         self.mosaicThread = None
 
-        ## Dont continue mosaics if we chnage objective
+        ## Dont continue mosaics if we change objective
         events.subscribe(events.OBJECTIVE_CHANGE, self.onObjectiveChange)
 
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
@@ -602,7 +602,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         event.Skip()
 
     def onObjectiveChange(self, objective):
-        """Objective chnage sets the shouldRestart flag so we dont continue in
+        """Objective change sets the shouldRestart flag so we dont continue in
         the wrong place."""
         self.shouldRestart = True
 
@@ -621,13 +621,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def centerCanvas(self, event=None):
         """Now that we've been created, recenter the canvas."""
         curPosition = cockpit.interfaces.stageMover.getPosition()[:2]
-        # As we read a position propergate a stage event to ensure
+        # As we read a position propagate a stage event to ensure
         # other interface components are in synch.
         events.publish(events.STAGE_POSITION, 0, curPosition[0])
         events.publish(events.STAGE_POSITION, 1, curPosition[1])
         # Calculate the size of the box at the center of the crosshairs.
         # \todo Should we necessarily assume a 512x512 area here?
-        # if we havent previously set crosshairBoxSize (maybe no camera active)
+        # if we haven't previously set crosshairBoxSize (maybe no camera active)
         if self.crosshairBoxSize == 0:
             self.crosshairBoxSize = 512 * wx.GetApp().Objectives.GetPixelSize()
         self.offset = wx.GetApp().Objectives.GetOffset()
@@ -1025,7 +1025,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         events.publish(events.MOSAIC_UPDATE)
 
     def clearTrails(self):
-        # clear all exisiting trails
+        # clear all existing trails
         self.trails = []
         events.publish(events.MOSAIC_UPDATE)
 

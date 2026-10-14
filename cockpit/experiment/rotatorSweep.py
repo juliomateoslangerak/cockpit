@@ -32,8 +32,9 @@ from cockpit.gui import guiUtils
 EXPERIMENT_NAME = "RotatorSweep"
 
 
-## This class handles classic Z-stack experiments.
 class RotatorSweepExperiment(experiment.Experiment):
+    """This class handles classic Z-stack experiments."""
+
     def __init__(
         self,
         polarizerHandler=None,
@@ -54,8 +55,8 @@ class RotatorSweepExperiment(experiment.Experiment):
         # Add voltage parameters to the metadata.
         self.metadata = "Rotator start and delta: [%f, %f]" % (startV, vDelta)
 
-    ## Create the ActionTable needed to run the experiment.
     def generateActions(self):
+        """Create the ActionTable needed to run the experiment."""
         table = actionTable.ActionTable()
         curTime = 0
         vStart, vLessThan, vSteps = self.vRange
@@ -87,8 +88,9 @@ EXPERIMENT_CLASS = RotatorSweepExperiment
 from cockpit.gui.guiUtils import FLOATVALIDATOR, INTVALIDATOR
 
 
-## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(wx.Panel):
+    """Generate the UI for special parameters used by this experiment."""
+
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
         self.configKey = configKey
@@ -130,9 +132,9 @@ class ExperimentUI(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-    ## Given a parameters dict (parameter name to value) to hand to the
-    # experiment instance, augment them with our special parameters.
     def augmentParams(self, params):
+        """Given a parameters dict (parameter name to value) to hand to the
+        experiment instance, augment them with our special parameters."""
         self.saveSettings()
         params["settlingTime"] = guiUtils.tryParseNum(
             self.settlingTimeControl, float
@@ -143,8 +145,8 @@ class ExperimentUI(wx.Panel):
         params["polarizerHandler"] = depot.getHandlerWithName("SI polarizer")
         return params
 
-    ## Load the saved experiment settings, if any.
     def loadSettings(self):
+        """Load the saved experiment settings, if any."""
         return cockpit.util.userConfig.getValue(
             self.configKey + "RotatorSweepExperimentSettings",
             default={
@@ -155,8 +157,8 @@ class ExperimentUI(wx.Panel):
             },
         )
 
-    ## Generate a dict of our settings.
     def getSettingsDict(self):
+        """Generate a dict of our settings."""
         return {
             "settlingTime": self.settlingTimeControl.GetValue(),
             "startV": self.startVControl.GetValue(),
@@ -164,8 +166,8 @@ class ExperimentUI(wx.Panel):
             "vSteps": self.vStepsControl.GetValue(),
         }
 
-    ## Save the current experiment settings to config.
     def saveSettings(self, settings=None):
+        """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(

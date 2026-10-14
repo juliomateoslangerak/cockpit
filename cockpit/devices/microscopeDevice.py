@@ -272,8 +272,8 @@ class MicroscopeGenericDevice(MicroscopeBase):
         self.handlers = [result]
         return [result]
 
-    ### UI functions ###
     def makeUI(self, parent):
+        """UI functions."""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
@@ -297,8 +297,8 @@ class MicroscopeSwitchableDevice(MicroscopeBase):
         self.handlers = [result]
         return [result]
 
-    ### UI functions ###
     def makeUI(self, parent):
+        """UI functions."""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
@@ -780,8 +780,8 @@ class MicroscopeDIO(MicroscopeBase):
         # need to map bool's to ints for valuelogviewer
         self.logger.log(list(map(int, self._cache)))
 
-    ## Debugging function: display a debug window.
     def showDebugWindow(self):
+        """Debugging function: display a debug window."""
         self.DIOdebugWindow = DIOOutputWindow(
             self, parent=wx.GetApp().MainWindow
         ).Show()
@@ -880,8 +880,9 @@ class DIOOutputWindow(wx.Frame):
         events.subscribe(events.DIO_OUTPUT, self.outputChanged)
         events.subscribe(events.DIO_INPUT, self.inputChanged)
 
-    # functions to updated chaces and GUI displays when DIO state changes.
     def outputChanged(self, line, state):
+        """functions to updated changes and GUI displays when DIO state
+        changes."""
         # check this is an output line
         if self.DIO.IOMap:
             self.lineToButton[line][1].SetValue(state)
@@ -890,8 +891,8 @@ class DIOOutputWindow(wx.Frame):
     def inputChanged(self, line, state):
         self.updateState(line, bool(state))
 
-    ## One of our buttons was clicked; update the debug output.
     def toggle(self):
+        """One of our buttons was clicked; update the debug output."""
         for line, (toggle, button) in self.lineToButton.items():
             if self.DIO.get_IO_state(line):
                 self.DIO.write_line(line, button.GetValue())
@@ -901,9 +902,9 @@ class DIOOutputWindow(wx.Frame):
                     self.DIO.read_line(line, updateGUI=False)
                 )
 
-    ## One of our buttons was clicked; update the debug output.
     @cockpit.util.threads.callInMainThread
     def updateState(self, line=None, state=None):
+        """One of our buttons was clicked; update the debug output."""
         if (line is not None) and (state is not None):
             _logger.debug("Line %d returned %s", line, str(state))
             if self.DIO.get_IO_state(line):
@@ -1009,6 +1010,6 @@ class MicroscopeValueLogger(MicroscopeBase):
                 self.logger.__stopEvent.set()
             return False
 
-    # ensure we stop the polling if we are shutting down.
     def onExit(self):
+        """ensure we stop the polling if we are shutting down."""
         self.enable(False)

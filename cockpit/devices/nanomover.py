@@ -126,10 +126,10 @@ class Nanomover(Device):
                 self.middleXY, shouldBlock=True
             )
 
-    ## We want to periodically exercise the XY stage to spread the grease
-    # around on its bearings; check how long it's been since the stage was
-    # last exercised, and prompt the user if it's been more than a week.
     def promptExerciseStage(self):
+        """We want to periodically exercise the XY stage to spread the grease
+        around on its bearings; check how long it's been since the stage was
+        last exercised, and prompt the user if it's been more than a week."""
         lastExerciseTimestamp = cockpit.util.userConfig.getValue(
             "NanomoverLastExerciseTimestamp", default=0
         )
@@ -207,14 +207,14 @@ class Nanomover(Device):
             )
         return result
 
-    ## Publish the current stage position.
     def publishPosition(self):
+        """Publish the current stage position."""
         for axis in range(3):
             events.publish(events.STAGE_MOVER, axis)
 
-    ## Send updates on the XY stage's position, until it stops moving.
     @cockpit.util.threads.callInNewThread
     def sendXYPositionUpdates(self):
+        """Send updates on the XY stage's position, until it stops moving."""
         while True:
             prevX, prevY = self.positionCache[:2]
             x, y = self.getPosition(shouldUseCache=False)[:2]
@@ -239,8 +239,8 @@ class Nanomover(Device):
             return self.positionCache
         return self.positionCache[axis]
 
-    ## Receive information from the Nanomover control program.
     def receiveData(self, *args):
+        """Receive information from the Nanomover control program."""
         if args[0] == "nanoMotionStatus":
             self.curPosition[:] = args[1]
             self.publishPosition()
@@ -248,22 +248,22 @@ class Nanomover(Device):
                 for i in range(3):
                     events.publish(events.STAGE_STOPPED, "%d nanomover" % i)
 
-    ## Move a specific axis to a given position.
     def moveAbsolute(self, axis, pos):
+        """Move a specific axis to a given position."""
         self.sendXYPositionUpdates()
         self.connection.connection.moveOMX_axis(axis, pos)
 
-    ## Move a specific axis by a given amount.
     def moveRelative(self, axis, delta):
+        """Move a specific axis by a given amount."""
         self.sendXYPositionUpdates()
         self.connection.connection.moveOMX_dAxis(axis, delta)
 
-    ## User clicked the abort button; halt motion.
     def onAbort(self, *args):
+        """User clicked the abort button; halt motion."""
         self.connection.connection.stopOMX()
 
-    # function to home stage if needed.
     def home(self):
+        """function to home stage if needed."""
         # keep a copy of the softlimits.
         #        realSoftlimits= copy.copy(self.softlimits)
         #        self.softlimits = [[-25000, 25000],

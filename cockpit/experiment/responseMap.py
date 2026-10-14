@@ -83,21 +83,17 @@ import wx
 EXPERIMENT_NAME = "Response map correction file"
 
 
-## This class collects the data needed to perform response-map correction.
-# It takes exposures of some flat illumination source (e.g.
-# a Chroma slide) at varying exposure times, to characterize the response of
-# the cameras to incident light. Structurally this class is very similar to
-# the OffsetGainCorrectionExperiment class.
 class ResponseMapExperiment(
     offsetGainCorrection.OffsetGainCorrectionExperiment
 ):
-    ## \param numExposures How many images to take for each exposure time.
-    # \param exposureTimes List of exposure times to take images for.
-    # \param cosmicRayThreshold If any pixels are more than this many
-    #        standard deviations away from the median of the overall image, then
-    #        the image is discarded.
-    # \param shouldPreserveIntermediaryFiles If True, then save the raw
-    #        data in addition to the averaged files.
+    """This class collects the data needed to perform response-map correction.
+
+    It takes exposures of some flat illumination source (e.g. a Chroma slide)
+    at varying exposure times, to characterize the response of the cameras to
+    incident light. Structurally this class is very similar to the
+    OffsetGainCorrectionExperiment class.
+    """
+
     def __init__(
         self,
         cameras,
@@ -110,6 +106,18 @@ class ResponseMapExperiment(
         shouldPreserveIntermediaryFiles,
         **kwargs,
     ):
+        """Set up the response map experiment.
+
+        Args:
+            numExposures (int): How many images to take for each exposure
+                time.
+            exposureTimes (list): Exposure times to take images for.
+            cosmicRayThreshold (float): If any pixels are more than this many
+                standard deviations away from the median of the overall
+                image, then the image is discarded.
+            shouldPreserveIntermediaryFiles (bool): If True, then save the raw
+                data in addition to the averaged files.
+        """
         # Fill in some dummy values here for parameters that we don't actually
         # use.
         super().__init__(
@@ -132,12 +140,14 @@ class ResponseMapExperiment(
         ## Maximum width/height of an image for any camera we use.
         self.maxImageDims = [0, 0]
 
-    ## Very similar to OffsetGainCorrectionExperiment.run() except that we
-    # calculate the exposure times to use differently, and have a different
-    # stopping condition. We also generate some output at the end to
-    # demonstrate our results.
     @cockpit.util.threads.callInNewThread
     def run(self):
+        """Very similar to OffsetGainCorrectionExperiment.run() except that we
+        calculate the exposure times to use differently, and have a different
+        stopping condition.
+
+        We also generate some output at the end to demonstrate our results.
+        """
         # For debugging purposes
         experiment.lastExperiment = self
 
@@ -211,9 +221,8 @@ class ResponseMapExperiment(
         self.showResults()
         self.cleanup()
 
-    ## Save our averaged images together in a single file, with the
-    # exposure time in the extended header.
     def save(self):
+        """Save our averaged images together in a single file, with the exposure time in the extended header."""
         # First, re-order our images into WTZ order (with the Z axis being
         # flat).
         numTimes = len(self.timesAndImages)
@@ -246,8 +255,8 @@ class ResponseMapExperiment(
         handle.write(allImages)
         handle.close()
 
-    ## Demonstrate our results to the user in a number of ways.
     def showResults(self):
+        """Demonstrate our results to the user in a number of ways."""
         # First, show plots of the linearity of some of the pixels, before
         # and after correction.
         xVals = numpy.array([d[0] for d in self.timesAndImages])
@@ -284,8 +293,8 @@ class ResponseMapExperiment(
             correctedImages, "Corrected sample images", parent=None
         )
 
-    ## Given some images, plot a few pixels.
     def plotPixels(self, xVals, images, title):
+        """Given some images, plot a few pixels."""
         figure = matplotlib.figure.Figure((6, 4), dpi=100, facecolor=(1, 1, 1))
         axes = figure.add_subplot(1, 1, 1)
         axes.set_axis_bgcolor("white")
@@ -326,10 +335,12 @@ class ResponseMapExperiment(
         frame.SetSize((640, 480))
         frame.Show()
 
-    ## Create the ActionTable needed to run the experiment. We basically
-    # ignore the values in self.exposureSettings in favor of the provided
-    # exposure time.
     def generateActions(self, exposureTime):
+        """Create the ActionTable needed to run the experiment.
+
+        We basically ignore the values in self.exposureSettings in favor of the
+        provided exposure time.
+        """
         table = actionTable.ActionTable()
         curTime = 0
         allCams = set(self.cameras)
@@ -348,12 +359,12 @@ class ResponseMapExperiment(
                     curTime = self.expose(curTime, usedCams, settings, table)
         return table
 
-    ## Examine the images in self.camToImages, discard any that indicate
-    # cosmic ray strikes or have unusual median intensities, average the
-    # remainder, and put them into
-    # self.camToAverages. Return a (possibly empty) set of cameras that had at
-    # least 1 valid image.
     def processImages(self, exposureTime):
+        """Examine the images in self.camToImages, discard any that indicate cosmic ray strikes or have unusual median intensities, average the remainder, and put them into self.camToAverages.
+
+        Return a (possibly empty) set of cameras that had at least 1 valid
+        image.
+        """
         activeCameras = set()
         averages = []
         raws = []
@@ -417,8 +428,9 @@ EXPERIMENT_CLASS = ResponseMapExperiment
 from cockpit.gui.guiUtils import CSVVALIDATOR, FLOATVALIDATOR, INTVALIDATOR
 
 
-## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(wx.Panel):
+    """Generate the UI for special parameters used by this experiment."""
+
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
         self.configKey = configKey
@@ -474,9 +486,8 @@ class ExperimentUI(wx.Panel):
         sizer.Add(rowSizer)
         self.SetSizerAndFit(sizer)
 
-    ## Given a parameters dict (parameter name to value) to hand to the
-    # experiment instance, augment them with our special parameters.
     def augmentParams(self, params):
+        """Given a parameters dict (parameter name to value) to hand to the experiment instance, augment them with our special parameters."""
         self.saveSettings()
         params["numExposures"] = guiUtils.tryParseNum(
             self.responseArgs["responseMapNumExposures"]
@@ -492,8 +503,8 @@ class ExperimentUI(wx.Panel):
         ].GetValue()
         return params
 
-    ## Load the saved experiment settings, if any.
     def loadSettings(self):
+        """Load the saved experiment settings, if any."""
         return cockpit.util.userConfig.getValue(
             self.configKey + "responseMapExperimentSettings",
             default={
@@ -504,12 +515,12 @@ class ExperimentUI(wx.Panel):
             },
         )
 
-    ## Generate a dict of our settings.
     def getSettingsDict(self):
+        """Generate a dict of our settings."""
         return {(key, c.GetValue()) for key, c in self.responseArgs.items()}
 
-    ## Save the current experiment settings to config.
     def saveSettings(self, settings=None):
+        """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(

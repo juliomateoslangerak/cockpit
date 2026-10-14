@@ -192,10 +192,10 @@ class PhysikInstrumenteM687(Device):
         # Get the proper initial position.
         self.getXYPosition(shouldUseCache=False)
 
-    ## We want to periodically exercise the XY stage to spread the grease
-    # around on its bearings; check how long it's been since the stage was
-    # last exercised, and prompt the user if it's been more than a week.
     def promptExerciseStage(self):
+        """We want to periodically exercise the XY stage to spread the grease
+        around on its bearings; check how long it's been since the stage was
+        last exercised, and prompt the user if it's been more than a week."""
         lastExerciseTimestamp = cockpit.util.userConfig.getValue(
             "PIM687LastExerciseTimestamp", default=0
         )
@@ -230,16 +230,18 @@ class PhysikInstrumenteM687(Device):
                 "PIM687LastExerciseTimestamp", time.time()
             )
 
-    ## Send a command to the XY stage controller, read the response, check
-    # for errors, and either raise an exception or return the response.
-    # Very similar to sendZCommand of course, but xyConnection is a Serial
-    # instance and zConnection is a Telnet instance.
-    # We prevent commands from being sent if too much time passes before we
-    # can acquire the lock, since otherwise we may buffer up a lot of
-    # user-input motion commands and end up moving further than expected.
     def sendXYCommand(
         self, command, numExpectedLines=1, shouldCheckErrors=True
     ):
+        """Send a command to the XY stage controller, read the response, check
+        for errors, and either raise an exception or return the response.
+
+        Very similar to sendZCommand of course, but xyConnection is a Serial
+        instance and zConnection is a Telnet instance. We prevent commands from
+        being sent if too much time passes before we can acquire the lock,
+        since otherwise we may buffer up a lot of user-input motion commands
+        and end up moving further than expected.
+        """
         with self.xyLock:
             self.xyConnection.write(command + b"\n")
             response = self.getXYResponse(numExpectedLines)
@@ -268,10 +270,12 @@ class PhysikInstrumenteM687(Device):
                     )
             return response
 
-    ## Read a response off of the XY connection. We do this one character
-    # at a time in the hopes of avoiding having to wait for a timeout. We
-    # stop when we hit the right number of newlines.
     def getXYResponse(self, numExpectedLines):
+        """Read a response off of the XY connection.
+
+        We do this one character at a time in the hopes of avoiding having to
+        wait for a timeout. We stop when we hit the right number of newlines.
+        """
         response = b""
         numLines = 0
         while True:
@@ -287,8 +291,8 @@ class PhysikInstrumenteM687(Device):
                 break
         return response
 
-    ## Home the motors.
     def homeMotors(self):
+        """Home the motors."""
         # Clear output buffers
         self.xyConnection.readlines()
         self.xyConnection.write(b"SVO 1 1\n")
@@ -336,21 +340,24 @@ class PhysikInstrumenteM687(Device):
 
         return success
 
-    ## When the user logs out, switch to open-loop mode.
     def onExit(self):
+        """When the user logs out, switch to open-loop mode."""
         # Switch to open loop
         self.sendXYCommand(b"SVO 1 0")
         self.sendXYCommand(b"SVO 2 0")
         self.xyConnection.close()
 
-    ## Halt XY motion when the user aborts. Note we can't control Z motion
-    # here because the piezo is under the DSP's control.
     def onAbort(self, *args):
+        """Halt XY motion when the user aborts.
+
+        Note we can't control Z motion here because the piezo is under the
+        DSP's control.
+        """
         self.sendXYCommand(b"HLT")
 
-    ## The XY Macro Stage view is painting itself; draw the banned
-    # rectangles as pink excluded zones.
     def onMacroStagePaint(self, stage):
+        """The XY Macro Stage view is painting itself; draw the banned
+        rectangles as pink excluded zones."""
         glColor3f(1, 0.6, 0.6)
         glBegin(GL_QUADS)
         for (x1, y1), (x2, y2) in BANNED_RECTANGLES:
@@ -416,12 +423,15 @@ class PhysikInstrumenteM687(Device):
         curPos = self.xyPositionCache[axis]
         self.moveXYAbsolute(axis, curPos + delta)
 
-    # Verify that the desired motion is safe, i.e. doesn't take us through
-    # either of the banned rectangles. We define a rectangle that consists
-    # of all of the potential locations that the stage could occupy between
-    # its current position and its target position, and test for overlap
-    # between that rectangle and the banned rectangles.
     def isMotionSafe(self, axis):
+        """Verify that the desired motion is safe, i.e. doesn't take us through
+        either of the banned rectangles.
+
+        We define a rectangle that consists of all of the potential locations
+        that the stage could occupy between its current position and its target
+        position, and test for overlap between that rectangle and the banned
+        rectangles.
+        """
         # Make copies of these values for safety's sake (so they don't get
         # unexpectedly altered).
         start = tuple(self.xyPositionCache)
@@ -436,10 +446,12 @@ class PhysikInstrumenteM687(Device):
                 return False
         return True
 
-    ## Test if the given two axis-aligned rectangles overlap. We do this by
-    # looking to see if either of their axial projections *don't* overlap
-    # (a simple application of the Separating Axis theorem).
     def doBoxesIntersect(self, start, end, rectangle):
+        """Test if the given two axis-aligned rectangles overlap.
+
+        We do this by looking to see if either of their axial projections
+        *don't* overlap (a simple application of the Separating Axis theorem).
+        """
         for axis in range(2):
             # a = minimum value for axis; b = maximum value; 1 = first
             # rectangle, 2 = second rectangle.
@@ -458,9 +470,9 @@ class PhysikInstrumenteM687(Device):
                 return False
         return True
 
-    ## Send updates on the XY stage's position, until it stops moving.
     @cockpit.util.threads.callInNewThread
     def sendXYPositionUpdates(self):
+        """Send updates on the XY stage's position, until it stops moving."""
         while True:
             prevX, prevY = self.xyPositionCache
             x, y = self.getXYPosition(shouldUseCache=False)
@@ -476,10 +488,12 @@ class PhysikInstrumenteM687(Device):
                 events.publish(events.STAGE_MOVER, axis)
             time.sleep(0.01)
 
-    ## Get the position of the specified axis, or both axes by default.
-    # If shouldUseCache is not set, then we will query the controller, which
-    # takes some time.
     def getXYPosition(self, axis=None, shouldUseCache=True):
+        """Get the position of the specified axis, or both axes by default.
+
+        If shouldUseCache is not set, then we will query the controller, which
+        takes some time.
+        """
         if not shouldUseCache:
             position = self.sendXYCommand(b"POS?", 2, False)
             y, x = position.split(b"\n", maxsplit=2)[:2]
@@ -494,8 +508,9 @@ class PhysikInstrumenteM687(Device):
     def makeInitialPublications(self):
         self.sendXYPositionUpdates()
 
-    ## Debugging function: extract all valid parameters from the XY controller.
     def listXYParams(self):
+        """Debugging function: extract all valid parameters from the XY
+        controller."""
         # Don't use sendXYCommand here because its error handling doesn't
         # deal with HPA?'s output properly -- there's an extra blank line
         # that makes it think output is done when it actually isn't.
@@ -523,8 +538,8 @@ class PhysikInstrumenteM687(Device):
         handle.write(b"\n\n")
         handle.close()
 
-    ## Debugging function: test doBoxesIntersect().
     def testBoxIntersect(self):
+        """Debugging function: test doBoxesIntersect()."""
         for items in [
             [(0, 0), (10, 10), ((5, 5), (15, 15)), True],
             [(5, 5), (15, 5), ((0, 0), (10, 10)), True],

@@ -71,8 +71,9 @@ FIELD_SIZE = (70, -1)
 _FILENAME_TEMPLATE = "{date}-{time}_t{cycle}_p{site}.mrc"
 
 
-## This class allows for configuring multi-site experiments.
 class MultiSiteExperimentDialog(wx.Dialog):
+    """This class allows for configuring multi-site experiments."""
+
     def __init__(self, parent):
         super().__init__(
             parent,
@@ -300,16 +301,16 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.sizer.Add(self.panel)
         self.SetSizerAndFit(self.sizer)
 
-    ## User clicked the show/hide scanning experiment button.
     def onShowScanButton(self, event):
+        """User clicked the show/hide scanning experiment button."""
         self.experimentPanel.Show(not self.experimentPanel.IsShown())
         text = ["Show", "Hide"][self.experimentPanel.IsShown()]
         self.showScanButton.SetLabel("%s experiment settings" % text)
         self.panel.SetSizerAndFit(self.panelSizer)
         self.SetClientSize(self.panel.GetSize())
 
-    ## User checked/unchecked the "customize light frequencies" button.
     def onCustomizeLightFrequencies(self, event):
+        """User checked/unchecked the "customize light frequencies" button."""
         self.lightFrequenciesPanel.Show(
             self.shouldCustomizeLightFrequencies.GetValue()
         )
@@ -317,13 +318,13 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.panel.SetSizerAndFit(self.panelSizer)
         self.SetClientSize(self.panel.GetSize())
 
-    ## Our experiment panel resized itself.
     def onExperimentPanelResize(self, panel):
+        """Our experiment panel resized itself."""
         self.panel.SetSizerAndFit(self.panelSizer)
         self.SetClientSize(self.panel.GetSize())
 
-    ## Our experiment panel needs to be reset.
     def onExperimentPanelReset(self):
+        """Our experiment panel needs to be reset."""
         self.panelSizer.Remove(self.experimentPanel)
         self.experimentPanel.Destroy()
         self.experimentPanel = experimentConfigPanel.ExperimentConfigPanel(
@@ -345,11 +346,14 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.panel.SetSizerAndFit(self.panelSizer)
         return self.experimentPanel
 
-    ## Analyze the user's chosen sites to visit and how often they should
-    # be visited, and come up with a sequence of sites to visit on each
-    # cycle that minimizes total travel time. Return a tuple of
-    # (total number of site lists, mapping of cycle number to site list).
     def chooseSiteVisitOrder(self):
+        """Analyze the user's chosen sites to visit and how often they should
+        be visited, and come up with a sequence of sites to visit on each cycle
+        that minimizes total travel time.
+
+        Return a tuple of (total number of site lists, mapping of cycle number
+        to site list).
+        """
         baseIndices, frequencies = self.sitesPanel.getSitesList()
         # Check for sites that have been deleted
         baseOrder = []
@@ -381,9 +385,11 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 cycleNumToSitesList.append(sitesList)
         return (cycleRate, cycleNumToSitesList)
 
-    ## Run sanity checks before starting the experiment. Return True if all
-    # is well, False otherwise.
     def sanityCheck(self):
+        """Run sanity checks before starting the experiment.
+
+        Return True if all is well, False otherwise.
+        """
         if not self.sitesPanel.getSitesList():
             wx.MessageBox(
                 "You must select sites before running the experiment.",
@@ -413,10 +419,13 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 return False
         return True
 
-    ## Run the experiment. We spin this off to a background thread so
-    # the user can interact with the UI while the experiment runs.
     @cockpit.util.threads.callInNewThread
     def onStart(self, event=None):
+        """Run the experiment.
+
+        We spin this off to a background thread so the user can interact with
+        the UI while the experiment runs.
+        """
         if not self.sanityCheck():
             return
         self.Hide()
@@ -470,8 +479,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
         self.cleanUp()
 
-    ## Clean up after the experiment ends.
     def cleanUp(self):
+        """Clean up after the experiment ends."""
         for i, shouldActivate in enumerate(self.activeLights):
             self.allLights[i].setEnabled(shouldActivate)
         if (
@@ -483,8 +492,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 handler.disable()
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
 
-    ## Select the appropriate light sources for this cycle.
     def activateLights(self, cycleNum):
+        """Select the appropriate light sources for this cycle."""
         for i, control in enumerate(self.lightFrequencies):
             string = control.GetValue()
             frequency = 1
@@ -500,8 +509,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             if self.activeLights[i]:
                 self.allLights[i].setEnabled(cycleNum % frequency == offset)
 
-    ## Go to the specified site and run our experiment on it.
     def imageSite(self, siteId, cycleNum, experimentStart):
+        """Go to the specified site and run our experiment on it."""
         events.publish(
             events.UPDATE_STATUS_LIGHT,
             "device waiting",
@@ -534,13 +543,16 @@ class MultiSiteExperimentDialog(wx.Dialog):
         )
         print(f"Imaging took {(time.time() - start):.2f} seconds")
 
-    ## User clicked the abort button.
     def onAbort(self, *args):
+        """User clicked the abort button."""
         self.shouldAbort = True
 
-    ## Wait for some time, allowing the user to abort the wait. Return True
-    # if we were successful (i.e. handed a valid amount of time to wait for).
     def waitFor(self, seconds):
+        """Wait for some time, allowing the user to abort the wait.
+
+        Return True if we were successful (i.e. handed a valid amount of time
+        to wait for).
+        """
         if seconds <= 0:
             return False
         print(f"Waiting for {seconds:.2f} seconds until next cycle")
@@ -564,8 +576,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             curTime = time.time()
         return True
 
-    ## Save our settings to the config.
     def saveConfig(self):
+        """Save our settings to the config."""
         lightFrequencies = [l.GetValue() for l in self.lightFrequencies]
         cockpit.util.userConfig.setValue(
             "multiSiteExperiment",
@@ -580,8 +592,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             },
         )
 
-    ## Blow away the dialog and recreate it from scratch.
     def onReset(self, event):
+        """Blow away the dialog and recreate it from scratch."""
         parent = self.GetParent()
         global dialog
         dialog.Destroy()

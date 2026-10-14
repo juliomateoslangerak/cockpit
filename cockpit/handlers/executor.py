@@ -67,19 +67,26 @@ from cockpit.handlers.deviceHandler import DeviceHandler
 from cockpit.handlers.genericPositioner import GenericPositionerHandler
 
 
-## This handler is responsible for executing portions of experiments.
 class ExecutorHandler(DeviceHandler):
-    ## callbacks must include the following:
-    # - examineActions(name, table): Perform any necessary validation or
-    #   modification of the experiment's ActionTable.
-    # - executeTable(name, table, startIndex, stopIndex): Actually perform
-    #   actions through the specified lines in the ActionTable.
+    """This handler is responsible for executing portions of experiments."""
+
     def __init__(self, name, groupName, callbacks, dlines=None, alines=None):
-        # \param name: handler name
-        # \param groupname: handler and device group name
-        # \param callbacks: callbacks, as above
-        # \param dlines: optional, number of digital lines
-        # \param alines: optional, number of analogue lines
+        """Set up the executor handler.
+
+        callbacks must include the following:
+
+        - examineActions(name, table): Perform any necessary validation or
+          modification of the experiment's ActionTable.
+        - executeTable(name, table, startIndex, stopIndex): Actually perform
+          actions through the specified lines in the ActionTable.
+
+        Args:
+            name (str): Handler name.
+            groupName (str): Handler and device group name.
+            callbacks (dict): Callbacks, as above.
+            dlines (int): Optional, number of digital lines.
+            alines (int): Optional, number of analogue lines.
+        """
         # Note that even though this device is directly involved in running
         # experiments, it is never itself a part of an experiment, so
         # we pass False for isEligibleForExperiments here.
@@ -117,7 +124,7 @@ class ExecutorHandler(DeviceHandler):
         return self.callbacks["examineActions"](table)
 
     def getNumRunnableLines(self, table, index):
-        ## Return number of lines this handler can run.
+        """Return number of lines this handler can run."""
         count = 0
         for time, handler, parameter in table[index:]:
             # Check for analog and digital devices we control.
@@ -137,16 +144,19 @@ class ExecutorHandler(DeviceHandler):
     def _raiseNoAnalogException(self, *args, **kwargs):
         raise Exception("Analog lines not supported.")
 
-    ## Run a portion of a table describing the actions to perform in a given
-    # experiment.
-    # \param table An ActionTable instance.
-    # \param startIndex Index of the first entry in the table to run.
-    # \param stopIndex Index of the entry before which we stop (i.e. it is
-    #        not performed).
-    # \param numReps Number of times to iterate the execution.
-    # \param repDuration Amount of time to wait between reps, or None for no
-    #        wait time.
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+        """Run a portion of a table describing the actions to perform in a
+        given experiment.
+
+        Args:
+            table (ActionTable): An ActionTable instance.
+            startIndex (int): Index of the first entry in the table to run.
+            stopIndex (int): Index of the entry before which we stop (i.e. it
+                is not performed).
+            numReps (int): Number of times to iterate the execution.
+            repDuration (float): Amount of time to wait between reps, or None
+                for no wait time.
+        """
         # The actions between startIndex and stopIndex may include actions for
         # this handler, or for this handler's clients. All actions are
         # ultimately carried out by this handler, so we need to parse the
@@ -220,8 +230,8 @@ class ExecutorHandler(DeviceHandler):
             actions, 0, len(actions), numReps, repDuration
         )
 
-    ## Debugging function: display ExecutorOutputWindow.
     def showDebugWindow(self):
+        """Debugging function: display ExecutorOutputWindow."""
         # Ensure only a single instance of the window.
         global _windowInstance
         window = globals().get("_windowInstance")
@@ -254,11 +264,11 @@ class ExecutorHandler(DeviceHandler):
 
 
 class DigitalMixin:
-    ## Digital handler mixin.
+    """Digital handler mixin."""
 
-    ## Register a client device that is connected to one of our lines.
-    # returns a virtual TriggerProxy.
     def registerDigital(self, client, line):
+        """Register a client device that is connected to one of our lines.
+        returns a virtual TriggerProxy."""
         h = TriggerProxy(client.name, self)
         self.digitalClients[h] = int(line)
         # If the client not a DelegateTrigger executor, all of its actions
@@ -267,8 +277,8 @@ class DigitalMixin:
             self.digitalClients[client] = int(line)
         return h
 
-    ## Set or clear a single line.
     def setDigital(self, line, state):
+        """Set or clear a single line."""
         if line is None:
             return
         line = int(line)
@@ -289,7 +299,7 @@ class DigitalMixin:
         return self.callbacks["readDigital"]()
 
     def triggerDigital(self, client, dt=0.01):
-        ## Trigger a client line now.
+        """Trigger a client line now."""
         line = self.digitalClients.get(client, None)
         if line:
             self.setDigital(line, True)
@@ -400,18 +410,22 @@ class DigitalMixin:
 
 
 class AnalogMixin:
-    ## Analog handler mixin.
-    # Consider output 'level' in volts, amps or ADUS, and input
-    # 'position' in experimental units (e.g. um or deg).
-    # level = gain * (offset + position)
-    # gain is in units of volts, amps or ADUS per experimental unit.
-    # offset is in experimental units.
+    """Analog handler mixin.
+
+    Consider output 'level' in volts, amps or ADUS, and input
+    'position' in experimental units (e.g. um or deg).
+    level = gain * (offset + position)
+    gain is in units of volts, amps or ADUS per experimental unit.
+    offset is in experimental units.
+    """
 
     def registerAnalog(
         self, client, line, offset=0, gain=1, movementTimeFunc=None
     ):
-        ## Register a client device that is connected to one of our lines.
-        # Returns an AnalogLineHandler for that line.
+        """Register a client device that is connected to one of our lines.
+
+        Returns an AnalogLineHandler for that line.
+        """
         h = AnalogLineHandler(
             client.name,
             self.name + " analogs",
@@ -427,11 +441,11 @@ class AnalogMixin:
         return h
 
     def setAnalogLine(self, line, level):
-        ## Set analog output of line to level.
+        """Set analog output of line to level."""
         self.callbacks["setAnalog"](line, level)
 
     def getAnalogLine(self, line):
-        ## Get level of analog line.
+        """Get level of analog line."""
         return self.callbacks["getAnalog"](line)
 
     def _onPrepareForExperiment(self):
@@ -445,13 +459,15 @@ class AnalogMixin:
 
 
 class AnalogLineHandler(GenericPositionerHandler):
-    ## A type of GenericPositioner for analog outputs.
-    # Handles absolute and indexed positions in action table.
-    #   absolute:   time, handler, float or int
-    #   indexed:    time, handler, (index, wavelength or None or 'default')
     def __init__(
         self, name, groupName, asource, line, offset, gain, movementTimeFunc
     ):
+        """A type of GenericPositioner for analog outputs.
+
+        Handles absolute and indexed positions in action table. absolute:
+        time, handler, float or int indexed:    time, handler, (index,
+        wavelength or None or 'default')
+        """
         super().__init__(name, groupName, True, {})
         # Indexed positions. Can be a dict if wavelength-independent, or
         # a mapping of wavelengths (as floats or ints) to lists of same length.
@@ -591,8 +607,9 @@ def plot_action_table_profile(
     plt.show(block=False)
 
 
-## This debugging window allows manipulation of analogue and digital lines.
 class ExecutorDebugWindow(wx.Frame):
+    """This debugging window allows manipulation of analogue and digital lines."""
+
     def __init__(self, handler, parent, *args, **kwargs):
         title = handler.name + " Executor control lines"
         kwargs["style"] = (
@@ -669,9 +686,10 @@ class ExecutorDebugWindow(wx.Frame):
             plot_action_table_profile(experiment.lastExperiment.table)
 
 
-## A class for a handler that can perform actions in an experiment,
-# but doesn't have any analogue or digital capabilities.
 class SimpleExecutor(DeviceHandler):
+    """A class for a handler that can perform actions in an experiment, but
+    doesn't have any analogue or digital capabilities."""
+
     def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
         super().__init__(
             name,
@@ -687,15 +705,15 @@ class SimpleExecutor(DeviceHandler):
                 cb = lambda *args, **kwargs: cb
             self.__setattr__(cbname, cb)
 
-    ## Execute whatever the device does and publish an event on completion.
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+        """Execute whatever the device does and publish an event on completion."""
         self.callbacks["executeTable"](
             table, startIndex, stopIndex, numReps, repDuration
         )
         events.publish(events.EXPERIMENT_EXECUTION)
 
-    ## Return number of lines this handler can run.
     def getNumRunnableLines(self, table, index):
+        """Return number of lines this handler can run."""
         count = 0
         if not self.isEligibleForExperiments:
             return 0
@@ -706,9 +724,10 @@ class SimpleExecutor(DeviceHandler):
         return count
 
 
-## A trigger handler to allow discrimination of trigger and
-# triggered device in the action table.
 class TriggerProxy(DeviceHandler):
+    """A trigger handler to allow discrimination of trigger and triggered
+    device in the action table."""
+
     def __init__(self, name, trigSource):
         super().__init__(
             name + " trigger", name + " group", False, {}, depot.GENERIC_DEVICE
@@ -724,16 +743,17 @@ class TriggerProxy(DeviceHandler):
 
 
 class DelegateTrigger(SimpleExecutor):
-    # def __init__(self, name, groupName, trigSource, trigLine, examineActions, movementTime=0):
     def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
+        """def __init__(self, name, groupName, trigSource, trigLine,
+        examineActions, movementTime=0):."""
         super().__init__(name, groupName, isEligibleForExperiments, callbacks)
         self._trigger = None
         self._triggerTime = 0
         self._responseTime = 0
         self.triggerNow = lambda: None
 
-    ## Delegate trigger actions to some trigSource
     def delegateTo(self, trigSource, trigLine, trigTime=0, responseTime=0):
+        """Delegate trigger actions to some trigSource."""
         if isinstance(trigSource, str):
             trigSource = depot.getHandler(trigSource, depot.EXECUTOR)
         self._trigger = trigSource.registerDigital(self, trigLine)
@@ -741,9 +761,12 @@ class DelegateTrigger(SimpleExecutor):
         self._triggerTime = trigTime
         self._responseTime = responseTime
 
-    ## Add a toggle event to the action table.
-    # Return time of last action, and response time before ready after trigger.
     def addToggle(self, time, table):
+        """Add a toggle event to the action table.
+
+        Return time of last action, and response time before ready after
+        trigger.
+        """
         dt = max(self._triggerTime, table.toggleTime)
         table.addAction(time, self._trigger, True)
         table.addAction(time + dt, self._trigger, False)

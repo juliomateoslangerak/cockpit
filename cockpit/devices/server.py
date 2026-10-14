@@ -95,11 +95,13 @@ class CockpitServer(device.Device):
             )
         ]
 
-    ## Register a new function. Create a daemon to listen to calls
-    # on the appropriate port; those calls will be forwarded to
-    # the registered function. Return a URI used to connect to that
-    # daemon from outside.
     def register(self, func, localIP=None):
+        """Register a new function.
+
+        Create a daemon to listen to calls on the appropriate port; those calls
+        will be forwarded to the registered function. Return a URI used to
+        connect to that daemon from outside.
+        """
         self.uniquePortID += 1
         ipAddress = self.ipAddress
         if localIP is not None:
@@ -110,8 +112,8 @@ class CockpitServer(device.Device):
         daemon.serve()
         return "PYRO:%s@%s:%d" % (self.name, ipAddress, self.uniquePortID)
 
-    ## Stop a daemon.
     def unregister(self, func):
+        """Stop a daemon."""
         if func in self.funcToDaemon:
             self.funcToDaemon[func].stop()
             del self.funcToDaemon[func]
@@ -124,13 +126,13 @@ class ServerDaemon:
         self.daemon = Pyro4.Daemon(port=port, host=host)
         self.daemon.register(self, name)
 
-    ## Handle function calls by forwarding them to self.func.
     @cockpit.util.threads.callInNewThread
     def serve(self):
+        """Handle function calls by forwarding them to self.func."""
         self.daemon.requestLoop()
 
-    ## Stop the daemon.
     def stop(self):
+        """Stop the daemon."""
         # Per the documentation, these functions must be called
         # in separate threads, or else the process will hang.
         threading.Thread(target=self.daemon.close, name="server-close").start()
@@ -138,11 +140,13 @@ class ServerDaemon:
             target=self.daemon.shutdown, name="server-shutdown"
         ).start()
 
-    ## Receive a function call from outside.
-    # Note that if our caller throws an exception, then we do not propagate
-    # it to the client; the assumption is that it's our fault and there's
-    # nothing the client can do about the failure.
     def receiveData(self, *args):
+        """Receive a function call from outside.
+
+        Note that if our caller throws an exception, then we do not propagate
+        it to the client; the assumption is that it's our fault and there's
+        nothing the client can do about the failure.
+        """
         try:
             self.func(*args)
         except Exception as e:

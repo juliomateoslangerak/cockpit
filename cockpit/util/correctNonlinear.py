@@ -82,9 +82,14 @@ from cockpit.util import datadoc
 
 
 class Corrector:
-    ## \param exposureTimes List of exposure times, one for each image.
-    # \param mapData List of 2D numpy arrays mapping out the response curve.
     def __init__(self, exposureTimes, mapData):
+        """Set up the corrector from a set of response-curve images.
+
+        Args:
+            exposureTimes (list): List of exposure times, one for each image.
+            mapData (list): List of 2D numpy arrays mapping out the response
+                curve.
+        """
         ## Shape of an image.
         self.imageShape = mapData[0].shape
 
@@ -179,12 +184,14 @@ class Corrector:
             newCorrectors.append(SubCorrector(times, images, 1))
         self.subCorrectors.extend(newCorrectors)
 
-    ## Given an input data array (2D), return a corrected version.
-    # See this post for a non-vectorized version of this algorithm:
-    # http://mail.scipy.org/pipermail/scipy-user/2013-January/034051.html
-    # Each SubCorrector can only handle a certain range of inputs, so we must
-    # apply them iteratively to cover all the input data.
     def correct(self, inputData):
+        """Given an input data array (2D), return a corrected version.
+
+        See this post for a non-vectorized version of this algorithm:
+        http://mail.scipy.org/pipermail/scipy-user/2013-January/034051.html
+        Each SubCorrector can only handle a certain range of inputs, so we must
+        apply them iteratively to cover all the input data.
+        """
         # Start out with "all uncorrected" data.
         result = numpy.ones(inputData.shape, dtype=numpy.float32) * -1
         for corrector in self.subCorrectors:
@@ -225,19 +232,27 @@ class Corrector:
         return result * self.slope + self.intercept
 
 
-## This class is a subcontractor to the Corrector class, responsible for
-# linearizing a portion of the data range. We do this because it's expected
-# that the response curve map is dense where the curve is nonlinear and sparse
-# otherwise. Our correcting system requires us to have a synthetic uniform
-# sampling of the response curve, which gets prohibitive in memory usage if
-# we try to do it for the entire possible data range, so we split it up into
-# sections.
 class SubCorrector:
-    ## \param exposureTimes List of exposure times we are valid for.
-    # \param images List of 2D image arrays of corresponding exposure times.
-    # \param sampleRate Amount of supersampling we should perform when we
-    #        create a uniform sampling of the image data.
+    """This class is a subcontractor to the Corrector class, responsible for
+    linearizing a portion of the data range.
+
+    We do this because it's expected that the response curve map is dense where
+    the curve is nonlinear and sparse otherwise. Our correcting system requires
+    us to have a synthetic uniform sampling of the response curve, which gets
+    prohibitive in memory usage if we try to do it for the entire possible data
+    range, so we split it up into sections.
+    """
+
     def __init__(self, exposureTimes, images, sampleRate=1):
+        """Set up a corrector valid for a range of exposure times.
+
+        Args:
+            exposureTimes (list): List of exposure times we are valid for.
+            images (list): List of 2D image arrays of corresponding exposure
+                times.
+            sampleRate (int): Amount of supersampling we should perform when we
+                create a uniform sampling of the image data.
+        """
         print(
             "Making subcontractor with times/median values",
             "\n".join(
@@ -278,10 +293,13 @@ class SubCorrector:
                     self.exposureTimes,
                 )
 
-    ## Given an input 2D array, linearize it so that its values are in terms
-    # of "exposure time" instead of counts. If a value is outside the range
-    # we can handle, then return -1 for that pixel.
     def correct(self, inputData):
+        """Given an input 2D array, linearize it so that its values are in
+        terms of "exposure time" instead of counts.
+
+        If a value is outside the range we can handle, then return -1 for that
+        pixel.
+        """
         indices = (
             (self.numSamples - 1)
             * (inputData - self.minVals)
@@ -295,8 +313,8 @@ class SubCorrector:
         )
         return exposures
 
-    ## Return a description of our mapping for the specified pixel.
     def describe(self, x, y):
+        """Return a description of our mapping for the specified pixel."""
         return "(%.2f @ %.2f, %.2f @ %.2f)" % (
             self.uniformData[0, x, y],
             self.exposureTimes[0],

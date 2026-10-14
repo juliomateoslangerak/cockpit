@@ -102,11 +102,6 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
     ## WX rendering context
     context = None
 
-    ## \param stageHardLimits An ((xMin, xMax), (yMin, yMax)) tuple
-    #         describing the limits of motion, in microns, of the stage.
-    # \param overlayCallback Function to call, during rendering, to draw
-    #        the overlay on top of the mosaic.
-    # \param mouseCallback Function to propagate mouse events to.
     def __init__(
         self,
         parent,
@@ -116,6 +111,15 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         *args,
         **kwargs,
     ):
+        """Set up the mosaic canvas.
+
+        Args:
+            stageHardLimits (tuple): An ((xMin, xMax), (yMin, yMax)) tuple
+                describing the limits of motion, in microns, of the stage.
+            overlayCallback (callable): Function to call, during rendering, to
+                draw the overlay on top of the mosaic.
+            mouseCallback (callable): Function to propagate mouse events to.
+        """
         super().__init__(parent, *args, **kwargs)
 
         self.stageHardLimits = stageHardLimits
@@ -153,10 +157,12 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.Bind(EVT_PROGRESS_END, self.destroyProgressDialog)
         self.oldScaleFactor = self.GetContentScaleFactor()
 
-    ## Now that OpenGL's ready to go, perform any necessary initialization.
-    # We can now create textures, for example, so it's time to create our
-    # MegaTiles.
     def initGL(self):
+        """Now that OpenGL's ready to go, perform any necessary initialization.
+
+        We can now create textures, for example, so it's time to create our
+        MegaTiles.
+        """
         glClearColor(1, 1, 1, 0)
 
         # Non-zero objective offsets require expansion of area covered
@@ -202,11 +208,16 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 self.megaTiles.append(MegaTile((-x, y)))
         self.haveInitedGL = True
 
-    ## Because tiles have been changed, we must now rerender all of
-    # our megatiles. Don't do this often, and definitely not when
-    # other threads need attention.
-    # \param tiles Which tiles to rerender. Default to rerendering all.
     def rerenderMegatiles(self, tiles=None):
+        """Because tiles have been changed, we must now rerender all of our
+        megatiles.
+
+        Don't do this often, and definitely not when other threads need
+        attention.
+
+        Args:
+            tiles (list): Which tiles to rerender. Defaults to rerendering all.
+        """
         self.SetCurrent(self.context)
         if tiles is None:
             tiles = self.megaTiles
@@ -214,14 +225,14 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             tile.recreateTexture()
             tile.prerenderTiles(self.tiles)
 
-    ## Delete all tiles and textures, including the megatiles.
     def deleteAll(self):
+        """Delete all tiles and textures, including the megatiles."""
         self.deleteTilesList(list(self.tiles))
         events.publish(events.MOSAIC_UPDATE)
 
-    ## Get all tiles that intersect the specified box, pulling from the provided
-    # list, or from all tiles if no list is provided.
     def getTilesIntersecting(self, start, end, allowedTiles=None):
+        """Get all tiles that intersect the specified box, pulling from the
+        provided list, or from all tiles if no list is provided."""
         if allowedTiles is None:
             allowedTiles = self.tiles
         x1 = min(start[0], end[0])
@@ -236,10 +247,10 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 tiles.append(tile)
         return tiles
 
-    ## Generate a composite array of tile data surrounding the provided
-    # tile, pulling only from the provided list of allowed tiles (or all
-    # tiles, if no list is provided).
     def getCompositeTileData(self, tile, allowedTiles=None):
+        """Generate a composite array of tile data surrounding the provided
+        tile, pulling only from the provided list of allowed tiles (or all
+        tiles, if no list is provided)."""
         if allowedTiles is None:
             allowedTiles = self.tiles
         tileShape = tile.textureData.shape
@@ -294,14 +305,14 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
 
         return result
 
-    ## Delete all tiles that intersect the specified box.
     def deleteTilesIntersecting(self, start, end):
+        """Delete all tiles that intersect the specified box."""
         self.deleteTilesList(self.getTilesIntersecting(start, end))
         events.publish(events.MOSAIC_UPDATE)
 
-    ## Delete a list of tiles.
     @cockpit.util.threads.callInMainThread
     def deleteTilesList(self, tilesToDelete):
+        """Delete a list of tiles."""
         for tile in tilesToDelete:
             tile.wipe()
             del self.tiles[self.tiles.index(tile)]
@@ -346,18 +357,21 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         if not self.pendingImages.empty():
             event.RequestMore()
 
-    ## Add a new image to the mosaic.
-    # @cockpit.util.threads.callInMainThread
     def addImage(
         self, data, pos, size, scalings=(None, None), layer=0, metadata=None
     ):
+        """Add a new image to the mosaic.
+        @cockpit.util.threads.callInMainThread."""
         self.pendingImages.put((data, pos, size, scalings, layer, metadata))
 
-    ## Rescale the tiles.
-    # \param minMax A (blackpoint, whitepoint) tuple, or None to rescale
-    # each tile individually.
     @cockpit.util.threads.callInMainThread
     def rescale(self, minMax=None):
+        """Rescale the tiles.
+
+        Args:
+            minMax (tuple): A (blackpoint, whitepoint) tuple, or None to
+                rescale each tile individually.
+        """
         if minMax is None:
             # Tiles will treat this as "use our own data".
             minMax = (None, None)
@@ -367,9 +381,9 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.rerenderMegatiles()
         self.Refresh()
 
-    ## Paint the canvas -- in other words, paint all tiles, plus whatever
-    # overlays we need.
     def onPaint(self, event):
+        """Paint the canvas -- in other words, paint all tiles, plus whatever
+        overlays we need."""
         if self.renderError is not None:
             return
 
@@ -420,8 +434,8 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             traceback.print_exc()
             self.renderError = e
 
-    ## Change our view transform.
     def zoomTo(self, x, y, scale):
+        """Change our view transform."""
         # Paranoia
         if not scale:
             return
@@ -479,14 +493,15 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # store scale factor so we can use for next rescale
         self.oldScaleFactor = contentScale
 
-    ## Change our translation by the specified number of pixels.
     def dragView(self, offset):
+        """Change our translation by the specified number of pixels."""
         self.dx += offset[0]
         self.dy -= offset[1]
         self.Refresh()
 
-    ## Remap an (X, Y) tuple of screen coordinates to a location on the stage.
     def mapScreenToCanvas(self, pos):
+        """Remap an (X, Y) tuple of screen coordinates to a location on the
+        stage."""
         scaleFactor = self.GetContentScaleFactor()
         pos = (pos[0] * scaleFactor, pos[1] * scaleFactor)
 
@@ -496,9 +511,9 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             -(self.dy - height + pos[1]) / self.scale,
         )
 
-    ## Return a (bottom left, top right) tuple showing what part
-    # of the stage is currently visible.
     def getViewBox(self):
+        """Return a (bottom left, top right) tuple showing what part of the
+        stage is currently visible."""
         width, height = self.GetClientSize() * self.GetContentScaleFactor()
         bottomLeft = (-self.dx / self.scale, -self.dy / self.scale)
         topRight = (
@@ -507,11 +522,14 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         )
         return (bottomLeft, topRight)
 
-    ## Given a path to a file, save the mosaic to that file and an adjacent
-    # file. The first is a text file that describes the layout of the tiles;
-    # the second is an MRC file that holds the actual image data.
     @cockpit.util.threads.callInNewThread
     def saveTiles(self, savePath):
+        """Given a path to a file, save the mosaic to that file and an adjacent
+        file.
+
+        The first is a text file that describes the layout of the tiles; the
+        second is an MRC file that holds the actual image data.
+        """
         wx.PostEvent(
             self.GetEventHandler(),
             ProgressStartEvent(
@@ -601,14 +619,17 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         handle.close()
         wx.PostEvent(self.GetEventHandler(), ProgressEndEvent())
 
-    ## Load a text file describing a set of tiles, as well as the tile image
-    # data. This is made a bit trickier by the fact that we want to display
-    # a progress dialog that updates as new images are added, but addImage()
-    # must run in the main thread while we run in a different one ...
-    # although maybe not since MAP added a queue and a thread to process
-    # new tiles.
     @cockpit.util.threads.callInNewThread
     def loadTiles(self, filePath):
+        """Load a text file describing a set of tiles, as well as the tile
+        image data.
+
+        This is made a bit trickier by the fact that we want to display a
+        progress dialog that updates as new images are added, but addImage()
+        must run in the main thread while we run in a different one ...
+        although maybe not since MAP added a queue and a thread to process new
+        tiles.
+        """
         with open(filePath, "r") as handle:
             mrcPath = handle.readline().strip()
             tileStats = []

@@ -26,8 +26,9 @@ EXPERIMENT_NAME = "2D Structured Illumination"
 EXPERIMENT_CLASS = structuredIllumination.SIExperiment
 
 
-## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(structuredIllumination.BaseSIMExperimentUI):
+    """Generate the UI for special parameters used by this experiment."""
+
     _CONFIG_KEY_SUFFIX = "SIExperiment2D"
 
     def augmentParams(self, params):

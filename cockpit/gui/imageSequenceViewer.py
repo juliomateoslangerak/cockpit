@@ -56,12 +56,19 @@ import cockpit.gui.imageViewer.viewCanvas
 from cockpit import events
 
 
-## This UI widget shows a sequence of images.
 class ImageSequenceViewer(wx.Frame):
-    ## \param images WTZYX array of image data to display.
-    # \param title Title string for the window. We'll update it with pixel
-    # value information when the user mouses over the display.
+    """This UI widget shows a sequence of images."""
+
     def __init__(self, images, title, *args, **kwargs):
+        """Set up the viewer for a sequence of images.
+
+        We'll update it with pixel value information when the user mouses over
+        the display.
+
+        Args:
+            images (numpy.ndarray): WTZYX array of image data to display.
+            title (str): Title string for the window.
+        """
         super().__init__(*args, **kwargs)
 
         self.images = images
@@ -127,24 +134,25 @@ class ImageSequenceViewer(wx.Frame):
                 id=id,
             )
 
-    ## Unsubscribe from the pixel info event so we don't leave stale functions
-    # lying around.
     def onClose(self, event):
+        """Unsubscribe from the pixel info event so we don't leave stale
+        functions lying around."""
         events.unsubscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
         event.Skip()
 
-    ## Update our title bar with the pixel brightness info.
     def onImagePixelInfo(self, coords, value):
+        """Update our title bar with the pixel brightness info."""
         self.SetTitle(
             "%s: (%d, %d): %.2f" % (self.title, coords[0], coords[1], value)
         )
 
-    ## Rescale the view.
     def onRescale(self, event=None):
+        """Rescale the view."""
         self.canvas.resetPixelScale()
 
-    ## Given a (time, Z) delta, adjust the current view index by that delta.
     def shiftView(self, delta):
+        """Given a (time, Z) delta, adjust the current view index by that
+        delta."""
         for i, val in enumerate(delta):
             axis = i + 1
             target = self.curViewIndex[axis] + delta[i]
@@ -155,8 +163,8 @@ class ImageSequenceViewer(wx.Frame):
                 self.axisToSlider[axis].SetValue(self.curViewIndex[axis])
         self.setCurImage()
 
-    ## Generate a slider for changing the view along the specified axis.
     def makeSlider(self, axis, label):
+        """Generate a slider for changing the view along the specified axis."""
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(
             wx.StaticText(self.panel, -1, label, style=wx.ALIGN_CENTRE),
@@ -174,13 +182,13 @@ class ImageSequenceViewer(wx.Frame):
         sizer.Add(slider)
         return sizer
 
-    ## Handle a slider moving.
     def onSlider(self, axis, event):
+        """Handle a slider moving."""
         position = event.GetPosition()
         self.curViewIndex[axis] = position
         self.setCurImage()
 
-    ## Set the current image, per our current view index.
     def setCurImage(self):
+        """Set the current image, per our current view index."""
         curImage = self.images[tuple(self.curViewIndex[:3])]
         self.canvas.setImage(curImage)

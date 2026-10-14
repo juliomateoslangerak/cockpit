@@ -64,41 +64,48 @@ from cockpit.handlers import deviceHandler
 TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT = range(4)
 
 
-## This handler is for cameras, of course. Cameras provide images to the
-# microscope, and are assumed to be usable during experiments.
 class CameraHandler(deviceHandler.DeviceHandler):
-    ## Create the Handler.
-    # callbacks should fill in the following functions:
-    # - setEnabled(name, shouldEnable): Turn the camera "on" or "off".
-    # - getImageSize(name): Return a (width, height) tuple describing the size
-    #   in pixels of the image the camera takes.
-    # - getTimeBetweenExposures(name, isExact): Return the minimum time between
-    #   exposures for this camera, in milliseconds. If isExact is set, returns
-    #   a decimal.Decimal instance.
-    # - setExposureTime(name, time): Change the camera's exposure time to
-    #   the specified value, in milliseconds.
-    # - getExposureTime(name, isExact): Returns the time in milliseconds that
-    #   the camera is set to expose for when triggered. If isExact is set,
-    #   returns a decimal.Decimal instance.
-    # - getShutteringMode(name): Returns if the camera has a global or a rolling
-    #   electronic shuttering mode.
-    # - setROI(name, roi): Change the camera's region of interest to
-    #   the specified region.
-    # - getROI(name): Returns the current region of interest.
-    # - getSensorShape(name): Returns the camera's sensor shape.
-    # - prepareForExperiment(name, experiment): Get the camera ready for an
-    #   experiment.
-    # - Optional: getMinExposureTime(name): returns the minimum exposure time
-    #   the camera is capable of performing, in milliseconds. If not available,
-    #   0ms is used.
-    # \param exposureMode One of TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION.
-    #   The first two are for external-trigger cameras, which may be frame-transfer
-    #   (trigger at end of exposure, and expose continuously) or not
-    #   (trigger at beginning of exposure and expose for a pre-configured duration).
-    #   The last two are for external-exposure cameras,
-    #   which expose for as long as you tell them to, based on the TTL line.
-    # \param minExposureTime Minimum exposure duration, in milliseconds.
-    #   Typically only applicable if doExperimentsExposeContinuously is True.
+    r"""This handler is for cameras, of course.
+
+    Cameras provide images to the microscope, and are assumed to be usable
+    during experiments.
+
+    Callbacks should fill in the following functions:
+    - setEnabled(name, shouldEnable): Turn the camera "on" or "off".
+    - getImageSize(name): Return a (width, height) tuple describing the size
+      in pixels of the image the camera takes.
+    - getTimeBetweenExposures(name, isExact): Return the minimum time between
+      exposures for this camera, in milliseconds. If isExact is set, returns
+      a decimal.Decimal instance.
+    - setExposureTime(name, time): Change the camera's exposure time to
+      the specified value, in milliseconds.
+    - getExposureTime(name, isExact): Returns the time in milliseconds that
+      the camera is set to expose for when triggered. If isExact is set,
+      returns a decimal.Decimal instance.
+    - getShutteringMode(name): Returns if the camera has a global or a rolling
+      electronic shuttering mode.
+    - setROI(name, roi): Change the camera's region of interest to
+      the specified region.
+    - getROI(name): Returns the current region of interest.
+    - getSensorShape(name): Returns the camera's sensor shape.
+    - prepareForExperiment(name, experiment): Get the camera ready for an
+      experiment.
+    - Optional: getMinExposureTime(name): returns the minimum exposure time
+      the camera is capable of performing, in milliseconds. If not available,
+      0ms is used.
+
+    Args:
+        exposureMode (int): One of TRIGGER_AFTER, TRIGGER_BEFORE,
+            TRIGGER_DURATION. The first two are for external-trigger cameras,
+            which may be frame-transfer (trigger at end of exposure, and expose
+            continuously) or not (trigger at beginning of exposure and expose
+            for a pre-configured duration). The last two are for
+            external-exposure cameras, which expose for as long as you tell
+            them to, based on the TTL line.
+        minExposureTime (float): Minimum exposure duration, in milliseconds.
+            Typically only applicable if doExperimentsExposeContinuously is
+            True.
+    """
 
     ## Shortcuts to decorators defined in parent class.
     reset_cache = deviceHandler.DeviceHandler.reset_cache
@@ -168,15 +175,16 @@ class CameraHandler(deviceHandler.DeviceHandler):
         self._exposureMode = triggerType
 
     def updateFilter(self, dye, wavelength=None):
-        ## Update the filter for this camera.
+        """Update the filter for this camera."""
         self.dye = dye
         self.wavelength = wavelength
         events.publish(events.FILTER_CHANGE)
 
-    ## Invoke our callback, and let everyone know that a new camera is online.
     @cockpit.interfaces.imager.pauseVideo
     @reset_cache
     def setEnabled(self, shouldEnable=True):
+        """Invoke our callback, and let everyone know that a new camera is
+        online."""
         try:
             self.isEnabled = self.callbacks["setEnabled"](
                 self.name, shouldEnable
@@ -191,25 +199,27 @@ class CameraHandler(deviceHandler.DeviceHandler):
         func(events.PREPARE_FOR_EXPERIMENT, self.prepareForExperiment)
         events.publish(events.CAMERA_ENABLE, self, self.isEnabled)
 
-    ## Return self.isEnabled.
     def getIsEnabled(self):
+        """Return self.isEnabled."""
         return self.isEnabled
 
-    ## Return the size, in pixels, of images we generated.
     def getImageSize(self):
+        """Return the size, in pixels, of images we generated."""
         return self.callbacks["getImageSize"](self.name)
 
-    ## Return the amount of time, in milliseconds, that must pass after
-    # ending one exposure before another can be started.
-    # If isExact is specified, then we return a decimal.Decimal value instead
-    # of a raw floating point value.
     @cached
     def getTimeBetweenExposures(self, isExact=False):
+        """Return the amount of time, in milliseconds, that must pass after
+        ending one exposure before another can be started.
+
+        If isExact is specified, then we return a decimal.Decimal value instead
+        of a raw floating point value.
+        """
         return self.callbacks["getTimeBetweenExposures"](self.name, isExact)
 
-    ## Return the minimum allowed exposure time, in milliseconds.
     @cached
     def getMinExposureTime(self, isExact=False):
+        """Return the minimum allowed exposure time, in milliseconds."""
         val = 0
         if "getMinExposureTime" in self.callbacks:
             val = self.callbacks["getMinExposureTime"](self.name)
@@ -217,25 +227,27 @@ class CameraHandler(deviceHandler.DeviceHandler):
             return decimal.Decimal(val)
         return val
 
-    ## Set a new exposure time, in milliseconds.
     @reset_cache
     def setExposureTime(self, time):
+        """Set a new exposure time, in milliseconds."""
         return self.callbacks["setExposureTime"](self.name, time)
 
-    ## Return the camera's currently-set exposure time, in milliseconds.
-    # If isExact is specified, then we return a decimal.Decimal value instead
-    # of a raw floating point value.
     @cached
     def getExposureTime(self, isExact=False):
+        """Return the camera's currently-set exposure time, in milliseconds.
+
+        If isExact is specified, then we return a decimal.Decimal value instead
+        of a raw floating point value.
+        """
         return self.callbacks["getExposureTime"](self.name, isExact)
 
     @cached
     def getShutteringMode(self):
         return self.callbacks["getShutteringMode"](self.name)
 
-    ## Do any necessary preparation for the camera to participate in an
     @reset_cache
     def setROI(self, roi):
+        """Do any necessary preparation for the camera to participate in an."""
         return self.callbacks["setROI"](self.name, roi)
 
     @cached
@@ -246,12 +258,12 @@ class CameraHandler(deviceHandler.DeviceHandler):
     def getSensorShape(self):
         return self.callbacks["getSensorShape"](self.name)
 
-    ## Do any necessary preparation for the camera to participate in an
-    # experiment.
     @reset_cache
     def prepareForExperiment(self, experiment):
+        """Do any necessary preparation for the camera to participate in an
+        experiment."""
         return self.callbacks["prepareForExperiment"](self.name, experiment)
 
-    ## Simple getter.
     def getExposureMode(self):
+        """Simple getter."""
         return self.exposureMode

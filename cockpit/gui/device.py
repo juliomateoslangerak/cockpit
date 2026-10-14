@@ -93,9 +93,9 @@ class Button(wx.StaticText):
         else:
             self.SetLabel(self.value)
 
-    ## Override of normal StaticText SetLabel, to try to vertically
-    # align the text.
     def SetLabel(self, text, *args, **kwargs):
+        """Override of normal StaticText SetLabel, to try to vertically align
+        the text."""
         height = self.GetSize()[1]
         font = self.GetFont()
         fontHeight = font.GetPointSize()

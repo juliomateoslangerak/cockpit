@@ -28,10 +28,12 @@ from cockpit.devices.microscopeDevice import MicroscopeBase
 
 
 class MicroscopeDeviceWithTestSetting(SimulatedFilterWheel):
-    # The Microscope device behind the Cockpit device for these tests.
-    # We don't actually care what device type it is, we just use
-    # filterwheels because they're the simplest.
     def __init__(self):
+        """The Microscope device behind the Cockpit device for these tests.
+
+        We don't actually care what device type it is, we just use filterwheels
+        because they're the simplest.
+        """
         super().__init__(positions=6)
         self._test_setting = False  # default value
         self.add_setting(
@@ -50,17 +52,22 @@ class MicroscopeDeviceWithTestSetting(SimulatedFilterWheel):
 
 
 class CockpitDeviceWithTestSetting(_MicroscopeTestDevice, MicroscopeBase):
-    # The Cockpit device which the rest of Cockpit handles and that
-    # proxies the Microscope device.  Because we don't actually case
-    # what device type it is, we just use MicroscopeBase.
     def __init__(self, *args, **kwargs):
+        """The Cockpit device which the rest of Cockpit handles and that
+        proxies the Microscope device.
+
+        Because we don't actually case what device type it is, we just use
+        MicroscopeBase.
+        """
         super().__init__(MicroscopeDeviceWithTestSetting(), *args, **kwargs)
 
-    # At the end of `MicroscopeBase.finalizeInitialization` (which is
-    # where the settings section from the depot file are applied), the
-    # user config is read and written back.  We don't want to do that
-    # during the test so do nothing here.
     def _readUserConfig(self):
+        """At the end of `MicroscopeBase.finalizeInitialization` (which is
+        where the settings section from the depot file are applied), the user
+        config is read and written back.
+
+        We don't want to do that during the test so do nothing here.
+        """
         pass
 
 
@@ -73,18 +80,21 @@ class TestMicroscopeSettings(unittest.TestCase):
     def assertSettingChanged(self, dev):
         self.assertTrue(dev._proxy.get_setting(self.setting_name))
 
-    # During each each test, new handlers are created which are added
-    # to depot (a global singleton).  To avoid issues, we create a new
-    # DeviceDepot instance before each test and remove it at the end.
     def setUp(self):
+        """During each each test, new handlers are created which are added to
+        depot (a global singleton).
+
+        To avoid issues, we create a new DeviceDepot instance before each test
+        and remove it at the end.
+        """
         cockpit.depot.deviceDepot = cockpit.depot.DeviceDepot()
 
     def tearDown(self):
         cockpit.depot.deviceDepot = None
 
-    # Settings are parsed and applied during `finalizeInitialization`
-    # so we need to have DeviceDepot does the whole init routine first.
     def _do_the_whole_init_routine(self, device_name, config_dict):
+        """Settings are parsed and applied during `finalizeInitialization` so
+        we need to have DeviceDepot does the whole init routine first."""
         device = CockpitDeviceWithTestSetting(device_name, config_dict)
         cockpit.depot.deviceDepot.initDevice(device)
         device.finalizeInitialization()

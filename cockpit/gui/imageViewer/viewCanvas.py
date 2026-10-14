@@ -435,13 +435,16 @@ class Histogram(BaseGL):
         glUseProgram(0)
 
 
-## This class handles displaying multi-channel 2D images.
-# Most of the actual drawing logic is handled in the image.Image class.
-# It can handle arbitrarily-sized images, by cutting them up into parcels
-# and tiling them together.
 class ViewCanvas(wx.glcanvas.GLCanvas):
-    ## Instantiate.
+    """This class handles displaying multi-channel 2D images.
+
+    Most of the actual drawing logic is handled in the image.Image class. It
+    can handle arbitrarily-sized images, by cutting them up into parcels and
+    tiling them together.
+    """
+
     def __init__(self, parent, *args, **kwargs):
+        """Instantiate."""
         super().__init__(parent, *args, **kwargs)
 
         self.image = Image()
@@ -585,9 +588,12 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
         self.haveInitedGL = True
 
-    ## Stop displaying anything. Optionally destroy the canvas at the end.
     @cockpit.util.threads.callInMainThread
     def clear(self, shouldDestroy=False):
+        """Stop displaying anything.
+
+        Optionally destroy the canvas at the end.
+        """
         # Clear out the queue of images.
         while True:
             try:
@@ -602,18 +608,24 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         else:
             self.Refresh()
 
-    ## Receive a new image. This will trigger processImages(), below, to
-    # actually display the image.
     def setImage(self, newImage):
+        """Receive a new image.
+
+        This will trigger processImages(), below, to actually display the
+        image.
+        """
         self.imageQueue.put_nowait(newImage)
         self.definedROI = False  # new image will have new ROI.
 
-    ## Consume images out of self.imageQueue and either display them or
-    # discard them. Because images can arrive very rapidly at times, we
-    # want to ensure that we don't jam up -- if several images arrive while
-    # we process one image, then the extras get discarded.
     @cockpit.util.threads.callInNewThread
     def processImages(self):
+        """Consume images out of self.imageQueue and either display them or
+        discard them.
+
+        Because images can arrive very rapidly at times, we want to ensure that
+        we don't jam up -- if several images arrive while we process one image,
+        then the extras get discarded.
+        """
         while self.shouldDraw:
             # Grab all images out of the queue; we'll use the most recent one.
             newImage = self.imageQueue.get()
@@ -645,22 +657,25 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             self.drawEvent.wait(timeout=1)
             self.drawEvent.clear()
 
-    ## Return the blackpoint and whitepoint (i.e. the pixel values which
-    # are displayed as black and white, respectively).
     def getScaling(self):
+        """Return the blackpoint and whitepoint (i.e. the pixel values which
+        are displayed as black and white, respectively)."""
         if self.imageData is None:
             # No image to operate on yet.
             return (None, None)
         else:
             return self.image.getDisplayRange()
 
-    ## As above, but the values used to calculate them instead of the
-    # absolute pixel values (e.g. (.1, .9) instead of (100, 400).
     def getRelativeScaling(self):
+        """As above, but the values used to calculate them instead of the
+        absolute pixel values (e.g.
+
+        (.1, .9) instead of (100, 400).
+        """
         return (self.blackPoint, self.whitePoint)
 
-    # @cockpit.util.threads.callInMainThread
     def onPaint(self, event):
+        """@cockpit.util.threads.callInMainThread."""
         if not self.shouldDraw:
             return
 
@@ -772,8 +787,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             glVertexPointerf(v_zoompan)
             glDrawArrays(GL_LINE_LOOP, 0, 4)
 
-    ## Update the size of the canvas by scaling it.
     def setSize(self, size):
+        """Update the size of the canvas by scaling it."""
         if self.imageData is not None:
             self.w, self.h = size * self.GetContentScaleFactor()
         self.Refresh(False)
@@ -904,8 +919,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # redrawing the histogram. A bit wasteful of resources, this.
         wx.CallAfter(self.Refresh)
 
-    ## Generate a list of (label, action) tuples to use for generating menus.
     def getMenuActions(self):
+        """Generate a list of (label, action) tuples to use for generating
+        menus."""
         return [
             ("Reset view", self.resetView),
             ("Set histogram parameters", self.onSetHistogram),
@@ -925,8 +941,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             ("Save image", self.saveData),
         ]
 
-    ## Let the user specify the blackpoint and whitepoint for image scaling.
     def onSetHistogram(self, event=None):
+        """Let the user specify the blackpoint and whitepoint for image scaling."""
         values = cockpit.gui.dialogs.getNumberDialog.getManyNumbersFromUser(
             parent=self,
             title="Set histogram scale parameters",
@@ -995,8 +1011,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 )
             )
 
-    ## Convert window co-ordinates to gl co-ordinates.
     def canvasToGl(self, x, y):
+        """Convert window co-ordinates to gl co-ordinates."""
         glx = (-1 + 2 * x / self.w - self.panX * self.zoom) / self.zoom
         gly = (
             -(
@@ -1010,9 +1026,11 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         )
         return (glx, gly)
 
-    ## Convert gl co-ordinates to indices into the data.
-    # Note: pass in x,y, but returns row-major datay, datax
     def glToIndices(self, glx, gly):
+        """Convert gl co-ordinates to indices into the data.
+
+        Note: pass in x,y, but returns row-major datay, datax
+        """
         # Vertical and horizontal modifiers for non-square images.
         hlim = self.imageShape[1] / max(self.imageShape)
         vlim = self.imageShape[0] / max(self.imageShape)
@@ -1024,21 +1042,23 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         datay_clamped = max(0, min(datay, self.imageShape[0]))
         return (datay_clamped, datax_clamped)
 
-    ## Convert data indices to gl co-ordinates.
-    # Note: pass in row-major datay, datax, but returns x,y
     def indicesToGl(self, datay, datax):
+        """Convert data indices to gl co-ordinates.
+
+        Note: pass in row-major datay, datax, but returns x,y
+        """
         glx = 2 / self.imageShape[1] * datax - 1
         gly = 2 / self.imageShape[0] * (self.imageShape[0] - datay) - 1
 
         return (glx, gly)
 
-    ## Convert window co-ordinates to indices into the data.
     def canvasToIndices(self, x, y):
+        """Convert window co-ordinates to indices into the data."""
         return self.glToIndices(*self.canvasToGl(x, y))
 
-    ## Display information on the pixel under the mouse at the given
-    # position.
     def updateMouseInfo(self, x, y):
+        """Display information on the pixel under the mouse at the given
+        position."""
         # Test that all required values have been populated. Use any(...),
         # because ```if None in [...]:``` will throw an exception when an
         # element in the list is an array with more than one element.
@@ -1054,15 +1074,15 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             value = self.imageData[coords[0], coords[1]]
             events.publish(events.IMAGE_PIXEL_INFO, coords[::-1], value)
 
-    ## Modify our panning amount by the provided factor.
     def modPan(self, dx, dy):
+        """Modify our panning amount by the provided factor."""
         self.panX += 2 * dx / (self.w * self.zoom)
         self.panY += 2 * dy / (self.h * self.zoom)
         events.publish(events.SYNCED_VIEW, self.panX, self.panY, self.zoom)
         self.Refresh(False)
 
-    ## Reset our view mods.
     def resetView(self):
+        """Reset our view mods."""
         if self.imageShape is None:
             # No image to work with.
             return

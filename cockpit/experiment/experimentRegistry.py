@@ -83,7 +83,7 @@ registeredModules = [
 ]
 
 
-## Retrieve all registered experiments.
 def getExperimentModules():
+    """Retrieve all registered experiments."""
     global registeredModules
     return registeredModules

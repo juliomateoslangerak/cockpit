@@ -67,26 +67,10 @@ from cockpit import events
 uniqueID = 0
 
 
-## This class simply records all data received during an experiment and saves
-# it to disk in MRC format.
 class MrcDataSaver:
-    ## \param cameras List of CameraHandler instances for the cameras that
-    #         will be generating images
-    # \param numReps How many times the experiment will be repeated.
-    # \param repDuration How long each rep lasts.
-    # \param cameraToImagesPerRep Maps camera handlers to how many images to
-    #        expect for that camera in a single repeat of the experiment.
-    # \param cameraToIgnoredImageIndices Maps camera handlers to indices of
-    #        images that we don't actually want to keep.
-    # \param runThread Thread that is executing the experiment. When it exits,
-    #        we know to stop expecting more images.
-    # \param savePath Path to save the incoming data to.
-    # \param pixelSizeZ Size of the Z "pixel" (i.e. distance between Z slices).
-    # \param titles List of strings to insert into the MRC file's header.
-    #        Per the file format, each string can be up to 80 characters long
-    #        and there can be up to 10 of them.
-    # \param cameraToExcitation Maps camera handlers to the excitation
-    #        wavelength used to generate the images it will acquire.
+    """This class simply records all data received during an experiment and
+    saves it to disk in MRC format."""
+
     def __init__(
         self,
         cameras,
@@ -100,6 +84,29 @@ class MrcDataSaver:
         titles,
         cameraToExcitation,
     ):
+        """
+        Args:
+            cameras (list): CameraHandler instances for the cameras that will
+                be generating images.
+            numReps (int): How many times the experiment will be repeated.
+            repDuration (float): How long each rep lasts.
+            cameraToImagesPerRep (dict): Maps camera handlers to how many
+                images to expect for that camera in a single repeat of the
+                experiment.
+            cameraToIgnoredImageIndices (dict): Maps camera handlers to
+                indices of images that we don't actually want to keep.
+            runThread (threading.Thread): Thread that is executing the
+                experiment. When it exits, we know to stop expecting more
+                images.
+            savePath (str): Path to save the incoming data to.
+            pixelSizeZ (float): Size of the Z "pixel" (i.e. distance between
+                Z slices).
+            titles (list): Strings to insert into the MRC file's header. Per
+                the file format, each string can be up to 80 characters long
+                and there can be up to 10 of them.
+            cameraToExcitation (dict): Maps camera handlers to the excitation
+                wavelength used to generate the images it will acquire.
+        """
         self.cameras = cameras
         self.numReps = numReps
         self.repDuration = repDuration
@@ -347,11 +354,14 @@ class MrcDataSaver:
         )
         self.saveThread.start()
 
-    ## Subscribe to the new-camera-image events for the cameras we care about.
-    # Save the functions we generate for handling the subscriptions, so we can
-    # unsubscribe later. Initialize self.minMaxVals. Start our status-update
-    # thread.
     def startCollecting(self):
+        """Subscribe to the new-camera-image events for the cameras we care
+        about.
+
+        Save the functions we generate for handling the subscriptions, so we
+        can unsubscribe later. Initialize self.minMaxVals. Start our status-
+        update thread.
+        """
         for camera in self.cameras:
 
             def func(data, metadata, camera=camera):
@@ -364,14 +374,14 @@ class MrcDataSaver:
         events.subscribe(events.USER_ABORT, self.onAbort)
         self.statusThread.start()
 
-    ## User aborted; stop saving data.
     def onAbort(self):
+        """User aborted; stop saving data."""
         self.shouldAbort = True
         self.statusThread.shouldStop = True
 
-    ## Wait for the runThread to finish, then wait a bit longer in case some
-    # images are laggardly, before we close our filehandles.
     def executeAndSave(self):
+        """Wait for the runThread to finish, then wait a bit longer in case
+        some images are laggardly, before we close our filehandles."""
         # Joining the thread doesn't actually work until it has started,
         # hence the delay here.
         time.sleep(0.5)
@@ -420,20 +430,20 @@ class MrcDataSaver:
                 cockpit.util.datadoc.writeMrcHeader(self.headers[i], handle)
                 handle.close()
 
-    ## Clean up once saving is completed.
     def cleanup(self):
+        """Clean up once saving is completed."""
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self.cameras):
             events.unsubscribe(events.NEW_IMAGE % camera.name, self.lambdas[i])
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
-    ## Receive new data, and add it to the queue.
     def onImage(self, cameraIndex, imageData, metadata):
+        """Receive new data, and add it to the queue."""
         self.imageQueue.put((cameraIndex, imageData, metadata))
 
-    ## Continually poll our imageQueue and save data to the file.
     @cockpit.util.threads.callInNewThread
     def saveData(self):
+        """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:
             if self.shouldAbort:
                 # Do nothing.
@@ -449,8 +459,8 @@ class MrcDataSaver:
             timestamp = timestamp - self.firstTimestamp
             self.writeImage(cameraIndex, imageData, timestamp)
 
-    ## Write a single image to the file.
     def writeImage(self, cameraIndex, imageData, timestamp):
+        """Write a single image to the file."""
         self.imagesReceived[cameraIndex] += 1
         camera = self.indexToCamera[cameraIndex]
         # First determine if we actually want to keep this image.
@@ -571,34 +581,15 @@ class MrcDataSaver:
             return
         self.statusThread.newImage(cameraIndex)
 
-    ## Return a list of the filenames we are writing to.
     def getFilenames(self):
+        """Return a list of the filenames we are writing to."""
         return self.filenames
 
 
-## This class simply records all data received during an experiment and saves
-# it to disk in ome-zarr format.
 class ZarrDataSaver:
-    ## \param cameras List of CameraHandler instances for the cameras that
-    #         will be generating images
-    # \param numReps How many times the experiment will be repeated.
-    # \param repDuration How long each rep lasts.
-    # \param cameraToImagesPerRep Maps camera handlers to how many images to
-    #        expect for that camera in a single repeat of the experiment.
-    # \param cameraToIgnoredImageIndices Maps camera handlers to indices of
-    #        images that we don't actually want to keep.
-    # \param runThread Thread that is executing the experiment. When it exits,
-    #        we know to stop expecting more images.
-    # \param savePath Path to save the incoming data to.
-    # \param pixelSizeXY Size of the XY "pixel".
-    # \param pixelSizeZ Size of the Z "pixel" (i.e. distance between Z slices).
-    # \param omeMetadata OME-XML Metadata to be included in the OME-Zarr file.
-    # \param downscale Downscaling factor for x and y axes
-    # \param maxLayer Number of downscalings. We are defaulting here to 2
-    # \param downscaleMethod Downscaling method. Default is 'nearest'
-    # \param chunkShape Output chunk shape
-    # \param compression Compressor to be used, defaults to numcodecs.Blosc()
-    # \param overwrite Overwrite existing files
+    """This class simply records all data received during an experiment and
+    saves it to disk in ome-zarr format."""
+
     def __init__(
         self,
         cameras,
@@ -618,6 +609,34 @@ class ZarrDataSaver:
         compression=numcodecs.Blosc(),
         overwrite=True,
     ):
+        """
+        Args:
+            cameras (list): CameraHandler instances for the cameras that will
+                be generating images.
+            numReps (int): How many times the experiment will be repeated.
+            repDuration (float): How long each rep lasts.
+            cameraToImagesPerRep (dict): Maps camera handlers to how many
+                images to expect for that camera in a single repeat of the
+                experiment.
+            cameraToIgnoredImageIndices (dict): Maps camera handlers to
+                indices of images that we don't actually want to keep.
+            runThread (threading.Thread): Thread that is executing the
+                experiment. When it exits, we know to stop expecting more
+                images.
+            savePath (str): Path to save the incoming data to.
+            pixelSizeXY (float): Size of the XY "pixel".
+            pixelSizeZ (float): Size of the Z "pixel" (i.e. distance between
+                Z slices).
+            omeMetadata (str): OME-XML Metadata to be included in the
+                OME-Zarr file.
+            downscale (int): Downscaling factor for x and y axes.
+            maxLayer (int): Number of downscalings. Defaults to 2.
+            downscaleMethod (str): Downscaling method. Default is 'nearest'.
+            chunkShape (tuple): Output chunk shape.
+            compression (numcodecs.abc.Codec): Compressor to be used. Defaults
+                to numcodecs.Blosc().
+            overwrite (bool): Overwrite existing files.
+        """
         self.cameras = cameras
         self.numReps = numReps
         self.repDuration = repDuration
@@ -731,11 +750,14 @@ class ZarrDataSaver:
         # Start the data-saving thread.
         self.saveData()
 
-    # Subscribe to the new-camera-image events for the cameras we care about.
-    # Save the functions we generate for handling the subscriptions, so we can
-    # unsubscribe later. Initialize self.minMaxVals. Start our status-update
-    # thread.
     def startCollecting(self):
+        """Subscribe to the new-camera-image events for the cameras we care
+        about.
+
+        Save the functions we generate for handling the subscriptions, so we
+        can unsubscribe later. Initialize self.minMaxVals. Start our status-
+        update thread.
+        """
         for camera in self.cameras:
 
             def func(data, metadata, camera=camera):
@@ -748,14 +770,15 @@ class ZarrDataSaver:
         events.subscribe(events.USER_ABORT, self.onAbort)
         self.statusThread.start()
 
-    # User aborted; stop saving data.
     def onAbort(self):
+        """User aborted; stop saving data."""
         self.shouldAbort = True
         self.statusThread.shouldStop = True
 
-    # Wait for the runThread to finish, then wait a bit longer in case some
-    # images are laggardly, before we close our filehandles.
     def executeAndSave(self):
+        """Wait for the runThread to finish, then wait a bit longer in case
+        some images are laggardly,
+        before we close our filehandles."""
         # Joining the thread doesn't actually work until it has started,
         # hence the delay here.
         time.sleep(0.5)
@@ -782,20 +805,20 @@ class ZarrDataSaver:
 
         self.cleanup()
 
-    # Clean up once saving is completed.
     def cleanup(self):
+        """Clean up once saving is completed."""
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self.cameras):
             events.unsubscribe(events.NEW_IMAGE % camera.name, self.lambdas[i])
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
-    # Receive new data, and add it to the queue.
     def onImage(self, cameraIndex, imageData, metadata):
+        """Receive new data, and add it to the queue."""
         self.imageQueue.put((cameraIndex, imageData, metadata))
 
-    # Continually poll our imageQueue and save data to the file.
     @cockpit.util.threads.callInNewThread
     def saveData(self):
+        """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:
             if self.shouldAbort:
                 # Do nothing.
@@ -811,8 +834,8 @@ class ZarrDataSaver:
             timestamp = timestamp - self.firstTimestamp
             self.writeImage(cameraIndex, imageData, timestamp)
 
-    # Write a single image to the file.
     def writeImage(self, cameraIndex, imageData, timestamp):
+        """Write a single image to the file."""
         self.imagesReceived[cameraIndex] += 1
         camera = self.indexToCamera[cameraIndex]
         # First determine if we actually want to keep this image.
@@ -923,34 +946,15 @@ class ZarrDataSaver:
             return
         self.statusThread.newImage(cameraIndex)
 
-    ## Return a list of the filenames we are writing to.
     def getFilenames(self):
+        """Return a list of the filenames we are writing to."""
         return self.filenames
 
 
-## This class simply records all data received during an experiment and saves
-# it to disk in ome-zarr format.
 class ZarrDataSaver:
-    ## \param cameras List of CameraHandler instances for the cameras that
-    #         will be generating images
-    # \param numReps How many times the experiment will be repeated.
-    # \param repDuration How long each rep lasts.
-    # \param cameraToImagesPerRep Maps camera handlers to how many images to
-    #        expect for that camera in a single repeat of the experiment.
-    # \param cameraToIgnoredImageIndices Maps camera handlers to indices of
-    #        images that we don't actually want to keep.
-    # \param runThread Thread that is executing the experiment. When it exits,
-    #        we know to stop expecting more images.
-    # \param savePath Path to save the incoming data to.
-    # \param pixelSizeXY Size of the XY "pixel".
-    # \param pixelSizeZ Size of the Z "pixel" (i.e. distance between Z slices).
-    # \param omeMetadata OME-XML Metadata to be included in the OME-Zarr file.
-    # \param downscale Downscaling factor for x and y axes
-    # \param maxLayer Number of downscalings. We are defaulting here to 2
-    # \param downscaleMethod Downscaling method. Default is 'nearest'
-    # \param chunkShape Output chunk shape
-    # \param compression Compressor to be used, defaults to numcodecs.Blosc()
-    # \param overwrite Overwrite existing files
+    """This class simply records all data received during an experiment and
+    saves it to disk in ome-zarr format."""
+
     def __init__(
         self,
         exposureSettings,
@@ -969,6 +973,33 @@ class ZarrDataSaver:
         compression="blosc",
         overwrite=True,
     ):
+        """Set up the OME-Zarr saver for the images of an experiment.
+
+        When it exits, we know to stop expecting more images.
+
+        Args:
+            exposureSettings (list): List of ([cameras], [(light, exposure
+                time)]) tuples describing how to take images.
+            numReps (int): How many times the experiment will be repeated.
+            repDuration (float): How long each rep lasts.
+            cameraToImagesPerRep (dict): Maps camera handlers to how many
+                images to expect for that camera in a single repeat of the
+                experiment.
+            cameraToIgnoredImageIndices (dict): Maps camera handlers to
+                indices of images that we don't actually want to keep.
+            runThread (threading.Thread): Thread that is executing the
+                experiment.
+            savePath (str): Path to save the incoming data to.
+            pixelSizeXY (float): Size of the XY "pixel".
+            sliceHeight (float): Distance between Z slices.
+            omeMetadata (str): OME-XML Metadata to be included in the
+                OME-Zarr file.
+            downscale (int): Downscaling factor for x and y axes.
+            maxLayer (int): Number of downscalings. Defaults to 1.
+            downscaleMethod (str): Downscaling method. Default is 'nearest'.
+            compression (str): Compressor to be used. Defaults to 'blosc'.
+            overwrite (bool): Overwrite existing files.
+        """
         self._exposureSettings = exposureSettings
         self._numReps = numReps
         self._repDuration = repDuration
@@ -1171,14 +1202,14 @@ class ZarrDataSaver:
                 "The x and y dimensions are not the same for all channels"
             )
 
-    # User aborted; stop saving data.
     def onAbort(self):
+        """User aborted; stop saving data."""
         self.shouldAbort = True
         self.statusThread.shouldStop = True
 
-    # Wait for the runThread to finish, then wait a bit longer in case some
-    # images are laggardly, before we close our filehandles.
     def executeAndSave(self):
+        """Wait for the runThread to finish, then wait a bit longer in case
+        some images are laggardly, before we close our filehandles."""
         # Joining the thread doesn't actually work until it has started,
         # hence the delay here.
         time.sleep(0.5)
@@ -1201,8 +1232,8 @@ class ZarrDataSaver:
 
         self.cleanup()
 
-    # Clean up once saving is completed.
     def cleanup(self):
+        """Clean up once saving is completed."""
         self.statusThread.shouldStop = True
         for i, camera in enumerate(self._cameraToChannelIds):
             events.unsubscribe(
@@ -1210,8 +1241,8 @@ class ZarrDataSaver:
             )
         events.unsubscribe(events.USER_ABORT, self.onAbort)
 
-    # Receive new data, and add it to the queue.
     def onImage(self, camera, imageData, metadata):
+        """Receive new data, and add it to the queue."""
         self._imageQueue.put((camera, imageData, metadata))
 
     @cockpit.util.threads.callInMainThread
@@ -1269,9 +1300,9 @@ class ZarrDataSaver:
         }
         return omeMetadata
 
-    # Continually poll our imageQueue and save data to the file.
     @cockpit.util.threads.callInNewThread
     def saveData(self):
+        """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:
             if self.shouldAbort:
                 # Do nothing.
@@ -1287,8 +1318,8 @@ class ZarrDataSaver:
             timestamp = timestamp - self._firstTimestamp
             self.writeImage(camera, imageData, timestamp)
 
-    # Write a single image to the file.
     def writeImage(self, camera, imageData, timestamp):
+        """Write a single image to the file."""
         self._imagesReceived[camera] += 1
         # First determine if we actually want to keep this image.
         if (
@@ -1336,14 +1367,15 @@ class ZarrDataSaver:
         """
         self._zarrArray[timeIndex, channelIndex, zIndex] = imageData
 
-    # Return a list of the filenames we are writing to.
     def getFilenames(self):
+        """Return a list of the filenames we are writing to."""
         return self.savePath
 
 
-# This thread handles telling the saving status light to update twice per
-# second.
 class StatusUpdateThread(threading.Thread):
+    """This thread handles telling the saving status light to update twice per
+    second."""
+
     def __init__(self, cameraNames, totals, numReps, repDuration):
         super().__init__()
         ## List of names of the cameras.
@@ -1383,8 +1415,8 @@ class StatusUpdateThread(threading.Thread):
         # Clear the status light.
         events.publish(events.UPDATE_STATUS_LIGHT, "image count", "")
 
-    ## Push a new text to the status light.
     def updateText(self):
+        """Push a new text to the status light."""
         statusText = []
         for i, name in enumerate(self.cameraNames):
             curCount = self.imagesReceived[i]
@@ -1399,7 +1431,7 @@ class StatusUpdateThread(threading.Thread):
             events.UPDATE_STATUS_LIGHT, "image count", " | ".join(statusText)
         )
 
-    ## Update our image count.
     def newImage(self, index):
+        """Update our image count."""
         with self.imageCountLock:
             self.imagesReceived[index] += 1

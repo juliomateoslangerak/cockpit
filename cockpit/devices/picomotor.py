@@ -177,16 +177,12 @@ class PicoMotorDevice(device.Device):
         # The home functions do this but are VERY slow
         self.getXYPosition(shouldUseCache=False)
 
-    # Routine to home all 3 motors.
-    # record position
-    # move to negative threshold (z axis should go to +ve limit so
-    # as not to ram objective)
-    # check if moving, sleep and loop
-    # record new pos
-    # set home
-    # move to start-end position to resturn to starting position
-    # loop through each axis
     def homeMotors(self):
+        """Routine to home all 3 motors. record position move to negative
+        threshold (z axis should go to +ve limit so as not to ram objective)
+        check if moving, sleep and loop record new pos set home move to
+        start-end position to return to starting position loop through each
+        axis."""
         origPosition = self.getXYPosition(shouldUseCache=False)
         for axis in range(0, 2):
             print(
@@ -218,8 +214,8 @@ class PicoMotorDevice(device.Device):
                 "%s pa %s" % (self.axisMapper[axis]), endposition[axis], 0
             )
 
-    ## Check for motion on a given controller.
     def checkForMotion(self, controller):
+        """Check for motion on a given controller."""
         motorState1 = self.sendXYCommand("%s>1 md" % (controller), 1)
         motorState2 = self.sendXYCommand("%s>2 md" % (controller), 1)
         # need to split of controller number if we have more than one. Use
@@ -283,11 +279,11 @@ class PicoMotorDevice(device.Device):
         motorState2 = motorState2.split(">")[1]
         return motorState1 or motorState2
 
-    ## Send a command to the XY stage controller, read the response, check
-    # for errors, and either raise an exception or return the response.
     def sendXYCommand(
         self, command, numExpectedLines=1, shouldCheckErrors=True
     ):
+        """Send a command to the XY stage controller, read the response, check
+        for errors, and either raise an exception or return the response."""
         with self.xyLock:
             self.xyConnection.sendall(command + "\n")
             # IMD 09052013 The controller needs a little time after a
@@ -304,10 +300,12 @@ class PicoMotorDevice(device.Device):
                     )
                 return response
 
-    ## Read a response off of the XY connection. We do this one character
-    # at a time in the hopes of avoiding having to wait for a timeout. We
-    # stop when we hit the right number of newlines.
     def getXYResponse(self, numExpectedLines):
+        """Read a response off of the XY connection.
+
+        We do this one character at a time in the hopes of avoiding having to
+        wait for a timeout. We stop when we hit the right number of newlines.
+        """
         response = ""
         numLines = 0
         while True:
@@ -322,12 +320,12 @@ class PicoMotorDevice(device.Device):
                 break
         return response
 
-    ## When the user logs out close the network connection.
     def onExit(self):
+        """When the user logs out close the network connection."""
         self.xyConnection.close()
 
-    ## Halt motion when the user aborts.
     def onAbort(self, *args):
+        """Halt motion when the user aborts."""
         self.sendXYCommand("AB", 0)
 
     def getHandlers(self):
@@ -390,9 +388,9 @@ class PicoMotorDevice(device.Device):
             )
             self.sendXYPositionUpdates()
 
-    ## Send updates on the XY stage's position, until it stops moving.
     @cockpit.util.threads.callInNewThread
     def sendXYPositionUpdates(self):
+        """Send updates on the XY stage's position, until it stops moving."""
         prevX, prevY, prevZ = self.xyPositionCache
         while True:
             x, y, z = self.getXYPosition(shouldUseCache=False)
@@ -407,10 +405,12 @@ class PicoMotorDevice(device.Device):
             prevX, prevY, prevZ = (x, y, z)
             time.sleep(0.1)
 
-    ## Get the position of the specified axis, or all axes by default.
-    # If shouldUseCache is not set, then we will query the controller, which
-    # takes some time.
     def getXYPosition(self, axis=None, shouldUseCache=True):
+        """Get the position of the specified axis, or all axes by default.
+
+        If shouldUseCache is not set, then we will query the controller, which
+        takes some time.
+        """
         # +++        self.xyPositionCache = (0, 0,0)
         if not shouldUseCache:
             if axis is not None:

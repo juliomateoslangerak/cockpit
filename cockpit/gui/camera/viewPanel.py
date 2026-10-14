@@ -111,9 +111,12 @@ class ViewPanel(wx.Panel):
         events.subscribe(events.FILTER_CHANGE, self.onFilterChange)
         self.Bind(wx.EVT_LEFT_DCLICK, self.onMouse)
 
-    ## User interacted with our current image.
-    # On double-click, we move the stage to centre the feature under the mouse.
     def onMouse(self, event):
+        """User interacted with our current image.
+
+        On double-click, we move the stage to centre the feature under the
+        mouse.
+        """
         if event.LeftDClick():
             if self.imagePos is None:
                 self.imagePos = cockpit.interfaces.stageMover.getPosition()
@@ -130,13 +133,15 @@ class ViewPanel(wx.Panel):
         else:
             event.Skip()
 
-    ## User clicked on the selector. Pop up a menu to let them either activate
-    # a camera or, if we're already activated, deactivate the current one.
-    # We also let them set the camera's readout size here, if a camera is
-    # active.
     def onSelector(self, event):
-        ## TODO: fix focus issue so that key bindings work immediately after camera enable.
-        ## Currently, have to mouse-over the bitmap area, or click in another window.
+        """User clicked on the selector.
+
+        Pop up a menu to let them either activate a camera or, if we're already
+        activated, deactivate the current one. We also let them set the
+        camera's readout size here, if a camera is active.
+        """
+        # TODO: fix focus issue so that key bindings work immediately after camera enable.
+        # Currently, have to mouse-over the bitmap area, or click in another window.
         menu = wx.Menu()
         if self.curCamera is not None:
             item = menu.Append(
@@ -161,8 +166,8 @@ class ViewPanel(wx.Panel):
                     )
         cockpit.gui.guiUtils.placeMenuAtMouse(self, menu)
 
-    ## Deactivate the view.
     def disable(self):
+        """Deactivate the view."""
         self.selector.SetLabel("No camera")
         self.selector.SetBackgroundColour((180, 180, 180))
         self.selector.Refresh()
@@ -178,8 +183,8 @@ class ViewPanel(wx.Panel):
             self.canvas.clear(shouldDestroy=True)
             self.canvas = None
 
-    ## Activate the view and connect to a data source.
     def enable(self, camera):
+        """Activate the view and connect to a data source."""
         self.selector.SetLabel(camera.descriptiveName)
         self.selector.SetBackgroundColour(camera.color)
         self.selector.Refresh()
@@ -196,8 +201,8 @@ class ViewPanel(wx.Panel):
         # Subscribe to new image events only after canvas is prepared.
         events.subscribe(events.NEW_IMAGE % self.curCamera.name, self.onImage)
 
-    # TODO: This needs revision, too many sizes are being set
     def change_size(self, size=wx.Size(VIEW_WIDTH, VIEW_HEIGHT - 40)):
+        """TODO: This needs revision, too many sizes are being set."""
         size_corrected = wx.Size(size[0], size[1] + 30)
         self.SetSize(size_corrected)
         self.SetMinSize(size_corrected)
@@ -212,39 +217,39 @@ class ViewPanel(wx.Panel):
         self.selector.SetSize(wx.Size(size[0], 30))
         self.selector.SetMinSize(wx.Size(size[0], 30))
 
-    ## React to the drawer changing, by updating our labels and colors.
     @cockpit.util.threads.callInMainThread
     def onFilterChange(self):
+        """React to the drawer changing, by updating our labels and colors."""
         if self.getIsEnabled():
             self.selector.SetLabel(self.curCamera.descriptiveName)
             self.selector.SetBackgroundColour(self.curCamera.color)
             self.Refresh()
 
-    ## Receive a new image and send it to our canvas.
     def onImage(self, data, metadata, *args):
+        """Receive a new image and send it to our canvas."""
         self.canvas.setImage(data)
         if not experiment.isRunning():
             self.metadata = metadata
             self.imagePos = self.metadata["imagePos"]
 
-    ## Return True if we currently display a camera.
     def getIsEnabled(self):
+        """Return True if we currently display a camera."""
         return self.curCamera is not None
 
-    ## Get the black- and white-point for the view.
     def getScaling(self):
+        """Get the black- and white-point for the view."""
         return self.canvas.getScaling()
 
-    ## As above, but the relative values used to generate them instead.
     def getRelativeScaling(self):
+        """As above, but the relative values used to generate them instead."""
         return self.canvas.getRelativeScaling()
 
-    ## Get the current pixel data for the view.
     def getPixelData(self):
+        """Get the current pixel data for the view."""
         return (self.canvas.imageData, self.metadata)
 
-    ## Debugging: convert to string.
     def __repr__(self):
+        """Debugging: convert to string."""
         descString = ", disabled"
         if self.curCamera is not None:
             descString = "for %s" % self.curCamera.name

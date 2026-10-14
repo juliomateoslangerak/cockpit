@@ -235,10 +235,12 @@ class MainWindowPanel(wx.Panel):
         self.updateROI = False
         events.subscribe(events.UPDATE_ROI, self.updateCamROI)
 
-    # function fired on camera ROI update. It looks to see if there are
-    # other active cameras and asks if you want to set all cameras to that
-    # ROI or not.
     def updateCamROI(self, camName):
+        """function fired on camera ROI update.
+
+        It looks to see if there are other active cameras and asks if you want
+        to set all cameras to that ROI or not.
+        """
         # track if already updating cameras, only need to ask once
         if self.updateROI:
             return
@@ -269,11 +271,13 @@ class MainWindowPanel(wx.Panel):
                     camera.setROI(roi)
         self.updateROI = False
 
-    ## User clicked the "view last file" button; open the last experiment's
-    # file in an image viewer. A bit tricky when there's multiple files
-    # generated due to the splitting logic. We just view the first one in
-    # that case.
     def onViewLastFile(self, event=None):
+        """User clicked the "view last file" button; open the last experiment's
+        file in an image viewer.
+
+        A bit tricky when there's multiple files generated due to the splitting
+        logic. We just view the first one in that case.
+        """
         filenames = cockpit.experiment.experiment.getLastFilenames()
         if filenames:
             window = fileViewerWindow.FileViewer(filenames[0], self)
@@ -839,7 +843,7 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
     return info
 
 
-## Create the window.
 def makeWindow():
+    """Create the window."""
     window = MainWindow()
     return window

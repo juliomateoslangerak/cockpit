@@ -37,7 +37,7 @@ class ShutterDevice(device.Device):
             self.lights = None
 
     def finalizeInitialization(self):
-        ## Replace lights strings with their handlers.
+        """Replace lights strings with their handlers."""
         handlers = []
         for name in self.lights:
             h = depot.getHandler(name, depot.LIGHT_TOGGLE)

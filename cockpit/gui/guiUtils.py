@@ -88,8 +88,8 @@ class _BaseValidator(wx.Validator):
     def TransferFromWindow(self):
         return True
 
-    # Abstract - define in derived calss.
     def _validate(self, value):
+        """Abstract - define in derived calss."""
         # Test a value. Raise an exception if it is not valid.
         pass
 
@@ -217,9 +217,11 @@ INTVALIDATOR = IntValidator()
 CSVVALIDATOR = CSVValidator()
 
 
-## Generate a set of small text boxes for controlling individual lights.
-# Return a list of the controls, and the sizer they are contained in.
 def makeLightsControls(parent, labels, defaults):
+    """Generate a set of small text boxes for controlling individual lights.
+
+    Return a list of the controls, and the sizer they are contained in.
+    """
     sizer = wx.FlexGridSizer(2, len(labels), 0, 4)
     controls = []
     for label, defaultVal in zip(labels, defaults):
@@ -237,26 +239,14 @@ def makeLightsControls(parent, labels, defaults):
     return controls, sizer
 
 
-## Add some explanatory text to the given sizer.
 def addHelperString(parent, sizer, text, border=0, flags=wx.ALL):
+    """Add some explanatory text to the given sizer."""
     label = wx.StaticText(parent, -1, " (What is this?)")
     label.SetForegroundColour((100, 100, 255))
     label.SetToolTip(wx.ToolTip(text))
     sizer.Add(label, 0, flags, border)
 
 
-## Add a labeled form input to the given sizer. Note that if you pass in
-# a wx.CheckBox input, then the input and the explanatory text are swapped.
-# @param defaultValue The default value the form input should have.
-# @param labelHeightAdjustment Number of pixels to push the input's label down
-# by. Sometimes labels and inputs don't align nicely otherwise.
-# @param controlType The type of the form input to make. Defaults to
-#        wx.TextCtrl.
-# @param control The specific control object to use. Mutually exclusive
-#        with the controlType parameter.
-# @param helperString Help text to insert, using addHelperString.
-# @param flags Any wx flags to use when inserting the object into the sizer.
-# \todo The checkbox logic results in substantial code duplication.
 def addLabeledInput(
     parent,
     sizer,
@@ -273,6 +263,26 @@ def addLabeledInput(
     helperString="",
     flags=wx.ALL,
 ):
+    """Add a labeled form input to the given sizer.
+
+    Note that if you pass in a wx.CheckBox input, then the input and the
+    explanatory text are swapped.
+
+    \\todo The checkbox logic results in substantial code duplication.
+
+    Args:
+        defaultValue (str): The default value the form input should have.
+        labelHeightAdjustment (int): Number of pixels to push the input's
+            label down by. Sometimes labels and inputs don't align nicely
+            otherwise.
+        controlType (type): The type of the form input to make. Defaults to
+            wx.TextCtrl.
+        control (wx.Control): The specific control object to use. Mutually
+            exclusive with the controlType parameter.
+        helperString (str): Help text to insert, using addHelperString.
+        flags (int): Any wx flags to use when inserting the object into the
+            sizer.
+    """
     if control is None:
         if controlType is None:
             controlType = wx.TextCtrl
@@ -312,9 +322,9 @@ def addLabeledInput(
     return control
 
 
-## Simple utility function to pop up the supplied menu at the current
-# mouse location.
 def placeMenuAtMouse(frame, menu):
+    """Simple utility function to pop up the supplied menu at the current mouse
+    location."""
     # Get the Mouse Position on the Screen
     mousePos = wx.GetMousePosition()
     # Translate the Mouse's Screen Position to the Mouse's Control Position
@@ -322,8 +332,8 @@ def placeMenuAtMouse(frame, menu):
     frame.PopupMenu(menu, mousePosRelative)
 
 
-## Pop up a warning dialog, and return the user's reaction.
 def getUserPermission(text, title="Warning"):
+    """Pop up a warning dialog, and return the user's reaction."""
     response = wx.MessageDialog(
         None,
         text,
@@ -333,9 +343,9 @@ def getUserPermission(text, title="Warning"):
     return response == wx.ID_OK
 
 
-## Given a control, try to parse its value as a number, returning a
-# default value on failure.
 def tryParseNum(control, convertFunc=int, default=0):
+    """Given a control, try to parse its value as a number, returning a default
+    value on failure."""
     try:
         return convertFunc(control.GetValue())
     except:

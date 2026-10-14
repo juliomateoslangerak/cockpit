@@ -58,12 +58,16 @@ from cockpit.experiment import actionTable, experiment
 EXPERIMENT_NAME = "Open-shutter sweep"
 
 
-## This class handles open-shutter sweep experiments, where we move the sample
-# continuously while exposing.
 class OpenShutterSweepExperiment(experiment.Experiment):
-    ## Create the ActionTable needed to run the experiment. We simply start
-    # an exposure at the bottom of the "stack" and end it at the top.
+    """This class handles open-shutter sweep experiments, where we move the
+    sample continuously while exposing."""
+
     def generateActions(self):
+        """Create the ActionTable needed to run the experiment.
+
+        We simply start an exposure at the bottom of the "stack" and end it at
+        the top.
+        """
         table = actionTable.ActionTable()
         curTime = 0
         for cameras, lightTimePairs in self.exposureSettings:

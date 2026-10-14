@@ -70,12 +70,12 @@ class DigitalIOHandler(deviceHandler.DeviceHandler):
         if self.isEnabled != shouldEnable:
             raise Exception("Problem enabling device with handler %s" % self)
 
-    ## Return self.isEnabled.
     def getIsEnabled(self):
+        """Return self.isEnabled."""
         return self.isEnabled
 
-    ### UI functions ###
     def makeUI(self, parent):
+        """UI functions"""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         enablebutton = cockpit.gui.device.EnableButton(

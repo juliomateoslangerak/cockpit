@@ -37,8 +37,8 @@ _config = {}
 _config_path = ""
 
 
-## Open the config file and unserialize its contents.
 def _loadConfig(fpath):
+    """Open the config file and unserialize its contents."""
     config = {}
     try:
         with open(fpath, "r") as fh:
@@ -52,9 +52,9 @@ def _loadConfig(fpath):
     return config
 
 
-## Serialize the current config state for the specified user
-# to the appropriate config file.
 def _writeConfig(config, fpath):
+    """Serialize the current config state for the specified user to the
+    appropriate config file."""
     ## Use pprint instead of pickle to write the config files so that
     ## their contents are readable.
     printer = pprint.PrettyPrinter()
@@ -77,11 +77,13 @@ def clearAllValues() -> None:
     _writeConfig(_config, _config_path)
 
 
-## Retrieve the config value referenced by key.
-# If key is not found, default is inserted and returned.
-# If the value changed as a result of the lookup (because we wrote the
-# default value to config), then write config back to the file.
 def getValue(key, default=None):
+    """Retrieve the config value referenced by key.
+
+    If key is not found, default is inserted and returned. If the value changed
+    as a result of the lookup (because we wrote the default value to config),
+    then write config back to the file.
+    """
     global _config
     global _config_path
     try:
@@ -93,9 +95,11 @@ def getValue(key, default=None):
     return result
 
 
-## Set the entry referenced by key to the given value. Users are set as
-# in getValue.
 def setValue(key, value):
+    """Set the entry referenced by key to the given value.
+
+    Users are set as in getValue.
+    """
     global _config
     global _config_path
     _config[key] = value

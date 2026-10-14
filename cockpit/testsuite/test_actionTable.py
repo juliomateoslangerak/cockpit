@@ -185,7 +185,7 @@ class TestActionTable(unittest.TestCase):
         self.assertEqual(proper_times, corrected_times)
 
     def test_getFirstAndLastActionTimes_emtpy(self):
-        ## XXX: Is this the correct response?
+        """XXX: Is this the correct response?"""
         self.assertEqual(
             self.action_table.getFirstAndLastActionTimes(), (None, None)
         )

@@ -79,15 +79,15 @@ class CockpitConfig(configparser.ConfigParser):
         )
 
     def _mixin_cmd_line_options(self, options):
-        ## Multiple depot config files behave different from cockpit
-        ## config files in that sections with same name are not merged
-        ## or overload one another.  We don't because we believe it to
-        ## be too error prone.  Similarly, we don't want to try read
-        ## default depot files if there's depot files mentioned
-        ## anywhere else.
-        ## 1. If specified via command line, then read only those.
-        ## 2. If defined in any of the cockpit config files, read only those.
-        ## 3. Otherwise, read and merge the system and user default.
+        """Multiple depot config files behave different from cockpit config
+        files in that sections with same name are not merged or overload one
+        another. We don't because we believe it to be too error prone.
+        Similarly, we don't want to try read default depot files if there's
+        depot files mentioned anywhere else.
+        1. If specified via command line, then read only those.
+        2. If defined in any of the cockpit config files, read only those.
+        3. Otherwise, read and merge the system and user default.
+        """
         if options.depot_files:
             self._set_depot_files(options.depot_files)
         elif self.has_option("global", "depot-files"):
@@ -245,11 +245,12 @@ def _default_user_config_dir():
 
 
 def _default_user_config_files(fname):
-    ## In the case of user config, there is always only one directory.
-    ## However, for system config case there may be multiple.  Having
-    ## *_user_config_* return a string and *_system_config_* return a
-    ## list of strings is messy and error prone, so we return a list
-    ## even in the case of *_user_config_*.
+    """In the case of user config, there is always only one directory.
+    However, for system config case there may be multiple. Having
+    *_user_config_* return a string and *_system_config_* return a list of
+    strings is messy and error prone, so we return a list even in the case of
+    *_user_config_*.
+    """
     return [os.path.join(_default_user_config_dir(), fname)]
 
 

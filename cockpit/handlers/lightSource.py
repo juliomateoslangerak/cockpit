@@ -54,22 +54,30 @@ from cockpit import depot, events
 from cockpit.handlers import deviceHandler
 
 
-## This handler is for lightsource toggle buttons and exposure time settings,
-# to control if a given illumination source is currently active (and for how
-# long).
 class LightHandler(deviceHandler.DeviceHandler):
-    ## callbacks should fill in the following functions:
-    # - setEnabled(name, value): Turn this light source on or off.
-    # - setExposureTime(name, value): Set the exposure time for this light,
-    #   in milliseconds.
-    # - getExposureTime(name, value): Get the current exposure time for this
-    #   light, in milliseconds.
-    # - setExposing(name, isOn): Optional. Sets the light on/off continuously
-    #   (i.e. without regard for what the camera(s) are doing).
-    # \param wavelength Wavelength of light the source emits, if appropriate.
-    # \param exposureTime Default exposure time.
-    # \param trigHandler: Optional. Sets up an auxilliary trigger source.
-    # \param trigLine: Optional. May be required by aux. trig. source.
+    """Handler for light source toggle buttons and exposure time settings.
+
+    It controls whether a given illumination source is currently active,
+    and for how long.
+
+    Callbacks should fill in the following functions:
+    - setEnabled(name, value): Turn this light source on or off.
+    - setExposureTime(name, value): Set the exposure time for this light,
+      in milliseconds.
+    - getExposureTime(name, value): Get the current exposure time for this
+      light, in milliseconds.
+    - setExposing(name, isOn): Optional. Sets the light on/off continuously
+      (i.e. without regard for what the camera(s) are doing).
+
+    Args:
+        wavelength (float): Wavelength of light the source emits, if
+            appropriate.
+        exposureTime (float): Default exposure time.
+        trigHandler (DeviceHandler): Optional. Sets up an auxiliary trigger
+            source.
+        trigLine (str): Optional. May be required by the auxiliary trigger
+            source.
+    """
 
     ## Shortcuts to decorators defined in parent class.
     reset_cache = deviceHandler.DeviceHandler.reset_cache
@@ -138,8 +146,8 @@ class LightHandler(deviceHandler.DeviceHandler):
         if self.getIsEnabled() != settings["isEnabled"]:
             self.toggleState()
 
-    ## Turn the laser on, off, or set continuous exposure.
     def setEnabled(self, setState):
+        """Turn the laser on, off, or set continuous exposure."""
         if self.state == deviceHandler.STATES.constant != setState:
             if "setExposing" in self.callbacks:
                 self.callbacks["setExposing"](self.name, False)
@@ -173,13 +181,13 @@ class LightHandler(deviceHandler.DeviceHandler):
             events.publish(events.LIGHT_SOURCE_ENABLE, self, False)
         self.state = setState
 
-    ## Return True if we're enabled, False otherwise.
     def getIsEnabled(self):
+        """Return True if we're enabled, False otherwise."""
         return self.state == deviceHandler.STATES.enabled
 
-    ## Set the light source to continuous exposure, if we have that option.
     @cockpit.util.threads.callInNewThread
     def setExposing(self, args):
+        """Set the light source to continuous exposure, if we have that option."""
         if not self.enableLock.acquire(False):
             return
         self.notifyListeners(self, deviceHandler.STATES.enabling)
@@ -193,13 +201,17 @@ class LightHandler(deviceHandler.DeviceHandler):
         finally:
             self.enableLock.release()
 
-    ## Set a new exposure time, in milliseconds.
     @reset_cache
     def setExposureTime(self, value, outermost=True):
-        ## Set the exposure time on self and update that on lights
-        # that share the same shutter if this is the outermost call.
-        # \param value: new exposure time
-        # \param outermost: flag indicating that we should update others.
+        """Set a new exposure time, in milliseconds.
+
+        Also update the exposure time on lights that share the same shutter
+        if this is the outermost call.
+
+        Args:
+            value (float): New exposure time.
+            outermost (bool): Flag indicating that we should update others.
+        """
         self.callbacks["setExposureTime"](self.name, value)
         # Publish event to update control labels.
         events.publish(events.LIGHT_EXPOSURE_UPDATE, self)
@@ -215,16 +227,16 @@ class LightHandler(deviceHandler.DeviceHandler):
                 other.setExposureTime(value, outermost=False)
                 events.publish(events.LIGHT_EXPOSURE_UPDATE, other)
 
-    ## Get the current exposure time, in milliseconds.
     @cached
     def getExposureTime(self):
+        """Get the current exposure time, in milliseconds."""
         return self.callbacks["getExposureTime"](self.name)
 
-    ## Simple getter.
     @cached
     def getWavelength(self):
+        """Simple getter."""
         return self.wavelength
 
-    ## Let them know what wavelength we are.
     def getSavefileInfo(self):
+        """Let them know what wavelength we are."""
         return str(self.wavelength)

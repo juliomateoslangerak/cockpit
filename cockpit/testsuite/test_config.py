@@ -147,10 +147,13 @@ class TempConfigBaseDir:
             config.write(fh)
 
     def __del__(self):
-        ## Very silly.  TemporaryDirectory will raise ResourceWarning
-        ## for implicitely cleaning up unless via context manager.  If
-        ## we don't use it a context manager, we need to explicitely
-        ## cleanup after ourselves or our tests get full of warnings.
+        """Very silly.
+
+        TemporaryDirectory will raise ResourceWarning for implicitly cleaning
+        up unless via context manager.  If we don't use it a context manager,
+        we need to explicitly cleanup after ourselves or our tests get full of
+        warnings.
+        """
         self._basedir.cleanup()
 
 
@@ -632,8 +635,8 @@ class TestDepotConfig(unittest.TestCase):
 
 class TestCommandLineOptions(unittest.TestCase):
     def test_debug(self):
-        ## Also get the default to make sure this test is not passing
-        ## just because something else is making debug the default.
+        """Also get the default to make sure this test is not passing just
+        because something else is making debug the default."""
         config_default = call_cockpit("--no-config-files")
         config_debug = call_cockpit("--no-config-files", "--debug")
         self.assertEqual(config_debug["log"]["level"], "debug")

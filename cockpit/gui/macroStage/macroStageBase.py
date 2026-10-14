@@ -72,12 +72,16 @@ ARROW_LINE_THICKNESS = 3.5
 ARROWHEAD_ANGLE = numpy.pi / 6.0
 
 
-## This class handles some common code for the MacroStageXY and MacroStageZ
-# classes.
 class MacroStageBase(wx.glcanvas.GLCanvas):
-    ## Create the MacroStage. Mostly, attach a timer to the main window so
-    # that we can use it to trigger updates.
+    """This class handles some common code for the MacroStageXY and MacroStageZ
+    classes."""
+
     def __init__(self, parent, size, id=-1, *args, **kwargs):
+        """Create the MacroStage.
+
+        Mostly, attach a timer to the main window so that we can use it to
+        trigger updates.
+        """
         super().__init__(
             parent, id, size=tuple(map(int, size)), *args, **kwargs
         )
@@ -133,27 +137,32 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         events.subscribe(events.STAGE_POSITION, self.onMotion)
         events.subscribe(events.STAGE_STEP_INDEX, self.onStepIndexChange)
 
-    ## Set up some set-once things for OpenGL.
     def initGL(self):
+        """Set up some set-once things for OpenGL."""
         self.SetCurrent(self.context)
         glClearColor(1.0, 1.0, 1.0, 0.0)
 
-    ## Update our marker of where the stage currently is. This will indirectly
-    # cause us to redisplay ourselves in a bit, thanks to self.refreshWaiter.
     def onMotion(self, axis, position):
+        """Update our marker of where the stage currently is.
+
+        This will indirectly cause us to redisplay ourselves in a bit, thanks
+        to self.refreshWaiter.
+        """
         self.curStagePosition[axis] = position
 
-    ## Step index has changed, so the highlighting on our step displays
-    # is different.
-    # \todo Redrawing *everything* at this stage seems a trifle excessive.
     def onStepIndexChange(self, index):
+        r"""Step index has changed, so the highlighting on our step displays is
+        different.
+        \todo Redrawing *everything* at this stage seems a trifle excessive."""
         self.shouldForceRedraw = True
 
-    ## Wait until a minimum amount of time has passed since our last redraw
-    # before we redraw again. Since we redraw when the stage moves and
-    # these events may happen rapidly, this prevents us from spamming
-    # OpenGL calls.
     def refreshWaiter(self):
+        """Wait until a minimum amount of time has passed since our last redraw
+        before we redraw again.
+
+        Since we redraw when the stage moves and these events may happen
+        rapidly, this prevents us from spamming OpenGL calls.
+        """
         while True:
             if not self:
                 # Our window has been deleted; we're done here.
@@ -175,11 +184,13 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
                 self.shouldForceRedraw = False
             time.sleep(0.1)
 
-    ## Rescale the input value to be in the range
-    # (self.min[X|Y], self.max[X|Y]), flip the X axis, and call glVertex2f on
-    # the result. Or return the value instead if shouldReturn is true. The
-    # basic idea here is to go from stage coordinates to view coordinates.
     def scaledVertex(self, x, y, shouldReturn=False):
+        """Rescale the input value to be in the range (self.min[X|Y],
+        self.max[X|Y]), flip the X axis, and call glVertex2f on the result.
+
+        Or return the value instead if shouldReturn is true. The basic idea
+        here is to go from stage coordinates to view coordinates.
+        """
         newX = -1 * ((x - self.minX) / float(self.maxX - self.minX) * 2 - 1)
         newY = (y - self.minY) / float(self.maxY - self.minY) * 2 - 1
         if shouldReturn:
@@ -187,8 +198,8 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         else:
             glVertex2f(newX, newY)
 
-    ## Draw an arrow from the first point along the specified vector.
     def drawArrow(self, baseLoc, vector, color, arrowSize, arrowHeadSize):
+        """Draw an arrow from the first point along the specified vector."""
         # Normalize.
         delta = vector / numpy.sqrt(numpy.vdot(vector, vector)) * arrowSize
         # Calculate angle, for the head of the arrow
@@ -232,8 +243,8 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         glVertex2f(pointLoc[0], pointLoc[1])
         glEnd()
 
-    ## Draw some text at the specified location
     def drawTextAt(self, loc, text, size, color=(0, 0, 0)):
+        """Draw some text at the specified location."""
         width, height = self.GetClientSize() * self.GetContentScaleFactor()
         aspect = float(height) / width
         loc = self.scaledVertex(loc[0], loc[1], True)

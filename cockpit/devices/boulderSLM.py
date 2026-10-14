@@ -272,8 +272,8 @@ class BoulderSLM(device.Device):
         result.append(self.handler)
         return result
 
-    ### UI functions ###
     def makeUI(self, parent):
+        """UI functions"""
         panel = wx.Panel(parent, style=wx.BORDER_RAISED)
         panel.SetDoubleBuffered(True)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
@@ -306,8 +306,8 @@ class BoulderSLM(device.Device):
         powerButton.manageStateOf((triggerButton, posDisplay))
         return panel
 
-    # ensure that the timer is stopped on window destroy
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+        """ensure that the timer is stopped on window destroy."""
         self.updateTimer.Stop()
         event.Skip()
 

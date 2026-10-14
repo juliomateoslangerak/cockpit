@@ -60,10 +60,13 @@ import wx.aui
 _logger = logging.getLogger(__name__)
 
 
-## This class provides a window that displays two text panels which capture
-# output (stdout and stderr) from the rest of the program. This simplifies
-# debugging in many ways.
 class LoggingWindow(wx.Frame):
+    """This class provides a window that displays two text panels which capture
+    output (stdout and stderr) from the rest of the program.
+
+    This simplifies debugging in many ways.
+    """
+
     SHOW_DEFAULT = False
     LIST_AS_COCKPIT_WINDOW = True
 
@@ -120,8 +123,8 @@ class LoggingWindow(wx.Frame):
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
         self.SetSize((600, 460))
 
-    ## Send text to one of our output boxes, and also log that text.
     def write(self, target, *args):
+        """Send text to one of our output boxes, and also log that text."""
         wx.CallAfter(target.AppendText, *args)
         # Text output reveals logging window.
         self.Show()

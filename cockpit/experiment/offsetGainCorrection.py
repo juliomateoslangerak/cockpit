@@ -73,23 +73,15 @@ from cockpit.gui import guiUtils
 EXPERIMENT_NAME = "Offset/gain correction file"
 
 
-## This class collects the data needed to generate an offset and gain
-# correction file. It takes exposures of some flat illumination source (e.g.
-# a Chroma slide) at varying exposure times, to characterize the response of
-# the cameras to incident light.
 class OffsetGainCorrectionExperiment(experiment.Experiment):
-    ## \param numExposures How many images to take for each exposure time.
-    # \param exposureMultiplier Factor by which to increase exposure time for
-    #        each step.
-    # \param maxIntensity Once the max intensity exceeds this value for a
-    #        given camera, we stop collecting data for it.
-    # \param cosmicRayThreshold If any pixels are more than this many
-    #        standard deviations away from the median of the overall image, then
-    #        the image is discarded.
-    # \param numCollections Maximum number of different exposure times to try,
-    #        assuming no other stopping condition is hit first.
-    # \param shouldPreserveIntermediaryFiles If True, then save the raw data
-    #        to a separate file, alongside the actual result file.
+    """This class collects the data needed to generate an offset and gain
+    correction file.
+
+    It takes exposures of some flat illumination source (e.g. a Chroma slide)
+    at varying exposure times, to characterize the response of the cameras to
+    incident light.
+    """
+
     def __init__(
         self,
         cameras,
@@ -104,6 +96,23 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         shouldPreserveIntermediaryFiles=False,
         **kwargs,
     ):
+        """Set up the offset and gain correction experiment.
+
+        Args:
+            numExposures (int): How many images to take for each exposure
+                time.
+            exposureMultiplier (float): Factor by which to increase exposure
+                time for each step.
+            maxIntensity (int): Once the max intensity exceeds this value for
+                a given camera, we stop collecting data for it.
+            cosmicRayThreshold (float): If any pixels are more than this many
+                standard deviations away from the median of the overall
+                image, then the image is discarded.
+            numCollections (int): Maximum number of different exposure times
+                to try, assuming no other stopping condition is hit first.
+            shouldPreserveIntermediaryFiles (bool): If True, then save the raw
+                data to a separate file, alongside the actual result file.
+        """
         # Note we fill in some dummy values here since we don't actually
         # move the stage during this experiment, and we handle data saving
         # manually. Some of these values may actually have been passed in via
@@ -152,10 +161,10 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         ## Time we last received an image, used in the above thread.
         self.lastImageTime = None
 
-    ## Broadly similar to Experiment.run(), but we generate and execute multiple
-    # tables.
     @cockpit.util.threads.callInNewThread
     def run(self):
+        """Broadly similar to Experiment.run(), but we generate and execute
+        multiple tables."""
         # For debugging purposes
         experiment.lastExperiment = self
 
@@ -256,10 +265,14 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
 
         self.cleanup()
 
-    ## Create the ActionTable needed to run the experiment.
-    # \param multiplier Amount to multiply exposure times by.
-    # \param activeCameras Cameras that we should still be taking images for.
     def generateActions(self, multiplier, activeCameras):
+        """Create the ActionTable needed to run the experiment.
+
+        Args:
+            multiplier (float): Amount to multiply exposure times by.
+            activeCameras (set): Cameras that we should still be taking
+                images for.
+        """
         table = actionTable.ActionTable()
         curTime = 0
         for cameras, lightTimePairs in self.exposureSettings:
@@ -276,27 +289,29 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
                     curTime = self.expose(curTime, usedCams, settings, table)
         return table
 
-    ## Record an image for the specified camera.
     def recordImage(self, image, camera):
+        """Record an image for the specified camera."""
         with self.camToLock[camera]:
             index = self.camToNumImagesReceived[camera]
             self.camToImages[camera][index] = image
             self.camToNumImagesReceived[camera] += 1
             self.lastImageTime = time.time()
 
-    ## This function waits for a certain amount of time to pass after an
-    # image is received.
     def waiter(self):
+        """This function waits for a certain amount of time to pass after an
+        image is received."""
         # Clearly-invalid initial value
         self.lastImageTime = time.time() + 1000
         while time.time() - self.lastImageTime < 0.25:
             time.sleep(0.1)
 
-    ## Examine the images in self.camToImages, discard any that indicate
-    # cosmic ray strikes, average the remainder, and put them into
-    # self.camToAverages. Return a set of cameras that had at least 1 valid
-    # image.
     def processImages(self, multiplier):
+        """Examine the images in self.camToImages, discard any that indicate
+        cosmic ray strikes, average the remainder, and put them into
+        self.camToAverages.
+
+        Return a set of cameras that had at least 1 valid image.
+        """
         activeCameras = set()
         for camera, imageData in self.camToImages.items():
             images = imageData[: self.camToNumImagesReceived[camera]]
@@ -327,9 +342,11 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
                 activeCameras.add(camera)
         return activeCameras
 
-    ## Given an array of images, make the offset and gain images.
-    # NB assumes that the first image in images is the measured dark offset.
     def makeFit(self, images):
+        """Given an array of images, make the offset and gain images.
+
+        NB assumes that the first image in images is the measured dark offset.
+        """
         xVals = map(numpy.mean, images)
         yVals = numpy.array(images)
         imageShape = yVals.shape[1:]
@@ -345,8 +362,9 @@ EXPERIMENT_CLASS = OffsetGainCorrectionExperiment
 from cockpit.gui.guiUtils import FLOATVALIDATOR, INTVALIDATOR
 
 
-## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(wx.Panel):
+    """Generate the UI for special parameters used by this experiment."""
+
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
 
@@ -415,9 +433,9 @@ class ExperimentUI(wx.Panel):
         sizer.Add(rowSizer)
         self.SetSizerAndFit(sizer)
 
-    ## Given a parameters dict (parameter name to value) to hand to the
-    # experiment instance, augment them with our special parameters.
     def augmentParams(self, params):
+        """Given a parameters dict (parameter name to value) to hand to the
+        experiment instance, augment them with our special parameters."""
         self.saveSettings()
         params["numExposures"] = guiUtils.tryParseNum(
             self.correctionArgs["correctionNumExposures"]
@@ -439,8 +457,8 @@ class ExperimentUI(wx.Panel):
         ].GetValue()
         return params
 
-    ## Load the saved experiment settings, if any.
     def loadSettings(self):
+        """Load the saved experiment settings, if any."""
         return cockpit.util.userConfig.getValue(
             self.configKey + "offsetGainExperimentSettings",
             default={
@@ -453,12 +471,12 @@ class ExperimentUI(wx.Panel):
             },
         )
 
-    ## Generate a dict of our settings.
     def getSettingsDict(self):
+        """Generate a dict of our settings."""
         return {(key, c.GetValue()) for key, c in self.correctionArgs.items()}
 
-    ## Save the current experiment settings to config.
     def saveSettings(self, settings=None):
+        """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(

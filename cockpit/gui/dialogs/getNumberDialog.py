@@ -55,9 +55,11 @@ import wx
 import cockpit.gui.guiUtils
 
 
-## This class allows for prompting the user for a number, similar to
-# wx.GetNumberFromUser except that we allow for floating point values as well.
 class GetNumberDialog(wx.Dialog):
+    """This class allows for prompting the user for a number, similar to
+    wx.GetNumberFromUser except that we allow for floating point values as
+    well."""
+
     def __init__(self, parent, title, prompt, default, atMouse=False):
         # Nothing checks how the window was closed, so the OK button should
         # be the only way to close it.
@@ -101,8 +103,9 @@ class GetNumberDialog(wx.Dialog):
         return self.value.GetValue()
 
 
-## As above, but we can accept any number of prompts for multiple numbers.
 class GetManyNumbersDialog(wx.Dialog):
+    """As above, but we can accept any number of prompts for multiple numbers."""
+
     def __init__(self, parent, title, prompts, defaultValues, atMouse=False):
         # Nothing checks how the window was closed, so the OK button should
         # be the only way to close it.

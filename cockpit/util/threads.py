@@ -38,9 +38,12 @@ import threading
 import wx
 
 
-## Call the passed-in function in a new thread. Used as a decorator when
-# a function needs to not block the UI thread.
 def callInNewThread(function):
+    """Call the passed-in function in a new thread.
+
+    Used as a decorator when a function needs to not block the UI thread.
+    """
+
     def wrappedFunc(*args, **kwargs):
         thread = threading.Thread(target=function, args=args, kwargs=kwargs)
         thread.name = function.__name__
@@ -76,11 +79,15 @@ objectToLock = {}
 locksLock = threading.Lock()
 
 
-## Ensure that the given function cannot be called at the same time as
-# other functions wit the same first argument. We assume that the first
-# argument is a class instance -- thus, this function effectively forces
-# certain member functions in a class to be threadsafe.
 def locked(func):
+    """Ensure that the given function cannot be called at the same time as
+    other functions wit the same first argument.
+
+    We assume that the first argument is a class instance -- thus, this
+    function effectively forces certain member functions in a class to be
+    threadsafe.
+    """
+
     def wrappedFunc(first, *args, **kwargs):
         with locksLock:
             if first not in objectToLock:

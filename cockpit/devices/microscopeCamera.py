@@ -393,8 +393,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         if self.enabled:
             self._proxy.soft_trigger()
 
-    ### UI functions ###
     def makeUI(self, parent):
+        """UI functions."""
         # TODO - this only adds a button with the button for settings.
         # Maybe that should all be handled in CameraPanel since the
         # logic to draw the settings ins the microscope.gui package

@@ -81,9 +81,12 @@ class Objectives(wx.EvtHandler):
     def GetNamesSorted(self) -> typing.List[str]:
         """List of all objective names sorted by magnification."""
 
-        # FIXME: we should not do this.  Instead, objective device and
-        # handlers should have a magnification field (see issue #139).
         def parse_magnification(name):
+            """FIXME: we should not do this.
+
+            Instead, objective device and handlers should have a magnification
+            field (see issue #139).
+            """
             match = re.search(r"^([0-9.])+x", name)
             if match is None:
                 raise Exception("failed to parse magnification from %s" % name)

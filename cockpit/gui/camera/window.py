@@ -109,11 +109,13 @@ class CamerasWindow(wx.Frame):
                     view.disable()
         self.resetGrid()
 
-    # When cameras are enabled/disabled, we resize the UI to suit. We
-    # want there to always be at least one unused ViewPanel so the
-    # window itself is visible but otherwise we keep only the enabled
-    # cameras to conserve screen real estate.
     def resetGrid(self):
+        """When cameras are enabled/disabled, we resize the UI to suit.
+
+        We want there to always be at least one unused ViewPanel so the window
+        itself is visible but otherwise we keep only the enabled cameras to
+        conserve screen real estate.
+        """
         viewsToShow = []
         for view in self.views:
             view.Hide()
@@ -132,15 +134,15 @@ class CamerasWindow(wx.Frame):
         self.panel.SetSizerAndFit(self.sizer)
         self.SetClientSize(self.panel.GetSize())
 
-    ## Received information on the pixel under the mouse; update our title
-    # to include that information.
     def onImagePixelInfo(self, coords, value):
+        """Received information on the pixel under the mouse; update our title
+        to include that information."""
         self.SetTitle(
             "Camera views    (%d, %d): %d" % (coords[0], coords[1], value)
         )
 
-    ## Rescale each camera view.
     def rescaleViews(self):
+        """Rescale each camera view."""
         for view in self.views:
             if view.getIsEnabled():
                 view.canvas.resetPixelScale()
@@ -155,13 +157,13 @@ def makeWindow(parent):
     window = CamerasWindow(parent)
 
 
-## Simple passthrough.
 def rescaleViews():
+    """Simple passthrough."""
     window.rescaleViews()
 
 
-## Retrieve the black- and white-points for a given camera's display.
 def getCameraScaling(camera):
+    """Retrieve the black- and white-points for a given camera's display."""
     for view in window.views:
         if view.curCamera is camera:
             return view.getScaling()
@@ -170,8 +172,8 @@ def getCameraScaling(camera):
     )
 
 
-## Retrieve the image currently displayed by the specified camera.
 def getImageForCamera(camera):
+    """Retrieve the image currently displayed by the specified camera."""
     for view in window.views:
         if view.curCamera is camera:
             return view.getPixelData()

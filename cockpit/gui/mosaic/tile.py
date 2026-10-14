@@ -119,9 +119,9 @@ from OpenGL.GL import (
 # supporting functions and constants.
 
 
-## Finds the smallest powers of two that will contain a texture with the
-# specified dimensions.
 def getTexSize(width, height):
+    """Finds the smallest powers of two that will contain a texture with the
+    specified dimensions."""
     result = [2, 2]
     for i, val in enumerate([width, height]):
         while result[i] < val:
@@ -143,8 +143,9 @@ dtypeToGlTypeMap = {
 }
 
 
-## This class handles a single tile in the mosaic.
 class Tile:
+    """This class handles a single tile in the mosaic."""
+
     def __init__(
         self,
         textureData,
@@ -155,7 +156,7 @@ class Tile:
         metadata,
         shouldDelayAllocation=False,
     ):
-        ## Array of pixel brightnesses
+        """Array of pixel brightnesses."""
         self.textureData = textureData
         ## XYZ position tuple, in microns. NB the Z portion is ignored
         # for rendering purposes and is mostly just kept around so we know
@@ -280,20 +281,20 @@ class Tile:
             imgString,
         )
 
-    ## Free up memory we were using.
     def wipe(self):
+        """Free up memory we were using."""
         glDeleteTextures([self.texture])
 
-    ## Wipe our texture and recreate it, presumably because it has
-    # changed somehow.
     def recreateTexture(self):
+        """Wipe our texture and recreate it, presumably because it has changed
+        somehow."""
         self.wipe()
         self.texture = glGenTextures(1)
         self.bindTexture()
 
-    ## Return true iff our area intersects the given
-    # (bottomLeft, topRight) tuple.
     def intersectsBox(self, viewBox):
+        """Return true iff our area intersects the given (bottomLeft, topRight)
+        tuple."""
         bottomLeft, topRight = viewBox
         tileBottomLeft, tileTopRight = self.box
 
@@ -306,8 +307,8 @@ class Tile:
             return False
         return True
 
-    ## Draw the tile, if it intersects the given view box
     def render(self, viewBox):
+        """Draw the tile, if it intersects the given view box."""
         if not self.intersectsBox(viewBox):
             return
         if self.shouldRefresh:
@@ -336,9 +337,9 @@ class Tile:
         glVertex2f(x, y + self.size[1])
         glEnd()
 
-    ## Set our histogramScale tuple to (min, max), or base those off of
-    # self.textureData if the provided values are None
     def scaleHistogram(self, minVal=None, maxVal=None):
+        """Set our histogramScale tuple to (min, max), or base those off of
+        self.textureData if the provided values are None."""
         if minVal is None:
             minVal = self.textureData.min()
         if maxVal is None:
@@ -352,9 +353,9 @@ class Tile:
         self.histogramScale = (minVal, maxVal)
         self.shouldRefresh = True
 
-    ## Return the (xSize, ySize) tuple of a single pixel of texture data in GL
-    # units.
     def getPixelSize(self):
+        """Return the (xSize, ySize) tuple of a single pixel of texture data
+        in GL units."""
         return (
             self.size[0] / self.textureData.shape[0],
             self.size[1] / self.textureData.shape[1],
@@ -367,10 +368,11 @@ class Tile:
 megaTileFramebuffer = None
 
 
-## This class handles pre-rendering of normal-sized Tile instances
-# at a reduced level of detail, which allows us to keep the program
-# responsive even when thousands of tiles are in view.
 class MegaTile(Tile):
+    """This class handles pre-rendering of normal-sized Tile instances at a
+    reduced level of detail, which allows us to keep the program responsive
+    even when thousands of tiles are in view."""
+
     ## Length in pixels of one edge of a MegaTile's texture.
     pixelSize = None
     ## Length in microns of one edge of a MegaTile's texture.
@@ -378,14 +380,16 @@ class MegaTile(Tile):
     ## An array of ones, used to initialize the MegaTile textures.
     _emptyTileData = None
 
-    ## Instantiate the megatile. The main difference here is that
-    # megatiles don't allocated any video memory until they have
-    # something to display; since the majority of the mosaic is
-    # usually blank, this saves significantly om memory.
-    #
-    # At this time, if megaTileFramebuffer has not been created
-    # yet, create it.
     def __init__(self, pos):
+        """Instantiate the megatile.
+
+        The main difference here is that megatiles don't allocated any video
+        memory until they have something to display; since the majority of the
+        mosaic is usually blank, this saves significantly om memory.
+
+        At this time, if megaTileFramebuffer has not been created
+        yet, create it.
+        """
         super().__init__(
             self._emptyTileData,
             pos,
@@ -417,9 +421,9 @@ class MegaTile(Tile):
         cls.micronSize = edge * 1
         cls._emptyTileData = numpy.ones((edge, edge), dtype=numpy.float32)
 
-    ## Go through the provided list of Tiles, find the ones that overlap
-    # our area, and prerender them to our texture
     def prerenderTiles(self, tiles):
+        """Go through the provided list of Tiles, find the ones that overlap
+        our area, and prerender them to our texture."""
         if not tiles:
             return
         minX = self.pos[0]
@@ -463,15 +467,15 @@ class MegaTile(Tile):
             glPopMatrix()
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
 
-    ## Prevent trying to delete our texture if we haven't made it yet.
     def wipe(self):
+        """Prevent trying to delete our texture if we haven't made it yet."""
         if self.haveAllocatedMemory:
             super().wipe()
             self.haveAllocatedMemory = False
             self.numRenderedTiles = 0
 
-    ## Prevent allocating a new texture if we haven't drawn anything yet.
     def recreateTexture(self):
+        """Prevent allocating a new texture if we haven't drawn anything yet."""
         if self.haveAllocatedMemory:
             super().recreateTexture()
             self.refresh()

@@ -170,7 +170,7 @@ class Clarity(microscopeDevice.MicroscopeFilter):
         self.panel = panel
         return outer
 
-    # ensure that the timer is stopped on window destroy
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+        """ensure that the timer is stopped on window destroy."""
         self._timer.Stop()
         event.Skip()

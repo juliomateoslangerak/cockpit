@@ -75,9 +75,11 @@ def mock_not_in_video_mode():
 
 class CameraHandlerTestCase(unittest.TestCase):
     def setUp(self):
-        ## On each test we will be creating new handlers which may
-        ## conflict with handlers created in previous tests.  So just
-        ## build a new depot and reinitialise the imager.
+        """On each test we will be creating new handlers which may conflict
+        with handlers created in previous tests.
+
+        So just build a new depot and reinitialise the imager.
+        """
         cockpit.depot.deviceDepot = cockpit.depot.DeviceDepot()
 
         self.callback_mocks = {

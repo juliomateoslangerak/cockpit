@@ -97,8 +97,8 @@ class AerotechZStage(device.Device):
         # Axis maximum speed (mm / s^2)
         self.speed = 20
 
-    ## Send a command to the Aerotech SoloistCP and fetch the response.
     def command(self, cmd):
+        """Send a command to the Aerotech SoloistCP and fetch the response."""
         # The terminated command string.
         cmdstr = cmd + CTC
         # A flag indicating that a retry is needed.
@@ -170,27 +170,27 @@ class AerotechZStage(device.Device):
         result.append(handler)
         return result
 
-    ## Initialize the axis.
     def initialize(self):
+        """Initialize the axis."""
         # Open a connection to the controller.
         self.openConnection()
         self.position = self.command(b"CMDPOS").decode()
         self.speed = int(self.command(b"GETPARM(71)"))
         self.acceleration = int(self.command(b"GETPARM(72"))
 
-    ## Publish our current position.
     def makeInitialPublications(self):
+        """Publish our current position."""
         axis = self.axis
         events.publish(events.STAGE_MOVER, axis)
 
-    ## User clicked the abort button; stop moving.
     def onAbort(self):
+        """User clicked the abort button; stop moving."""
         self.command(b"ABORT")
         axis = self.axis
         events.publish(events.STAGE_STOPPED, "%d %s" % (axis, NAME_STRING))
 
-    ## Move the stage to a given position.
     def moveAbsolute(self, axis, pos):
+        """Move the stage to a given position."""
         self.command(b"ENABLE")
         self.command(b"MOVEABS D %f F %f" % (pos / 1000.0, self.speed))
         events.publish(events.STAGE_MOVER, axis)
@@ -202,8 +202,8 @@ class AerotechZStage(device.Device):
         events.publish(events.STAGE_STOPPED, "%d mover" % axis)
         self.command(b"DISABLE")
 
-    ## Move the stage piezo by a given delta.
     def moveRelative(self, axis, delta):
+        """Move the stage piezo by a given delta."""
         self.command(b"ENABLE")
         self.command(b"MOVEINC D %f F %f" % (delta / 1000.0, self.speed))
         events.publish(events.STAGE_MOVER, axis)
@@ -215,16 +215,16 @@ class AerotechZStage(device.Device):
         events.publish(events.STAGE_STOPPED, "%d %s" % (axis, NAME_STRING))
         self.command(b"DISABLE")
 
-    ## Get the current piezo position.
     def getPosition(self, axis):
+        """Get the current piezo position."""
         return float(self.position) * 1000.0
 
-    ## Get the amount of time it would take the mover to move from the
-    # initial position to the final position, as well
-    # as the amount of time needed to stabilize after that point,
-    # both in milliseconds. This is needed when setting up timings for
-    # experiments.
     def getMovementTime(self, axis, start, end):
+        """Get the amount of time it would take the mover to move from the
+        initial position to the final position, as well as the amount of time
+        needed to stabilize after that point, both in milliseconds. This is
+        needed when setting up timings for experiments.
+        """
         # top speed mm/s
         v = self.speed
         # acceleration mm/s**2
@@ -254,9 +254,9 @@ class AerotechZStage(device.Device):
         except:
             raise
 
-    # function to home the stage, should be wrapped with a dialog to
-    # ensure the stage plate is removed.
     def home(self):
+        """function to home the stage, should be wrapped with a dialog to
+        ensure the stage plate is removed."""
         self.command(b"ENABLE")
         self.command(b"HOME")
         self.command(b"DISABLE")

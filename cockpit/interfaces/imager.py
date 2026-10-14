@@ -89,10 +89,11 @@ def pauseVideo(func):
     return wrapper
 
 
-## Simple container class.
 class Imager:
+    """Simple container class."""
+
     def __init__(self, handlers: typing.Sequence[ImagerHandler]) -> None:
-        ## List of Handlers capable of taking images.
+        """List of Handlers capable of taking images."""
         self._imageHandlers = handlers
         ## Set of active cameras, so we can check their framerates.
         self.activeCameras = set()
@@ -145,13 +146,16 @@ class Imager:
         with self._lock:
             self._updateExposureTime()
 
-    ## Take an image.
-    # \param shouldBlock True if we want to wait for the cameras and lights
-    #        to be ready so we can take the image; False if we don't want to
-    #        wait and should just give up if they aren't ready.
-    # \param shouldStopVideo True if we should stop video mode. Only really
-    #        used by self.videoMode().
     def takeImage(self, shouldBlock=False, shouldStopVideo=True):
+        """Take an image.
+
+        Args:
+            shouldBlock (bool): True if we want to wait for the cameras and
+                lights to be ready so we can take the image; False if we don't
+                want to wait and should just give up if they aren't ready.
+            shouldStopVideo (bool): True if we should stop video mode. Only
+                really used by self.videoMode().
+        """
         from cockpit.experiment import experiment
 
         if experiment.isRunning():
@@ -173,13 +177,15 @@ class Imager:
             handler.takeImage()
         self.lastImageTime = time.time()
 
-    ## Video mode: continuously take images at our maximum update rate.
-    # We stop whenever the user invokes takeImage() manually or the abort
-    # button is pressed. We also limit our image rate if there are any
-    # non-room-light light sources to 1 image per second, to avoid excessive
-    # sample damage.
     @cockpit.util.threads.callInNewThread
     def videoMode(self):
+        """Video mode: continuously take images at our maximum update rate.
+
+        We stop whenever the user invokes takeImage() manually or the abort
+        button is pressed. We also limit our image rate if there are any non-
+        room-light light sources to 1 image per second, to avoid excessive
+        sample damage.
+        """
         if not self.activeCameras:
             # No cameras, no video mode.
             events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
@@ -224,13 +230,13 @@ class Imager:
         self.amInVideoMode = False
         events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
 
-    ## Stop our video thread, if relevant.
     def stopVideo(self):
+        """Stop our video thread, if relevant."""
         self.shouldStopVideoMode = True
 
-    ## Get the next time it's safe to call takeImage(), based on the
-    # cameras' time between images and the light sources' exposure times.
     def getNextImageTime(self):
+        """Get the next time it's safe to call takeImage(), based on the
+        cameras' time between images and the light sources' exposure times."""
         camLimiter = 0
         for camera in self.activeCameras:
             camLimiter = max(camLimiter, camera.getTimeBetweenExposures())

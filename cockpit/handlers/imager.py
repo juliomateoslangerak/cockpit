@@ -53,14 +53,18 @@ from cockpit import depot
 from cockpit.handlers import deviceHandler
 
 
-## This handler represents any device that is capable of causing an image to
-# be taken. That's different from a camera; an imager is what triggers the
-# camera, be it an internal trigger on the camera itself or an external signal
-# source like a DSP or DAQ board.
 class ImagerHandler(deviceHandler.DeviceHandler):
-    ## callbacks should fill in the following functions:
-    # - takeImage(): Cause an image to be collected.
+    """This handler represents any device that is capable of causing an image
+    to be taken.
+
+    That's different from a camera; an imager is what triggers the camera, be
+    it an internal trigger on the camera itself or an external signal source
+    like a DSP or DAQ board.
+    """
+
     def __init__(self, name, groupName, callbacks):
+        """callbacks should fill in the following functions:
+        - takeImage(): Cause an image to be collected."""
         super().__init__(name, groupName, False, callbacks, depot.IMAGER)
 
     def takeImage(self):

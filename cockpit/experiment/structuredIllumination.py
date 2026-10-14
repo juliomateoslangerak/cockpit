@@ -167,22 +167,9 @@ def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
     return data
 
 
-## This class handles SI experiments.
 class SIExperiment(experiment.Experiment):
-    ## \param numAngles How many angles to perform -- sometimes we only want
-    # to do 1 angle, for example.
-    # \param collectionOrder Key from COLLECTION_ORDERS that indicates what
-    #        order we change the angle, phase, and Z step in.
-    # \param angleHandler DeviceHandler for the device that handles rotations
-    #        of the illumination pattern.
-    # \param phaseHandler DeviceHandler for the device that handles phase
-    #        changes in the illumination pattern.
-    # \param slmHandler Optionally, both angle and phase can be handled by an
-    #        SLM or similar pattern-generating device instead. Each handler
-    #        (angle, phase, and slm) will be used if present.
-    # \param bleachCompensations A dictionary mapping light handlers to
-    #        how much to increase their exposure times on successive angles,
-    #        to compensate for bleaching.
+    """This class handles SI experiments."""
+
     def __init__(
         self,
         collectionOrder,
@@ -196,6 +183,28 @@ class SIExperiment(experiment.Experiment):
         *args,
         **kwargs,
     ):
+        """Set up the structured illumination experiment.
+
+        Each handler (angle, phase, and slm) will be used if present.
+
+        Args:
+            collectionOrder (str): Key from COLLECTION_ORDERS that indicates
+                what order we change the angle, phase, and Z step in.
+            bleachCompensations (dict): Maps light handlers to how much to
+                increase their exposure times on successive angles, to
+                compensate for bleaching.
+            numAngles (int): How many angles to perform. Sometimes we only
+                want to do 1 angle, for example.
+            numPhases (int): How many phases to perform.
+            angleHandler (DeviceHandler): Handler for the device that handles
+                rotations of the illumination pattern.
+            phaseHandler (DeviceHandler): Handler for the device that handles
+                phase changes in the illumination pattern.
+            polarizerHandler (DeviceHandler): Handler for the polarizer.
+            slmHandler (DeviceHandler): Optionally, both angle and phase can
+                be handled by an SLM or similar pattern-generating device
+                instead.
+        """
         # Store the collection order in the MRC header.
         metadata = "SI order: %s" % collectionOrder
         # Store the diffraction angle in MRC metadata
@@ -223,9 +232,9 @@ class SIExperiment(experiment.Experiment):
         self.slmHandler = slmHandler
         self.handlerToBleachCompensation = bleachCompensations
 
-    ## Generate a sequence of (angle, phase, Z) positions for SI experiments,
-    # based on the order the user specified.
     def genSIPositions(self):
+        """Generate a sequence of (angle, phase, Z) positions for SI experiments,
+        based on the order the user specified."""
         ordering = COLLECTION_ORDERS[self.collectionOrder]
         maxVals = (self.numAngles, self.numPhases, self.numZSlices)
         for i in range(maxVals[ordering[0]]):
@@ -237,10 +246,12 @@ class SIExperiment(experiment.Experiment):
                     z = vals[ordering.index(2)]
                     yield (angle, phase, self.zStart + z * self.sliceHeight)
 
-    ## Create the ActionTable needed to run the experiment. We do three
-    # Z-stacks for three different angles, and take five images at each
-    # Z-slice, one for each phase.
     def generateActions(self):
+        """Create the ActionTable needed to run the experiment.
+
+        We do three Z-stacks for three different angles, and take five images
+        at each Z-slice, one for each phase.
+        """
         table = actionTable.ActionTable()
         curTime = 0
         prevAngle, prevZ, prevPhase = None, None, None
@@ -385,11 +396,10 @@ class SIExperiment(experiment.Experiment):
 
         return table
 
-    ## Wrapper around Experiment.expose() that:
-    # 1: adjusts exposure times based on the current angle, to compensate for
-    # bleaching;
-    # 2: uses an SLM (if available) to optimise SIM for each exposure.
     def expose(self, curTime, cameras, lightTimePairs, angle, phase, table):
+        """Wrapper around Experiment.expose() that: 1: adjusts exposure times
+        based on the current angle, to compensate for bleaching; 2: uses an SLM
+        (if available) to optimise SIM for each exposure."""
         # new lightTimePairs with exposure times adjusted for bleaching.
         newPairs = []
         # If a SIM pattern puts the 1st-order spots for a given wavelength at
@@ -573,9 +583,10 @@ class SIExperiment(experiment.Experiment):
 EXPERIMENT_CLASS = SIExperiment
 
 
-## Generate the UI for special parameters used by this experiment.
 class BaseSIMExperimentUI(wx.Panel):
     """Base Experiment UI for SIM experiments.
+
+    Generate the UI for special parameters used by this experiment.
 
     Subclasses must implement class property `_CONFIG_KEY_SUFFIX`.
     """
@@ -613,9 +624,9 @@ class BaseSIMExperimentUI(wx.Panel):
         sizer.Add(rowSizer)
         self.SetSizerAndFit(sizer)
 
-    ## Given a parameters dict (parameter name to value) to hand to the
-    # experiment instance, augment them with our special parameters.
     def augmentParams(self, params):
+        """Given a parameters dict (parameter name to value) to hand to the
+        experiment instance, augment them with our special parameters."""
         self.saveSettings()
         params["numAngles"] = 3
         params["numPhases"] = 5
@@ -643,8 +654,8 @@ class BaseSIMExperimentUI(wx.Panel):
         }
         return default
 
-    ## Load the saved experiment settings, if any.
     def loadSettings(self):
+        """Load the saved experiment settings, if any."""
         result = cockpit.util.userConfig.getValue(
             self.configKey, default=self._getDefaultSettings()
         )
@@ -655,8 +666,8 @@ class BaseSIMExperimentUI(wx.Panel):
             result["bleachCompensations"] = ["" for light in self.allLights]
         return result
 
-    ## Generate a dict of our settings.
     def getSettingsDict(self):
+        """Generate a dict of our settings."""
         return {
             "bleachCompensations": [
                 c.GetValue() for c in self.bleachCompensations
@@ -664,8 +675,8 @@ class BaseSIMExperimentUI(wx.Panel):
             "siCollectionOrder": self.siCollectionOrder.GetSelection(),
         }
 
-    ## Save the current experiment settings to config.
     def saveSettings(self, settings=None):
+        """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(self.configKey, settings)

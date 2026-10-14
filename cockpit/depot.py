@@ -92,8 +92,8 @@ SKIP_CONFIG = ["server"]
 
 
 class DeviceDepot:
-    ## Initialize the Depot.
     def __init__(self):
+        """Initialize the Depot."""
         ## Maps config section names to device
         self.nameToDevice = {}
         ## Maps devices to their handlers.
@@ -111,10 +111,11 @@ class DeviceDepot:
         ## Maps group name to handlers.
         self.groupNameToHandlers = collections.defaultdict(list)
 
-    ## Call the initialize() method for each registered device, then get
-    # the device's Handler instances and insert them into our various
-    # containers.  Yield the device names as we go.
     def initialize(self, config):
+        """Call the initialize() method for each registered device, then get
+        the device's Handler instances and insert them into our various
+        containers. Yield the device names as we go.
+        """
         ## TODO: we will want to remove this print statements when
         ## we're done refactoring the location of the log and config
         ## files (issue #320)
@@ -265,8 +266,8 @@ class DeviceDepot:
         self.handlerToDevice[handler] = device
         self.groupNameToHandlers[handler.groupName].append(handler)
 
-    ## Initialize a Device.
     def initDevice(self, device):
+        """Initialize a Device."""
         device.initialize()
         device.performSubscriptions()
 
@@ -279,18 +280,18 @@ class DeviceDepot:
         for handler in handlers:
             self.addHandler(handler, device)
 
-    ## Let each device publish any initial events it needs. It's assumed this
-    # is called after all the handlers have set up their UIs, so that they can
-    # be adjusted to match the current configuration.
     def makeInitialPublications(self):
+        """Let each device publish any initial events it needs. It's assumed
+        this is called after all the handlers have set up their UIs, so that
+        they can be adjusted to match the current configuration.
+        """
         for device in self.nameToDevice.values():
             device.makeInitialPublications()
         for handler in self.handlersList:
             handler.makeInitialPublications()
 
-    ## Do any extra initialization needed now that everything is properly
-    # set up.
     def finalizeInitialization(self):
+        """Do any extra initialization needed now that everything is properly set up."""
         futures = []
         with ThreadPoolExecutor(max_workers=4) as pool:
             for device in self.nameToDevice.values():
@@ -308,10 +309,12 @@ class DeviceDepot:
             if future.exception():
                 raise future.exception()
 
-    ## Return a mapping of axis to a sorted list of positioners for that axis.
-    # We sort by range of motion, with the largest range coming first in the
-    # list.
     def getSortedStageMovers(self):
+        """Return a mapping of axis to a sorted list of positioners for that axis.
+
+        We sort by range of motion, with the largest range coming first in the
+        list.
+        """
         axisToMovers = {}
         for mover in self.deviceTypeToHandlers[STAGE_POSITIONER]:
             if mover.axis not in axisToMovers:
@@ -384,8 +387,8 @@ class DeviceDepot:
 deviceDepot = None
 
 
-## Simple passthrough
 def initialize(config):
+    """Simple passthrough."""
     for device in deviceDepot.initialize(config):
         yield device
 

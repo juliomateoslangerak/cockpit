@@ -149,14 +149,19 @@ def GoToXYZDialog(parent: wx.Window) -> None:
     wx.GetApp().Stage.curHandlerIndex = originalHandlerIndex
 
 
-## This class shows a high-level view of where the stage is in XY space, and
-# how it will move when controlled by the keypad. It includes displays
-# of where saved sites are, where mosaic tiles are, the current
-# XY coordinates, and so on.
 class MacroStageXY(macroStageBase.MacroStageBase):
-    ## Instantiate the object. Just calls the parent constructor and sets
-    # up the mouse event.
+    """This class shows a high-level view of where the stage is in XY space,
+    and how it will move when controlled by the keypad.
+
+    It includes displays of where saved sites are, where mosaic tiles are, the
+    current XY coordinates, and so on.
+    """
+
     def __init__(self, *args, **kwargs):
+        """Instantiate the object.
+
+        Just calls the parent constructor and sets up the mouse event.
+        """
         super().__init__(*args, **kwargs)
         ## Objective offset info to get correct position and limits
         self.offset = wx.GetApp().Objectives.GetOffset()
@@ -243,8 +248,8 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         # bind to window destroy to stop timer
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
-    # code that the wx timer calls to check postion on a regular basisis.
     def onTimer(self, evt):
+        """code that the wx timer calls to check postion on a regular basisis."""
         position = cockpit.interfaces.stageMover.getPosition()
         for i, pos in enumerate(position):
             if pos != self._positionCache[i]:
@@ -255,25 +260,25 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         self._timer.Stop()
         evt.Skip()
 
-    ## Safety limits have changed, which means we need to force a refresh.
-    # \todo Redrawing everything just to tackle the safety limits is a bit
-    # excessive.
     def onSafetyChange(self, axis, value, isMax):
+        r"""Safety limits have changed, which means we need to force a refresh.
+        \todo Redrawing everything just to tackle the safety limits is a bit excessive."""
         # We only care about the X and Y axes.
         if axis in [0, 1]:
             wx.CallAfter(self.Refresh)
 
-    ## Draw the canvas. We draw the following:
-    # - A blue dotted square representing the hard stage limits of
-    #   [(4000, 4000), (25000, 25000)]
-    # - A green dotted square representing the soft stage limits
-    # - A red square centered on the current stage position
-    # - A red crosshairs representing the stage motion delta
-    # - When moving, a blue arrow indicating our direction of motion
-    # - A purple dot for each saved site
-    # - A black dot for each tile in the mosaic
-    # - Device-defined primitives, e.g. to show individual sample locations.
     def onPaint(self, event=None):
+        """Draw the canvas.
+
+        We draw the following: - A blue dotted square representing the hard
+        stage limits of [(4000, 4000), (25000, 25000)] - A green dotted square
+        representing the soft stage limits - A red square centered on the
+        current stage position - A red crosshairs representing the stage motion
+        delta - When moving, a blue arrow indicating our direction of motion -
+        A purple dot for each saved site - A black dot for each tile in the
+        mosaic - Device-defined primitives, e.g. to show individual sample
+        locations.
+        """
         if not self.shouldDraw:
             return
         try:
@@ -484,8 +489,8 @@ class MacroStageXY(macroStageBase.MacroStageBase):
             _logger.error(traceback.format_exc())
             self.shouldDraw = False
 
-    ## Set one part of the stage motion limits.
     def setXYLimit(self, pos=None):
+        """Set one part of the stage motion limits."""
         if pos is None:
             # Use current stage position
             pos = self.curStagePosition
@@ -510,21 +515,30 @@ class MacroStageXY(macroStageBase.MacroStageBase):
             self.firstSafetyMousePos = None
             self.Refresh()
 
-    ## Moved the mouse. Record its position
     def OnMouseMotion(self, event):
+        """Moved the mouse.
+
+        Record its position
+        """
         if self.amSettingSafeties and self.firstSafetyMousePos:
             # Need to redraw to show the new safeties.
             self.lastMousePos = self.remapClick(event.GetPosition())
             self.Refresh()
 
-    ## Clicked the left mouse button. Set safeties if we're in that mode.
     def OnLeftClick(self, event):
+        """Clicked the left mouse button.
+
+        Set safeties if we're in that mode.
+        """
         if self.amSettingSafeties:
             safeLoc = self.remapClick(event.GetPosition())
             self.setXYLimit(safeLoc)
 
-    ## Double-clicked the left mouse button. Move to the clicked location.
     def OnLeftDoubleClick(self, event):
+        """Double-clicked the left mouse button.
+
+        Move to the clicked location.
+        """
         originalMover = cockpit.interfaces.stageMover.mover.curHandlerIndex
         # Quick hack to get deepsim working need to check if we can do it
         # properly.  Should really check to see if we can move, and by that
@@ -542,12 +556,15 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         del event
         GoToXYZDialog(self.GetParent())
 
-    ## Right-clicked the mouse. Toggle drawing of the mosaic tiles
     def OnRightDoubleClick(self, event):
+        """Right-clicked the mouse.
+
+        Toggle drawing of the mosaic tiles
+        """
         self.shouldDrawMosaic = not self.shouldDrawMosaic
 
-    ## Remap a click location from pixel coordinates to realspace coordinates
     def remapClick(self, clickLoc):
+        """Remap a click location from pixel coordinates to realspace coordinates."""
         width, height = self.GetClientSize()
         x = (
             float(width - clickLoc[0]) / width * (self.maxX - self.minX)
@@ -559,12 +576,12 @@ class MacroStageXY(macroStageBase.MacroStageBase):
         )
         return [x + self.offset[0], y - self.offset[1]]
 
-    ## Switch mode so that clicking sets the safeties
     def setSafeties(self, event=None):
+        """Switch mode so that clicking sets the safeties."""
         self.amSettingSafeties = True
 
-    ## Refresh display on objective change
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
+        """Refresh display on objective change."""
         self.offset = wx.GetApp().Objectives.GetOffset()
         self.Refresh()
         event.Skip()

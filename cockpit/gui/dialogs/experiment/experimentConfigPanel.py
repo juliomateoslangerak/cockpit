@@ -82,21 +82,18 @@ Z_POSITION_MODES = [
 ]
 
 
-## This class provides a GUI for setting up and running experiments, in the
-# form of an embeddable wx.Panel and a selection of functions. To use the
-# panel, create an instance of ExperimentConfigPanel and insert it into your
-# GUI. Call its runExperiment function when you are ready to start the
-# experiment.
-#
-# The parent is required to implement onExperimentPanelResize so that changes
-# in the panel size will be handled properly.
 class ExperimentConfigPanel(wx.Panel):
-    ## Instantiate the class. Pull default values out of the config file, and
-    # create the UI and layout.
-    # \param resizeCallback Function to call when we have changed size.
-    # \param resetCallback Function to call to force a reset of the panel.
-    # \param configKey String used to look up settings in the user config. This
-    #        allows different experiment panels to have different defaults.
+    """This class provides a GUI for setting up and running experiments, in the
+    form of an embeddable wx.Panel and a selection of functions.
+
+    To use the panel, create an instance of ExperimentConfigPanel and insert it
+    into your GUI. Call its runExperiment function when you are ready to start
+    the experiment.
+
+    The parent is required to implement onExperimentPanelResize so that changes
+    in the panel size will be handled properly.
+    """
+
     def __init__(
         self,
         parent,
@@ -104,6 +101,21 @@ class ExperimentConfigPanel(wx.Panel):
         resetCallback,
         configKey="singleSiteExperiment",
     ):
+        """Instantiate the class.
+
+        Pull default values out of the config file, and create the UI and
+        layout.
+
+        Args:
+            parent (wx.Window): Parent window for the panel.
+            resizeCallback (callable): Function to call when we have changed
+                size.
+            resetCallback (callable): Function to call to force a reset of the
+                panel.
+            configKey (str): String used to look up settings in the user
+                config. This allows different experiment panels to have
+                different defaults.
+        """
         super().__init__(
             parent,
             style=wx.DEFAULT_DIALOG_STYLE
@@ -416,10 +428,10 @@ class ExperimentConfigPanel(wx.Panel):
             ):
                 choice.SetSelection(-1)
 
-    ## Load values from config, and validate them -- since devices may get
-    # changed out from under us, rendering some config entries (e.g. dealing
-    # with light sources) invalid.
     def loadConfig(self):
+        """Load values from config, and validate them -- since devices may get
+        changed out from under us, rendering some config entries (e.g. dealing
+        with light sources) invalid."""
         result = cockpit.util.userConfig.getValue(
             self.configKey,
             default={
@@ -460,10 +472,10 @@ class ExperimentConfigPanel(wx.Panel):
             ]
         return result
 
-    ## User selected a different experiment type; show/hide specific
-    # experiment parameters as appropriate; depending on experiment type,
-    # some controls may be enabled/disabled.
     def onExperimentTypeChoice(self, event=None):
+        """User selected a different experiment type; show/hide specific
+        experiment parameters as appropriate; depending on experiment type,
+        some controls may be enabled/disabled."""
         newType = self.experimentType.GetStringSelection()
         for expString, module in self.experimentStringToModule.items():
             if module in self.experimentModuleToPanel:
@@ -475,8 +487,8 @@ class ExperimentConfigPanel(wx.Panel):
         self.SetSizerAndFit(self.sizer)
         self.resizeCallback(self)
 
-    ## User changed the exposure mode
     def onExposureMode(self, event=None):
+        """User changed the exposure mode."""
         val = self.exposureMode.GetSelection()
         # Show the relevant light panel. Disable the unused panel to
         # prevent validation of its controls.
@@ -489,10 +501,10 @@ class ExperimentConfigPanel(wx.Panel):
         self.SetSizerAndFit(self.sizer)
         self.resizeCallback(self)
 
-    ## User clicked the "Use current settings" button; fill out the
-    # simultaneous-exposure settings text boxes with the current
-    # interactive-mode exposure settings.
     def onUseCurrentExposureSettings(self, event=None):
+        """User clicked the "Use current settings" button; fill out the
+        simultaneous-exposure settings text boxes with the current
+        interactive-mode exposure settings."""
         for i, light in enumerate(self.allLights):
             # Only have an exposure time if the light is enabled.
             val = ""
@@ -500,9 +512,9 @@ class ExperimentConfigPanel(wx.Panel):
                 val = str(light.getExposureTime())
             self.lightExposureTimes[i].SetValue(val)
 
-    ## User clicked the "Save experiment settings..." button; save the
-    # parameters for later use as a JSON dict.
     def onSaveExperiment(self, event=None):
+        """User clicked the "Save experiment settings..." button; save the
+        parameters for later use as a JSON dict."""
         settings = self.getSettingsDict()
         # Augment the settings with information pertinent to our current
         # experiment.
@@ -537,9 +549,9 @@ class ExperimentConfigPanel(wx.Panel):
             _logger.error("Settings are:\n%s" % str(settings))
         handle.close()
 
-    ## User clicked the "Load experiment settings..." button; load the
-    # parameters from a file.
     def onLoadExperiment(self, event=None):
+        """User clicked the "Load experiment settings..." button; load the
+        parameters from a file."""
         dialog = wx.FileDialog(
             self,
             style=wx.FD_OPEN,
@@ -568,8 +580,8 @@ class ExperimentConfigPanel(wx.Panel):
         panel.experimentType.SetSelection(experimentIndex)
         panel.onExperimentTypeChoice()
 
-    ## Run the experiment per the user's settings.
     def runExperiment(self):
+        """Run the experiment per the user's settings."""
         # Returns True to close dialog box, None or False otherwise.
         self.saveSettings()
         # Find the Z mover with the smallest range of motion, assumed
@@ -734,8 +746,8 @@ class ExperimentConfigPanel(wx.Panel):
         self.runner = module.EXPERIMENT_CLASS(**params)
         return self.runner.run()
 
-    ## Generate a dict of our current settings.
     def getSettingsDict(self):
+        """Generate a dict of our current settings."""
         sequencedExposureSettings = []
         for i, camera in enumerate(self.allCameras):
             sequencedExposureSettings.append(
@@ -756,8 +768,8 @@ class ExperimentConfigPanel(wx.Panel):
         }
         return newSettings
 
-    ## Save the current experiment settings to config.
     def saveSettings(self):
+        """Save the current experiment settings to config."""
         cockpit.util.userConfig.setValue(
             self.configKey, self.getSettingsDict()
         )

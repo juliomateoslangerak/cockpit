@@ -65,26 +65,33 @@ from cockpit.gui import guiUtils
 EXPERIMENT_NAME = "Example opto script"
 
 
-## This experiment is an example of a custom opto script. It is identical
-# to a standard Z-stack experiment except that it turns on and off lights
-# in a configurable timed sequence before running the stack
-# Note that this class inherits from the ZStackExperiment class
-# in experiment/zStack.py; the generateActions() function in that class is
-# what collects the actual data. We just modify the execute() function
-# (inherited from the base Experiment class in experiment/experiment.py) to
-# engage the lights as specified before each rep.
-# See below this class for the ExperimentUI and OptoPanel classes that set
-# up the UI for configuring the experiment settings.
 class OptoExperiment(zStack.ZStackExperiment):
-    ## \param lightToTime Dictionary mapping different light handler names to
-    #         lists of [start, stop] times for illuminating them prior to
-    #         running a standard Z-stack.
-    ## \param lightToIsOnDuringAcquisition Dictionary mapping different light
-    #         handler names to whether or not those lights should be left on while
-    #         taking images in the Z-stack section of the experiment.
+    """This experiment is an example of a custom opto script.
+
+    It is identical to a standard Z-stack experiment except that it turns on
+    and off lights in a configurable timed sequence before running the stack
+    Note that this class inherits from the ZStackExperiment class in
+    experiment/zStack.py; the generateActions() function in that class is what
+    collects the actual data. We just modify the execute() function (inherited
+    from the base Experiment class in experiment/experiment.py) to engage the
+    lights as specified before each rep. See below this class for the
+    ExperimentUI and OptoPanel classes that set up the UI for configuring the
+    experiment settings.
+    """
+
     def __init__(
         self, lightToSequence, lightToIsOnDuringAcquisition, **kwargs
     ):
+        """Set up the opto experiment with its light sequences.
+
+        Args:
+            lightToSequence (dict): Maps light handler names to lists of
+                [start, stop] times for illuminating them prior to running a
+                standard Z-stack.
+            lightToIsOnDuringAcquisition (dict): Maps light handler names to
+                whether or not those lights should be left on while taking
+                images in the Z-stack section of the experiment.
+        """
         # Convert from light source names to light handlers.
         self.lightToSequence = {}
         for name, sequence in lightToSequence.items():
@@ -98,9 +105,9 @@ class OptoExperiment(zStack.ZStackExperiment):
         # parameters, which are in the "kwargs" dictionary object.
         super().__init__(**kwargs)
 
-    ## This function overrides the base execute() function in the Experiment
-    # class.
     def execute(self):
+        """This function overrides the base execute() function in the
+        Experiment class."""
         # HACK: replace self.numReps since it's referred to in
         # Experiment.execute(), and we want to handle repeats at a higher
         # level.
@@ -140,10 +147,10 @@ class OptoExperiment(zStack.ZStackExperiment):
                 light.setExposing(False)
         return result
 
-    ## Given a light source and a list of [start, stop] pairs when the light
-    # should be enabled/disabled, turn the light on and off according to the
-    # sequence.
     def shineLight(self, light, sequence):
+        """Given a light source and a list of [start, stop] pairs when the
+        light should be enabled/disabled, turn the light on and off according
+        to the sequence."""
         curTime = 0
         for start, stop in sequence:
             # Sleep until we should start illumination.
@@ -161,8 +168,9 @@ class OptoExperiment(zStack.ZStackExperiment):
 EXPERIMENT_CLASS = OptoExperiment
 
 
-## Generate the UI for special parameters used by this experiment.
 class ExperimentUI(wx.Panel):
+    """Generate the UI for special parameters used by this experiment."""
+
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
 
@@ -213,12 +221,14 @@ class ExperimentUI(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-    ## Return a mapping of light source names to lists of illumination sequences.
-    # e.g. {"650 LED": [[0, 20], [30, 50]]} to indicate that the 650
-    # LED should be on from 0 to 20 seconds, and from 30 to 50 seconds.
-    # We use handler names instead of handlers here so that they can be
-    # serialized (when saving experiment settings) cleanly.
     def getLightToSequence(self):
+        """Return a mapping of light source names to lists of illumination
+        sequences. e.g. {"650 LED": [[0, 20], [30, 50]]} to indicate that the
+        650 LED should be on from 0 to 20 seconds, and from 30 to 50 seconds.
+
+        We use handler names instead of handlers here so that they can be
+        serialized (when saving experiment settings) cleanly.
+        """
         return dict(
             [
                 (l.name, self.lightToPanel[l].getSequence())
@@ -226,12 +236,14 @@ class ExperimentUI(wx.Panel):
             ]
         )
 
-    ## Returns a mapping of light source names to whether or not those lights
-    # should be left on during image acquisition (independently of whether
-    # or not those lights are being used as traditional imaging lights).
-    # We use handler names instead of handlers here so that they can be
-    # serialized (when saving experiment settings) cleanly.
     def getLightToIsOnDuringAcquisition(self):
+        """Returns a mapping of light source names to whether or not those
+        lights should be left on during image acquisition (independently of
+        whether those lights are being used as traditional imaging lights).
+
+        We use handler names instead of handlers here so that they can be
+        serialized (when saving experiment settings) cleanly.
+        """
         return dict(
             [
                 (l.name, self.lightToPanel[l].getIsOnDuringAcquisition())
@@ -239,9 +251,10 @@ class ExperimentUI(wx.Panel):
             ]
         )
 
-    ## Given a parameters dict (parameter name to value) to hand to the
-    # experiment instance, augment them with our special parameters.
     def augmentParams(self, params, shouldSave=True):
+        """Given a parameters dict (parameter name to value) to hand to the
+        experiment instance,
+        augment them with our special parameters."""
         if shouldSave:
             self.saveSettings()
         params["lightToSequence"] = self.getLightToSequence()
@@ -250,8 +263,8 @@ class ExperimentUI(wx.Panel):
         )
         return params
 
-    ## Load the saved experiment settings, if any.
     def loadSettings(self):
+        """Load the saved experiment settings, if any."""
         return cockpit.util.userConfig.getValue(
             self.configKey + "optoExampleSettings",
             default={
@@ -260,12 +273,12 @@ class ExperimentUI(wx.Panel):
             },
         )
 
-    ## Generate a dict of our settings.
     def getSettingsDict(self):
+        """Generate a dict of our settings."""
         return self.augmentParams({}, shouldSave=False)
 
-    ## Save the current experiment settings to config.
     def saveSettings(self, settings=None):
+        """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
         cockpit.util.userConfig.setValue(
@@ -350,19 +363,19 @@ class OptoPanel(wx.Panel):
         self.SetSizerAndFit(sizer)
         self.updateDisplay()
 
-    ## Clear all illumination settings.
     def onClear(self, event=None):
+        """Clear all illumination settings."""
         self.sequence = []
         self.updateDisplay()
 
-    ## Delete the last entry in the illumination settings.
     def onDeleteLast(self, event=None):
+        """Delete the last entry in the illumination settings."""
         self.sequence = self.sequence[:-1]
         self.updateDisplay()
 
-    ## Add a new entry to the illumination settings, merging entries as
-    # necessary.
     def onAdd(self, event=None):
+        """Add a new entry to the illumination settings, merging entries as
+        necessary."""
         start = guiUtils.tryParseNum(self.startText, float)
         stop = guiUtils.tryParseNum(self.stopText, float)
         if start >= stop:
@@ -398,17 +411,17 @@ class OptoPanel(wx.Panel):
         self.stopText.SetValue("")
         self.updateDisplay()
 
-    ## Update our textual display of the illumination settings.
     def updateDisplay(self):
+        """Update our textual display of the illumination settings."""
         text = ", ".join(
             ["(%.2f, %.2f)" % (start, stop) for start, stop in self.sequence]
         )
         self.sequenceText.SetValue(text)
 
-    ## Simple accessor.
     def getSequence(self):
+        """Simple accessor."""
         return self.sequence
 
-    ## Simple accessor.
     def getIsOnDuringAcquisition(self):
+        """Simple accessor."""
         return self.isOnDuringAcquisition.GetValue()

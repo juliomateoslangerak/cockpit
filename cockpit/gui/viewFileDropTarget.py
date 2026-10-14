@@ -55,8 +55,9 @@ import wx
 from cockpit.gui import fileViewerWindow
 
 
-## Allow users to drag files onto the provided window to pop up a viewer.
 class ViewFileDropTarget(wx.FileDropTarget):
+    """Allow users to drag files onto the provided window to pop up a viewer."""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent

@@ -59,14 +59,17 @@ from cockpit.handlers import deviceHandler
 _logger = logging.getLogger(__name__)
 
 
-## This handler is for light sources where the power of the light can be
-# controlled through software.
 class LightPowerHandler(deviceHandler.DeviceHandler):
-    ## callbacks should fill in the following functions:
-    # - setPower(value): Set power level.
-    # - getPower(): Get current output power level.
-    # \param curPower Initial output power.
-    # \param isEnabled True iff the handler can be interacted with.
+    """Handler for light sources whose power can be controlled in software.
+
+    Callbacks should fill in the following functions:
+    - setPower(value): Set power level.
+    - getPower(): Get current output power level.
+
+    Args:
+        curPower (float): Initial output power.
+        isEnabled (bool): True iff the handler can be interacted with.
+    """
 
     def __init__(
         self,
@@ -121,20 +124,20 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
             # Invalid power; just ignore it.
             print("Invalid power for %s: %s" % (self.name, settings))
 
-    ## Toggle accessibility of the handler.
     def setEnabled(self, isEnabled):
+        """Toggle accessibility of the handler."""
         self.isEnabled = isEnabled
 
-    ## Return True iff we're currently enabled (i.e. GUI is active).
     def getIsEnabled(self):
+        """Return True iff we're currently enabled (i.e. GUI is active)."""
         return self.isEnabled
 
-    ## Fetch the current laser power.
     def getPower(self):
+        """Fetch the current laser power."""
         return self.callbacks["getPower"]()
 
-    ## Handle the user selecting a new power level.
     def setPower(self, power):
+        """Handle the user selecting a new power level."""
         if power < 0.0 or power > 1.0:
             raise RuntimeError(
                 "Tried to set invalid power %f for light %s"
@@ -144,10 +147,10 @@ class LightPowerHandler(deviceHandler.DeviceHandler):
         self.powerSetPoint = power
         cockpit.util.userConfig.setValue(self.name + "-lightPower", power)
 
-    ## Simple getter.
     def getWavelength(self):
+        """Simple getter."""
         return self.wavelength
 
-    ## Experiments should include the laser power.
     def getSavefileInfo(self):
+        """Experiments should include the laser power."""
         return "%s: %.1f" % (self.name, self.lastPower)

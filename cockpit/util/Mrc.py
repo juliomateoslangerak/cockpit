@@ -809,8 +809,9 @@ def shapeFromHdr(hdr, verbose=0):
     return shape
 
 
-# my hack to allow thinks like a.Mrc.hdr.d = (1,2,3)
 def implement_hdr(hdrArray):
+    """my hack to allow thinks like a.Mrc.hdr.d = (1,2,3)."""
+
     class hdr:
         __slots__ = list(mrcHdr_dtype.names) + ["_array"]
 
@@ -828,8 +829,8 @@ def implement_hdr(hdrArray):
     return hdr()
 
 
-# class function
 def makeHdrArray(buffer=None):
+    """class function."""
     if buffer is not None:
         h = buffer
         h.dtype = mrcHdr_dtype
@@ -841,8 +842,8 @@ def makeHdrArray(buffer=None):
     return implement_hdr(h)
 
 
-# class function
 def hdrInfo(hdr):
+    """class function."""
     shape = hdr.Num[::-1]
     nz = shape[0]
     numInts = hdr.NumIntegers

@@ -92,8 +92,8 @@ class FilterHandler(deviceHandler.DeviceHandler):
             if f.position == settings:
                 self.setFilter(f)
 
-    ### UI functions ####
     def makeSelector(self, parent):
+        """UI functions"""
         self.ctrl = wx.Choice(parent)
         self.ctrl.Set(list(map(str, self.filters)))
         self.ctrl.Bind(

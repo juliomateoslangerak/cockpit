@@ -99,8 +99,9 @@ class CockpitApp(wx.App):
     """
 
     def __init__(self, config):
-        ## OnInit() will make use of config, and wx.App.__init__()
-        ## calls OnInit().  So we need to assign this before super().
+        """OnInit() will make use of config, and wx.App.__init__() calls
+        OnInit(). So we need to assign this before super().
+        """
         self._config = config
         self._depot = cockpit.depot.DeviceDepot()
         # FIXME: some places still access the depot singleton instance

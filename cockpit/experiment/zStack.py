@@ -61,11 +61,15 @@ from cockpit.experiment import actionTable, experiment
 EXPERIMENT_NAME = "Z-stack"
 
 
-## This class handles classic Z-stack experiments.
 class ZStackExperiment(experiment.Experiment):
-    ## Create the ActionTable needed to run the experiment. We simply move to
-    # each Z-slice in turn, take an image, then move to the next.
+    """This class handles classic Z-stack experiments."""
+
     def generateActions(self):
+        """Create the ActionTable needed to run the experiment.
+
+        We simply move to each Z-slice in turn, take an image, then move to the
+        next.
+        """
         table = actionTable.ActionTable()
         curTime = 0
         prevAltitude = None

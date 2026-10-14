@@ -57,12 +57,16 @@ import cockpit.interfaces.stageMover
 import cockpit.util.userConfig
 
 
-## This class shows a simple dialog to the user that allows them to lay down
-# a grid of sites on the mosaic. They can then use this to image large areas
-# in a regulated manner without relying on the mosaic's spiral system.
 class GridSitesDialog(wx.Dialog):
-    ## Create the dialog, and lay out its UI widgets.
+    """This class shows a simple dialog to the user that allows them to lay
+    down a grid of sites on the mosaic.
+
+    They can then use this to image large areas in a regulated manner without
+    relying on the mosaic's spiral system.
+    """
+
     def __init__(self, parent):
+        """Create the dialog, and lay out its UI widgets."""
         super().__init__(parent, -1, "Place a Grid of Sites")
 
         ## Config-loaded settings for the form.
@@ -136,8 +140,8 @@ class GridSitesDialog(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.OnStart, startButton)
 
-    ## Create the grid of sites.
     def OnStart(self, evt):
+        """Create the grid of sites."""
         self.saveSettings()
 
         curLoc = cockpit.interfaces.stageMover.getPosition()
@@ -157,8 +161,8 @@ class GridSitesDialog(wx.Dialog):
                 cockpit.interfaces.stageMover.saveSite(newSite)
         self.Destroy()
 
-    ## Save the user's settings to the configuration file.
     def saveSettings(self):
+        """Save the user's settings to the configuration file."""
         cockpit.util.userConfig.setValue(
             "gridSitesDialog",
             {
@@ -171,8 +175,8 @@ class GridSitesDialog(wx.Dialog):
         )
 
 
-## Show the dialog.
 def showDialog(parent):
+    """Show the dialog."""
     dialog = GridSitesDialog(parent)
     dialog.Show()
     dialog.SetFocus()

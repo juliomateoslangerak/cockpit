@@ -287,13 +287,15 @@ class SaveTopBottomPanel(wx.Panel):
         stageMover.moveZCheckMoverLimits(centre)
 
 
-## This class simply contains instances of the various MacroStage
-# subclasses, side-by-side, along with the buttons associated
-# with each. It also allows for communication between
-# the different subclasses, and has some logic that is generally
-# related to the UIs the MacroStage instances provide but is not
-# tightly bound to any one of them.
 class MacroStagePanel(wx.Panel):
+    """This class simply contains instances of the various MacroStage
+    subclasses, side-by-side, along with the buttons associated with each.
+
+    It also allows for communication between the different subclasses, and has
+    some logic that is generally related to the UIs the MacroStage instances
+    provide but is not tightly bound to any one of them.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

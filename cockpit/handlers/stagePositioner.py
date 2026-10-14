@@ -55,22 +55,27 @@ from cockpit import depot, events
 from cockpit.handlers import deviceHandler
 
 
-## This handler is for stage positioner devices.
 class PositionerHandler(deviceHandler.DeviceHandler):
-    ## callbacks should fill in the following functions:
-    # - moveAbsolute(axis, position): Move the axis to the
-    #   given position, in microns.
-    # - moveRelative(axis, delta): Move the axis by the specified
-    #   delta, in microns.
-    # - getPosition(axis): Get the position for the specified axis.
-    # Additionally, if the device is to be used in experiments, it must have:
-    # - getMovementTime(axis, start, end): Get the amount of time it takes to
-    #   move from start to end and then stabilize.
-    # \param axis A numerical indicator of the axis (0 = X, 1 = Y, 2 = Z).
-    # \param hardLimits A (minPosition, maxPosition) tuple indicating
-    #        the device's hard motion limits.
-    # \param softLimits Default soft motion limits for the device. Defaults
-    #        to the hard limits.
+    """This handler is for stage positioner devices.
+
+    Callbacks should fill in the following functions:
+    - moveAbsolute(axis, position): Move the axis to the given position,
+      in microns.
+    - moveRelative(axis, delta): Move the axis by the specified delta,
+      in microns.
+    - getPosition(axis): Get the position for the specified axis.
+    Additionally, if the device is to be used in experiments, it must have:
+    - getMovementTime(axis, start, end): Get the amount of time it takes to
+      move from start to end and then stabilize.
+
+    Args:
+        axis (int): A numerical indicator of the axis (0 = X, 1 = Y,
+            2 = Z).
+        hardLimits (tuple): A (minPosition, maxPosition) tuple indicating
+            the device's hard motion limits.
+        softLimits (tuple): Default soft motion limits for the device.
+            Defaults to the hard limits.
+    """
 
     ## Shortcuts to decorators defined in parent class.
     reset_cache = deviceHandler.DeviceHandler.reset_cache
@@ -110,8 +115,8 @@ class PositionerHandler(deviceHandler.DeviceHandler):
         # Cast to a list since we may need to modify these later.
         self.softLimits = list(softLimits)
 
-    ## Handle being told to move to a specific position.
     def moveAbsolute(self, pos):
+        """Handle being told to move to a specific position."""
         if self.softLimits[0] <= pos <= self.softLimits[1]:
             self.callbacks["moveAbsolute"](self.axis, pos)
         else:
@@ -121,8 +126,8 @@ class PositionerHandler(deviceHandler.DeviceHandler):
                 % (pos, self.softLimits[0], self.softLimits[1])
             )
 
-    ## Handle being told to move by a specific delta.
     def moveRelative(self, delta):
+        """Handle being told to move by a specific delta."""
         target = self.callbacks["getPosition"](self.axis) + delta
         if self.softLimits[0] <= target <= self.softLimits[1]:
             self.callbacks["moveRelative"](self.axis, delta)
@@ -133,20 +138,20 @@ class PositionerHandler(deviceHandler.DeviceHandler):
                 % (target, self.softLimits[0], self.softLimits[1])
             )
 
-    ## Retrieve the current position.
     def getPosition(self):
+        """Retrieve the current position."""
         return self.callbacks["getPosition"](self.axis)
 
-    ## Simple getter.
     def getHardLimits(self):
+        """Simple getter."""
         return self.hardLimits
 
-    ## Simple getter.
     def getSoftLimits(self):
+        """Simple getter."""
         return self.softLimits
 
-    ## Set a soft limit, either min or max.
     def setSoftLimit(self, value, isMax):
+        """Set a soft limit, either min or max."""
         if isMax and value > self.hardLimits[1]:
             raise RuntimeError(
                 "Attempted to set soft motion limit of %s, exceeding our hard motion limit of %s"
@@ -159,10 +164,13 @@ class PositionerHandler(deviceHandler.DeviceHandler):
             )
         self.softLimits[int(isMax)] = value
 
-    ## Return the amount of time it'd take us to move the specified distance,
-    # and the amount of time needed to stabilize after reaching that point.
-    # Only called if this device is experiment-eligible.
     def getMovementTime(self, start, end):
+        """Return the amount of time it'd take us to move the specified
+        distance, and the amount of time needed to stabilize after reaching
+        that point.
+
+        Only called if this device is experiment-eligible.
+        """
         if self.isEligibleForExperiments:
             # if (start < self.softLimits[0] or start > self.softLimits[1] or
             #         end < self.softLimits[0] or end > self.softLimits[1]):
@@ -178,13 +186,14 @@ class PositionerHandler(deviceHandler.DeviceHandler):
     def getDeltaMovementTime(self, delta):
         return self.callbacks["getMovementTime"](self.axis, 0.0, delta)
 
-    ## Register this handler with an analogue source.
     def connectToAnalogSource(self, source, line, offset, gain):
+        """Register this handler with an analogue source."""
         h = source.registerAnalog(self, line, offset, gain)
 
-        # Movements are handled by the analogue handler, but need to wrap to
-        # publish position update and stage stop events.
         def wrapMoveFunc(f):
+            """Movements are handled by the analogue handler, but need to wrap
+            to publish position update and stage stop events."""
+
             def call(x, arg):
                 f(arg)
                 time.sleep(sum(map(float, self.getMovementTime(0, arg))))

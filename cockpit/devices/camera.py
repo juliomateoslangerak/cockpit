@@ -64,9 +64,10 @@ def _config_to_transform(tstr):
         return (False, False, False)
 
 
-## CameraDevice subclasses Device with some additions appropriate
-# to any camera.
 class CameraDevice(device.Device):
+    """CameraDevice subclasses Device with some additions appropriate to any
+    camera."""
+
     def __init__(self, name, config):
         super().__init__(name, config)
         # baseTransform depends on camera orientation and is constant.

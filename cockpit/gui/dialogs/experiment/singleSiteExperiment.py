@@ -56,8 +56,9 @@ from cockpit.gui.dialogs.experiment import experimentConfigPanel
 from cockpit.gui.guiUtils import EVT_COCKPIT_VALIDATION_ERROR
 
 
-## A simple wrapper around the ExperimentConfigPanel class.
 class SingleSiteExperimentDialog(wx.Dialog):
+    """A simple wrapper around the ExperimentConfigPanel class."""
+
     def __init__(self, parent):
         super().__init__(
             parent,
@@ -135,20 +136,23 @@ class SingleSiteExperimentDialog(wx.Dialog):
             ],
         )
 
-    ## Our experiment panel resized itself.
     def onExperimentPanelResize(self, panel):
+        """Our experiment panel resized itself."""
         self.SetSizerAndFit(self.sizer)
 
-    ## Attempt to run the experiment. If the testrun fails, report why.
     def onStart(self, event=None):
+        """Attempt to run the experiment.
+
+        If the testrun fails, report why.
+        """
         self.statusbar.SetLabel("")
         if not self.Validate():
             return
         if self.panel.runExperiment():
             self.Hide()
 
-    ## Blow away the dialog and recreate it from scratch.
     def onReset(self, event=None):
+        """Blow away the dialog and recreate it from scratch."""
         parent = self.GetParent()
         global dialog
         dialog.Destroy()

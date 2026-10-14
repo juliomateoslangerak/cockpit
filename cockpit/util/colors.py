@@ -50,8 +50,8 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-## Given a wavelength in nm, return an RGB color tuple.
 def wavelengthToColor(wavelength, saturation=1):
+    """Given a wavelength in nm, return an RGB color tuple."""
     wavelength = float(wavelength)
     if wavelength == 0.0:
         return (192, 192, 192)
@@ -67,10 +67,13 @@ def wavelengthToColor(wavelength, saturation=1):
     return tuple(int(val * 255) for val in (r, g, b))
 
 
-## Convert to RGB. Taken from Pyrel:
-# https://bitbucket.org/derakon/pyrel/src/7c30ed65e11b5f483737df615fcc607ab6c47d8b/gui/colors.py?at=master
-# In turn, adapted from http://www.cs.rit.edu/~ncs/color/t_convert.html
 def hsvToRgb(hue, saturation, value):
+    """Convert to RGB.
+
+    Taken from Pyrel: https://bitbucket.org/derakon/pyrel/src/7c30ed65e11b5f483
+    737df615fcc607ab6c47d8b/gui/colors.py?at=master In turn, adapted from
+    http://www.cs.rit.edu/~ncs/color/t_convert.html
+    """
     if saturation == 0:
         # Greyscale.
         return (value, value, value)

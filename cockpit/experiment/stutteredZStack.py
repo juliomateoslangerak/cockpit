@@ -60,30 +60,38 @@ from cockpit.experiment import zStack
 EXPERIMENT_NAME = "Stuttered Z-stack"
 
 
-## This class handles experiments where we alter the rate at which we take
-# stacks as a function of time. E.g. (each | represents a single volume):
-# ||||   |   |   |   ||||   |   |   |   |||| ...
 class StutteredZStackExperiment(zStack.ZStackExperiment):
-    ## \param sampleRates A list of (interval, numReps) tuples indicating
-    #         the amount of time in seconds between each rep, and the
-    #         number of reps to perform at that rate. If we hit the end of
-    #         the list before running out of reps, then we recommence from
-    #         the beginning.
+    """This class handles experiments where we alter the rate at which we take
+    stacks as a function of time.
+
+    E.g. (each | represents a single volume): ||||   |   |   |   ||||   |   |
+    |   |||| ...
+    """
+
     def __init__(self, sampleRates, *args, **kwargs):
+        """Set up the stuttered Z-stack experiment.
+
+        If we hit the end of the list before running out of reps, then we
+        recommence from the beginning.
+
+        Args:
+            sampleRates (list): A list of (interval, numReps) tuples
+                indicating the amount of time in seconds between each rep, and
+                the number of reps to perform at that rate.
+        """
         super().__init__(*args, **kwargs)
         self.sampleRates = sampleRates
         self.shouldAbort = False
 
         events.subscribe(events.USER_ABORT, self.onAbort)
 
-    ## User aborted.
     def onAbort(self):
+        """User aborted."""
         self.shouldAbort = True
 
-    ## Call Experiment.execute() repeatedly, while varying self.numReps and
-    # self.repDuration so that we do the right sequence with the right
-    # timings.
     def execute(self):
+        """Call Experiment.execute() repeatedly, while varying self.numReps and
+        self.repDuration so that we do the right sequence with the right timings."""
         # HACK: replace self.numReps since it's used in Experiment.execute(),
         # which we will be calling from within this function. We'll handle
         # reps more directly.
@@ -184,18 +192,18 @@ class ExperimentUI(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-    ## User clicked the "Clear" button; wipe out our current settings.
     def onClear(self, event=None):
+        """User clicked the "Clear" button; wipe out our current settings."""
         self.sampleRates = []
         self.setText()
 
-    ## User clicked the "Delete last" button; remove the most recent setting.
     def onDeleteLast(self, event=None):
+        """User clicked the "Delete last" button; remove the most recent setting."""
         self.sampleRates = self.sampleRates[:-1]
         self.setText()
 
-    ## User clicked the "Add" button; add the new pair to our settings.
     def onAdd(self, event=None):
+        """User clicked the "Add" button; add the new pair to our settings."""
         interval = float(self.interval.GetValue())
         numReps = int(self.numReps.GetValue())
         self.sampleRates.append((interval, numReps))
@@ -203,8 +211,8 @@ class ExperimentUI(wx.Panel):
         self.numReps.SetValue("")
         self.setText()
 
-    ## Update our text display of the settings.
     def setText(self):
+        """Update our text display of the settings."""
         text = ", ".join(
             ["(%.2f, %d)" % (i, n) for (i, n) in self.sampleRates]
         )

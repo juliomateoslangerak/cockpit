@@ -53,24 +53,28 @@
 import decimal
 
 
-## This class represents the actions performed during an experiment.
-# Each action has a timestamp and the parameters for the action to be performed.
 class ActionTable:
+    """Represent the actions performed during an experiment.
+
+    Each action has a timestamp and the parameters for the action to be
+    performed.
+    """
+
     toggleTime = decimal.Decimal(".1")
 
     def __init__(self):
-        ## List of (time, handler, parameter) tuples indicating what actions
+        # List of (time, handler, parameter) tuples indicating what actions
         # must be taken at what times.
         self.actions = []
-        ## Time of our first action.
+        # Time of our first action.
         # \todo How do we handle the removal of actions rendering this invalid?
         # For now, we don't.
         self.firstActionTime = None
-        ## Time of our last action.
+        # Time of our last action.
         self.lastActionTime = None
 
-    ## Insert an element into self.actions.
     def addAction(self, time, handler, parameter):
+        """Insert an element into self.actions."""
         self.actions.append((time, handler, parameter))
         if self.firstActionTime is None or self.firstActionTime > time:
             self.firstActionTime = time
@@ -78,41 +82,51 @@ class ActionTable:
             self.lastActionTime = time
         return time
 
-    ## Like addDigital, but rapidly toggle the output on and then off.
-    # Return the time after the toggle is completed.
     def addToggle(self, time, handler):
+        """Like addDigital, but rapidly toggle the output on and then off.
+
+        Return the time after the toggle is completed.
+        """
         time, dt = handler.addToggle(time, self)
         return time
 
-    ## Retrieve the last time and action we performed with the specified
-    # handler.
-    # NB assumes that self.actions has been sorted.
     def getLastActionFor(self, handler):
+        """Retrieve the last time and action we performed with the specified
+        handler.
+
+        NB assumes that self.actions has been sorted.
+        """
         for time, altHandler, parameter in reversed(self.actions):
             if altHandler is handler:
                 return time, parameter
         return None, None
 
-    ## Sort all the actions in the table by time.
-    # \todo We should remove redundant entries in here (e.g. due to
-    # 0 stabilization time for stage movement).
     def sort(self):
+        r"""Sort all the actions in the table by time.
+
+        \todo We should remove redundant entries in here (e.g. due to
+        0 stabilization time for stage movement).
+        """
         # First element in each action is the timestamp.
         self.actions.sort(key=lambda a: a[0])
 
-    ## Clear invalid entries from the list. Sometimes when the table is
-    # modified, an entry needs to be deleted without affecting indexing into
-    # the list; thus, the user sets it to None and then calls this function
-    # afterwards.
     def clearBadEntries(self):
+        """Clear invalid entries from the list.
+
+        Sometimes when the table is modified, an entry needs to be deleted
+        without affecting indexing into the list; thus, the user sets it to
+        None and then calls this function afterwards.
+        """
         pairs = [item for item in enumerate(self.actions)]
         for i, action in reversed(pairs):
             if action is None:
                 del self.actions[i]
 
-    ## Go through the table and ensure all timepoints are positive.
-    # NB assumes the table has been sorted.
     def enforcePositiveTimepoints(self):
+        """Go through the table and ensure all timepoints are positive.
+
+        NB assumes the table has been sorted.
+        """
         delta = -self.actions[0][0]
         if delta < 0:
             # First event is at a positive time, so we're good to go.
@@ -126,9 +140,11 @@ class ActionTable:
         self.firstActionTime += delta
         self.lastActionTime += delta
 
-    ## Move all actions after the specified time back by the given offset,
-    # to make room for some new action.
     def shiftActionsBack(self, markTime, delta):
+        """Move all actions after the specified time back by the given offset.
+
+        This makes room for some new action.
+        """
         for i, (actionTime, handler, action) in enumerate(self.actions):
             if actionTime >= markTime:
                 self.actions[i] = (actionTime + delta, handler, action)
@@ -137,9 +153,11 @@ class ActionTable:
         if self.lastActionTime > markTime:
             self.lastActionTime += delta
 
-    ## Return the time of the first and last action we have.
-    # Use our cached values if allowed.
     def getFirstAndLastActionTimes(self, canUseCache=True):
+        """Return the time of the first and last action we have.
+
+        Use our cached values if allowed.
+        """
         if canUseCache:
             return self.firstActionTime, self.lastActionTime
         firstTime = lastTime = None
@@ -150,21 +168,23 @@ class ActionTable:
             lastTime = max(lastTime, actionTime)
         return firstTime, lastTime
 
-    ## Access an element in the table.
     def __getitem__(self, index):
+        """Access an element in the table."""
         return self.actions[index]
 
-    ## Modify an item in the table
     def __setitem__(self, index, val):
+        """Modify an item in the table."""
         self.actions[index] = val
 
-    ## Get the length of the table.
     def __len__(self):
+        """Get the length of the table."""
         return len(self.actions)
 
-    ## Generate pretty text for our table, optionally only for the specified
-    # handler(s)
     def prettyString(self, handlers=[]):
+        """Generate pretty text for our table.
+
+        Optionally only for the specified handler(s).
+        """
         result = ""
         for event in self.actions:
             if event is None:
@@ -180,6 +200,6 @@ class ActionTable:
                     result += "\n"
         return result
 
-    ## Cast to a string -- generate a textual description of our actions.
     def __repr__(self):
+        """Cast to a string -- generate a textual description of our actions."""
         return self.prettyString()

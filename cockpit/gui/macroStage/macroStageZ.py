@@ -82,9 +82,10 @@ MINI_HISTOGRAM_PADDING = 1
 SECONDARY_HISTOGRAM_SIZE = 50
 
 
-## This is a simple container class for histogram display info.
-# \todo Refactor histogram drawing logic into this class.
 class Histogram:
+    r"""This is a simple container class for histogram display info.
+    \todo Refactor histogram drawing logic into this class."""
+
     def __init__(
         self,
         minAltitude,
@@ -97,7 +98,7 @@ class Histogram:
         margin,
         data=None,
     ):
-        ## Altitude in microns below which we do not display
+        """Altitude in microns below which we do not display."""
         self.minAltitude = minAltitude
         ## Altitude in microns above which we do not display
         self.maxAltitude = maxAltitude
@@ -129,9 +130,9 @@ class Histogram:
                 if slot < len(data):
                     self.maxBucketSize = max(self.maxBucketSize, data[slot])
 
-    ## Rescale an altitude to our min and max, so that our min
-    # maps to self.minY and our max to self.maxY, modulo our margin
     def scale(self, altitude):
+        """Rescale an altitude to our min and max, so that our min maps to
+        self.minY and our max to self.maxY, modulo our margin."""
         altitude = float(altitude - self.minAltitude) / (
             self.maxAltitude - self.minAltitude
         )
@@ -143,12 +144,15 @@ class Histogram:
         return altitude
 
 
-## This class shows a high-level view of where the stage is in Z space. It
-# includes the current stage position, hard and soft motion limits, and Z
-# tower position information.
 class MacroStageZ(macroStageBase.MacroStageBase):
-    ## Instantiate the MacroStageZ.
+    """This class shows a high-level view of where the stage is in Z space.
+
+    It includes the current stage position, hard and soft motion limits, and Z
+    tower position information.
+    """
+
     def __init__(self, parent, *args, **kwargs):
+        """Instantiate the MacroStageZ."""
         super().__init__(parent, *args, **kwargs)
         ## Backlink to parent for accessing one of its datastructures
         self.parent = parent
@@ -204,9 +208,9 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         events.subscribe(events.STAGE_STEP_SIZE, self.onStepSizeChange)
         self.SetToolTip(wx.ToolTip("Double-click to move in Z"))
 
-    ## Calculate the histogram buckets and min/max settings
-    # based on self.experimentAltitudes
     def calculateHistogram(self):
+        """Calculate the histogram buckets and min/max settings based on
+        self.experimentAltitudes."""
         self.experimentAltitudes = list(
             cockpit.util.userConfig.getValue("experimentAltitudes", default=[])
         )
@@ -232,9 +236,9 @@ class MacroStageZ(macroStageBase.MacroStageBase):
                 if slot < len(self.altitudeBuckets):
                     self.altitudeBuckets[slot] += 1
 
-    ## Handle a new experiment completing -- requires us to update our
-    # histogram.
     def onExperimentComplete(self, *args):
+        """Handle a new experiment completing -- requires us to update our
+        histogram."""
         # Update histogram data
         self.experimentAltitudes = list(
             cockpit.util.userConfig.getValue("experimentAltitudes", default=[])
@@ -245,8 +249,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         )
         self.calculateHistogram()
 
-    ## Handle a soft safety limit being changed.
     def onSafetyChange(self, axis, position, isMax):
+        """Handle a soft safety limit being changed."""
         if axis != 2 or isMax:
             # We don't care about anything other than the Z safety min.
             return
@@ -254,15 +258,15 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             # Update primary histogram display settings
             self.prevZSafety = position
 
-    ## Step sizes have changed, which means we get to redraw.
-    # \todo Redrawing *everything* at this stage seems a trifle excessive.
     def onStepSizeChange(self, axis: int, newSize: float) -> None:
+        r"""Step sizes have changed, which means we get to redraw.
+        \todo Redrawing *everything* at this stage seems a trifle excessive."""
         if axis == 2 and self.stepSize != newSize:
             self.stepSize = newSize
             self.shouldForceRedraw = True
 
-    ## Generate the larger of the two histograms.
     def makeBigHistogram(self, altitude):
+        """Generate the larger of the two histograms."""
         minorLimits = cockpit.interfaces.stageMover.getIndividualSoftLimits(2)
         # Add the max range of motion of the first fine-motion controller.
         # And subtract the lower limit if minor controller exisits.
@@ -306,9 +310,9 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             self.histograms[0] = histogram
         wx.CallAfter(self.Refresh)
 
-    ## Overrides the parent function, since we may need to also generate a
-    # histogram based on the new Z position.
     def onMotion(self, axis, position):
+        """Overrides the parent function, since we may need to also generate a
+        histogram based on the new Z position."""
         if axis != 2:
             # We only care about the Z axis.
             return
@@ -351,16 +355,18 @@ class MacroStageZ(macroStageBase.MacroStageBase):
                 _logger.error(traceback.format_exc())
                 self.shouldDraw = False
 
-    ## Draw the following:
-    # - A red line at the current stage height
-    # - A purple line at the current Z tower height (or at a ceiling height if
-    #   its position is off the scale).
-    # - A pair of dotted blue lines for the hard stage motion limits at [4000, 25000]
-    # - A dotted green line for the soft stage motion min limit (no max limit)
-    # - A red line indicating the stage motion delta
-    # - When moving, a blue arrow indicating our direction of motion
-    # - A scale indicator
     def onPaint(self, event=None):
+        """Draw the following:
+        - A red line at the current stage height
+        - A purple line at the current Z tower height (or at a ceiling height
+          if its position is off the scale).
+        - A pair of dotted blue lines for the hard stage motion limits at
+          [4000, 25000]
+        - A dotted green line for the soft stage motion min limit
+          (no max limit)
+        - A red line indicating the stage motion delta
+        - When moving, a blue arrow indicating our direction of motion
+        - A scale indicator."""
         if not self.shouldDraw:
             return
         try:
@@ -506,8 +512,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             traceback.print_exc()
             self.shouldDraw = False
 
-    ## Draw all our histograms
     def drawHistograms(self):
+        """Draw all our histograms."""
         prevHistogram = self.dummyHistogram
         minY, maxY = cockpit.interfaces.stageMover.getHardLimitsForAxis(2)
         width, height = self.GetClientSize()
@@ -597,7 +603,6 @@ class MacroStageZ(macroStageBase.MacroStageBase):
 
             prevHistogram = histogram
 
-    ## Draw a horizontal line at the specified altitude.
     def drawLine(
         self,
         altitude,
@@ -610,6 +615,7 @@ class MacroStageZ(macroStageBase.MacroStageBase):
         shouldLabelMainView=True,
         shouldLabelHistogram=True,
     ):
+        """Draw a horizontal line at the specified altitude."""
         if lineLength is None:
             lineLength = self.horizLineLength
         drawAltitude = altitude
@@ -670,8 +676,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
                             color=color,
                         )
 
-    ## Double click moves the stage in Z.
     def OnMouse(self, event):
+        """Double click moves the stage in Z."""
         if event.LeftDClick():
             clickLoc = event.GetPosition()
             canvasLoc = self.mapClickToCanvas(clickLoc)
@@ -703,8 +709,8 @@ class MacroStageZ(macroStageBase.MacroStageBase):
             # make sure we are back to the expected mover
             cockpit.interfaces.stageMover.mover.curHandlerIndex = originalMover
 
-    ## Remap an XY tuple to stage coordinates.
     def mapClickToCanvas(self, loc):
+        """Remap an XY tuple to stage coordinates."""
         width, height = self.GetClientSize()
         x = float(width - loc[0]) / width * (self.maxY - self.minY) + self.minY
         y = (

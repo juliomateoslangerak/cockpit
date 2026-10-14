@@ -25,9 +25,8 @@ import cockpit.util.Mrc as Mrc
 
 class TruncatedMrcFiles(unittest.TestCase):
     def test_adjust_data_shape(self):
-        ## An array of test cases, each a 3 element tuple specifying
-        ## array_size, expected_shape, and adjusted_shape (the return
-        ## value)
+        """An array of test cases, each a 3 element tuple specifying
+        array_size, expected_shape, and adjusted_shape (the return value)."""
         test_cases = [
             (100, (10, 10), (10, 10)),
             (20, (10, 10), (2, 10)),

@@ -111,8 +111,8 @@ def onChar(evt):
         evt.Skip()
 
 
-## Given a wx.Window instance, set up keyboard controls for that instance.
 def setKeyboardHandlers(window):
+    """Given a wx.Window instance, set up keyboard controls for that instance."""
     accelTable = wx.AcceleratorTable(
         [
             # Pop up a menu to help the user find hidden windows.
@@ -126,8 +126,8 @@ def setKeyboardHandlers(window):
     window.Bind(wx.EVT_CHAR_HOOK, onChar)
 
 
-# Function to show/hide the pythion shell window
 def showHideShell(parent):
+    """Function to show/hide the pythion shell window."""
     for window in wx.GetTopLevelWindows():
         if window.GetTitle() == "PyShell":
             window.Show(not window.IsShown())

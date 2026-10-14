@@ -69,8 +69,9 @@ from cockpit import events
 #    addWatch(parameterName, callback)
 
 
-## Device states
 class STATES:
+    """Device states."""
+
     error = -1
     disabled = 0
     enabled = 1
@@ -80,23 +81,13 @@ class STATES:
 
 
 class DeviceHandler:
-    ## \param name The name of the device being controlled. This should be
-    #         unique, as it is used to indicate the specific DeviceHandler
-    #         in many callback functions.
-    # \param groupName The name of the group of objects this object falls
-    #        under. Multiple DeviceHandlers can correspond to a single group
-    #        when their purpose is similar.
-    # \param callbacks Mapping of strings to functions. Each Handler has a
-    #        different selection of functions that must be filled in by the
-    #        Device that created it. Refer to the Handler's constructor.
-    # \param deviceType Type of device this is; each subclass of DeviceHandler
-    #        should have a distinct deviceType. Normal users don't need to
-    #        worry about this as it is provided automatically by the
-    #        DeviceHandler subclass.
-    # \param isEligibleForExperiments True if the device can be used in
-    #        experiments (i.e. data collections).
     @staticmethod
     def cached(f):
+        """Decorate a method so that its results are cached per device.
+
+        The cache is cleared by reset_cache.
+        """
+
         def wrapper(self, *args, **kwargs):
             key = (f, args, frozenset(sorted(kwargs.items())))
             # Previously, I checked for key existence and, if it wasn't
@@ -128,6 +119,25 @@ class DeviceHandler:
     def __init__(
         self, name, groupName, isEligibleForExperiments, callbacks, deviceType
     ):
+        """Set up the handler for a device.
+
+        Args:
+            name (str): The name of the device being controlled. This should
+                be unique, as it is used to indicate the specific
+                DeviceHandler in many callback functions.
+            groupName (str): The name of the group of objects this object
+                falls under. Multiple DeviceHandlers can correspond to a
+                single group when their purpose is similar.
+            isEligibleForExperiments (bool): True if the device can be used in
+                experiments (i.e. data collections).
+            callbacks (dict): Mapping of strings to functions. Each Handler has
+                a different selection of functions that must be filled in by
+                the Device that created it. Refer to the Handler's constructor.
+            deviceType (str): Type of device this is; each subclass of
+                DeviceHandler should have a distinct deviceType. Normal users
+                don't need to worry about this as it is provided automatically
+                by the DeviceHandler subclass.
+        """
         # Set up dict for attribute-change listeners.
         super().__init__()
         self._publisher = events.Publisher()
@@ -146,68 +156,83 @@ class DeviceHandler:
         object.__setattr__(self, key, value)
         self._publisher.publish(key, value)
 
-    # Define __lt__ to make handlers sortable.
     def __lt__(self, other):
+        """Define __lt__ to make handlers sortable."""
         return self.name.lower() < other.name.lower()
 
-    ## Return a string that identifies the device.
     def getIdentifier(self):
+        """Return a string that identifies the device."""
         return "%s:%s" % (self.deviceType, self.name)
 
-    ## Construct any necessary UI widgets for this Device to perform its job.
-    # Return a WX sizer holding the result, or None if nothing is to be
-    # inserted into the parent object.
-    # \param parent The WX object that will own the UI.
     def makeUI(self, parent):
+        """Construct any necessary UI widgets for this Device to perform its
+        job.
+
+        Args:
+            parent (wx.Window): The WX object that will own the UI.
+
+        Returns:
+            wx.Sizer or None: A WX sizer holding the result, or None if
+            nothing is to be inserted into the parent object.
+        """
         if "makeUI" in self.callbacks:
             return self.callbacks["makeUI"](parent)
         else:
             return None
 
-    ## Publish any necessary events to declare our initial configuration to
-    # anything that cares. At this point, all device handlers should be
-    # initialized.
     def makeInitialPublications(self):
+        """Publish any necessary events to declare our initial configuration to
+        anything that cares.
+
+        At this point, all device handlers should be initialized.
+        """
         getIsEnabled = getattr(
             self, "getIsEnabled", None
         ) or self.callbacks.get("getIsEnabled", None)
         if getIsEnabled:
             events.publish(events.DEVICE_STATUS, self, getIsEnabled())
 
-    ## Do any final initaliaziton actions, now that all devices are set up,
-    # all subscriptions have been made, and all initial publications are done.
     def finalizeInitialization(self):
+        """Do any final initaliaziton actions, now that all devices are set up,
+        all subscriptions have been made, and all initial publications are done."""
         pass
 
-    ## Return True if we can be used during experiments.
     def getIsEligibleForExperiments(self):
+        """Return True if we can be used during experiments."""
         return self.isEligibleForExperiments
 
-    ## Generate a string of information that we want to save into the
-    # experiment file's header. There's limited space (800 characters) so
-    # only important information should be preserved. This callback is
-    # optional; by default nothing is generated.
     def getSavefileInfo(self):
+        """Generate a string of information that we want to save into the
+        experiment file's header.
+
+        There's limited space (800 characters) so only important information
+        should be preserved. This callback is optional; by default nothing is
+        generated.
+        """
         if "getSavefileInfo" in self.callbacks:
             return self.callbacks["getSavefileInfo"](self.name)
         return ""
 
-    ## Do any necessary cleanup when an experiment is finished.
-    # \param isCleanupFinal This boolean indicates if we're about to leap into
-    #        a followup experiment. In that situation, some cleanup steps may
-    #        be unnecessary and should be omitted for performance reasons.
     def cleanupAfterExperiment(self, isCleanupFinal=True):
+        """Do any necessary cleanup when an experiment is finished.
+
+        In that situation, some cleanup steps may be unnecessary and should be
+        omitted for performance reasons.
+
+        Args:
+            isCleanupFinal (bool): Indicates if we're about to leap into a
+                followup experiment.
+        """
         pass
 
-    ## Debugging: print some pertinent info.
     def __repr__(self):
+        """Debugging: print some pertinent info."""
         return "<%s named %s in group %s>" % (
             self.deviceType,
             self.name,
             self.groupName,
         )
 
-    ## Add a watch on a device parameter.
     def addWatch(self, name, callback):
         """Add a watch/callback on a device attribute."""
         self._publisher.subscribe(name, callback)
@@ -216,9 +241,10 @@ class DeviceHandler:
         """Remove a watch/callback on a device attribute."""
         self._publisher.unsubscribe(name, callback)
 
-    ## A function that any control can call to toggle enabled/disabled state.
     @cockpit.util.threads.callInNewThread
     def toggleState(self, *args, **kwargs):
+        """A function that any control can call to toggle enabled/disabled
+        state."""
         if self.state == STATES.enabling:
             # Already processing a previous toggle request.
             return
@@ -248,9 +274,12 @@ class DeviceHandler:
             self.enableLock.release()
         events.publish(events.DEVICE_STATUS, self, getIsEnabled())
 
-    ## Add a toggle event to the action table.
-    # Return time of last action, and response time before ready after trigger.
     def addToggle(self, time, table):
+        """Add a toggle event to the action table.
+
+        Return time of last action, and response time before ready after
+        trigger.
+        """
         table.addAction(time, self, True)
         table.addAction(time + table.toggleTime, self, False)
         return time + table.toggleTime, 0

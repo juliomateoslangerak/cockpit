@@ -64,14 +64,17 @@ _logger = logging.getLogger(__name__)
 # This module contains the EnumerateSitesPanel class
 
 
-## This class provides a standard way to list out sites -- saved positions
-# in interfaces.stageMover, which each have a corresponding number when
-# displayed in the mosaic. For example, the string "1,2,4-6,8-10" corresponds
-# to the list of sites [1,2,4,5,6,8,9,10].
-# Additionally, numbers in parentheses may be included to indicate
-# a frequency. E.g. "1,2-4(2),5-8(3)" would mean "1 always, 2-4 every other
-# time, 5-8 every third time".
 class EnumerateSitesPanel(wx.Panel):
+    """This class provides a standard way to list out sites -- saved positions
+    in interfaces.stageMover, which each have a corresponding number when
+    displayed in the mosaic.
+
+    For example, the string "1,2,4-6,8-10" corresponds to the list of sites
+    [1,2,4,5,6,8,9,10]. Additionally, numbers in parentheses may be included to
+    indicate a frequency. E.g. "1,2-4(2),5-8(3)" would mean "1 always, 2-4
+    every other time, 5-8 every third time".
+    """
+
     def __init__(
         self,
         parent,

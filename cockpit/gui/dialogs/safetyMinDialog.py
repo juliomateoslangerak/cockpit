@@ -66,14 +66,16 @@ SLIDE_SAFETY = 7300
 DISH_SAFETY = 5725
 
 
-## This class provides a simple wrapper around the interfaces.stageMover's
-# safety functionality.
-# Note that unlike most
-# dialogs, this one does not save the user's settings; instead, it always
-# shows the current safety min as the default setting. This is to keep
-# users from blindly setting the safety min to what they always use;
-# we want them to think about what they're doing.
 class SafetyMinDialog(wx.Dialog):
+    """This class provides a simple wrapper around the interfaces.stageMover's
+    safety functionality.
+
+    Note that unlike most dialogs, this one does not save the user's settings;
+    instead, it always shows the current safety min as the default setting.
+    This is to keep users from blindly setting the safety min to what they
+    always use; we want them to think about what they're doing.
+    """
+
     def __init__(
         self,
         parent,
@@ -150,13 +152,13 @@ class SafetyMinDialog(wx.Dialog):
 
         startButton.Bind(wx.EVT_BUTTON, self.OnStart)
 
-    ## Set the text for the stage safety min to a default value.
     def setSafetyText(self, value):
+        """Set the text for the stage safety min to a default value."""
         self.minStageZ.SetValue("%.1f" % value)
 
-    ## Save the user's selected Z min to the user config, and then set the
-    # new min.
     def OnStart(self, event):
+        """Save the user's selected Z min to the user config, and then set the
+        new min."""
         self.Hide()
         cockpit.interfaces.stageMover.setSoftMin(
             2, float(self.minStageZ.GetValue())
@@ -167,9 +169,11 @@ class SafetyMinDialog(wx.Dialog):
 dialog = None
 
 
-## Generate the dialog for display. If it already exists, just bring it
-# forwards.
 def showDialog(parent):
+    """Generate the dialog for display.
+
+    If it already exists, just bring it forwards.
+    """
     global dialog
     if dialog:
         try:

@@ -61,11 +61,12 @@ import cockpit.gui.guiUtils
 # class, and code for displaying it.
 
 
-## This dialog allows the user to add a positional offset to a selection
-# of sites.
 class OffsetSites_Dialog(wx.Dialog):
-    ## Create the dialog, and lay out its UI widgets.
+    """This dialog allows the user to add a positional offset to a selection of
+    sites."""
+
     def __init__(self, parent, *args):
+        """Create the dialog, and lay out its UI widgets."""
         super().__init__(parent, -1, "Move Sites", *args)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -102,8 +103,8 @@ class OffsetSites_Dialog(wx.Dialog):
         self.SetAutoLayout(True)
         sizer.Fit(self)
 
-    ## Return a list of floats indicating the offset to add.
     def getOffset(self):
+        """Return a list of floats indicating the offset to add."""
         result = []
         for control in self.controls:
             if control.GetValue():
@@ -113,8 +114,11 @@ class OffsetSites_Dialog(wx.Dialog):
         return result
 
 
-## Show the dialog. If it has not been created yet, then create it first.
 def showDialogModal(parent):
+    """Show the dialog.
+
+    If it has not been created yet, then create it first.
+    """
     dialog = OffsetSites_Dialog(parent)
     if dialog.ShowModal() == wx.ID_OK:
         return dialog.getOffset()

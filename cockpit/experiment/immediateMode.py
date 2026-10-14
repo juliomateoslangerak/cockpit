@@ -55,18 +55,15 @@ from cockpit import depot
 from cockpit.experiment import experiment
 
 
-## Immediate-mode experiments are Experiments which perform actions via the
-# standard cockpit interactions (e.g. using interfaces.imager.takeImage())
-# instead of by generating an ActionTable. As a result, they are easier to
-# write, but may not benefit from speed enhancements that the ActionTable
-# approach allows.
 class ImmediateModeExperiment(experiment.Experiment):
-    ## We need to provide enough information here to fill in certain important
-    # values in the header. Specifically, we need to know how many images
-    # per rep, and how many reps. We would also like to know the Z pixel
-    # size (i.e. the distance between images in a 3D volume), if applicable.
-    # And of course we need the save path for the file (or else no data will
-    # be recorded). Optionally, additional metadata can be supplied.
+    """Immediate-mode experiments are Experiments which perform actions via the
+    standard cockpit interactions (e.g. using interfaces.imager.takeImage())
+    instead of by generating an ActionTable.
+
+    As a result, they are easier to write, but may not benefit from speed
+    enhancements that the ActionTable approach allows.
+    """
+
     def __init__(
         self,
         numReps,
@@ -76,6 +73,15 @@ class ImmediateModeExperiment(experiment.Experiment):
         metadata="",
         savePath="",
     ):
+        """We need to provide enough information here to fill in certain
+        important values in the header.
+
+        Specifically, we need to know how many images per rep, and how many
+        reps. We would also like to know the Z pixel size (i.e. the distance
+        between images in a 3D volume), if applicable. And of course we need
+        the save path for the file (or else no data will be recorded).
+        Optionally, additional metadata can be supplied.
+        """
         super().__init__(
             numReps,
             repDuration,
@@ -120,16 +126,20 @@ class ImmediateModeExperiment(experiment.Experiment):
     def createValidActionTable(self):
         pass
 
-    ## This experiment will generate images, which need to be saved.
-    ## Assume we use all active cameras and light sources.
     def run(self):
+        """This experiment will generate images, which need to be saved.
+
+        Assume we use all active cameras and light sources.
+        """
         self.cameraToImageCount = {c: self.imagesPerRep for c in self.cameras}
         return super().run()
 
-    ## Run the experiment. Return True if it was successful. This will call
-    # self.executeRep() iteratively, taking care of the time to pass between
-    # reps for you.
     def execute(self):
+        """Run the experiment.
+
+        Return True if it was successful. This will call self.executeRep()
+        iteratively, taking care of the time to pass between reps for you.
+        """
         for i in range(self.numReps):
             if self.shouldAbort:
                 break
@@ -139,11 +149,15 @@ class ImmediateModeExperiment(experiment.Experiment):
             waitTime = self.repDuration - (endTime - startTime)
             time.sleep(max(0, waitTime))
 
-    ## Execute one rep of the experiment. Override this function to perform
-    # your experiment logic.
-    # \param repNum The number of the rep (e.g. 0 = first rep, 1 = second
-    #        rep, etc.)
     def executeRep(self, repNum):
+        """Execute one rep of the experiment.
+
+        Override this function to perform your experiment logic.
+
+        Args:
+            repNum (int): The number of the rep (e.g. 0 = first rep,
+                1 = second rep, etc.).
+        """
         raise RuntimeError(
             ("Immediate-mode experiment %s " % self)
             + "didn't implement its executeRep function."

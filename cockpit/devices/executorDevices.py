@@ -108,9 +108,9 @@ class ExecutorDevice(device.Device):
         ## Set of all handlers we control.
         self.handlers = set()
 
-    ## Connect to the DSP computer.
     @cockpit.util.threads.locked
     def initialize(self):
+        """Connect to the DSP computer."""
         self.connection = Pyro4.Proxy(self.uri)
         self.connection._pyroTimeout = 6
         self.connection.Abort()
@@ -120,21 +120,23 @@ class ExecutorDevice(device.Device):
             self.connection._pyroRelease()
         super().onExit()
 
-    # Subscribe to events.
     def performSubscriptions(self):
+        """Subscribe to events."""
         events.subscribe(events.USER_ABORT, self.onAbort)
         events.subscribe(
             events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
         )
 
-    ## As a side-effect of setting our initial positions, we will also
-    # publish them. We want the Z piezo to be in the middle of its range
-    # of motion.
     def makeInitialPublications(self):
+        """As a side-effect of setting our initial positions, we will also
+        publish them.
+
+        We want the Z piezo to be in the middle of its range of motion.
+        """
         pass
 
-    ## User clicked the abort button.
     def onAbort(self):
+        """User clicked the abort button."""
         self.connection.Abort()
         # Various threads could be waiting for a 'DSP done' event, preventing
         # new DSP actions from starting after an abort.
@@ -147,9 +149,9 @@ class ExecutorDevice(device.Device):
         self.receiveUri = server.register(self.receiveData)
         self.connection.receiveClient(self.receiveUri)
 
-    ## We control which light sources are active, as well as a set of
-    # stage motion piezos.
     def getHandlers(self):
+        """We control which light sources are active, as well as a set of stage
+        motion piezos."""
         result = []
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
             self.name,
@@ -180,8 +182,8 @@ class ExecutorDevice(device.Device):
         self.handlers = set(result)
         return result
 
-    ## Receive data from the executor remote.
     def receiveData(self, action, *args):
+        """Receive data from the executor remote."""
         if action.lower() in ["done", "dsp done"]:
             events.publish(events.EXECUTOR_DONE % self.name)
 
@@ -190,14 +192,14 @@ class ExecutorDevice(device.Device):
         time.sleep(dt)
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
 
-    ## Prepare to run an experiment.
     def onPrepareForExperiment(self, *args):
+        """Prepare to run an experiment."""
         # Ensure remote has the correct URI set for sending data/notifications.
         self.connection.receiveClient(self.receiveUri)
 
-    ## Actually execute the events in an experiment ActionTable, starting at
-    # startIndex and proceeding up to but not through stopIndex.
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+        """Actually execute the events in an experiment ActionTable, starting
+        at startIndex and proceeding up to but not through stopIndex."""
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
         actions = self._adaptActions(actions)
@@ -238,8 +240,8 @@ class LegacyDSP(ExecutorDevice):
 
     """
 
-    #        May need to wrap profile digitals and analogs in numpy object.
     def __init__(self, name, config):
+        """May need to wrap profile digitals and analogs in numpy object."""
         super().__init__(name, config)
         self.tickrate = 10  # Number of ticks per ms.
         # We store the current position for each analogue channel, because
@@ -269,23 +271,23 @@ class LegacyDSP(ExecutorDevice):
         self._lastAnalogs = [line for line in self._currentAnalogs]
         self._lastDigital = self.connection.ReadDigital()
 
-    ## Receive data from the DSP computer.
     def receiveData(self, action, *args):
+        """Receive data from the DSP computer."""
         if action.lower() == "dsp done":
             events.publish(events.EXECUTOR_DONE % self.name)
 
-    ## Return analog position in native units
     def getAnalog(self, line):
+        """Return analog position in native units."""
         return self._currentAnalogs[line]
 
-    ## Set analog position in native units
     def setAnalog(self, line, target):
+        """Set analog position in native units."""
         self._currentAnalogs[line] = target
         return self.connection.MoveAbsoluteADU(line, int(target))
 
-    ## We control which light sources are active, as well as a set of
-    # stage motion piezos.
     def getHandlers(self):
+        """We control which light sources are active, as well as a set of stage
+        motion piezos."""
         result = []
         h = cockpit.handlers.executor.AnalogDigitalExecutorHandler(
             self.name,
@@ -316,17 +318,19 @@ class LegacyDSP(ExecutorDevice):
         self.handlers = set(result)
         return result
 
-    ## Actually execute the events in an experiment ActionTable, starting at
-    # startIndex and proceeding up to but not through stopIndex.
     def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
-        # Take time and arguments (i.e. omit handler) from table to generate actions.
-        # For the UCSF m6x DSP device, we also need to:
-        #  - make the analogue values offsets from the current position;
-        #  - convert float in ms to integer clock ticks and ensure digital
-        #    lines are not changed twice on the same tick;
-        #  - separate analogue and digital events into different lists;
-        #  - generate a structure that describes the profile.
+        """Actually execute the events in an experiment ActionTable, starting
+        at startIndex and proceeding up to but not through stopIndex.
 
+        Take time and arguments (i.e. omit handler) from table to generate
+        actions.
+        For the UCSF m6x DSP device, we also need to:
+        - make the analogue values offsets from the current position;
+        - convert float in ms to integer clock ticks and ensure digital
+          lines are not changed twice on the same tick;
+        - separate analogue and digital events into different lists;
+        - generate a structure that describes the profile.
+        """
         actions = actions_from_table(table, startIndex, stopIndex, repDuration)
 
         # Profiles
@@ -436,8 +440,8 @@ class LegacyDSP(ExecutorDevice):
 
 
 def actions_from_table(table, startIndex, stopIndex, repDuration):
-    ## Take time and arguments (i.e. omit handler) from table to
-    ## generate actions.
+    """Take time and arguments (i.e. omit handler) from table to generate
+    actions."""
     t0 = float(table[startIndex][0])
     actions = [
         (float(row[0]) - t0,) + tuple(row[1:])

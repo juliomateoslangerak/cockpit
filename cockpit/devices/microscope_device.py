@@ -376,7 +376,7 @@ class MicroscopeLaser(MicroscopeBase):
 
         return self.handlers
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def _setPower(self, power: float) -> None:
         self._proxy.power = power
 

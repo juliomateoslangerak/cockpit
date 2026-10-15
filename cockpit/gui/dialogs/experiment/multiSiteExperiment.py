@@ -419,7 +419,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 return False
         return True
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def onStart(self, event=None):
         """Run the experiment.
 

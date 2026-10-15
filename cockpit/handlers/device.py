@@ -241,7 +241,7 @@ class DeviceHandler:
         """Remove a watch/callback on a device attribute."""
         self._publisher.unsubscribe(name, callback)
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def toggleState(self, *args, **kwargs):
         """A function that any control can call to toggle enabled/disabled
         state."""

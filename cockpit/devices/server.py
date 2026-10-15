@@ -126,7 +126,7 @@ class ServerDaemon:
         self.daemon = Pyro4.Daemon(port=port, host=host)
         self.daemon.register(self, name)
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def serve(self):
         """Handle function calls by forwarding them to self.func."""
         self.daemon.requestLoop()

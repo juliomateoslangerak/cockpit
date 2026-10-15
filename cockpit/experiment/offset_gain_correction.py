@@ -161,7 +161,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         ## Time we last received an image, used in the above thread.
         self.lastImageTime = None
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def run(self):
         """Broadly similar to Experiment.run(), but we generate and execute
         multiple tables."""

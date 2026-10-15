@@ -177,7 +177,7 @@ class Imager:
             handler.takeImage()
         self.lastImageTime = time.time()
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def videoMode(self):
         """Video mode: continuously take images at our maximum update rate.
 

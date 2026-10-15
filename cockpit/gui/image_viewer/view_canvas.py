@@ -617,7 +617,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         self.imageQueue.put_nowait(newImage)
         self.definedROI = False  # new image will have new ROI.
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def processImages(self):
         """Consume images out of self.imageQueue and either display them or
         discard them.

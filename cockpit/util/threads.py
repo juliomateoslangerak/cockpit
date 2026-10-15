@@ -38,7 +38,7 @@ import threading
 import wx
 
 
-def callInNewThread(function):
+def call_in_new_thread(function):
     """Call the passed-in function in a new thread.
 
     Used as a decorator when a function needs to not block the UI thread.

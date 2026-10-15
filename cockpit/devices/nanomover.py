@@ -212,7 +212,7 @@ class Nanomover(Device):
         for axis in range(3):
             events.publish(events.STAGE_MOVER, axis)
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def sendXYPositionUpdates(self):
         """Send updates on the XY stage's position, until it stops moving."""
         while True:

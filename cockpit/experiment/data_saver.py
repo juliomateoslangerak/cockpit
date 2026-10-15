@@ -441,7 +441,7 @@ class MrcDataSaver:
         """Receive new data, and add it to the queue."""
         self.imageQueue.put((cameraIndex, imageData, metadata))
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def saveData(self):
         """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:
@@ -816,7 +816,7 @@ class ZarrDataSaver:
         """Receive new data, and add it to the queue."""
         self.imageQueue.put((cameraIndex, imageData, metadata))
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def saveData(self):
         """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:
@@ -1300,7 +1300,7 @@ class ZarrDataSaver:
         }
         return omeMetadata
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def saveData(self):
         """Continually poll our imageQueue and save data to the file."""
         while not self.amDone:

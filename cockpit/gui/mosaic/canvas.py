@@ -522,7 +522,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         )
         return (bottomLeft, topRight)
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def saveTiles(self, savePath):
         """Given a path to a file, save the mosaic to that file and an adjacent
         file.
@@ -619,7 +619,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         handle.close()
         wx.PostEvent(self.GetEventHandler(), ProgressEndEvent())
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def loadTiles(self, filePath):
         """Load a text file describing a set of tiles, as well as the tile
         image data.

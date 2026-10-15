@@ -334,7 +334,7 @@ class LinkamStage(MicroscopeBase, Device):
             curPos = self.positionCache[axis]
             self.moveAbsolute(axis, curPos + delta)
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def sendPositionUpdates(self):
         """Send XY stage positions until it stops moving."""
         if self.sendingPositionUpdates is True:

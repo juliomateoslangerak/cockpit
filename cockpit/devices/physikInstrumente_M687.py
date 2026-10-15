@@ -470,7 +470,7 @@ class PhysikInstrumenteM687(Device):
                 return False
         return True
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def sendXYPositionUpdates(self):
         """Send updates on the XY stage's position, until it stops moving."""
         while True:

@@ -36,15 +36,15 @@ class Listener:
     deals with registering and unregistering listener functions.
     """
 
-    def __init__(self, pyroProxy, callback=None, localIp=None):
+    def __init__(self, pyro_proxy, callback=None, local_ip=None):
         """Extant connection to the camera."""
-        self._proxy = pyroProxy
+        self._proxy = pyro_proxy
         ## The callback function
         self._callback = callback
         ## Are we listening?
         self._listening = False
         ## Local cockpit server IP address
-        self._localIp = localIp
+        self._local_ip = local_ip
 
     def connect(self, callback=None, timeout=5):
         """Establish a connection with the remote service, and tell it to send
@@ -61,7 +61,7 @@ class Listener:
         elif not self._callback:
             # No callback specified in either self._callback or this call.
             raise Exception("No callback set.")
-        uri = server.register(self._callback, self._localIp)
+        uri = server.register(self._callback, self._local_ip)
         self._proxy.receiveClient(uri)
         self._listening = True
 

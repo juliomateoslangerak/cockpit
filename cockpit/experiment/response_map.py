@@ -140,7 +140,7 @@ class ResponseMapExperiment(
         ## Maximum width/height of an image for any camera we use.
         self.maxImageDims = [0, 0]
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def run(self):
         """Very similar to OffsetGainCorrectionExperiment.run() except that we
         calculate the exposure times to use differently, and have a different

@@ -395,7 +395,7 @@ class DigitalMixin:
         final = (initial & ~mask) | state
         self.writeDigital(final)
 
-    @util.threads.callInNewThread
+    @util.threads.call_in_new_thread
     def softSequence(self, seq):
         # Mask of the bits that we toggle
         mask = functools.reduce(operator.ior, list(zip(*seq))[1])

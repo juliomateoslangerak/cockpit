@@ -388,7 +388,7 @@ class PicoMotorDevice(device.Device):
             )
             self.sendXYPositionUpdates()
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def sendXYPositionUpdates(self):
         """Send updates on the XY stage's position, until it stops moving."""
         prevX, prevY, prevZ = self.xyPositionCache

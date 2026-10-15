@@ -185,7 +185,7 @@ class LightHandler(device.DeviceHandler):
         """Return True if we're enabled, False otherwise."""
         return self.state == device.STATES.enabled
 
-    @cockpit.util.threads.callInNewThread
+    @cockpit.util.threads.call_in_new_thread
     def setExposing(self, args):
         """Set the light source to continuous exposure, if we have that option."""
         if not self.enableLock.acquire(False):

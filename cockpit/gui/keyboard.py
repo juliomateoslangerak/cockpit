@@ -53,7 +53,7 @@ import wx
 
 import cockpit.gui.camera.window
 import cockpit.gui.mosaic.window
-import cockpit.interfaces.stageMover
+import cockpit.interfaces.stage_mover
 
 
 def onChar(evt):
@@ -71,39 +71,39 @@ def onChar(evt):
     if evt.KeyCode == wx.WXK_NUMPAD_MULTIPLY:
         cockpit.gui.camera.window.rescaleViews()
     elif evt.KeyCode == wx.WXK_NUMPAD_DIVIDE:
-        cockpit.interfaces.stageMover.changeMover()
+        cockpit.interfaces.stage_mover.changeMover()
     elif evt.KeyCode == wx.WXK_NUMPAD_DECIMAL:
         cockpit.gui.mosaic.window.transferCameraImage()
     elif evt.KeyCode == wx.WXK_NUMPAD_SUBTRACT:
-        cockpit.interfaces.stageMover.recenterFineMotion()
+        cockpit.interfaces.stage_mover.recenterFineMotion()
     elif evt.KeyCode == wx.WXK_DOWN:
         # Z down
-        cockpit.interfaces.stageMover.step((0, 0, -1))
+        cockpit.interfaces.stage_mover.step((0, 0, -1))
     elif evt.KeyCode == wx.WXK_NUMPAD2:
         # Y down
-        cockpit.interfaces.stageMover.step((0, -1, 0))
+        cockpit.interfaces.stage_mover.step((0, -1, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD3:
         # Decrease delta
-        cockpit.interfaces.stageMover.changeStepSize(-1)
+        cockpit.interfaces.stage_mover.changeStepSize(-1)
     elif evt.KeyCode == wx.WXK_NUMPAD4:
         # X up
-        cockpit.interfaces.stageMover.step((1, 0, 0))
+        cockpit.interfaces.stage_mover.step((1, 0, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD5:
         # Stop motion
         # TODO: was never handled.
         pass
     elif evt.KeyCode == wx.WXK_NUMPAD6:
         # X down
-        cockpit.interfaces.stageMover.step((-1, 0, 0))
+        cockpit.interfaces.stage_mover.step((-1, 0, 0))
     elif evt.KeyCode == wx.WXK_UP:
         # Z up
-        cockpit.interfaces.stageMover.step((0, 0, 1))
+        cockpit.interfaces.stage_mover.step((0, 0, 1))
     elif evt.KeyCode == wx.WXK_NUMPAD8:
         # Y up
-        cockpit.interfaces.stageMover.step((0, 1, 0))
+        cockpit.interfaces.stage_mover.step((0, 1, 0))
     elif evt.KeyCode == wx.WXK_NUMPAD9:
         # Increase delta
-        cockpit.interfaces.stageMover.changeStepSize(1)
+        cockpit.interfaces.stage_mover.changeStepSize(1)
     elif evt.KeyCode in [wx.WXK_NUMPAD_ADD, wx.WXK_NUMPAD0]:
         # Take image
         wx.GetApp().Imager.takeImage()

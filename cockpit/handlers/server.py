@@ -50,10 +50,10 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 from cockpit import depot
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
-class ServerHandler(deviceHandler.DeviceHandler):
+class ServerHandler(device.DeviceHandler):
     """This handler mostly just handles setting up incoming communications from
     other programs."""
 

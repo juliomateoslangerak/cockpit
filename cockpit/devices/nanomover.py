@@ -52,12 +52,12 @@
 import re
 import time
 
-import cockpit.handlers.genericPositioner
-import cockpit.handlers.stagePositioner
+import cockpit.handlers.generic_positioner
+import cockpit.handlers.stage_positioner
 import cockpit.interfaces
 import cockpit.util.connection
 import cockpit.util.threads
-import cockpit.util.userConfig
+import cockpit.util.user_config
 from cockpit import events
 from cockpit.devices.device import Device
 
@@ -122,7 +122,7 @@ class Nanomover(Device):
             print("Homing Nanomover")
             self.connection.connection.startOMX()
             self.home()
-            cockpit.interfaces.stageMover.goToXY(
+            cockpit.interfaces.stage_mover.goToXY(
                 self.middleXY, shouldBlock=True
             )
 
@@ -130,7 +130,7 @@ class Nanomover(Device):
         """We want to periodically exercise the XY stage to spread the grease
         around on its bearings; check how long it's been since the stage was
         last exercised, and prompt the user if it's been more than a week."""
-        lastExerciseTimestamp = cockpit.util.userConfig.getValue(
+        lastExerciseTimestamp = cockpit.util.user_config.getValue(
             "NanomoverLastExerciseTimestamp", default=0
         )
         curTime = time.time()
@@ -149,20 +149,20 @@ class Nanomover(Device):
             # necessary to avoid the banned rectangles, in case the stage is
             # in them when we start.
             initialPos = tuple(self.positionCache)
-            #            cockpit.interfaces.stageMover.goToXY((0, 0), shouldBlock = True)
+            #            cockpit.interfaces.stage_mover.goToXY((0, 0), shouldBlock = True)
             for i in range(5):
                 print("Rep %d of 5..." % i)
                 for position in self.softlimits[0:2]:
-                    cockpit.interfaces.stageMover.goToXY(
+                    cockpit.interfaces.stage_mover.goToXY(
                         position, shouldBlock=True
                     )
-            cockpit.interfaces.stageMover.goToXY(
+            cockpit.interfaces.stage_mover.goToXY(
                 self.middleXY, shouldBlock=True
             )
-            cockpit.interfaces.stageMover.goToXY(initialPos, shouldBlock=True)
+            cockpit.interfaces.stage_mover.goToXY(initialPos, shouldBlock=True)
             print("Exercising complete. Thank you!")
 
-            cockpit.util.userConfig.setValue(
+            cockpit.util.user_config.setValue(
                 "NanomoverLastExerciseTimestamp", time.time()
             )
 
@@ -191,7 +191,7 @@ class Nanomover(Device):
             lowLimit, highLimit = self.safeties[axis]
             softLowLimit, softHighLimit = self.softlimits[axis]
             result.append(
-                cockpit.handlers.stagePositioner.PositionerHandler(
+                cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d nanomover" % axis,
                     "%d stage motion" % axis,
                     False,

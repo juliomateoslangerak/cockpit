@@ -29,17 +29,17 @@ Some of subpackages are:
 
 - :mod:`cockpit.gui.camera`: handles the display of images received
   from the camera(s).  It depends heavily on the
-  :mod:`cockpit.gui.imageViewer`.
+  :mod:`cockpit.gui.image_viewer`.
 
 - :mod:`cockpit.gui.dialogs`: contains all dialog subclasses and any
   widgets that are specific to them.  This includes the experiment
   setup dialogs.
 
-- :mod:`cockpit.gui.imageViewer`: generic code for displaying pixel
+- :mod:`cockpit.gui.image_viewer`: generic code for displaying pixel
   arrays to the screen.  It includes a histogram for black/white
   scaling, zoom and drag, etc.
 
-- :mod:`cockpit.gui.macroStage`: the Macro Stage window gives the user
+- :mod:`cockpit.gui.macro_stage`: the Macro Stage window gives the user
   a high-level overview of where they are with respect to the motion
   limits of their stage.
 

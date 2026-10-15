@@ -53,10 +53,10 @@
 import wx
 
 import cockpit.gui.keyboard
-import cockpit.gui.viewFileDropTarget
+import cockpit.gui.view_file_drop_target
 import cockpit.util.threads
 from cockpit import depot, events
-from cockpit.gui.camera import viewPanel
+from cockpit.gui.camera import view_panel
 
 
 class CamerasWindow(wx.Frame):
@@ -85,7 +85,7 @@ class CamerasWindow(wx.Frame):
         ## List of ViewPanels we contain.
         self.views = []
         for i in range(self.numCameras):
-            view = viewPanel.ViewPanel(self.panel)
+            view = view_panel.ViewPanel(self.panel)
             self.views.append(view)
 
         events.subscribe(events.CAMERA_ENABLE, self.onCameraEnableEvent)
@@ -94,7 +94,7 @@ class CamerasWindow(wx.Frame):
 
         self.resetGrid()
         self.SetDropTarget(
-            cockpit.gui.viewFileDropTarget.ViewFileDropTarget(self)
+            cockpit.gui.view_file_drop_target.ViewFileDropTarget(self)
         )
 
     @cockpit.util.threads.callInMainThread

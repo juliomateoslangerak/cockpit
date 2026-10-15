@@ -22,11 +22,11 @@ import decimal
 import unittest
 
 import cockpit.depot
-import cockpit.experiment.actionTable
-import cockpit.handlers.deviceHandler
+import cockpit.experiment.action_table
+import cockpit.handlers.device
 
 
-class _MockDeviceHandler(cockpit.handlers.deviceHandler.DeviceHandler):
+class _MockDeviceHandler(cockpit.handlers.device.DeviceHandler):
     def __init__(self, name="mock", groupName="testsuite"):
         super().__init__(
             name,
@@ -39,7 +39,7 @@ class _MockDeviceHandler(cockpit.handlers.deviceHandler.DeviceHandler):
 
 class TestActionTable(unittest.TestCase):
     def setUp(self):
-        self.action_table = cockpit.experiment.actionTable.ActionTable()
+        self.action_table = cockpit.experiment.action_table.ActionTable()
 
     def test___getitem___single(self):
         self.action_table.addAction(0, None, None)

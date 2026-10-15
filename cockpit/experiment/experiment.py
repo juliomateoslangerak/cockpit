@@ -61,10 +61,10 @@ import wx
 from microscope import ElectronicShutteringMode
 
 import cockpit.handlers.camera
-import cockpit.interfaces.stageMover
+import cockpit.interfaces.stage_mover
 from cockpit import depot, events
-from cockpit.experiment import dataSaver
-from cockpit.gui import guiUtils
+from cockpit.experiment import data_saver
+from cockpit.gui import gui_utils
 
 
 _logger = logging.getLogger(__name__)
@@ -215,7 +215,7 @@ class Experiment:
         # Returns True to close config dialog box, False or None otherwise.
         # Check if the user is set to save to an already-existing file.
         if self.savePath and os.path.exists(self.savePath):
-            if not guiUtils.getUserPermission(
+            if not gui_utils.getUserPermission(
                 ("The file:\n%s\nalready exists. " % self.savePath)
                 + "Are you sure you want to overwrite it?"
             ):
@@ -255,7 +255,7 @@ class Experiment:
                 "\n    'OK' to run repeats as fast as possible;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not guiUtils.getUserPermission(warning):
+            if not gui_utils.getUserPermission(warning):
                 return False
             # set repDuration to the last table action
             self.repDuration = float(self.table.lastActionTime) / 1000.0
@@ -291,7 +291,7 @@ class Experiment:
                     )
 
             if self.savePath.endswith((".dv", ".mrc")):
-                saver = dataSaver.MrcDataSaver(
+                saver = data_saver.MrcDataSaver(
                     cameras=self.cameras,
                     numReps=self.numReps,
                     repDuration=self.repDuration,
@@ -304,7 +304,7 @@ class Experiment:
                     cameraToExcitation=cameraToExcitation,
                 )
             elif self.savePath.endswith(".zarr"):
-                saver = dataSaver.ZarrDataSaver(
+                saver = data_saver.ZarrDataSaver(
                     exposureSettings=self.exposureSettings,
                     numReps=self.numReps,
                     repDuration=self.repDuration,
@@ -353,20 +353,20 @@ class Experiment:
         """Prepare all of the handlers needed in the experiment so that they're
         in the correct mode."""
         # Store the pre-experiment altitude.
-        self.initialAltitude = cockpit.interfaces.stageMover.getPosition()[-1]
+        self.initialAltitude = cockpit.interfaces.stage_mover.getPosition()[-1]
         # Ensure that we're the only ones moving things around.
-        cockpit.interfaces.stageMover.waitForStop()
+        cockpit.interfaces.stage_mover.waitForStop()
         # TODO: Handling multiple movers on an axis is broken. Do not proceed if
         # anything but the innermost Z mover is selected. Needs a proper fix.
         if (
-            cockpit.interfaces.stageMover.mover.curHandlerIndex
+            cockpit.interfaces.stage_mover.mover.curHandlerIndex
             < len(depot.getSortedStageMovers()[2]) - 1
         ):
             wx.MessageBox("Wrong axis mover selected.")
             raise Exception("Wrong axis mover selected.")
         # Prepare our position.
-        cockpit.interfaces.stageMover.goToZ(self.altBottom, shouldBlock=True)
-        self.zStart = cockpit.interfaces.stageMover.getAllPositions()[-1][-1]
+        cockpit.interfaces.stage_mover.goToZ(self.altBottom, shouldBlock=True)
+        self.zStart = cockpit.interfaces.stage_mover.getAllPositions()[-1][-1]
         events.publish(events.PREPARE_FOR_EXPERIMENT, self)
         # Prepare cameras.
         for camera in self.cameras:
@@ -533,7 +533,7 @@ class Experiment:
         events.publish(events.CLEANUP_AFTER_EXPERIMENT)
         if self.initialAltitude is not None:
             # Restore our initial altitude.
-            cockpit.interfaces.stageMover.goToZ(
+            cockpit.interfaces.stage_mover.goToZ(
                 self.initialAltitude, shouldBlock=True
             )
         events.publish(events.EXPERIMENT_COMPLETE)
@@ -578,7 +578,7 @@ class Experiment:
                 str(
                     [
                         "%.2f" % p
-                        for p in (cockpit.interfaces.stageMover.getPosition())
+                        for p in (cockpit.interfaces.stage_mover.getPosition())
                     ]
                 ),
             )

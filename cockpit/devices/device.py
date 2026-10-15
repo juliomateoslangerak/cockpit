@@ -102,7 +102,7 @@ class Device:
         capabilities we are responsible for. Each DeviceHandler represents an
         abstract bit of hardware -- for example, a generic camera, or a stage
         mover along a single axis, or a light source. Take a look at the
-        "handlers/deviceHandler.py" file for more information.
+        "handlers/device.py" file for more information.
         """
         return []
 

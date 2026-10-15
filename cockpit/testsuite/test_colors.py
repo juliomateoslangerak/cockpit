@@ -25,37 +25,37 @@ import cockpit.util.colors as colors
 
 class TestWavelengthToColor(unittest.TestCase):
     def test_wavelength_to_color_red(self):
-        R, G, B = colors.wavelengthToColor(650)
+        R, G, B = colors.wavelength_to_color(650)
         self.assertEqual(G, 0)
         self.assertEqual(B, 0)
         self.assertGreater(R, 0)
 
     def test_wavelength_to_color_blue(self):
-        R, G, B = colors.wavelengthToColor(410)
+        R, G, B = colors.wavelength_to_color(410)
         self.assertEqual(G, 0)
         self.assertEqual(R, 0)
         self.assertGreater(B, 0)
 
     def test_wavelength_to_color_no_color(self):
         with self.assertRaises(TypeError):
-            colors.wavelengthToColor(None)
+            colors.wavelength_to_color(None)
 
 
 class TestHsvToRgb(unittest.TestCase):
     def test_hsv_to_rgb_greyscale(self):
         v = 1
-        self.assertEqual((v, v, v), colors.hsvToRgb(0, 0, v))
+        self.assertEqual((v, v, v), colors.hsv_to_rgb(0, 0, v))
 
     def test_hsv_to_rgb_full_saturation_red(self):
-        R = colors.hsvToRgb(0, 1, 1)
+        R = colors.hsv_to_rgb(0, 1, 1)
         self.assertEqual((1, 0, 0), R)
 
     def test_hsv_to_rgb_full_saturation_green(self):
-        G = colors.hsvToRgb(120, 1, 1)
+        G = colors.hsv_to_rgb(120, 1, 1)
         self.assertEqual((0, 1, 0), G)
 
     def test_hsv_to_rgb_full_saturation_blue(self):
-        G = colors.hsvToRgb(240, 1, 1)
+        G = colors.hsv_to_rgb(240, 1, 1)
         self.assertEqual((0, 0, 1), G)
 
 

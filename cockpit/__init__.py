@@ -73,13 +73,13 @@ import cockpit.config
 import cockpit.depot
 import cockpit.events
 import cockpit.gui
-import cockpit.gui.loggingWindow
-import cockpit.gui.mainWindow
+import cockpit.gui.logging_window
+import cockpit.gui.main_window
 import cockpit.interfaces
 import cockpit.interfaces.channels
 import cockpit.interfaces.imager
-import cockpit.interfaces.stageMover
-import cockpit.util.userConfig
+import cockpit.interfaces.stage_mover
+import cockpit.util.user_config
 
 
 _logger = logging.getLogger(__name__)
@@ -164,12 +164,12 @@ class CockpitApp(wx.App):
             status.Show()
 
             # Do this early so we can see output while initializing.
-            logging_window = cockpit.gui.loggingWindow.makeWindow(None)
+            logging_window = cockpit.gui.logging_window.makeWindow(None)
 
             updateNum = 1
             status.Update(updateNum, "Initializing config...")
             updateNum += 1
-            cockpit.util.userConfig.initialize(self.Config)
+            cockpit.util.user_config.initialize(self.Config)
 
             status.Update(updateNum, "Initializing devices...")
             updateNum += 1
@@ -184,11 +184,11 @@ class CockpitApp(wx.App):
             self._imager = cockpit.interfaces.imager.Imager(
                 self.Depot.getHandlersOfType(cockpit.depot.IMAGER)
             )
-            cockpit.interfaces.stageMover.initialize()
+            cockpit.interfaces.stage_mover.initialize()
             self._objectives = cockpit.interfaces.Objectives(
                 self.Depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
             )
-            self._stage = cockpit.interfaces.stageMover.mover
+            self._stage = cockpit.interfaces.stage_mover.mover
             self._channels = cockpit.interfaces.channels.Channels()
             for fpath in self.Config["global"].getpaths("channel-files", []):
                 new_channels = cockpit.interfaces.channels.LoadFromFile(fpath)
@@ -197,7 +197,7 @@ class CockpitApp(wx.App):
             status.Update(updateNum, "Initializing user interface...")
             updateNum += 1
 
-            self._main_window = cockpit.gui.mainWindow.makeWindow()
+            self._main_window = cockpit.gui.main_window.makeWindow()
             self.SetTopWindow(self._main_window)
 
             # Now that the main window exists, we can reparent the
@@ -212,9 +212,9 @@ class CockpitApp(wx.App):
             for module_name in [
                 "cockpit.gui.camera.window",
                 "cockpit.gui.mosaic.window",
-                "cockpit.gui.macroStage.macroStageWindow",
-                "cockpit.gui.shellWindow",
-                "cockpit.gui.touchscreen",
+                "cockpit.gui.macro_stage.macro_stage_window",
+                "cockpit.gui.shell_window",
+                "cockpit.gui.touch_screen",
             ]:
                 module = importlib.import_module(module_name)
                 status.Update(updateNum, " ... " + module_name)
@@ -236,7 +236,7 @@ class CockpitApp(wx.App):
                 #   3. if none of the above is set, hide
                 default_show = getattr(window, "SHOW_DEFAULT", False)
                 config_name = "Show Window " + window.GetTitle()
-                to_show = cockpit.util.userConfig.getValue(
+                to_show = cockpit.util.user_config.getValue(
                     config_name, default=default_show
                 )
                 window.Show(to_show)
@@ -246,7 +246,7 @@ class CockpitApp(wx.App):
             status.Destroy()
 
             self.Depot.makeInitialPublications()
-            cockpit.interfaces.stageMover.makeInitialPublications()
+            cockpit.interfaces.stage_mover.makeInitialPublications()
 
             cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
@@ -313,7 +313,7 @@ class CockpitApp(wx.App):
         This should probably be a private method, or at least a method
         that would take the positions dict as argument.
         """
-        positions = cockpit.util.userConfig.getValue(
+        positions = cockpit.util.user_config.getValue(
             "WindowPositions", default={}
         )
         for window in wx.GetTopLevelWindows():
@@ -342,7 +342,7 @@ class CockpitApp(wx.App):
         if camera_window_title is not None:
             positions["Camera views"] = positions.pop(camera_window_title)
 
-        cockpit.util.userConfig.setValue("WindowPositions", positions)
+        cockpit.util.user_config.setValue("WindowPositions", positions)
 
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():
@@ -352,7 +352,7 @@ class CockpitApp(wx.App):
             if title.startswith("Camera views "):
                 title = "Camera views"
             config_name = "Show Window " + title
-            cockpit.util.userConfig.setValue(config_name, window.IsShown())
+            cockpit.util.user_config.setValue(config_name, window.IsShown())
 
 
 def show_exception_app() -> None:

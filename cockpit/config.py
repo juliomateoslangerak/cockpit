@@ -187,7 +187,7 @@ def _default_cockpit_config():
             "dishAltitude": "7570",
             "slideAltitude": "7370",
             "slideTouchdownAltitude": "7900",
-            ## XXX: these two things are used in the touchscreen code
+            ## XXX: these two things are used in the touch_screen code
             ## but they never had a default.
             # 'loadPosition' : '',
             # 'unloadPosition' : '',

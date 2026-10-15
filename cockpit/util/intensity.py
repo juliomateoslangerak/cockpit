@@ -35,7 +35,7 @@ import wx
 import wx.lib.plot as plot
 from wx.lib.floatcanvas import FloatCanvas
 
-from cockpit.util.Mrc import Mrc
+from cockpit.util.mrc import Mrc
 
 
 ICON_SIZE = (16, 16)

@@ -50,10 +50,10 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 from cockpit import depot
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
-class ImagerHandler(deviceHandler.DeviceHandler):
+class ImagerHandler(device.DeviceHandler):
     """This handler represents any device that is capable of causing an image
     to be taken.
 

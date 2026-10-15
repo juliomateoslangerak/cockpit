@@ -24,11 +24,11 @@ import Pyro4
 import wx
 
 import cockpit.gui.device
-import cockpit.handlers.filterHandler
+import cockpit.handlers.filter
 from cockpit import depot, events
-from cockpit.devices import microscopeDevice
-from cockpit.handlers.deviceHandler import STATES
-from cockpit.handlers.filterHandler import Filter, FilterHandler
+from cockpit.devices import microscope_device
+from cockpit.handlers.device import STATES
+from cockpit.handlers.filter import Filter, FilterHandler
 
 
 class ClaritySlideHandler(FilterHandler):
@@ -46,7 +46,7 @@ class ClaritySlideHandler(FilterHandler):
         return None
 
 
-class Clarity(microscopeDevice.MicroscopeFilter):
+class Clarity(microscope_device.MicroscopeFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

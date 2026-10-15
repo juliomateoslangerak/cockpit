@@ -59,16 +59,16 @@ from cockpit import depot
 class Connection:
     """Simple class for managing connections to remote services."""
 
-    def __init__(self, serviceName, ipAddress, port, localIp=None):
+    def __init__(self, service_name, ip_address, port, local_ip=None):
         """Name of the service on the remote server."""
-        self.serviceName = serviceName
+        self.serviceName = service_name
         ## IP address to connect to.
-        self.ipAddress = ipAddress
+        self.ipAddress = ip_address
         ## Port to connect to.
         self.port = port
         ## Local IP address to use for communication, in the event that this
         # computer has multiple networks to choose from.
-        self.localIp = localIp
+        self.localIp = local_ip
         ## Function to call when we get something from the camera.
         self.callback = None
         ## Extant connection to the camera.

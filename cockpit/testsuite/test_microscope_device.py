@@ -24,7 +24,7 @@ from microscope.simulators import SimulatedFilterWheel
 
 import cockpit.depot
 from cockpit.devices.dummies import _MicroscopeTestDevice
-from cockpit.devices.microscopeDevice import MicroscopeBase
+from cockpit.devices.microscope_device import MicroscopeBase
 
 
 class MicroscopeDeviceWithTestSetting(SimulatedFilterWheel):

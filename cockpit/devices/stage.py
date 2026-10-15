@@ -22,8 +22,8 @@ from decimal import Decimal
 
 from cockpit import depot
 from cockpit.devices.device import Device
-from cockpit.handlers import stagePositioner
-from cockpit.interfaces.stageMover import AXIS_MAP
+from cockpit.handlers import stage_positioner
+from cockpit.interfaces.stage_mover import AXIS_MAP
 
 
 class SimplePiezo(Device):
@@ -90,7 +90,7 @@ class SimplePiezo(Device):
 
         result = []
         # Create handler without movement callbacks.
-        handler = stagePositioner.PositionerHandler(
+        handler = stage_positioner.PositionerHandler(
             "%d %s" % (axis, self.name),
             "%d stage motion" % axis,
             True,

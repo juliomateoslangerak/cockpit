@@ -62,9 +62,9 @@ from microscope import ElectronicShutteringMode
 
 from cockpit import depot, events, util
 from cockpit.experiment import experiment
-from cockpit.experiment.actionTable import ActionTable
-from cockpit.handlers.deviceHandler import DeviceHandler
-from cockpit.handlers.genericPositioner import GenericPositionerHandler
+from cockpit.experiment.action_table import ActionTable
+from cockpit.handlers.device import DeviceHandler
+from cockpit.handlers.generic_positioner import GenericPositionerHandler
 
 
 class ExecutorHandler(DeviceHandler):

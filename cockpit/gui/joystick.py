@@ -126,7 +126,7 @@ class Joystick:
         if buttonTest(event.ButtonChange, 0):
             mosaic.window.centerCanvas()
         elif buttonTest(event.ButtonChange, 1):
-            from cockpit.interfaces.stageMover import changeMover
+            from cockpit.interfaces.stage_mover import changeMover
 
             changeMover()
         elif buttonTest(event.ButtonChange, 2):
@@ -135,7 +135,7 @@ class Joystick:
             mosaic.window.toggleMosaic()
 
     def _onMoveEvent(self, event):
-        from cockpit.interfaces.stageMover import moveRelative
+        from cockpit.interfaces.stage_mover import moveRelative
 
         delta = tuple(map(sub, event.Position, self._centre))
         absdelta = map(abs, delta)

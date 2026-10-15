@@ -55,7 +55,7 @@ import cockpit.handlers.imager
 import cockpit.interfaces.imager
 import cockpit.util.colors
 from cockpit import depot, events
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
 ## Available trigger modes for triggering the camera.
@@ -64,7 +64,7 @@ from cockpit.handlers import deviceHandler
 TRIGGER_AFTER, TRIGGER_BEFORE, TRIGGER_DURATION, TRIGGER_SOFT = range(4)
 
 
-class CameraHandler(deviceHandler.DeviceHandler):
+class CameraHandler(device.DeviceHandler):
     r"""This handler is for cameras, of course.
 
     Cameras provide images to the microscope, and are assumed to be usable
@@ -108,8 +108,8 @@ class CameraHandler(deviceHandler.DeviceHandler):
     """
 
     ## Shortcuts to decorators defined in parent class.
-    reset_cache = deviceHandler.DeviceHandler.reset_cache
-    cached = deviceHandler.DeviceHandler.cached
+    reset_cache = device.DeviceHandler.reset_cache
+    cached = device.DeviceHandler.cached
 
     def __init__(
         self,
@@ -154,7 +154,7 @@ class CameraHandler(deviceHandler.DeviceHandler):
     @property
     def color(self):
         if self.wavelength is not None:
-            return cockpit.util.colors.wavelengthToColor(self.wavelength, 0.8)
+            return cockpit.util.colors.wavelength_to_color(self.wavelength, 0.8)
         else:
             return (127,) * 3
 

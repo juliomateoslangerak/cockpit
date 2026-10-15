@@ -54,7 +54,7 @@ import typing
 import wx
 
 from cockpit import depot, events
-from cockpit.handlers import deviceHandler
+from cockpit.handlers import device
 
 
 class DrawerSettings:
@@ -97,7 +97,7 @@ class DrawerSettings:
         self.cameraToWavelength = dict(zip(self.cameraNames, self.wavelengths))
 
 
-class DrawerHandler(deviceHandler.DeviceHandler):
+class DrawerHandler(device.DeviceHandler):
     """This handler is responsible for tracking what kinds of light each camera
     receives, via the drawer system."""
 

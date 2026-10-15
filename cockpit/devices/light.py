@@ -23,7 +23,7 @@ import typing
 
 import cockpit.depot
 import cockpit.devices.device
-from cockpit.handlers.lightSource import LightHandler
+from cockpit.handlers.light_source import LightHandler
 
 
 class SimpleLight(cockpit.devices.device.Device):

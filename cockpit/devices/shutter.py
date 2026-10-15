@@ -22,7 +22,7 @@ import re
 
 from cockpit import depot, events
 from cockpit.devices import device
-from cockpit.handlers.lightSource import LightHandler
+from cockpit.handlers.light_source import LightHandler
 
 
 class ShutterDevice(device.Device):

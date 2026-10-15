@@ -55,7 +55,7 @@ import socket
 import threading
 import time
 
-import cockpit.handlers.stagePositioner
+import cockpit.handlers.stage_positioner
 import cockpit.util.threads
 from cockpit import events
 from cockpit.devices import device
@@ -337,7 +337,7 @@ class PicoMotorDevice(device.Device):
             (2, -1000, 1000),
         ]:
             result.append(
-                cockpit.handlers.stagePositioner.PositionerHandler(
+                cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d PI mover" % axis,
                     "%d stage motion" % axis,
                     False,

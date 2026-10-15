@@ -61,11 +61,11 @@ import typing
 
 import wx
 
-import cockpit.experiment.experimentRegistry
-import cockpit.interfaces.stageMover
-import cockpit.util.userConfig
+import cockpit.experiment.experiment_registry
+import cockpit.interfaces.stage_mover
+import cockpit.util.user_config
 from cockpit import depot
-from cockpit.gui import guiUtils
+from cockpit.gui import gui_utils
 
 
 _logger = logging.getLogger(__name__)
@@ -154,29 +154,29 @@ class ExperimentConfigPanel(wx.Panel):
         self.experimentStringToModule = collections.OrderedDict()
         for (
             module
-        ) in cockpit.experiment.experimentRegistry.getExperimentModules():
+        ) in cockpit.experiment.experiment_registry.getExperimentModules():
             self.experimentStringToModule[module.EXPERIMENT_NAME] = module
 
         self.experimentType = wx.Choice(
             self, choices=list(self.experimentStringToModule.keys())
         )
         self.experimentType.SetSelection(0)
-        guiUtils.addLabeledInput(
+        gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Experiment type:",
             control=self.experimentType,
         )
 
-        self.numReps = guiUtils.addLabeledInput(
+        self.numReps = gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Number of reps:",
             defaultValue=self.settings["numReps"],
         )
-        self.numReps.SetValidator(guiUtils.INTVALIDATOR)
+        self.numReps.SetValidator(gui_utils.INTVALIDATOR)
 
-        self.repDuration = guiUtils.addLabeledInput(
+        self.repDuration = gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Rep duration (s):",
@@ -184,32 +184,32 @@ class ExperimentConfigPanel(wx.Panel):
             helperString="Amount of time that must pass between the start "
             + "of each rep. Use 0 if you don't want any wait time.",
         )
-        self.repDuration.SetValidator(guiUtils.FLOATVALIDATOR)
+        self.repDuration.SetValidator(gui_utils.FLOATVALIDATOR)
 
         self.zPositionMode = wx.Choice(self, choices=Z_POSITION_MODES)
         self.zPositionMode.SetSelection(0)
-        guiUtils.addLabeledInput(
+        gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Z position mode:",
             control=self.zPositionMode,
         )
 
-        self.stackHeight = guiUtils.addLabeledInput(
+        self.stackHeight = gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Stack height (\u03bcm):",
             defaultValue=self.settings["stackHeight"],
         )
-        self.stackHeight.SetValidator(guiUtils.FLOATVALIDATOR)
+        self.stackHeight.SetValidator(gui_utils.FLOATVALIDATOR)
 
-        self.sliceHeight = guiUtils.addLabeledInput(
+        self.sliceHeight = gui_utils.addLabeledInput(
             self,
             universalSizer,
             label="Slice height (\u03bcm):",
             defaultValue=self.settings["sliceHeight"],
         )
-        self.sliceHeight.SetValidator(guiUtils.FLOATVALIDATOR)
+        self.sliceHeight.SetValidator(gui_utils.FLOATVALIDATOR)
 
         self.sizer.Add(universalSizer, 0, wx.ALL, border=5)
 
@@ -264,7 +264,7 @@ class ExperimentConfigPanel(wx.Panel):
         )
 
         ## Ordered list of exposure times for simultaneous exposure mode.
-        self.lightExposureTimes, timeSizer = guiUtils.makeLightsControls(
+        self.lightExposureTimes, timeSizer = gui_utils.makeLightsControls(
             self.simultaneousExposurePanel,
             [str(l.name) for l in self.allLights],
             self.settings["simultaneousExposureTimes"],
@@ -324,7 +324,7 @@ class ExperimentConfigPanel(wx.Panel):
                 )
                 exposureTime.SetValue(defaultVal)
                 # allowEmpty=True lets validator know this control may be empty.
-                exposureTime.SetValidator(guiUtils.FLOATVALIDATOR)
+                exposureTime.SetValidator(gui_utils.FLOATVALIDATOR)
                 exposureTime.allowEmpty = True
                 sequenceSizer.Add(exposureTime, 0, wx.ALL, border=5)
                 times.append(exposureTime)
@@ -432,7 +432,7 @@ class ExperimentConfigPanel(wx.Panel):
         """Load values from config, and validate them -- since devices may get
         changed out from under us, rendering some config entries (e.g. dealing
         with light sources) invalid."""
-        result = cockpit.util.userConfig.getValue(
+        result = cockpit.util.user_config.getValue(
             self.configKey,
             default={
                 "numReps": "1",
@@ -447,7 +447,7 @@ class ExperimentConfigPanel(wx.Panel):
                 "ZPositionMode": 0,
             },
         )
-        # FIXME: cockpit.util.userConfig.getValue(...default={...})
+        # FIXME: cockpit.util.user_config.getValue(...default={...})
         #   does not work well with dicts because it will read the
         #   saved dict and not pick defaults for missing keys so we
         #   end up without a default value for those.  These are new
@@ -573,7 +573,7 @@ class ExperimentConfigPanel(wx.Panel):
             panel = self.experimentModuleToPanel[module]
             panel.saveSettings(settings["experimentSpecificValues"])
             del settings["experimentSpecificValues"]
-        cockpit.util.userConfig.setValue(self.configKey, settings)
+        cockpit.util.user_config.setValue(self.configKey, settings)
         # Reset the panel, destroying us and creating a new panel with
         # the proper values in all parameters, except for experiment type.
         panel = self.resetCallback()
@@ -611,7 +611,7 @@ class ExperimentConfigPanel(wx.Panel):
             lightTimePairs = [
                 (
                     light,
-                    guiUtils.tryParseNum(
+                    gui_utils.tryParseNum(
                         self.lightExposureTimes[i], decimal.Decimal
                     ),
                 )
@@ -621,7 +621,7 @@ class ExperimentConfigPanel(wx.Panel):
                     and self.lightExposureTimes[i].GetValue()
                 )
             ]
-            if not lightTimePairs and not guiUtils.getUserPermission(
+            if not lightTimePairs and not gui_utils.getUserPermission(
                 "No enabled light has a define exposure time. Are you sure you want to continue?"
             ):
                 return True
@@ -641,7 +641,7 @@ class ExperimentConfigPanel(wx.Panel):
                         settings.append(
                             (
                                 light,
-                                guiUtils.tryParseNum(
+                                gui_utils.tryParseNum(
                                     timeControl, decimal.Decimal
                                 ),
                             )
@@ -703,17 +703,17 @@ class ExperimentConfigPanel(wx.Panel):
                 for i in sorted(unsortedExposureSettings.keys())
             ]
 
-        altitude = cockpit.interfaces.stageMover.getPositionForAxis(2)
+        altitude = cockpit.interfaces.stage_mover.getPositionForAxis(2)
         # Default to "current is bottom"
         altBottom = altitude
-        zHeight = guiUtils.tryParseNum(self.stackHeight, float)
+        zHeight = gui_utils.tryParseNum(self.stackHeight, float)
         if self.zPositionMode.GetStringSelection() == "Current is center":
             altBottom = altitude - zHeight / 2
         elif self.zPositionMode.GetStringSelection() == "Use saved top/bottom":
-            altBottom = cockpit.interfaces.stageMover.mover.SavedBottom
-            zHeight = cockpit.interfaces.stageMover.mover.SavedTop - altBottom
+            altBottom = cockpit.interfaces.stage_mover.mover.SavedBottom
+            zHeight = cockpit.interfaces.stage_mover.mover.SavedTop - altBottom
 
-        sliceHeight = guiUtils.tryParseNum(self.sliceHeight, float)
+        sliceHeight = gui_utils.tryParseNum(self.sliceHeight, float)
         if zHeight == 0:
             # 2D mode.
             zHeight = 1e-6
@@ -728,8 +728,8 @@ class ExperimentConfigPanel(wx.Panel):
             return True
 
         params = {
-            "numReps": guiUtils.tryParseNum(self.numReps),
-            "repDuration": guiUtils.tryParseNum(self.repDuration, float),
+            "numReps": gui_utils.tryParseNum(self.numReps),
+            "repDuration": gui_utils.tryParseNum(self.repDuration, float),
             "zPositioner": mover,
             "altBottom": altBottom,
             "zHeight": zHeight,
@@ -770,7 +770,7 @@ class ExperimentConfigPanel(wx.Panel):
 
     def saveSettings(self):
         """Save the current experiment settings to config."""
-        cockpit.util.userConfig.setValue(
+        cockpit.util.user_config.setValue(
             self.configKey, self.getSettingsDict()
         )
 

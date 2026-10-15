@@ -50,7 +50,7 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-def wavelengthToColor(wavelength, saturation=1):
+def wavelength_to_color(wavelength, saturation=1):
     """Given a wavelength in nm, return an RGB color tuple."""
     wavelength = float(wavelength)
     if wavelength == 0.0:
@@ -63,11 +63,11 @@ def wavelengthToColor(wavelength, saturation=1):
     decay = max(0, max(400 - wavelength, wavelength - 650))
     # Don't let value decay too much.
     value = max(0.5, 1 - decay / 200.0)
-    r, g, b = hsvToRgb(hue, saturation, value)
+    r, g, b = hsv_to_rgb(hue, saturation, value)
     return tuple(int(val * 255) for val in (r, g, b))
 
 
-def hsvToRgb(hue, saturation, value):
+def hsv_to_rgb(hue, saturation, value):
     """Convert to RGB.
 
     Taken from Pyrel: https://bitbucket.org/derakon/pyrel/src/7c30ed65e11b5f483

@@ -22,7 +22,7 @@ import unittest
 
 import numpy
 
-import cockpit.experiment.structuredIllumination as sim
+import cockpit.experiment.structured_illumination as sim
 
 
 class PostpadTestCase(unittest.TestCase):

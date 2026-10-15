@@ -21,10 +21,10 @@
 import typing
 
 import cockpit.depot
-import cockpit.handlers.deviceHandler
+import cockpit.handlers.device
 
 
-class ObjectiveHandler(cockpit.handlers.deviceHandler.DeviceHandler):
+class ObjectiveHandler(cockpit.handlers.device.DeviceHandler):
     """Handler for a single objective.
 
     Args:

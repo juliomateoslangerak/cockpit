@@ -31,11 +31,11 @@ import wx
 import wx.propgrid
 
 import cockpit.util.threads
-import cockpit.util.userConfig
+import cockpit.util.user_config
 from cockpit import events
 from cockpit.events import DEVICE_STATUS
 from cockpit.gui import EVT_COCKPIT, EvtEmitter
-from cockpit.handlers.deviceHandler import STATES
+from cockpit.handlers.device import STATES
 
 
 ## @package cockpit.gui.device
@@ -409,7 +409,7 @@ class SettingsEditor(wx.Frame):
         for name, value in settings.items():
             if self.settings[name]["type"] == "enum":
                 settings[name] = self.settings[name]["values"][value]
-        cockpit.util.userConfig.setValue(
+        cockpit.util.user_config.setValue(
             self.handler.getIdentifier() + "_SETTINGS", settings
         )
 

@@ -27,10 +27,10 @@ import microscope.simulators
 import microscope.testsuite.devices
 import Pyro4
 
-import cockpit.devices.executorDevices
-import cockpit.devices.microscopeCamera
-import cockpit.devices.microscopeDevice
-from cockpit.handlers.stagePositioner import PositionerHandler
+import cockpit.devices.executor_devices
+import cockpit.devices.microscope_camera
+import cockpit.devices.microscope_device
+from cockpit.handlers.stage_positioner import PositionerHandler
 
 
 class _MicroscopeTestDevice:
@@ -65,7 +65,7 @@ class _MicroscopeTestDevice:
 
 
 class DummyCamera(
-    _MicroscopeTestDevice, cockpit.devices.microscopeCamera.MicroscopeCamera
+    _MicroscopeTestDevice, cockpit.devices.microscope_camera.MicroscopeCamera
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -74,7 +74,7 @@ class DummyCamera(
 
 
 class DummyDSP(
-    _MicroscopeTestDevice, cockpit.devices.executorDevices.ExecutorDevice
+    _MicroscopeTestDevice, cockpit.devices.executor_devices.ExecutorDevice
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -83,7 +83,7 @@ class DummyDSP(
 
 
 class DummyLaser(
-    _MicroscopeTestDevice, cockpit.devices.microscopeDevice.MicroscopeLaser
+    _MicroscopeTestDevice, cockpit.devices.microscope_device.MicroscopeLaser
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -92,7 +92,7 @@ class DummyLaser(
 
 
 class DummyStage(
-    _MicroscopeTestDevice, cockpit.devices.microscopeDevice.MicroscopeStage
+    _MicroscopeTestDevice, cockpit.devices.microscope_device.MicroscopeStage
 ):
     """Dummy stages.
 

@@ -119,9 +119,9 @@ class ViewPanel(wx.Panel):
         """
         if event.LeftDClick():
             if self.imagePos is None:
-                self.imagePos = cockpit.interfaces.stage_mover.getPosition()
+                self.imagePos = cockpit.interfaces.stage_mover.get_position()
             x, y = event.GetPosition() * self.GetContentScaleFactor()
-            pixelSize = wx.GetApp().Objectives.GetPixelSize()
+            pixelSize = wx.GetApp().Objectives.get_pixel_size()
             x0, y0 = self.canvas.glToIndices(0, 0)
             dy, dx = self.canvas.canvasToIndices(x, y)
             dx -= x0
@@ -129,7 +129,7 @@ class ViewPanel(wx.Panel):
             dx *= pixelSize
             dy *= pixelSize
             target = (self.imagePos[0] - dx, self.imagePos[1] - dy)
-            cockpit.interfaces.stage_mover.goToXY(target)
+            cockpit.interfaces.stage_mover.go_to_xy(target)
         else:
             event.Skip()
 
@@ -153,15 +153,15 @@ class ViewPanel(wx.Panel):
         else:
             # Get all inactive cameras.
             cameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
-            cameras.sort(key=lambda c: c.descriptiveName)
+            cameras.sort(key=lambda c: c.descriptive_name)
             for camera in cameras:
-                if not camera.getIsEnabled():
+                if not camera.get_is_enabled():
                     item = menu.Append(
-                        -1, "Enable %s" % camera.descriptiveName
+                        -1, "Enable %s" % camera.descriptive_name
                     )
                     self.Bind(
                         wx.EVT_MENU,
-                        lambda event, cam=camera: cam.toggleState(),
+                        lambda event, cam=camera: cam.toggle_state(),
                         item,
                     )
         cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
@@ -185,7 +185,7 @@ class ViewPanel(wx.Panel):
 
     def enable(self, camera):
         """Activate the view and connect to a data source."""
-        self.selector.SetLabel(camera.descriptiveName)
+        self.selector.SetLabel(camera.descriptive_name)
         self.selector.SetBackgroundColour(camera.color)
         self.selector.Refresh()
         self.curCamera = camera
@@ -217,10 +217,10 @@ class ViewPanel(wx.Panel):
         self.selector.SetSize(wx.Size(size[0], 30))
         self.selector.SetMinSize(wx.Size(size[0], 30))
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def onFilterChange(self):
         """React to the drawer changing, by updating our labels and colors."""
-        if self.getIsEnabled():
+        if self.get_is_enabled():
             self.selector.SetLabel(self.curCamera.descriptiveName)
             self.selector.SetBackgroundColour(self.curCamera.color)
             self.Refresh()
@@ -232,7 +232,7 @@ class ViewPanel(wx.Panel):
             self.metadata = metadata
             self.imagePos = self.metadata["imagePos"]
 
-    def getIsEnabled(self):
+    def get_is_enabled(self):
         """Return True if we currently display a camera."""
         return self.curCamera is not None
 

@@ -27,7 +27,7 @@ import pprint
 _logger = logging.getLogger(__name__)
 
 
-## @package userConfig
+## @package user_config
 # This module handles loading and saving changes to user configuration, which
 # is used to remember individual users' settings (and a few global settings)
 # for dialogs and the like.
@@ -37,7 +37,7 @@ _config = {}
 _config_path = ""
 
 
-def _loadConfig(fpath):
+def _load_config(fpath):
     """Open the config file and unserialize its contents."""
     config = {}
     try:
@@ -52,7 +52,7 @@ def _loadConfig(fpath):
     return config
 
 
-def _writeConfig(config, fpath):
+def _write_config(config, fpath):
     """Serialize the current config state for the specified user to the
     appropriate config file."""
     ## Use pprint instead of pickle to write the config files so that
@@ -69,15 +69,15 @@ def _writeConfig(config, fpath):
         fh.write(printer.pformat(config))
 
 
-def clearAllValues() -> None:
+def clear_all_values() -> None:
     """Discard all previous configuration and writes that to file."""
     global _config
     global _config_path
     _config = {}
-    _writeConfig(_config, _config_path)
+    _write_config(_config, _config_path)
 
 
-def getValue(key, default=None):
+def get_value(key, default=None):
     """Retrieve the config value referenced by key.
 
     If key is not found, default is inserted and returned. If the value changed
@@ -90,20 +90,20 @@ def getValue(key, default=None):
         result = _config[key]
     except KeyError:
         _config[key] = default
-        _writeConfig(_config, _config_path)
+        _write_config(_config, _config_path)
         result = default
     return result
 
 
-def setValue(key, value):
+def set_value(key, value):
     """Set the entry referenced by key to the given value.
 
-    Users are set as in getValue.
+    Users are set as in get_value.
     """
     global _config
     global _config_path
     _config[key] = value
-    _writeConfig(_config, _config_path)
+    _write_config(_config, _config_path)
 
 
 def initialize(cockpit_config):
@@ -112,4 +112,4 @@ def initialize(cockpit_config):
     _config_path = os.path.join(
         cockpit_config["global"].get("config-dir"), "config.py"
     )
-    _config = _loadConfig(_config_path)
+    _config = _load_config(_config_path)

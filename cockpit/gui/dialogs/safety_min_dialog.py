@@ -67,7 +67,7 @@ DISH_SAFETY = 5725
 
 
 class SafetyMinDialog(wx.Dialog):
-    """This class provides a simple wrapper around the interfaces.stageMover's
+    """This class provides a simple wrapper around the interfaces.stage_mover's
     safety functionality.
 
     Note that unlike most dialogs, this one does not save the user's settings;
@@ -104,7 +104,7 @@ class SafetyMinDialog(wx.Dialog):
             sizer=self.mainSizer,
             label="Stage Z minimum (µm):",
             defaultValue=str(
-                cockpit.interfaces.stage_mover.getSoftLimits()[2][0]
+                cockpit.interfaces.stage_mover.get_soft_limits()[2][0]
             ),
             size=(70, -1),
             minSize=(150, -1),
@@ -160,7 +160,7 @@ class SafetyMinDialog(wx.Dialog):
         """Save the user's selected Z min to the user config, and then set the
         new min."""
         self.Hide()
-        cockpit.interfaces.stage_mover.setSoftMin(
+        cockpit.interfaces.stage_mover.set_soft_min(
             2, float(self.minStageZ.GetValue())
         )
 

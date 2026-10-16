@@ -191,8 +191,8 @@ class CockpitApp(wx.App):
             self._stage = cockpit.interfaces.stage_mover.mover
             self._channels = cockpit.interfaces.channels.Channels()
             for fpath in self.Config["global"].getpaths("channel-files", []):
-                new_channels = cockpit.interfaces.channels.LoadFromFile(fpath)
-                self._channels.Update(new_channels)
+                new_channels = cockpit.interfaces.channels.load_from_file(fpath)
+                self._channels.update(new_channels)
 
             status.Update(updateNum, "Initializing user interface...")
             updateNum += 1
@@ -236,7 +236,7 @@ class CockpitApp(wx.App):
                 #   3. if none of the above is set, hide
                 default_show = getattr(window, "SHOW_DEFAULT", False)
                 config_name = "Show Window " + window.GetTitle()
-                to_show = cockpit.util.user_config.getValue(
+                to_show = cockpit.util.user_config.get_value(
                     config_name, default=default_show
                 )
                 window.Show(to_show)
@@ -245,8 +245,8 @@ class CockpitApp(wx.App):
             # Sometimes, status doesn't make it into the list, so test.
             status.Destroy()
 
-            self.Depot.makeInitialPublications()
-            cockpit.interfaces.stage_mover.makeInitialPublications()
+            self.Depot.make_initial_publications()
+            cockpit.interfaces.stage_mover.make_initial_publications()
 
             cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
             self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
@@ -299,7 +299,7 @@ class CockpitApp(wx.App):
             _logger.error(traceback.format_exc())
         for dev in self.Depot.getAllDevices():
             try:
-                dev.onExit()
+                dev.on_exit()
             except:
                 _logger.error("Error on device '%s' during exit", dev.name)
                 _logger.error(traceback.format_exc())
@@ -313,7 +313,7 @@ class CockpitApp(wx.App):
         This should probably be a private method, or at least a method
         that would take the positions dict as argument.
         """
-        positions = cockpit.util.user_config.getValue(
+        positions = cockpit.util.user_config.get_value(
             "WindowPositions", default={}
         )
         for window in wx.GetTopLevelWindows():
@@ -342,7 +342,7 @@ class CockpitApp(wx.App):
         if camera_window_title is not None:
             positions["Camera views"] = positions.pop(camera_window_title)
 
-        cockpit.util.user_config.setValue("WindowPositions", positions)
+        cockpit.util.user_config.set_value("WindowPositions", positions)
 
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():
@@ -352,7 +352,7 @@ class CockpitApp(wx.App):
             if title.startswith("Camera views "):
                 title = "Camera views"
             config_name = "Show Window " + title
-            cockpit.util.user_config.setValue(config_name, window.IsShown())
+            cockpit.util.user_config.set_value(config_name, window.IsShown())
 
 
 def show_exception_app() -> None:

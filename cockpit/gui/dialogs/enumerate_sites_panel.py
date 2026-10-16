@@ -66,7 +66,7 @@ _logger = logging.getLogger(__name__)
 
 class EnumerateSitesPanel(wx.Panel):
     """This class provides a standard way to list out sites -- saved positions
-    in interfaces.stageMover, which each have a corresponding number when
+    in interfaces.stage_mover, which each have a corresponding number when
     displayed in the mosaic.
 
     For example, the string "1,2,4-6,8-10" corresponds to the list of sites
@@ -107,11 +107,11 @@ class EnumerateSitesPanel(wx.Panel):
 
         site_list_str = "Most recent site"
         if default_is_all_sites:
-            sites = cockpit.interfaces.stage_mover.getAllSites()
+            sites = cockpit.interfaces.stage_mover.get_all_sites()
             if not sites:
                 site_list_str = "You must select points first"
             else:
-                site_list_str = "1-%d" % sites[-1].uniqueID
+                site_list_str = "1-%d" % sites[-1].unique_id
         self.sites.SetValue(site_list_str)
 
         self.SetSizerAndFit(sizer)
@@ -138,11 +138,11 @@ class EnumerateSitesPanel(wx.Panel):
                     new_indices = [
                         i
                         for i in range(int(first), int(last) + 1)
-                        if cockpit.interfaces.stage_mover.doesSiteExist(i)
+                        if cockpit.interfaces.stage_mover.does_site_exist(i)
                     ]
                     base_indices.extend(new_indices)
                     base_frequencies.extend([frequency] * len(new_indices))
-                elif cockpit.interfaces.stage_mover.doesSiteExist(int(token)):
+                elif cockpit.interfaces.stage_mover.does_site_exist(int(token)):
                     base_indices.append(int(token))
                     base_frequencies.append(frequency)
 

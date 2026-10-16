@@ -85,7 +85,7 @@ class Device:
                 self.config[k] = t(self.config[k])
         ip = config.get("ipaddress", False)
         if ip:
-            self.ipAddress = ip
+            self.ip_address = ip
         port = config.get("port", False)
         if port:
             self.port = port
@@ -97,7 +97,7 @@ class Device:
         """Perform any necessary initialization (e.g. connecting to hardware)."""
         pass
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Generate a list of DeviceHandlers representing the various
         capabilities we are responsible for. Each DeviceHandler represents an
         abstract bit of hardware -- for example, a generic camera, or a stage
@@ -106,7 +106,7 @@ class Device:
         """
         return []
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """Construct any special UI the Device needs.
 
         Most Devices will not need to do anything here, but if you have
@@ -124,11 +124,11 @@ class Device:
         """
         return None
 
-    def performSubscriptions(self):
+    def perform_subscriptions(self):
         """Subscribe to any events we care about."""
         pass
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """Publish any needed information.
 
         This is called after all UI widgets have been generated, so they are
@@ -136,10 +136,10 @@ class Device:
         """
         pass
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         """Do any final actions needed, now that all of the devices are set up
         and all initial publications and subscriptions have been made."""
         pass
 
-    def onExit(self) -> None:
+    def on_exit(self) -> None:
         pass

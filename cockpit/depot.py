@@ -171,7 +171,7 @@ class DeviceDepot:
                 devices.append(d)
                 continue
             yield d.name
-            self.initDevice(d)
+            self.init_device(d)
             done.append(d.name)
 
         # Add dummy devices as required.
@@ -243,13 +243,13 @@ class DeviceDepot:
         # Initialise dummies.
         for d in dummies:
             self.nameToDevice[d.name] = d
-            self.initDevice(d)
+            self.init_device(d)
 
-        self.finalizeInitialization()
+        self.finalize_initialization()
         yield "dummy-devices"
 
     def addHandler(self, handler, device=None):
-        self.deviceTypeToHandlers[handler.deviceType].append(handler)
+        self.deviceTypeToHandlers[handler.device_type].append(handler)
         if handler.name in self.nameToHandler:
             # We enforce unique names, but multiple devices may reference
             # the same handler, e.g. where a device A is triggered by signals
@@ -264,14 +264,14 @@ class DeviceDepot:
                 )
         self.nameToHandler[handler.name] = handler
         self.handlerToDevice[handler] = device
-        self.groupNameToHandlers[handler.groupName].append(handler)
+        self.groupNameToHandlers[handler.group_name].append(handler)
 
-    def initDevice(self, device):
+    def init_device(self, device):
         """Initialize a Device."""
         device.initialize()
-        device.performSubscriptions()
+        device.perform_subscriptions()
 
-        handlers = device.getHandlers()
+        handlers = device.get_handlers()
         if not handlers:
             # device is not used
             return
@@ -280,22 +280,22 @@ class DeviceDepot:
         for handler in handlers:
             self.addHandler(handler, device)
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """Let each device publish any initial events it needs. It's assumed
         this is called after all the handlers have set up their UIs, so that
         they can be adjusted to match the current configuration.
         """
         for device in self.nameToDevice.values():
-            device.makeInitialPublications()
+            device.make_initial_publications()
         for handler in self.handlersList:
-            handler.makeInitialPublications()
+            handler.make_initial_publications()
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         """Do any extra initialization needed now that everything is properly set up."""
         futures = []
         with ThreadPoolExecutor(max_workers=4) as pool:
             for device in self.nameToDevice.values():
-                futures.append(pool.submit(device.finalizeInitialization))
+                futures.append(pool.submit(device.finalize_initialization))
         for future in futures:
             if future.exception():
                 raise future.exception()
@@ -304,7 +304,7 @@ class DeviceDepot:
         futures = []
         with ThreadPoolExecutor(max_workers=4) as pool:
             for handler in self.handlersList:
-                futures.append(pool.submit(handler.finalizeInitialization))
+                futures.append(pool.submit(handler.finalize_initialization))
         for future in futures:
             if future.exception():
                 raise future.exception()
@@ -353,7 +353,7 @@ class DeviceDepot:
         cameras = self.getHandlersOfType(CAMERA)
         result = []
         for camera in cameras:
-            if camera.getIsEnabled():
+            if camera.get_is_enabled():
                 result.append(camera)
         return result
 
@@ -364,7 +364,7 @@ class DeviceDepot:
     def getHandler(self, nameOrDevice, handlerType):
         """Get the handlers of a specific type for a device."""
         if isinstance(nameOrDevice, DeviceHandler):
-            if nameOrDevice.deviceType == handlerType:
+            if nameOrDevice.device_type == handlerType:
                 return nameOrDevice
         if isinstance(nameOrDevice, str):
             dev = self.getDeviceWithName(nameOrDevice)

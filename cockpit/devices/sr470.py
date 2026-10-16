@@ -53,14 +53,14 @@ class StanfordShutter(shutter.ShutterDevice):
     def initialize(self):
         """Open telnet connection and enable response to triggers."""
         self.connection = telnetlib.Telnet(
-            self.ipAddress, self.port, timeout=5
+            self.ip_address, self.port, timeout=5
         )
         self.connection.read_until(("SR470 Telnet Session:").encode())
         # Read out any trailing whitespace, e.g. newlines.
         self.connection.read_eager()
-        self.enableTrigger()
+        self.enable_trigger()
 
-    def enableTrigger(self, enab=True):
+    def enable_trigger(self, enable=True):
         # The SR470 has a 'normal' shutter state: open or closed. With external
         # level triggering, the shutter is in the 'normal' state when the
         # external input is high. If we set the shutter to 'normally closed', a
@@ -73,12 +73,12 @@ class StanfordShutter(shutter.ShutterDevice):
         # long as the external input is high.
         self.send("SRCE 2")
         # Enable the shutter - wake from 'sleep' mode.
-        if enab:
+        if enable:
             self.send("ENAB 1")
         else:
             self.send("ENAB 0")
 
-    def onExit(self):
+    def on_exit(self):
         try:
             # Reset the controller to close the shutter and revert to internal
             # triggering.
@@ -89,15 +89,15 @@ class StanfordShutter(shutter.ShutterDevice):
         except:
             pass
 
-    def onPrepareForExperiment(self, experiment):
-        self.enableTrigger()
+    def on_prepare_for_experiment(self, experiment):
+        self.enable_trigger()
 
-    def onCleanupAfterExperiment(self):
+    def on_cleanup_after_experiment(self):
         # Assert shutter closed (also reverts to internal triggering).
         self.send("ASRT 0")
-        self.enableTrigger()
+        self.enable_trigger()
 
-    def setExposureTime(self, t):
+    def set_exposure_time(self, t):
         # Could set exposure on controller, but currently rely on bulb trigger
         # from a trigger source.
         pass

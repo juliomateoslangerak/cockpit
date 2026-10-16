@@ -335,7 +335,7 @@ class ExperimentConfigPanel(wx.Panel):
         # Panel for when we expose channels.
         self.channelExposurePanel = wx.Panel(self, name="channel sequence")
         channelSizer = wx.FlexGridSizer(
-            rows=len(self.channels.Names), cols=3, vgap=5, hgap=10
+            rows=len(self.channels.names), cols=3, vgap=5, hgap=10
         )
         channelSizer.AddGrowableCol(1)
 
@@ -344,7 +344,7 @@ class ExperimentConfigPanel(wx.Panel):
         self.channelsOrder = {}
         self.channelsOrderPossible = []
 
-        for channel in self.channels.Names:
+        for channel in self.channels.names:
             # Checkboxes to activate channels
             channelCheckBox = wx.CheckBox(self.channelExposurePanel, label="")
             self.channelsChecked[channel] = channelCheckBox
@@ -374,7 +374,7 @@ class ExperimentConfigPanel(wx.Panel):
 
         # Toggle which panel is displayed based on the radio box.
         self.exposureMode.Bind(wx.EVT_RADIOBOX, self.onExposureMode)
-        self.exposureMode.SetSelection(self.settings["exposureMode"])
+        self.exposureMode.SetSelection(self.settings["exposure_mode"])
         self.onExposureMode()
 
         self.sizer.Add(exposureSizer)
@@ -432,7 +432,7 @@ class ExperimentConfigPanel(wx.Panel):
         """Load values from config, and validate them -- since devices may get
         changed out from under us, rendering some config entries (e.g. dealing
         with light sources) invalid."""
-        result = cockpit.util.user_config.getValue(
+        result = cockpit.util.user_config.get_value(
             self.configKey,
             default={
                 "numReps": "1",
@@ -440,14 +440,14 @@ class ExperimentConfigPanel(wx.Panel):
                 "sequencedExposureSettings": [
                     ["" for l in self.allLights] for c in self.allCameras
                 ],
-                "exposureMode": 0,
+                "exposure_mode": 0,
                 "simultaneousExposureTimes": ["" for l in self.allLights],
                 "sliceHeight": ".15",
                 "stackHeight": "4",
                 "ZPositionMode": 0,
             },
         )
-        # FIXME: cockpit.util.user_config.getValue(...default={...})
+        # FIXME: cockpit.util.user_config.get_value(...default={...})
         #   does not work well with dicts because it will read the
         #   saved dict and not pick defaults for missing keys so we
         #   end up without a default value for those.  These are new
@@ -508,8 +508,8 @@ class ExperimentConfigPanel(wx.Panel):
         for i, light in enumerate(self.allLights):
             # Only have an exposure time if the light is enabled.
             val = ""
-            if light.getIsEnabled():
-                val = str(light.getExposureTime())
+            if light.get_is_enabled():
+                val = str(light.get_exposure_time())
             self.lightExposureTimes[i].SetValue(val)
 
     def onSaveExperiment(self, event=None):
@@ -573,7 +573,7 @@ class ExperimentConfigPanel(wx.Panel):
             panel = self.experimentModuleToPanel[module]
             panel.saveSettings(settings["experimentSpecificValues"])
             del settings["experimentSpecificValues"]
-        cockpit.util.user_config.setValue(self.configKey, settings)
+        cockpit.util.user_config.set_value(self.configKey, settings)
         # Reset the panel, destroying us and creating a new panel with
         # the proper values in all parameters, except for experiment type.
         panel = self.resetCallback()
@@ -592,7 +592,7 @@ class ExperimentConfigPanel(wx.Panel):
         # many times.
         cameras = list(
             filter(
-                lambda c: c.getIsEnabled(),
+                lambda c: c.get_is_enabled(),
                 wx.GetApp().Depot.getHandlersOfType(depot.CAMERA),
             )
         )
@@ -617,7 +617,7 @@ class ExperimentConfigPanel(wx.Panel):
                 )
                 for i, light in enumerate(self.allLights)
                 if (
-                    self.allLights[i].getIsEnabled()
+                    self.allLights[i].get_is_enabled()
                     and self.lightExposureTimes[i].GetValue()
                 )
             ]
@@ -634,7 +634,7 @@ class ExperimentConfigPanel(wx.Panel):
                 cameraSettings = self.cameraToExposureTimes[camera]
                 settings = []
                 for i, light in enumerate(self.allLights):
-                    if not light.getIsEnabled():
+                    if not light.get_is_enabled():
                         continue
                     timeControl = cameraSettings[i]
                     if timeControl.GetValue():
@@ -659,7 +659,7 @@ class ExperimentConfigPanel(wx.Panel):
                 return True
             unsortedExposureSettings = {}
             for channel, checkbox, order in zip(
-                self.channels.Names,
+                self.channels.names,
                 self.channelsChecked.values(),
                 self.channelsOrder.values(),
             ):
@@ -672,7 +672,7 @@ class ExperimentConfigPanel(wx.Panel):
                             style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK,
                         ).ShowModal()
                         return True
-                    channelSettings = self.channels.Get(channel)
+                    channelSettings = self.channels.get(channel)
                     cameras = []
                     cameras.extend(
                         cam_handler
@@ -691,7 +691,7 @@ class ExperimentConfigPanel(wx.Panel):
                             ),
                         )
                         for light_handler in self.allLights
-                        if channelSettings[light_handler.name]["isEnabled"]
+                        if channelSettings[light_handler.name]["is_enabled"]
                     ]
                     unsortedExposureSettings[order.GetSelection()] = (
                         cameras,
@@ -703,15 +703,15 @@ class ExperimentConfigPanel(wx.Panel):
                 for i in sorted(unsortedExposureSettings.keys())
             ]
 
-        altitude = cockpit.interfaces.stage_mover.getPositionForAxis(2)
+        altitude = cockpit.interfaces.stage_mover.get_position_for_axis(2)
         # Default to "current is bottom"
         altBottom = altitude
         zHeight = gui_utils.tryParseNum(self.stackHeight, float)
         if self.zPositionMode.GetStringSelection() == "Current is center":
             altBottom = altitude - zHeight / 2
         elif self.zPositionMode.GetStringSelection() == "Use saved top/bottom":
-            altBottom = cockpit.interfaces.stage_mover.mover.SavedBottom
-            zHeight = cockpit.interfaces.stage_mover.mover.SavedTop - altBottom
+            altBottom = cockpit.interfaces.stage_mover.mover.saved_bottom
+            zHeight = cockpit.interfaces.stage_mover.mover.saved_top - altBottom
 
         sliceHeight = gui_utils.tryParseNum(self.sliceHeight, float)
         if zHeight == 0:
@@ -760,7 +760,7 @@ class ExperimentConfigPanel(wx.Panel):
             "numReps": self.numReps.GetValue(),
             "repDuration": self.repDuration.GetValue(),
             "sequencedExposureSettings": sequencedExposureSettings,
-            "exposureMode": self.exposureMode.GetSelection(),
+            "exposure_mode": self.exposureMode.GetSelection(),
             "simultaneousExposureTimes": simultaneousTimes,
             "sliceHeight": self.sliceHeight.GetValue(),
             "stackHeight": self.stackHeight.GetValue(),
@@ -770,7 +770,7 @@ class ExperimentConfigPanel(wx.Panel):
 
     def saveSettings(self):
         """Save the current experiment settings to config."""
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             self.configKey, self.getSettingsDict()
         )
 

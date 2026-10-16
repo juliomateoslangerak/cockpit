@@ -55,7 +55,7 @@ import wx
 import wx.lib.newevent
 
 
-## @package cockpit.gui.guiUtils
+## @package cockpit.gui.gui_utils
 # This module contains many functions related to the GUI, mostly for setting
 # up UI elements and updating various status displays.
 

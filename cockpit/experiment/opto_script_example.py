@@ -265,7 +265,7 @@ class ExperimentUI(wx.Panel):
 
     def loadSettings(self):
         """Load the saved experiment settings, if any."""
-        return cockpit.util.user_config.getValue(
+        return cockpit.util.user_config.get_value(
             self.configKey + "optoExampleSettings",
             default={
                 "lightToSequence": {},
@@ -281,7 +281,7 @@ class ExperimentUI(wx.Panel):
         """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             self.configKey + "optoExampleSettings", settings
         )
 

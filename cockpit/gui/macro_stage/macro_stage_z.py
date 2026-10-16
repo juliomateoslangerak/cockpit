@@ -160,7 +160,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
         # our histograms.
         self.prevZSafety = None
 
-        minZ, maxZ = cockpit.interfaces.stage_mover.getHardLimitsForAxis(2)
+        minZ, maxZ = cockpit.interfaces.stage_mover.get_hard_limits_for_axis(2)
         ## Total size of the stage's range of motion.
         self.stageExtent = maxZ - minZ
         ## Vertical size of the canvas in microns -- slightly larger than the
@@ -181,7 +181,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
         # something on the Z scale.
         self.horizLineLength = self.stageExtent * 0.1
 
-        self.stepSize = cockpit.interfaces.stage_mover.getCurStepSizes()[2]
+        self.stepSize = cockpit.interfaces.stage_mover.get_cur_step_sizes()[2]
 
         ## List of altitudes at which experiments have occurred
         self.experimentAltitudes = []
@@ -212,7 +212,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
         """Calculate the histogram buckets and min/max settings based on
         self.experimentAltitudes."""
         self.experimentAltitudes = list(
-            cockpit.util.user_config.getValue("experimentAltitudes", default=[])
+            cockpit.util.user_config.get_value("experimentAltitudes", default=[])
         )
         ## Set of buckets, by altitude, of the experiments
         self.altitudeBuckets = [
@@ -241,10 +241,10 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
         histogram."""
         # Update histogram data
         self.experimentAltitudes = list(
-            cockpit.util.user_config.getValue("experimentAltitudes", default=[])
+            cockpit.util.user_config.get_value("experimentAltitudes", default=[])
         )
         self.experimentAltitudes.append(float(self.curStagePosition[2]))
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             "experimentAltitudes", self.experimentAltitudes
         )
         self.calculateHistogram()
@@ -267,11 +267,11 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
 
     def makeBigHistogram(self, altitude):
         """Generate the larger of the two histograms."""
-        minorLimits = cockpit.interfaces.stage_mover.getIndividualSoftLimits(2)
+        minorLimits = cockpit.interfaces.stage_mover.get_individual_soft_limits(2)
         # Add the max range of motion of the first fine-motion controller.
         # And subtract the lower limit if minor controller exists.
         if len(minorLimits) > 1:
-            minorPos = cockpit.interfaces.stage_mover.getAllPositions()[1][2]
+            minorPos = cockpit.interfaces.stage_mover.get_all_positions()[1][2]
             histogramMin = (
                 altitude
                 - (minorPos - minorLimits[1][0])
@@ -318,7 +318,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             return
         super().onMotion(axis, position)
         # Ensure there's a histogram to work with based around current pos.
-        self.makeBigHistogram(cockpit.interfaces.stage_mover.getPosition()[2])
+        self.makeBigHistogram(cockpit.interfaces.stage_mover.get_position()[2])
         if self.shouldDraw:
             try:
                 motorPos = self.curStagePosition[2]
@@ -383,14 +383,14 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
             motorPos = self.curStagePosition[2]
-            majorPos = cockpit.interfaces.stage_mover.getAllPositions()[0][2]
+            majorPos = cockpit.interfaces.stage_mover.get_all_positions()[0][2]
             minorLimits = (
-                cockpit.interfaces.stage_mover.getIndividualSoftLimits(2)
+                cockpit.interfaces.stage_mover.get_individual_soft_limits(2)
             )
             # Add the max range of motion of the first fine-motion controller.
             # And subtract the lower limit
             if len(minorLimits) > 1:
-                minorPos = cockpit.interfaces.stage_mover.getAllPositions()[1][
+                minorPos = cockpit.interfaces.stage_mover.get_all_positions()[1][
                     2
                 ]
                 zMax = majorPos + minorLimits[1][1]
@@ -410,7 +410,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             glColor3f(0, 0, 0)
             glLineWidth(1)
             glBegin(GL_LINES)
-            minY, maxY = cockpit.interfaces.stage_mover.getHardLimitsForAxis(2)
+            minY, maxY = cockpit.interfaces.stage_mover.get_hard_limits_for_axis(2)
             scaleX = self.zHorizOffset
             self.scaledVertex(scaleX, minY)
             self.scaledVertex(scaleX, maxY)
@@ -445,8 +445,8 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
 
             # Draw top and bottom positions of stack in blue.
             self.stackdef = [
-                cockpit.interfaces.stage_mover.mover.SavedTop,
-                cockpit.interfaces.stage_mover.mover.SavedBottom,
+                cockpit.interfaces.stage_mover.mover.saved_top,
+                cockpit.interfaces.stage_mover.mover.saved_bottom,
             ]
             for pos in self.stackdef:
                 if pos is not None:
@@ -515,7 +515,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
     def drawHistograms(self):
         """Draw all our histograms."""
         prevHistogram = self.dummyHistogram
-        minY, maxY = cockpit.interfaces.stage_mover.getHardLimitsForAxis(2)
+        minY, maxY = cockpit.interfaces.stage_mover.get_hard_limits_for_axis(2)
         width, height = self.GetClientSize()
         for histogram in self.histograms:
             glColor3f(0, 0, 0)
@@ -685,15 +685,15 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             scale = (self.minY, self.maxY)
             # if we are on the first hist then use the coarsest mover if not
             # then use the currently selected one.
-            originalMover = cockpit.interfaces.stage_mover.mover.curHandlerIndex
-            cockpit.interfaces.stage_mover.mover.curHandlerIndex = 0
+            originalMover = cockpit.interfaces.stage_mover.mover.cur_handler_index
+            cockpit.interfaces.stage_mover.mover.cur_handler_index = 0
 
             for histogram in self.histograms:
                 if canvasLoc[0] < histogram.xOffset + self.horizLineLength:
                     scale = (histogram.minAltitude, histogram.maxAltitude)
                     # not first hist so revert to current mover whatever that
                     # might be
-                    cockpit.interfaces.stage_mover.mover.curHandlerIndex = (
+                    cockpit.interfaces.stage_mover.mover.cur_handler_index = (
                         originalMover
                     )
                     break  # fall through as we have found which
@@ -702,12 +702,12 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             width, height = self.GetClientSize()
             weight = 1.0 - float(clickLoc[1]) / height
             altitude = (scale[1] - scale[0]) * weight + scale[0]
-            zHardMax = cockpit.interfaces.stage_mover.getIndividualHardLimits(
+            zHardMax = cockpit.interfaces.stage_mover.get_individual_hard_limits(
                 2
             )[0][1]
-            cockpit.interfaces.stage_mover.goToZ(min(zHardMax, altitude))
+            cockpit.interfaces.stage_mover.go_to_z(min(zHardMax, altitude))
             # make sure we are back to the expected mover
-            cockpit.interfaces.stage_mover.mover.curHandlerIndex = originalMover
+            cockpit.interfaces.stage_mover.mover.cur_handler_index = originalMover
 
     def mapClickToCanvas(self, loc):
         """Remap an XY tuple to stage coordinates."""

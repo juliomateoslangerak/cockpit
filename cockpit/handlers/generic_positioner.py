@@ -60,7 +60,7 @@ class GenericPositionerHandler(device.DeviceHandler):
     r"""This handler is for generic positioning devices.
 
     It moves along a single axis, and is not used for stage/sample
-    positioning. Use the StagePositionerHandler for positioners that move
+    positioning. Use the cockpit.handlers.stage_positioner.PositionerHandler for positioners that move
     the sample around.
 
     Callbacks should fill in the following functions:
@@ -81,11 +81,11 @@ class GenericPositionerHandler(device.DeviceHandler):
     reset_cache = device.DeviceHandler.reset_cache
     cached = device.DeviceHandler.cached
 
-    def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
+    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
         super().__init__(
             name,
-            groupName,
-            isEligibleForExperiments,
+            group_name,
+            is_eligible_for_experiments,
             callbacks,
             depot.GENERIC_POSITIONER,
         )

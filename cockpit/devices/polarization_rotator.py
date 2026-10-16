@@ -37,7 +37,7 @@ class PolarizationDevice(device.Device):
     .. code:: ini
 
         [SI polarizer]
-        type: cockpit.devices.polarizationRotator.PolarizationDevice
+        type: cockpit.devices.polarization_rotator.PolarizationDevice
         analogSource: NAME_OF_EXECUTOR_DEVICE
         analogLine: 1
         siVoltages: 488: 0.915, 1.05, 1.23
@@ -68,15 +68,15 @@ class PolarizationDevice(device.Device):
     def __init__(self, name, config={}):
         super().__init__(name, config)
 
-    def getHandlers(self):
-        aSource = self.config.get("analogsource", None)
-        aLine = self.config.get("analogline", None)
-        aHandler = depot.getHandler(aSource, depot.EXECUTOR)
-        if aHandler is None:
+    def get_handlers(self):
+        a_source = self.config.get("analogsource", None)
+        a_line = self.config.get("analogline", None)
+        a_handler = depot.getHandler(a_source, depot.EXECUTOR)
+        if a_handler is None:
             raise Exception("No control source.")
         gain = self.config.get("gain", 1)
         offset = self.config.get("offset", 0)
-        h = aHandler.registerAnalog(self, aLine, offset, gain)
+        h = a_handler.registerAnalog(self, a_line, offset, gain)
 
         # If there are indexed positions in the config, add them to the handler.
         idlevoltage = self.config.get("idlevoltage", 0)

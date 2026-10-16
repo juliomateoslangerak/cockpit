@@ -212,10 +212,10 @@ class CSVPlotter(wx.Frame):
         self.empty_root_nodes = []
         self._watch_timer = wx.Timer(self)
 
-        self._makeUI()
+        self._make_ui()
         self.Bind(wx.EVT_TIMER, self.update_data, self._watch_timer)
         self._watch_timer.Start(1000)
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
         self.Bind(wx.EVT_CLOSE, self._on_close)
 
     def _on_close(self, evt):
@@ -243,7 +243,7 @@ class CSVPlotter(wx.Frame):
         self.item_to_trace.clear()
         self.tree.DeleteAllItems()
 
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
         self._watch_timer.Stop()
         event.Skip()
 
@@ -269,7 +269,7 @@ class CSVPlotter(wx.Frame):
             files = glob.glob(fd.Path + "/*")
             self.add_data_sources(files, defer_open=len(files) > 2)
 
-    def _makeUI(self):
+    def _make_ui(self):
         """Make the window and all widgets"""
         min_plot_w = min_plot_h = 400
         min_tree_w = 160

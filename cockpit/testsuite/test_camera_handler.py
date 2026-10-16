@@ -50,17 +50,17 @@ def mock_events_at(where: str):
 def mock_not_in_video_mode():
     """Mock CockpitApp that reports we are not in video mode.
 
-    The camera handler uses `cockpit.interfaces.imager.pauseVideo`
+    The camera handler uses `cockpit.interfaces.imager.pause_video`
     which looks into wx's app singleton.  This ruins the abstraction,
     the handlers should not require a wx app running.  While that is
     not fixed, this mocks access to CockpitApp.Imager so it reports we
-    are not in video mode and pauseVideo then does nothing.
+    are not in video mode and pause_video then does nothing.
 
     """
 
     class MockImager:
         def __init__(self):
-            self.amInVideoMode = False
+            self.am_in_video_mode = False
 
     class MockCockpitApp:
         @property
@@ -83,14 +83,14 @@ class CameraHandlerTestCase(unittest.TestCase):
         cockpit.depot.deviceDepot = cockpit.depot.DeviceDepot()
 
         self.callback_mocks = {
-            "setEnabled": unittest.mock.Mock(side_effect=lambda n, s: s),
+            "set_enabled": unittest.mock.Mock(side_effect=lambda n, s: s),
         }
 
         self.args = {
             "name": "mock",
-            "groupName": "testsuite",
+            "group_name": "testsuite",
             "callbacks": self.callback_mocks,
-            "exposureMode": cockpit.handlers.camera.TRIGGER_BEFORE,
+            "exposure_mode": cockpit.handlers.camera.TRIGGER_BEFORE,
         }
 
     def test_update_filter(self):
@@ -99,7 +99,7 @@ class CameraHandlerTestCase(unittest.TestCase):
 
         try:
             camera = cockpit.handlers.camera.CameraHandler(**self.args)
-            camera.updateFilter("test-dye", 512.0)
+            camera.update_filter("test-dye", 512.0)
         finally:
             cockpit.events.unsubscribe(
                 cockpit.events.FILTER_CHANGE, event_handler
@@ -111,9 +111,9 @@ class CameraHandlerTestCase(unittest.TestCase):
 
     def test_descriptive_name(self):
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
-        camera.updateFilter("Test-Dye", 512.0)
+        camera.update_filter("Test-Dye", 512.0)
         self.assertEqual(
-            camera.descriptiveName, self.args["name"] + " (Test-Dye)"
+            camera.descriptive_name, self.args["name"] + " (Test-Dye)"
         )
 
     def test_camera_enable_event(self):
@@ -123,7 +123,7 @@ class CameraHandlerTestCase(unittest.TestCase):
         cockpit.events.subscribe(cockpit.events.CAMERA_ENABLE, event_handler)
         try:
             with mock_not_in_video_mode():
-                camera.setEnabled(True)
+                camera.set_enabled(True)
         finally:
             cockpit.events.unsubscribe(
                 cockpit.events.CAMERA_ENABLE, event_handler
@@ -131,57 +131,57 @@ class CameraHandlerTestCase(unittest.TestCase):
 
         event_handler.assert_called_once()
         event_handler.assert_called_with(camera, True)
-        self.callback_mocks["setEnabled"].assert_called_with("mock", True)
+        self.callback_mocks["set_enabled"].assert_called_with("mock", True)
 
     @mock_events_at("cockpit.handlers.camera")
     def test_set_enabled_sends_experiment_event(self, mockEvents):
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
-        camera.setEnabled(True)
+        camera.set_enabled(True)
 
         mockEvents.subscribe.assert_called_with(
-            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepareForExperiment
+            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepare_for_experiment
         )
 
     @mock_events_at("cockpit.handlers.camera")
     def testSetEnabledSendsCorrectEvent_disable(self, mockEvents):
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
-        camera.setEnabled(False)
+        camera.set_enabled(False)
         mockEvents.unsubscribe.assert_called_with(
-            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepareForExperiment
+            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepare_for_experiment
         )
 
     def test_enabled_getter(self):
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
-        self.assertFalse(camera.getIsEnabled())
+        self.assertFalse(camera.get_is_enabled())
         with mock_not_in_video_mode():
-            camera.setEnabled(True)
-        self.assertTrue(camera.getIsEnabled())
+            camera.set_enabled(True)
+        self.assertTrue(camera.get_is_enabled())
         with mock_not_in_video_mode():
-            camera.setEnabled(False)
-        self.assertFalse(camera.getIsEnabled())
+            camera.set_enabled(False)
+        self.assertFalse(camera.get_is_enabled())
 
     def test_get_time_between_exposures(self):
         callback = unittest.mock.Mock(return_value=50)
-        self.args["callbacks"] = {"getTimeBetweenExposures": callback}
+        self.args["callbacks"] = {"get_time_between_exposures": callback}
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
 
-        self.assertEqual(camera.getTimeBetweenExposures(), 50)
+        self.assertEqual(camera.get_time_between_exposures(), 50)
         callback.assert_called_with("mock", False)
 
     def testGetMinExposureTime(self):
         callback = unittest.mock.Mock(return_value=50)
-        self.args["callbacks"] = {"getMinExposureTime": callback}
+        self.args["callbacks"] = {"get_min_exposure_time": callback}
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
 
-        self.assertEqual(camera.getMinExposureTime(), 50)
+        self.assertEqual(camera.get_min_exposure_time(), 50)
         callback.assert_called_with("mock")
 
     def testSetExposureTime(self):
         callback = unittest.mock.Mock()
-        self.args["callbacks"] = {"setExposureTime": callback}
+        self.args["callbacks"] = {"set_exposure_time": callback}
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
 
-        camera.setExposureTime(50)
+        camera.set_exposure_time(50)
         callback.assert_called_with("mock", 50)
 
 

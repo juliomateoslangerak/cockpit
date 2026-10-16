@@ -44,7 +44,7 @@ LOGGING_PERIOD = 30
 
 class RefillTimerPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
-        self._refillFunc = None
+        self._refill_func = None
 
         label_text = kwargs.pop("label", "")
         kwargs["style"] = kwargs.get("style", 0) | wx.BORDER_SIMPLE
@@ -70,19 +70,19 @@ class RefillTimerPanel(wx.Panel):
             self.Sizer.Add(o, flag=wx.ALL | wx.EXPAND, border=2)
             for o in (label, self.previous, self.current, self.filling)
         ]
-        self.Bind(wx.EVT_CONTEXT_MENU, self.onContextMenu)
+        self.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
         self.ToolTip = wx.ToolTip(
             "dt: last cycle time.\nt+: time since last refill\nRight click to refill."
         )
         [c.Unbind(wx.EVT_MOTION) for c in self.Children]
 
-    def setRefillFunc(self, f):
-        self._refillFunc = f
+    def set_refill_func(self, f):
+        self._refill_func = f
 
-    def onContextMenu(self, evt):
+    def on_context_menu(self, evt):
         menu = wx.Menu()
         menu.Append(1, "Start refill")
-        self.Bind(wx.EVT_MENU, lambda e: self._refillFunc(), id=1)
+        self.Bind(wx.EVT_MENU, lambda e: self._refill_func(), id=1)
         cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
 
     def format(self, dt, prefix=""):
@@ -95,7 +95,7 @@ class RefillTimerPanel(wx.Panel):
         hh, mm = divmod(mm, 60)
         return prefix + ("%.2d:%.2d:%.2d" % (hh, mm, ss))
 
-    def doUpdate(self, refill):
+    def do_update(self, refill):
         # Default colours for current timer display. May be modified before
         # being set at the end of this call.
         bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
@@ -144,7 +144,7 @@ class LinkamStage(MicroscopeBase, Device):
     Tested with CMS196.  Config uses following parameters:
 
     ``type``
-        Needs to be ``cockpit.devices.linkamStage.LinkamStage``.
+        Needs to be ``cockpit.devices.linkam_stage.LinkamStage``.
     ``uri``
         URI of device server.
 
@@ -158,13 +158,13 @@ class LinkamStage(MicroscopeBase, Device):
         ## Connection to the XY stage controller (serial.Serial instance).
         self._proxy = Pyro4.Proxy(config.get("uri"))
         ## Lock around sending commands to the XY stage controller.
-        self.xyLock = threading.Lock()
+        self.xy_lock = threading.Lock()
         ## Cached copy of the stage's position.
-        self.positionCache = (None, None)
+        self.position_cache = (None, None)
         ## Target positions for movement in X and Y.
-        self.motionTargets = [None, None]
-        ## Flag to show that sendPositionUpdates is running.
-        self.sendingPositionUpdates = False
+        self.motion_targets = [None, None]
+        ## Flag to show that send_position_updates is running.
+        self.sending_position_updates = False
         ## Status dict updated by remote.
         self.status = {}
         ## Keys for status items that should be logged
@@ -184,24 +184,24 @@ class LinkamStage(MicroscopeBase, Device):
         self.hardlimits = tuple(zip(xlim, ylim))
         self.softlimits = self.hardlimits
 
-        events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(events.USER_ABORT, self.on_abort)
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         """Finalize device initialization."""
-        self.statusThread = threading.Thread(
-            target=self.pollStatus, name="Linkam-status"
+        self.status_thread = threading.Thread(
+            target=self.poll_status, name="Linkam-status"
         )
-        events.subscribe(events.COCKPIT_INIT_COMPLETE, self.statusThread.start)
+        events.subscribe(events.COCKPIT_INIT_COMPLETE, self.status_thread.start)
 
-    def pollStatus(self):
+    def poll_status(self):
         """Fetch the status from the remote and update the UI.
 
         Formerly, the remote periodically pushed status to a cockpit
         server. This caused frequent Pyro timeout errors when cockpit
         was busy doing other things.
         """
-        lastTemps = [None]
-        lastTime = 0
+        last_temps = [None]
+        last_time = 0
 
         while True:
             time.sleep(1)
@@ -213,51 +213,51 @@ class LinkamStage(MicroscopeBase, Device):
 
             if status.get("connected", False):
                 self.status.update(status)
-                self.sendPositionUpdates()
-                tNow = time.time()
-                if tNow - lastTime > LOGGING_PERIOD:
-                    newTemps = [status.get(k) for k in self.logger.keys]
-                    if not all(map(operator.eq, newTemps, lastTemps)):
-                        self.logger.log(newTemps)
-                        lastTemps = newTemps
-                    lastTime = tNow
+                self.send_position_updates()
+                t_now = time.time()
+                if t_now - last_time > LOGGING_PERIOD:
+                    new_temps = [status.get(k) for k in self.logger.keys]
+                    if not all(map(operator.eq, new_temps, last_temps)):
+                        self.logger.log(new_temps)
+                        last_temps = new_temps
+                    last_time = t_now
             else:
                 self.status["connected"] = False
-            self.updateUI()
+            self.update_ui()
 
     def initialize(self):
         """Initialize the device."""
         super().initialize()
-        self.getPosition(shouldUseCache=False)
-        self.updateSettings()
+        self.get_position(should_use_cache=False)
+        self.update_settings()
 
-    def onAbort(self, *args):
+    def on_abort(self, *args):
         """Actions to do in the event of an abort."""
         pass
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Generate and return device handlers."""
         result = []
         # zip(*limits) transforms ((x0,y0),(x1,y1)) to ((x0,x1),(y0,y1))
-        for axis, (minPos, maxPos) in enumerate(zip(*self.softlimits)):
+        for axis, (min_pos, max_pos) in enumerate(zip(*self.softlimits)):
             result.append(
                 cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d linkam mover" % axis,
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.moveAbsolute,
-                        "moveRelative": self.moveRelative,
-                        "getPosition": self.getPosition,
+                        "moveAbsolute": self.move_absolute,
+                        "moveRelative": self.move_relative,
+                        "getPosition": self.get_position,
                     },
                     axis,
-                    (minPos, maxPos),  # hard limits
-                    (minPos, maxPos),  # soft limits
+                    (min_pos, max_pos),  # hard limits
+                    (min_pos, max_pos),  # soft limits
                 )
             )
         return result
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """Make cockpit user interface elements."""
         ## A list of value displays for temperatures.
         # Panel, sizer and a device label.
@@ -271,19 +271,19 @@ class LinkamStage(MicroscopeBase, Device):
         panel.Sizer.Add(right_sizer)
 
         self.elements = {}
-        lightButton = wx.ToggleButton(panel, wx.ID_ANY, "light")
-        lightButton.Bind(
+        light_button = wx.ToggleButton(panel, wx.ID_ANY, "light")
+        light_button.Bind(
             wx.EVT_TOGGLEBUTTON,
             lambda evt: self._proxy.set_light(evt.EventObject.Value),
         )
-        self.elements["light"] = lightButton
-        left_sizer.Add(lightButton, flag=wx.EXPAND)
-        condensorButton = wx.ToggleButton(panel, wx.ID_ANY, "condensor")
-        condensorButton.Bind(
+        self.elements["light"] = light_button
+        left_sizer.Add(light_button, flag=wx.EXPAND)
+        condensor_button = wx.ToggleButton(panel, wx.ID_ANY, "condensor")
+        condensor_button.Bind(
             wx.EVT_TOGGLEBUTTON,
             lambda evt: self._proxy.set_condensor(evt.EventObject.Value),
         )
-        left_sizer.Add(condensorButton, flag=wx.EXPAND)
+        left_sizer.Add(condensor_button, flag=wx.EXPAND)
         ## Generate the value displays.
         for d in self._temperature_names:
             self.elements[d] = cockpit.gui.device.ValueDisplay(
@@ -296,7 +296,7 @@ class LinkamStage(MicroscopeBase, Device):
             left_sizer.Add(self.elements[d])
         # Settings button
         adv_button = wx.Button(parent=self.panel, label="settings")
-        adv_button.Bind(wx.EVT_LEFT_UP, self.showSettings)
+        adv_button.Bind(wx.EVT_LEFT_UP, self.show_settings)
         left_sizer.Add(adv_button, flag=wx.EXPAND)
         # Refill timers
         for r in self._refill_names:
@@ -305,42 +305,42 @@ class LinkamStage(MicroscopeBase, Device):
                 self.elements[r], flag=wx.LEFT | wx.RIGHT | wx.BOTTOM, border=4
             )
             if r == "sample":
-                self.elements[r].setRefillFunc(self._proxy.refill_chamber)
+                self.elements[r].set_refill_func(self._proxy.refill_chamber)
             elif r == "external":
-                self.elements[r].setRefillFunc(self._proxy.refill_dewar)
+                self.elements[r].set_refill_func(self._proxy.refill_dewar)
         panel.Fit()
         return panel
 
-    def moveAbsolute(self, axis, pos):
+    def move_absolute(self, axis, pos):
         """Move a stage axis to new position, pos."""
         pos = int(pos)
         if axis == 0:
-            newPos = (pos, None)
+            new_pos = (pos, None)
         elif axis == 1:
-            newPos = (None, pos)
+            new_pos = (None, pos)
         else:
             # Arguments were wrong. Just return, since raising an
             # exception can kill the mosaic.
             return
-        with self.xyLock:
+        with self.xy_lock:
             # moveToXY(x, y), where None indicates no change.
-            self._proxy.move_to(*newPos)
-        self.motionTargets[axis] = pos
-        self.sendPositionUpdates()
+            self._proxy.move_to(*new_pos)
+        self.motion_targets[axis] = pos
+        self.send_position_updates()
 
-    def moveRelative(self, axis, delta):
+    def move_relative(self, axis, delta):
         """Move stage to a position relative to the current position."""
         if delta:
-            curPos = self.positionCache[axis]
-            self.moveAbsolute(axis, curPos + delta)
+            cur_pos = self.position_cache[axis]
+            self.move_absolute(axis, cur_pos + delta)
 
     @cockpit.util.threads.call_in_new_thread
-    def sendPositionUpdates(self):
+    def send_position_updates(self):
         """Send XY stage positions until it stops moving."""
-        if self.sendingPositionUpdates is True:
+        if self.sending_position_updates is True:
             # Already sending updates.
             return
-        self.sendingPositionUpdates = True
+        self.sending_position_updates = True
         moving = True
         # Send positions at least once.
         while moving:
@@ -350,49 +350,49 @@ class LinkamStage(MicroscopeBase, Device):
             time.sleep(0.1)
             # Update position cache before publishing STAGE_MOVER so
             # that the UI gets the new position when it queries it.
-            self.getPosition(shouldUseCache=False)
+            self.get_position(should_use_cache=False)
             for axis in [0, 1]:
                 events.publish(events.STAGE_MOVER, axis)
             moving = self._proxy.is_moving()
 
         for axis in (0, 1):
             events.publish(events.STAGE_STOPPED, "%d linkam mover" % axis)
-            self.motionTargets = [None, None]
-        self.sendingPositionUpdates = False
+            self.motion_targets = [None, None]
+        self.sending_position_updates = False
         return
 
-    def getPosition(self, axis=None, shouldUseCache=True):
+    def get_position(self, axis=None, should_use_cache=True):
         """Return the position of one or both axes.
 
         If axis is None, return positions of both axes.
-        Query the hardware if shouldUseCache is False.
+        Query the hardware if should_use_cache is False.
         """
-        if not shouldUseCache:
+        if not should_use_cache:
             # Occasionally, at the start on an experiment, a
             # ConnectionClosedError is thrown here. I think this is something
             # to do with Pyro reusing connections and those connections getting
             # closed on the remote due to frequent traffic in the status thread.
             # Workaround: retry a few times in the event of a ConnectionClosedError.
             success = False
-            failCount = 0
+            fail_count = 0
             while not success:
                 try:
                     position = self._proxy.get_position()
                     success = True
                 except Pyro4.errors.ConnectionClosedError:
-                    if failCount < 5:
-                        failCount += 1
+                    if fail_count < 5:
+                        fail_count += 1
                     else:
                         raise
                 except:
                     raise
-            self.positionCache = (position["X"], position["Y"])
+            self.position_cache = (position["X"], position["Y"])
         if axis is None:
-            return self.positionCache
+            return self.position_cache
         else:
-            return self.positionCache[axis]
+            return self.position_cache[axis]
 
-    def updateUI(self):
+    def update_ui(self):
         """Update user interface elements."""
         status = self.status
         if not status.get("connected", False):
@@ -409,8 +409,8 @@ class LinkamStage(MicroscopeBase, Device):
 
         for r in self._refill_names:
             refill = status["refills"].get(r, None)
-            self.elements[r].doUpdate(refill)
+            self.elements[r].do_update(refill)
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """Send initial device publications."""
-        self.sendPositionUpdates()
+        self.send_position_updates()

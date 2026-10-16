@@ -94,7 +94,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.activeLights = [None for l in self.allLights]
 
         ## User's last-used inputs.
-        self.settings = cockpit.util.user_config.getValue(
+        self.settings = cockpit.util.user_config.get_value(
             "multiSiteExperiment",
             default={
                 "numCycles": "10",
@@ -359,7 +359,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         baseOrder = []
         baseFrequencies = []
         for i, siteId in enumerate(baseIndices):
-            if cockpit.interfaces.stage_mover.doesSiteExist(siteId):
+            if cockpit.interfaces.stage_mover.does_site_exist(siteId):
                 baseOrder.append(siteId)
                 baseFrequencies.append(frequencies[i])
         cycleRate = 1
@@ -379,7 +379,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     sitesList.append(siteId)
             if self.shouldOptimizeSiteOrder.GetValue():
                 cycleNumToSitesList.append(
-                    cockpit.interfaces.stage_mover.optimisedSiteOrder(sitesList)
+                    cockpit.interfaces.stage_mover.optimised_site_order(sitesList)
                 )
             else:
                 cycleNumToSitesList.append(sitesList)
@@ -401,7 +401,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         # restarted the cockpit (thus resetting motion safeties) and then
         # loaded a list of sites which we cannot now reach.
         for siteId in self.sitesPanel.get_sites_list()[0]:
-            if not cockpit.interfaces.stage_mover.doesSiteExist(siteId):
+            if not cockpit.interfaces.stage_mover.does_site_exist(siteId):
                 wx.MessageBox(
                     "Experiment cancelled:\n\nSite %s does not exist."
                     % siteId,
@@ -409,7 +409,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP,
                 )
                 return False
-            if not cockpit.interfaces.stage_mover.canReachSite(siteId):
+            if not cockpit.interfaces.stage_mover.can_reach_site(siteId):
                 wx.MessageBox(
                     "Experiment cancelled:\n\nSite %s cannot be reached."
                     % siteId,
@@ -431,7 +431,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.Hide()
         self.saveConfig()
 
-        self.activeLights = [l.getIsEnabled() for l in self.allLights]
+        self.activeLights = [l.get_is_enabled() for l in self.allLights]
 
         self.shouldAbort = False
         delay = float(self.delayBeforeStarting.GetValue()) * 60
@@ -450,9 +450,9 @@ class MultiSiteExperimentDialog(wx.Dialog):
             siteIds = cycleNumToSitesList[cycleNum % cyclePeriod]
             if cycleNum != 0:
                 # Move to the first site.
-                cockpit.interfaces.stage_mover.waitForStop()
-                cockpit.interfaces.stage_mover.goToSite(
-                    siteIds[0], shouldBlock=True
+                cockpit.interfaces.stage_mover.wait_for_stop()
+                cockpit.interfaces.stage_mover.go_to_site(
+                    siteIds[0], should_block=True
                 )
                 # Wait for when the next cycle should start.
                 waitTime = cycleStartTime + cycleDuration - time.time()
@@ -482,7 +482,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
     def cleanUp(self):
         """Clean up after the experiment ends."""
         for i, shouldActivate in enumerate(self.activeLights):
-            self.allLights[i].setEnabled(shouldActivate)
+            self.allLights[i].set_enabled(shouldActivate)
         if (
             self.shouldPowerDownWhenDone is not None
             and self.shouldPowerDownWhenDone.GetValue()
@@ -507,7 +507,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
             # Only activate a light if it was enabled when the experiment
             # started.
             if self.activeLights[i]:
-                self.allLights[i].setEnabled(cycleNum % frequency == offset)
+                self.allLights[i].set_enabled(cycleNum % frequency == offset)
 
     def imageSite(self, siteId, cycleNum, experimentStart):
         """Go to the specified site and run our experiment on it."""
@@ -516,8 +516,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             "device waiting",
             "Waiting for stage motion",
         )
-        cockpit.interfaces.stage_mover.waitForStop()
-        cockpit.interfaces.stage_mover.goToSite(siteId, shouldBlock=True)
+        cockpit.interfaces.stage_mover.wait_for_stop()
+        cockpit.interfaces.stage_mover.go_to_site(siteId, should_block=True)
         self.waitFor(float(self.delayBeforeImaging.GetValue()))
         if self.shouldAbort:
             return
@@ -579,7 +579,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
     def saveConfig(self):
         """Save our settings to the config."""
         lightFrequencies = [l.GetValue() for l in self.lightFrequencies]
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             "multiSiteExperiment",
             {
                 "numCycles": self.numCycles.GetValue(),

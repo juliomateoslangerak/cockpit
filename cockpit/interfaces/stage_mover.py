@@ -68,8 +68,8 @@ StageLimits = typing.Tuple[AxisLimits, AxisLimits, AxisLimits]
 
 
 ## Stage movement threshold (previously a hard-coded value).
-# There can be problems when this doesn't match a corresponding threshold
-# the stage device code.
+# There can be problems if this doesn't match the corresponding threshold
+# used by the stage device code.
 # TODO:  This should be defined in only one place, either here,
 # in the stage code, or in a config file.
 STAGE_MIN_MOVEMENT = 0.3
@@ -83,12 +83,12 @@ AXIS_MAP.update({k: k for k in [0, 1, 2]})
 ## This module handles general stage motion: "go to this position", "move by
 # this delta", "remember this position", "go to this remembered position",
 # etc. The cockpit deals with this module instead of speaking direction to
-# StagePositionerHandlers.
+# stage device handlers.
 # Several of the functions in this module accept an "axis" parameter. The
 # mapping is 0: X; 1: Y; 2: Z.
 
 ## Auto-incrementing unique value to mark each Site instance.
-uniqueSiteIndex = 0
+unique_site_index = 0
 
 
 class Site:
@@ -108,10 +108,10 @@ class Site:
         self.group = group
         self.color = color
         self.size = size
-        global uniqueSiteIndex
-        uniqueSiteIndex += 1
+        global unique_site_index
+        unique_site_index += 1
         ## Unique ID for the Site.
-        self.uniqueID = uniqueSiteIndex
+        self.unique_id = unique_site_index
 
     def serialize(self):
         """Serialize the site -- convert it to a string we can use to
@@ -120,11 +120,11 @@ class Site:
         result += ",".join(map(str, self.position))
         result += ",%s," % self.group
         result += ",".join(map(str, self.color))
-        result += ",%.2f,%d" % (self.size, self.uniqueID)
+        result += ",%.2f,%d" % (self.size, self.unique_id)
         return result
 
 
-def deserializeSite(line):
+def deserialize_site(line):
     """Generate a new Site from a text string generated from serialize(),
     above."""
     x, y, z, group, r, g, b, size, id = line.split(",")
@@ -134,11 +134,11 @@ def deserializeSite(line):
         group = None
         # Otherwise let group remain as a string.
     result = Site(numpy.array((x, y, z)), group, (r, g, b), size)
-    result.uniqueID = id
+    result.unique_id = id
     return result
 
 
-def _SensibleStepSize(
+def _sensible_step_size(
     step_size: float,
     bases: typing.Sequence[int],
     cmp: typing.Callable[[float, float], bool],
@@ -155,12 +155,12 @@ def _SensibleStepSize(
         )
 
 
-def SensibleNextStepSize(step_size: float) -> float:
-    return _SensibleStepSize(step_size, [2, 5, 10], operator.lt)
+def sensible_next_step_size(step_size: float) -> float:
+    return _sensible_step_size(step_size, [2, 5, 10], operator.lt)
 
 
-def SensiblePreviousStepSize(step_size: float) -> float:
-    return _SensibleStepSize(step_size, [5, 2, 1, 0.5], operator.gt)
+def sensible_previous_step_size(step_size: float) -> float:
+    return _sensible_step_size(step_size, [5, 2, 1, 0.5], operator.gt)
 
 
 class StageMover:
@@ -169,26 +169,26 @@ class StageMover:
 
     def __init__(self):
         """Maps axis to the handlers for that axis, sorted by their range of motion."""
-        self.axisToHandlers = depot.getSortedStageMovers()
-        if set(self.axisToHandlers.keys()) != {0, 1, 2}:
+        self.axis_to_handlers = depot.getSortedStageMovers()
+        if set(self.axis_to_handlers.keys()) != {0, 1, 2}:
             raise ValueError("stage mover requires 3 axis: X, Y, and Z")
 
         # FIXME: we should have sensible defaults (see issue #638).
-        self._saved_top = user_config.getValue("savedTop", default=3010.0)
-        self._saved_bottom = user_config.getValue("savedBottom", default=3000.0)
+        self._saved_top = user_config.get_value("savedTop", default=3010.0)
+        self._saved_bottom = user_config.get_value("savedBottom", default=3000.0)
 
         ## XXX: We have a single index for all axis, even though each
         ## axis may have a different number of stages.  While we don't
         ## refactor this assumption, we just make copies of the movers
         ## with the most precise movement (issues #413 and #415)
-        self.n_stages = max([len(s) for s in self.axisToHandlers.values()])
-        for axis, stages in self.axisToHandlers.items():
+        self.n_stages = max([len(s) for s in self.axis_to_handlers.values()])
+        for axis, stages in self.axis_to_handlers.items():
             stages.extend([stages[-1]] * (self.n_stages - len(stages)))
 
         ## Indicates which stage handler is currently under control.
-        self.curHandlerIndex = 0
+        self.cur_handler_index = 0
         ## Maps Site unique IDs to Site instances.
-        self.idToSite = {}
+        self.id_to_site = {}
 
         # Compute the hard motion limits for each axis as the
         # summation of all limits for handlers on that axis.
@@ -200,7 +200,7 @@ class StageMover:
             # have duplicated handlers because of the hack to meet
             # cockpit requirements that all axis have the same number
             # of handlers (see comments on issue #413).
-            for handler in set(self.axisToHandlers[axis]):
+            for handler in set(self.axis_to_handlers[axis]):
                 handler_limits = handler.getHardLimits()
                 lower += handler_limits[0]
                 upper += handler_limits[1]
@@ -219,8 +219,8 @@ class StageMover:
         for stage_index in range(self.n_stages):
             default_step_sizes = []
             for axis in (0, 1, 2):
-                limits = self.axisToHandlers[axis][stage_index].getHardLimits()
-                step_size = SensiblePreviousStepSize(
+                limits = self.axis_to_handlers[axis][stage_index].getHardLimits()
+                step_size = sensible_previous_step_size(
                     (limits[1] - limits[0]) / 100.0
                 )
                 default_step_sizes.append(step_size)
@@ -232,35 +232,35 @@ class StageMover:
 
         ## Maps handler names to events indicating if those handlers
         # have stopped moving.
-        self.nameToStoppedEvent = {}
-        events.subscribe(events.STAGE_MOVER, self.onMotion)
-        events.subscribe(events.STAGE_STOPPED, self.onStop)
+        self.name_to_stopped_event = {}
+        events.subscribe(events.STAGE_MOVER, self.on_motion)
+        events.subscribe(events.STAGE_STOPPED, self.on_stop)
 
     @property
-    def SavedTop(self) -> float:
+    def saved_top(self) -> float:
         return self._saved_top
 
-    @SavedTop.setter
-    def SavedTop(self, pos: float) -> None:
-        user_config.setValue("savedTop", pos)
+    @saved_top.setter
+    def saved_top(self, pos: float) -> None:
+        user_config.set_value("savedTop", pos)
         self._saved_top = pos
         events.publish(events.STAGE_TOP_BOTTOM)
 
     @property
-    def SavedBottom(self) -> float:
+    def saved_bottom(self) -> float:
         return self._saved_bottom
 
-    @SavedBottom.setter
-    def SavedBottom(self, pos: float) -> None:
-        user_config.setValue("savedBottom", pos)
+    @saved_bottom.setter
+    def saved_bottom(self, pos: float) -> None:
+        user_config.set_value("savedBottom", pos)
         self._saved_bottom = pos
         events.publish(events.STAGE_TOP_BOTTOM)
 
-    def GetStepSizes(self) -> typing.Tuple[float, float, float]:
+    def get_step_sizes(self) -> typing.Tuple[float, float, float]:
         """Return a (dX, dY, dZ) tuple of the current step sizes."""
-        return self._step_sizes[self.curHandlerIndex]
+        return self._step_sizes[self.cur_handler_index]
 
-    def Step(self, direction: typing.Tuple[int, int, int]) -> None:
+    def step(self, direction: typing.Tuple[int, int, int]) -> None:
         """Move one step with the current active handler in the specified
         direction(s).
 
@@ -273,65 +273,65 @@ class StageMover:
             raise ValueError("direction must be a 3 element list")
         for axis, sign in enumerate(direction):
             if sign != 0:
-                step_size = self._step_sizes[self.curHandlerIndex][axis]
-                handler = self.axisToHandlers[axis][self.curHandlerIndex]
+                step_size = self._step_sizes[self.cur_handler_index][axis]
+                handler = self.axis_to_handlers[axis][self.cur_handler_index]
                 handler.moveRelative(step_size * sign)
 
-    def SetStepSize(self, axis: int, step_size: float) -> None:
+    def set_step_size(self, axis: int, step_size: float) -> None:
         if step_size <= 0.0:
             raise ValueError("step size must be a positive number")
         elif axis not in [0, 1, 2]:
             raise ValueError("axis must be in [0, 1, 2]")
-        step_sizes = list(self.GetStepSizes())
+        step_sizes = list(self.get_step_sizes())
         step_sizes[axis] = step_size
-        self._step_sizes[self.curHandlerIndex] = tuple(step_sizes)
+        self._step_sizes[self.cur_handler_index] = tuple(step_sizes)
         events.publish(events.STAGE_STEP_SIZE, axis, step_size)
 
-    def ChangeStepSize(self, direction: int) -> None:
+    def change_step_size(self, direction: int) -> None:
         if direction == +1:
-            guess_new = SensibleNextStepSize
+            guess_new = sensible_next_step_size
         elif direction == -1:
-            guess_new = SensiblePreviousStepSize
+            guess_new = sensible_previous_step_size
         else:
             raise ValueError(
                 "direction must be -1 (decrease) or +1 (increase)"
             )
-        old_step_sizes = self.GetStepSizes()
+        old_step_sizes = self.get_step_sizes()
         new_step_sizes = tuple([guess_new(x) for x in old_step_sizes])
-        self._step_sizes[self.curHandlerIndex] = new_step_sizes
+        self._step_sizes[self.cur_handler_index] = new_step_sizes
 
-        for axis, step_size in enumerate(self.GetStepSizes()):
+        for axis, step_size in enumerate(self.get_step_sizes()):
             events.publish(events.STAGE_STEP_SIZE, axis, step_size)
 
-    def onMotion(self, axis):
+    def on_motion(self, axis):
         """Handle one of our devices moving.
 
         We just republish an abstracted stage position for that axis.
         """
-        events.publish(events.STAGE_POSITION, axis, getPositionForAxis(axis))
+        events.publish(events.STAGE_POSITION, axis, get_position_for_axis(axis))
 
-    def onStop(self, name):
-        """Handle one of our devices stopping motion; this unblocks _goToAxes
+    def on_stop(self, name):
+        """Handle one of our devices stopping motion; this unblocks _go_to_axes
         if it is waiting."""
-        if name in self.nameToStoppedEvent:
-            self.nameToStoppedEvent[name].set()
+        if name in self.name_to_stopped_event:
+            self.name_to_stopped_event[name].set()
 
-    def _goToAxes(self, position, shouldBlock=False):
+    def _go_to_axes(self, position, should_block=False):
         r"""Internal function to go to the specified location (specified as a
         list of (axis, position) tuples).
 
-        Wait for the axes to stop moving, if shouldBlock is true.
+        Wait for the axes to stop moving, if should_block is true.
         \todo Assumes that the target position is within the range of motion of the current handler.
         """
         waiters = []
         for axis, target in position:
             # Get the offset for the movers that aren't being adjusted.
             offset = 0
-            for handler in self.axisToHandlers[axis]:
-                if handler != self.axisToHandlers[axis][self.curHandlerIndex]:
+            for handler in self.axis_to_handlers[axis]:
+                if handler != self.axis_to_handlers[axis][self.cur_handler_index]:
                     offset += handler.getPosition()
 
-            handler = self.axisToHandlers[axis][self.curHandlerIndex]
+            handler = self.axis_to_handlers[axis][self.cur_handler_index]
             # Check if we need to bother moving.
             if (
                 abs(handler.getPosition() - (target - offset))
@@ -339,9 +339,9 @@ class StageMover:
             ):
                 event = threading.Event()
                 waiters.append(event)
-                self.nameToStoppedEvent[handler.name] = event
+                self.name_to_stopped_event[handler.name] = event
                 handler.moveAbsolute(target - offset)
-        if shouldBlock:
+        if should_block:
             for event in waiters:
                 try:
                     event.wait(30)
@@ -359,15 +359,15 @@ def initialize():
     mover = StageMover()
 
 
-def makeInitialPublications():
+def make_initial_publications():
     """Publicize any information that various widgets care about."""
     # for axis in range(3):
-    for axis in mover.axisToHandlers.keys():
-        events.publish(events.STAGE_POSITION, axis, getPositionForAxis(axis))
-        limits = getSoftLimitsForAxis(axis)
-        for isMax in [0, 1]:
+    for axis in mover.axis_to_handlers.keys():
+        events.publish(events.STAGE_POSITION, axis, get_position_for_axis(axis))
+        limits = get_soft_limits_for_axis(axis)
+        for is_max in [0, 1]:
             events.publish(
-                events.SOFT_SAFETY_LIMIT, axis, limits[isMax], bool(isMax)
+                events.SOFT_SAFETY_LIMIT, axis, limits[is_max], bool(is_max)
             )
 
 
@@ -376,187 +376,187 @@ def makeInitialPublications():
 
 
 def step(direction):
-    mover.Step(direction)
+    mover.step(direction)
 
 
-def changeMover():
+def change_mover():
     """Change to the next handler."""
-    oldIndex = mover.curHandlerIndex
-    newIndex = (mover.curHandlerIndex + 1) % mover.n_stages
-    if newIndex != oldIndex:
-        old_step_sizes = mover.GetStepSizes()
-        mover.curHandlerIndex = newIndex
-        events.publish(events.STAGE_STEP_INDEX, mover.curHandlerIndex)
-        for axis, new_step_size in enumerate(mover.GetStepSizes()):
+    old_index = mover.cur_handler_index
+    new_index = (mover.cur_handler_index + 1) % mover.n_stages
+    if new_index != old_index:
+        old_step_sizes = mover.get_step_sizes()
+        mover.cur_handler_index = new_index
+        events.publish(events.STAGE_STEP_INDEX, mover.cur_handler_index)
+        for axis, new_step_size in enumerate(mover.get_step_sizes()):
             if old_step_sizes[axis] != new_step_size:
                 events.publish(events.STAGE_STEP_SIZE, axis, new_step_size)
 
 
-def changeStepSize(direction):
+def change_step_size(direction):
     """Change the step size for the current handlers."""
-    mover.ChangeStepSize(direction)
+    mover.change_step_size(direction)
 
 
-def recenterFineMotion():
+def recenter_fine_motion():
     """Recenter the fine-motion devices by adjusting the large-scale motion
     device."""
-    for axis, handlers in mover.axisToHandlers.items():
+    for axis, handlers in mover.axis_to_handlers.items():
         if len(set(handlers)) < 2:
             continue  # Only makes sense if one has at least two stages
 
-        totalDelta = 0
+        total_delta = 0
         for handler in handlers[1:]:
             # Assume that the fine-motion devices want to be in the center
             # of their ranges.
-            curPosition = handler.getPosition()
+            cur_position = handler.getPosition()
             safeties = handler.getHardLimits()
             target = (safeties[1] - safeties[0]) / 2 + safeties[0]
             handler.moveAbsolute(target)
-            totalDelta += target - curPosition
-        handlers[0].moveRelative(-totalDelta)
+            total_delta += target - cur_position
+        handlers[0].moveRelative(-total_delta)
 
 
-def goTo(position, shouldBlock=False):
+def go_to(position, should_block=False):
     """Move to the specified position using the current handler."""
-    if len(position) != len(mover.axisToHandlers.keys()):
+    if len(position) != len(mover.axis_to_handlers.keys()):
         raise RuntimeError(
             "Asked to go to position with wrong number of axes (%d != %d)"
-            % (len(position), len(mover.axisToHandlers.keys()))
+            % (len(position), len(mover.axis_to_handlers.keys()))
         )
-    mover._goToAxes(enumerate(position), shouldBlock)
+    mover._go_to_axes(enumerate(position), should_block)
 
 
-def goToXY(position, shouldBlock=False):
-    """As goTo, but only in X and Y."""
+def go_to_xy(position, should_block=False):
+    """As go_to, but only in X and Y."""
     if len(position) != 2:
         raise RuntimeError(
             "Asked to go to XY position with wrong number of axes (%d != %d)"
             % (len(position), 2)
         )
-    mover._goToAxes(enumerate(position), shouldBlock)
+    mover._go_to_axes(enumerate(position), should_block)
 
 
-def goToZ(position, shouldBlock=False):
-    """As goTo, but only in Z."""
-    mover._goToAxes([(2, position)], shouldBlock)
+def go_to_z(position, should_block=False):
+    """As go_to, but only in Z."""
+    mover._go_to_axes([(2, position)], should_block)
 
 
-def moveRelative(offset, shouldBlock=False):
+def move_relative(offset, should_block=False):
     """Move by the specified 3D offset."""
-    numAxes = len(mover.axisToHandlers.keys())
-    if len(offset) != numAxes:
+    num_axes = len(mover.axis_to_handlers.keys())
+    if len(offset) != num_axes:
         raise RuntimeError(
             "Asked to move relatively with wrong number of axes (%d != %d)"
-            % (len(offset), numAxes)
+            % (len(offset), num_axes)
         )
-    curPosition = getPosition()
-    vals = [offset[i] + curPosition[i] for i in range(numAxes)]
-    goTo(vals, shouldBlock)
+    cur_position = get_position()
+    vals = [offset[i] + cur_position[i] for i in range(num_axes)]
+    go_to(vals, should_block)
 
 
-def waitForStop(timeout=5):
+def wait_for_stop(timeout=5):
     """Wait for any stage motion to cease."""
-    for name, event in mover.nameToStoppedEvent.items():
+    for name, event in mover.name_to_stopped_event.items():
         if not event.wait(timeout):
             raise RuntimeError("Timed out waiting for %s to stop" % name)
 
 
-def goToSite(uniqueID, shouldBlock=False):
+def go_to_site(unique_id, should_block=False):
     """Move to the specified site."""
-    site = mover.idToSite[uniqueID]
-    objOffset = wx.GetApp().Objectives.GetOffset()
-    offsetPosition = list(site.position)
-    for i in range(len(offsetPosition)):
-        offsetPosition[i] = offsetPosition[i] + objOffset[i]
-    goTo(offsetPosition, shouldBlock)
+    site = mover.id_to_site[unique_id]
+    obj_offset = wx.GetApp().Objectives.get_offset()
+    offset_position = list(site.position)
+    for i in range(len(offset_position)):
+        offset_position[i] = offset_position[i] + obj_offset[i]
+    go_to(offset_position, should_block)
 
 
-def getSite(uniqueID):
+def get_site(unique_id):
     """Get a Site with a given ID."""
-    return mover.idToSite[uniqueID]
+    return mover.id_to_site[unique_id]
 
 
-def saveSite(newSite=None):
+def save_site(new_site=None):
     """Save a new Site.
 
     Use default settings if none is provided.
     """
-    if newSite is None:
-        newSite = Site(getPosition())
-    mover.idToSite[newSite.uniqueID] = newSite
+    if new_site is None:
+        new_site = Site(get_position())
+    mover.id_to_site[new_site.unique_id] = new_site
     # Start counting from the new site, if necessary.
-    global uniqueSiteIndex
-    uniqueSiteIndex = max(uniqueSiteIndex, newSite.uniqueID)
-    events.publish(events.NEW_SITE, newSite)
+    global unique_site_index
+    unique_site_index = max(unique_site_index, new_site.unique_id)
+    events.publish(events.NEW_SITE, new_site)
 
 
-def deleteSite(siteID):
+def delete_site(site_id):
     """Remove a site with the specified ID."""
-    site = mover.idToSite[siteID]
-    del mover.idToSite[siteID]
+    site = mover.id_to_site[site_id]
+    del mover.id_to_site[site_id]
     events.publish(events.DELETE_SITE, site)
-    # HACK: if this siteID is for the most-recently created
+    # HACK: if this site_id is for the most-recently created
     # site, decrement the global site ID.
-    global uniqueSiteIndex
-    if siteID == uniqueSiteIndex:
-        uniqueSiteIndex -= 1
+    global unique_site_index
+    if site_id == unique_site_index:
+        unique_site_index -= 1
 
 
-def getAllSites() -> typing.List[int]:
+def get_all_sites() -> typing.List[int]:
     """Retrieve the sites as a list."""
-    return list(mover.idToSite.values())
+    return list(mover.id_to_site.values())
 
 
-def doesSiteExist(siteId):
+def does_site_exist(site_id):
     """Return True if there's a site with the specified ID."""
-    return siteId in mover.idToSite
+    return site_id in mover.id_to_site
 
 
-def canReachSite(siteId):
+def can_reach_site(site_id):
     """Return True iff the position of the specified site is inside all of our
     soft motion limits."""
-    position = mover.idToSite[siteId].position
-    safeties = getSoftLimits()
+    position = mover.id_to_site[site_id].position
+    safeties = get_soft_limits()
     for axis, pos in enumerate(position):
         if safeties[axis][0] > pos or pos > safeties[axis][1]:
             return False
     return True
 
 
-def writeSitesToFile(filename):
+def write_sites_to_file(filename):
     """Record sites to a file."""
     with open(filename, "w") as handle:
-        for id, site in mover.idToSite.items():
+        for id, site in mover.id_to_site.items():
             handle.write(site.serialize() + "\n")
 
 
-def loadSites(filename):
+def load_sites(filename):
     """Load sites from a file."""
     with open(filename, "r") as handle:
         for line in handle:
-            site = deserializeSite(line)
-            saveSite(site)
+            site = deserialize_site(line)
+            save_site(site)
 
 
-def getPosition():
+def get_position():
     """Return the exact stage position, as the aggregate of all handlers'
     positions."""
     result = 3 * [0]
-    for axis, handlers in mover.axisToHandlers.items():
+    for axis, handlers in mover.axis_to_handlers.items():
         for handler in set(handlers):
             result[axis] += handler.getPosition()
     return result
 
 
-def getPositionForAxis(axis):
+def get_position_for_axis(axis):
     """Return the exact stage position for the given axis."""
     result = 0
-    for handler in set(mover.axisToHandlers[axis]):
+    for handler in set(mover.axis_to_handlers[axis]):
         result += handler.getPosition()
     return result
 
 
-def getAllPositions():
+def get_all_positions():
     """Return a list of (X, Y, Z) tuples indicating the positions for all
     handlers we have.
 
@@ -565,64 +565,64 @@ def getAllPositions():
     """
     result = []
     for i in range(mover.n_stages):
-        current = [None] * len(mover.axisToHandlers)
-        for axis, handlers in mover.axisToHandlers.items():
+        current = [None] * len(mover.axis_to_handlers)
+        for axis, handlers in mover.axis_to_handlers.items():
             current[axis] = handlers[i].getPosition()
         result.append(tuple(current))
     return result
 
 
-def getCurStepSizes():
-    return mover.GetStepSizes()
+def get_cur_step_sizes():
+    return mover.get_step_sizes()
 
 
-def getCurHandlerIndex():
+def get_cur_handler_index():
     """Simple getter."""
-    return mover.curHandlerIndex
+    return mover.cur_handler_index
 
 
-def getHardLimitsForAxis(axis: int) -> AxisLimits:
+def get_hard_limits_for_axis(axis: int) -> AxisLimits:
     """Get the hard motion limits for a specific axis, as the summation of all
     limits for movers on that axis."""
     return mover._hard_limits[axis]
 
 
-def getHardLimits() -> StageLimits:
+def get_hard_limits() -> StageLimits:
     """Repeat the above for each axis."""
     return mover._hard_limits
 
 
-def getIndividualHardLimits(axis):
+def get_individual_hard_limits(axis):
     """Returns a list of all hard motion limits for the given axis."""
-    return [handler.getHardLimits() for handler in mover.axisToHandlers[axis]]
+    return [handler.getHardLimits() for handler in mover.axis_to_handlers[axis]]
 
 
-def getSoftLimitsForAxis(axis):
+def get_soft_limits_for_axis(axis):
     """Get the soft motion limits for a specific axis, as the summation of all
     limits for movers on that axis."""
-    lowLimit = 0
-    highLimit = 0
-    for handler in set(mover.axisToHandlers[axis]):
+    low_limit = 0
+    high_limit = 0
+    for handler in set(mover.axis_to_handlers[axis]):
         low, high = handler.getSoftLimits()
-        lowLimit += low
-        highLimit += high
-    return (lowLimit, highLimit)
+        low_limit += low
+        high_limit += high
+    return (low_limit, high_limit)
 
 
-def getSoftLimits():
+def get_soft_limits():
     """Repeat the above for each axis."""
     result = []
-    for axis in sorted(mover.axisToHandlers.keys()):
-        result.append(getSoftLimitsForAxis(axis))
+    for axis in sorted(mover.axis_to_handlers.keys()):
+        result.append(get_soft_limits_for_axis(axis))
     return result
 
 
-def getIndividualSoftLimits(axis):
+def get_individual_soft_limits(axis):
     """Returns a list of all soft motion limits for the given axis."""
-    return [handler.getSoftLimits() for handler in mover.axisToHandlers[axis]]
+    return [handler.getSoftLimits() for handler in mover.axis_to_handlers[axis]]
 
 
-def setSoftLimit(axis, value, isMax):
+def set_soft_limit(axis, value, is_max):
     """Try to change the software safety limits.
 
     Return True if we succeed, False otherwise.
@@ -630,8 +630,8 @@ def setSoftLimit(axis, value, isMax):
     # \todo For now we assume that only the first handler, with the greatest
     # range of motion, cares about soft limits.
     try:
-        mover.axisToHandlers[axis][0].setSoftLimit(value, isMax)
-        events.publish(events.SOFT_SAFETY_LIMIT, axis, value, isMax)
+        mover.axis_to_handlers[axis][0].setSoftLimit(value, is_max)
+        events.publish(events.SOFT_SAFETY_LIMIT, axis, value, is_max)
         return True
     except Exception as e:
         # \todo Assuming that any exception here means the safety was not
@@ -639,46 +639,46 @@ def setSoftLimit(axis, value, isMax):
         return False
 
 
-def setSoftMin(axis, value):
-    setSoftLimit(axis, value, False)
+def set_soft_min(axis, value):
+    set_soft_limit(axis, value, False)
 
 
-def setSoftMax(axis, value):
-    setSoftLimit(axis, value, True)
+def set_soft_max(axis, value):
+    set_soft_limit(axis, value, True)
 
 
-def moveZCheckMoverLimits(target):
+def move_z_check_mover_limits(target):
     # Use the nanomover (and, optionally, also the stage piezo) to
     # move to the target elevation.
 
     # Need to check current mover limits, see if we exceed them and if
     # so drop down to lower mover handler.
-    originalMover = mover.curHandlerIndex
-    limits = getIndividualSoftLimits(2)
-    offset = target - getPosition()[2]
+    original_mover = mover.cur_handler_index
+    limits = get_individual_soft_limits(2)
+    offset = target - get_position()[2]
 
     # FIXME: IMD 2018-11-07 I think this test needs to be currentpos
     # of the current mover not the overall pos.
-    while mover.curHandlerIndex >= 0:
-        handler = mover.curHandlerIndex
-        moverPos = getAllPositions()[handler][2]
-        if (moverPos + offset) > limits[mover.curHandlerIndex][1] or (
-            moverPos + offset
-        ) < limits[mover.curHandlerIndex][0]:
+    while mover.cur_handler_index >= 0:
+        handler = mover.cur_handler_index
+        mover_pos = get_all_positions()[handler][2]
+        if (mover_pos + offset) > limits[mover.cur_handler_index][1] or (
+                mover_pos + offset
+        ) < limits[mover.cur_handler_index][0]:
             # need to drop down a handler to see if next handler can do the move
-            mover.curHandlerIndex -= 1
-            if mover.curHandlerIndex < 0:
+            mover.cur_handler_index -= 1
+            if mover.cur_handler_index < 0:
                 print("Move too large for any Z mover.")
 
         else:
-            goToZ(target)
+            go_to_z(target)
             break
 
     # return to original active mover.
-    mover.curHandlerIndex = originalMover
+    mover.cur_handler_index = original_mover
 
 
-def optimisedSiteOrder(baseOrder):
+def optimised_site_order(base_order):
     """Use the nearest-neighbor algorithm to select the order in which to visit
     the selected sites (i.e. try to solve the Traveling Salesman problem).
 
@@ -688,15 +688,15 @@ def optimisedSiteOrder(baseOrder):
     some basically sane order.
 
     Args:
-        baseOrder (list): List of site IDs.
+        base_order (list): List of site IDs.
     """
-    if len(baseOrder) == 0:
+    if len(base_order) == 0:
         return []
-    markedPoints = set()
-    pointsInOrder = []
-    totalTourCost = 0
-    curPoint = baseOrder[0]
-    remainingPoints = set(baseOrder)
+    marked_points = set()
+    points_in_order = []
+    total_tour_cost = 0
+    cur_point = base_order[0]
+    remaining_points = set(base_order)
 
     def distance(a, b):
         """Calculate the travel time between two sites.
@@ -704,34 +704,34 @@ def optimisedSiteOrder(baseOrder):
         Since we move simultaneously in each axis, this is simply the maximum
         distance along any given axis.
         """
-        p1 = mover.idToSite[a].position
-        p2 = mover.idToSite[b].position
+        p1 = mover.id_to_site[a].position
+        p2 = mover.id_to_site[b].position
         return max([abs(a - b) for a, b in zip(p1, p2)])
 
-    while remainingPoints:
-        markedPoints.add(curPoint)
-        pointsInOrder.append(curPoint)
-        remainingPoints.remove(curPoint)
-        if not remainingPoints:
+    while remaining_points:
+        marked_points.add(cur_point)
+        points_in_order.append(cur_point)
+        remaining_points.remove(cur_point)
+        if not remaining_points:
             break
 
         # Find the closest remaining point
-        nextPoint = min(remainingPoints, key=lambda a: distance(a, curPoint))
-        totalTourCost += distance(curPoint, nextPoint)
-        curPoint = nextPoint
+        next_point = min(remaining_points, key=lambda a: distance(a, cur_point))
+        total_tour_cost += distance(cur_point, next_point)
+        cur_point = next_point
     # Add cost of closing the loop back to the first point.
-    totalTourCost += distance(baseOrder[0], curPoint)
+    total_tour_cost += distance(base_order[0], cur_point)
 
     # Calculate the cost of just doing everything in order.
-    simpleTourCost = 0
-    for i in range(len(baseOrder)):
-        simpleTourCost += distance(
-            baseOrder[i], baseOrder[(i + 1) % len(baseOrder)]
+    simple_tour_cost = 0
+    for i in range(len(base_order)):
+        simple_tour_cost += distance(
+            base_order[i], base_order[(i + 1) % len(base_order)]
         )
-    simpleTourCost += distance(baseOrder[0], baseOrder[-1])
+    simple_tour_cost += distance(base_order[0], base_order[-1])
 
-    if simpleTourCost < totalTourCost:
+    if simple_tour_cost < total_tour_cost:
         # Nearest-neighbor is worse than just going in the
         # user-specified order
-        return baseOrder.copy()
-    return pointsInOrder
+        return base_order.copy()
+    return points_in_order

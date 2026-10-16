@@ -104,7 +104,7 @@ class DrawerHandler(device.DeviceHandler):
     def __init__(
         self,
         name: str,
-        groupName: str,
+        group_name: str,
         settings: typing.Sequence[DrawerSettings],
         settingIndex: int,
         callbacks={},
@@ -121,7 +121,7 @@ class DrawerHandler(device.DeviceHandler):
             settingIndex (int): Index into settings list indicating the current
                 mode.
         """
-        super().__init__(name, groupName, False, callbacks, depot.DRAWER)
+        super().__init__(name, group_name, False, callbacks, depot.DRAWER)
         self.settings = settings
         self.settingIndex = settingIndex
 
@@ -132,7 +132,7 @@ class DrawerHandler(device.DeviceHandler):
             lambda: self.changeDrawer(initial_settings),
         )
 
-    def makeUI(self, parent) -> None:
+    def make_ui(self, parent) -> None:
         """Generate a row of buttons, one for each possible drawer."""
         if not self.settings or len(self.settings) == 1:
             # Nothing to be done here.
@@ -167,7 +167,7 @@ class DrawerHandler(device.DeviceHandler):
         """Set dye and wavelength on each camera, and update our UI."""
         for cname in newSetting.cameraNames:
             handler = depot.getHandler(cname, depot.CAMERA)
-            handler.updateFilter(
+            handler.update_filter(
                 newSetting.cameraToDye[cname],
                 newSetting.cameraToWavelength[cname],
             )

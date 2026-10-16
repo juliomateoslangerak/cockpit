@@ -113,7 +113,7 @@ class PhysikInstrumenteM687(Device):
     .. code:: ini
 
         [m687]
-        type: cockpit.devices.physikInstrumenteM687.PhysikInstrumenteM687
+        type: cockpit.devices.physik_instrumente_m687.PhysikInstrumenteM687
         port: com6
         baud: 115200
         timeout: 0.1
@@ -135,26 +135,26 @@ class PhysikInstrumenteM687(Device):
     def __init__(self, name, config):
         super().__init__(name, config)
         ## Connection to the XY stage controller (serial.Serial instance)
-        self.xyConnection = None
+        self.xy_connection = None
         ## Lock around sending commands to the XY stage controller.
-        self.xyLock = threading.Lock()
+        self.xy_lock = threading.Lock()
         ## Cached copy of the stage's position. Initialized to an impossible
         # value; this will be modified in initialize.
-        self.xyPositionCache = (10**100, 10**100)
+        self.xy_position_cache = (10**100, 10**100)
         ## Target positions for movement in X and Y, or None if that axis is
         # not moving.
-        self.xyMotionTargets = [None, None]
+        self.xy_motion_targets = [None, None]
         ## Maps the cockpit's axis ordering (0: X, 1: Y, 2: Z) to the
         # XY stage's ordering or swap it if True in the configuration
         if self.config.get("swapaxes", False):
-            self.axisMapper = {0: 2, 1: 1}
+            self.axis_mapper = {0: 2, 1: 1}
         else:
-            self.axisMapper = {0: 1, 1: 2}
+            self.axis_mapper = {0: 1, 1: 2}
         ## Maps cockpit axis ordering to a +-1 multiplier to apply to motion,
         # since some of our axes might be flipped.
         invert_0 = config.get("invert0", False)
         invert_1 = config.get("invert1", False)
-        self.axisSignMapper = {
+        self.axis_sign_mapper = {
             0: -1 if invert_0 else 1,
             1: -1 if invert_1 else 1,
         }
@@ -165,8 +165,8 @@ class PhysikInstrumenteM687(Device):
         self.baud = config.get("baud")
         self.timeout = config.get("timeout")
         try:
-            limitString = config.get("softlimits")
-            parsed = re.search(LIMITS_PAT, limitString)
+            limit_string = config.get("softlimits")
+            parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
                 raise Exception("Bad config: PhysikInstrumentsM687 Limits.")
@@ -178,32 +178,32 @@ class PhysikInstrumenteM687(Device):
             print("No softlimits section setting default limits")
             self.softlimits = ((-67500, 67500), (-42500, 42500))
 
-        events.subscribe(events.USER_ABORT, self.onAbort)
-        events.subscribe(events.MACRO_STAGE_XY_DRAW, self.onMacroStagePaint)
-        # events.subscribe(events.COCKPIT_INIT_COMPLETE, self.promptExerciseStage)
+        events.subscribe(events.USER_ABORT, self.on_abort)
+        events.subscribe(events.MACRO_STAGE_XY_DRAW, self.on_macro_stage_paint)
+        # events.subscribe(events.COCKPIT_INIT_COMPLETE, self.prompt_exercise_stage)
 
     def initialize(self):
         port = self.port
         baud = self.baud
         timeout = self.timeout
-        self.xyConnection = serial.Serial(port, baud, timeout=timeout)
-        self.sendXYCommand(b"SVO 1 1")
-        self.sendXYCommand(b"SVO 2 1")
+        self.xy_connection = serial.Serial(port, baud, timeout=timeout)
+        self.send_xy_command(b"SVO 1 1")
+        self.send_xy_command(b"SVO 2 1")
         # Get the proper initial position.
-        self.getXYPosition(shouldUseCache=False)
+        self.get_xy_position(should_use_cache=False)
 
-    def promptExerciseStage(self):
+    def prompt_exercise_stage(self):
         """We want to periodically exercise the XY stage to spread the grease
         around on its bearings; check how long it's been since the stage was
         last exercised, and prompt the user if it's been more than a week."""
-        lastExerciseTimestamp = cockpit.util.user_config.getValue(
+        last_exercise_timestamp = cockpit.util.user_config.get_value(
             "PIM687LastExerciseTimestamp", default=0
         )
-        curTime = time.time()
-        delay = curTime - lastExerciseTimestamp
-        daysPassed = delay / float(24 * 60 * 60)
-        if daysPassed > 7 and cockpit.gui.gui_utils.getUserPermission(
-            ("It has been %.1f days since " % daysPassed)
+        cur_time = time.time()
+        delay = cur_time - last_exercise_timestamp
+        days_passed = delay / float(24 * 60 * 60)
+        if days_passed > 7 and cockpit.gui.gui_utils.getUserPermission(
+            ("It has been %.1f days since " % days_passed)
             + "the stage was last exercised. Please exercise "
             + "the stage regularly.\n\nExercise stage?",
             "Please exercise the stage",
@@ -214,41 +214,41 @@ class PhysikInstrumenteM687(Device):
             # slightly from the true safeties. Moving to the middle is
             # necessary to avoid the banned rectangles, in case the stage is
             # in them when we start.
-            initialPos = tuple(self.xyPositionCache)
-            cockpit.interfaces.stage_mover.goToXY((0, 0), shouldBlock=True)
+            initial_pos = tuple(self.xy_position_cache)
+            cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block=True)
             for i in range(5):
                 print("Rep %d of 5..." % i)
                 for position in self.softlimits:
-                    cockpit.interfaces.stage_mover.goToXY(
-                        position, shouldBlock=True
+                    cockpit.interfaces.stage_mover.go_to_xy(
+                        position, should_block=True
                     )
-            cockpit.interfaces.stage_mover.goToXY((0, 0), shouldBlock=True)
-            cockpit.interfaces.stage_mover.goToXY(initialPos, shouldBlock=True)
+            cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block=True)
+            cockpit.interfaces.stage_mover.go_to_xy(initial_pos, should_block=True)
             print("Exercising complete. Thank you!")
 
-            cockpit.util.user_config.setValue(
+            cockpit.util.user_config.set_value(
                 "PIM687LastExerciseTimestamp", time.time()
             )
 
-    def sendXYCommand(
-        self, command, numExpectedLines=1, shouldCheckErrors=True
+    def send_xy_command(
+        self, command, num_expected_lines=1, should_check_errors=True
     ):
         """Send a command to the XY stage controller, read the response, check
         for errors, and either raise an exception or return the response.
 
-        Very similar to sendZCommand of course, but xyConnection is a Serial
+        Very similar to sendZCommand of course, but xy_connection is a Serial
         instance and zConnection is a Telnet instance. We prevent commands from
         being sent if too much time passes before we can acquire the lock,
         since otherwise we may buffer up a lot of user-input motion commands
         and end up moving further than expected.
         """
-        with self.xyLock:
-            self.xyConnection.write(command + b"\n")
-            response = self.getXYResponse(numExpectedLines)
-            if shouldCheckErrors:
+        with self.xy_lock:
+            self.xy_connection.write(command + b"\n")
+            response = self.get_xy_response(num_expected_lines)
+            if should_check_errors:
                 # Check for errors
-                self.xyConnection.write(b"ERR?\n")
-                error = int(self.getXYResponse(1).strip())
+                self.xy_connection.write(b"ERR?\n")
+                error = int(self.get_xy_response(1).strip())
                 # 0 is "no error"; 10 is "motion stopped by user".
                 if error == 5:
                     # Motors need homing.
@@ -259,59 +259,59 @@ class PhysikInstrumenteM687(Device):
                     to home the stage.
                     """
                     if cockpit.gui.gui_utils.getUserPermission(msg):
-                        self.homeMotors()
+                        self.home_motors()
                 elif error not in [0, 10]:
-                    errorDesc = ERROR_CODES.get(
+                    error_desc = ERROR_CODES.get(
                         error, "Unknown error code [%s]" % error
                     )
                     raise RuntimeError(
                         "Error issuing command [%s] to the XY stage controller: %s"
-                        % (command.decode(), errorDesc)
+                        % (command.decode(), error_desc)
                     )
             return response
 
-    def getXYResponse(self, numExpectedLines):
+    def get_xy_response(self, num_expected_lines):
         """Read a response off of the XY connection.
 
         We do this one character at a time in the hopes of avoiding having to
         wait for a timeout. We stop when we hit the right number of newlines.
         """
         response = b""
-        numLines = 0
+        num_lines = 0
         while True:
-            output = self.xyConnection.read(1)
+            output = self.xy_connection.read(1)
             if output:
                 response += output
                 if output == b"\n":
-                    numLines += 1
-                    if numLines == numExpectedLines:
+                    num_lines += 1
+                    if num_lines == num_expected_lines:
                         break
             else:
                 # No output; must be done.
                 break
         return response
 
-    def homeMotors(self):
+    def home_motors(self):
         """Home the motors."""
         # Clear output buffers
-        self.xyConnection.readlines()
-        self.xyConnection.write(b"SVO 1 1\n")
-        self.xyConnection.write(b"SVO 2 1\n")
-        self.xyConnection.write(b"FRF\n")
+        self.xy_connection.readlines()
+        self.xy_connection.write(b"SVO 1 1\n")
+        self.xy_connection.write(b"SVO 2 1\n")
+        self.xy_connection.write(b"FRF\n")
         # Motion status response.
         response = None
 
         # Progress indicator.
         # TODO - rather than raw wx, this should probably be a class from
-        # cockpit.gui.guiUtils.
+        # cockpit.gui.gui_utils.
         busy_box = wx.ProgressDialog(
             parent=None, title="Busy...", message="Homing stage"
         )
         busy_box.Show()
         while response != 0:
             # Request motion status
-            self.xyConnection.write(b"\x05")
-            response = int(self.xyConnection.readline())
+            self.xy_connection.write(b"\x05")
+            response = int(self.xy_connection.readline())
             busy_box.Pulse()
             time.sleep(0.2)
 
@@ -319,8 +319,8 @@ class PhysikInstrumenteM687(Device):
         busy_box.Destroy()
 
         # Was homing successful?
-        self.xyConnection.write(b"FRF?\n")
-        homestatus = self.xyConnection.readlines()
+        self.xy_connection.write(b"FRF?\n")
+        homestatus = self.xy_connection.readlines()
         success = True
 
         msg = ""
@@ -333,29 +333,29 @@ class PhysikInstrumenteM687(Device):
                 success = False
 
         if success:
-            self.sendXYPositionUpdates()
+            self.send_xy_position_updates()
             msg = "Homing successful."
 
         wx.MessageBox(msg, style=(wx.ICON_INFORMATION | wx.OK))
 
         return success
 
-    def onExit(self):
+    def on_exit(self):
         """When the user logs out, switch to open-loop mode."""
         # Switch to open loop
-        self.sendXYCommand(b"SVO 1 0")
-        self.sendXYCommand(b"SVO 2 0")
-        self.xyConnection.close()
+        self.send_xy_command(b"SVO 1 0")
+        self.send_xy_command(b"SVO 2 0")
+        self.xy_connection.close()
 
-    def onAbort(self, *args):
+    def on_abort(self, *args):
         """Halt XY motion when the user aborts.
 
         Note we can't control Z motion here because the piezo is under the
         DSP's control.
         """
-        self.sendXYCommand(b"HLT")
+        self.send_xy_command(b"HLT")
 
-    def onMacroStagePaint(self, stage):
+    def on_macro_stage_paint(self, stage):
         """The XY Macro Stage view is painting itself; draw the banned
         rectangles as pink excluded zones."""
         glColor3f(1, 0.6, 0.6)
@@ -367,7 +367,7 @@ class PhysikInstrumenteM687(Device):
             stage.scaledVertex(x2, y1)
         glEnd()
 
-    def getHandlers(self):
+    def get_handlers(self):
         # Note we leave control of the Z axis to the DSP; only the XY
         # stage movers get handlers here.
         result = []
@@ -376,7 +376,7 @@ class PhysikInstrumenteM687(Device):
         # with the objective.
         # True range of motion is (-67500, 67500) for X, (-42500, 42500) for Y.
         # IMD 2015-03-02 hacked in full range to see if we can access the full range
-        for axis, minPos, maxPos in [
+        for axis, min_pos, max_pos in [
             (0, self.softlimits[0][0], self.softlimits[1][0]),
             (1, self.softlimits[0][1], self.softlimits[1][1]),
         ]:
@@ -386,44 +386,44 @@ class PhysikInstrumenteM687(Device):
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.moveXYAbsolute,
-                        "moveRelative": self.moveXYRelative,
-                        "getPosition": self.getXYPosition,
+                        "moveAbsolute": self.move_xy_absolute,
+                        "moveRelative": self.move_xy_relative,
+                        "getPosition": self.get_xy_position,
                     },
                     axis,
-                    (minPos, maxPos),
-                    (minPos, maxPos),
+                    (min_pos, max_pos),
+                    (min_pos, max_pos),
                 )
             )
         return result
 
-    def moveXYAbsolute(self, axis, pos):
-        with self.xyLock:
-            if self.xyMotionTargets[axis] is not None:
+    def move_xy_absolute(self, axis, pos):
+        with self.xy_lock:
+            if self.xy_motion_targets[axis] is not None:
                 # Don't stack motion commands for the same axis
                 return
-        self.xyMotionTargets[axis] = pos
-        if not self.isMotionSafe(axis):
-            self.xyMotionTargets[axis] = None
+        self.xy_motion_targets[axis] = pos
+        if not self.is_motion_safe(axis):
+            self.xy_motion_targets[axis] = None
             raise RuntimeError(
                 "Moving axis %d to %s would pass through unsafe zone"
                 % (axis, pos)
             )
         # The factor of 1000 converts from microns to millimeters.
-        self.sendXYCommand(
+        self.send_xy_command(
             b"MOV %d %f"
-            % (self.axisMapper[axis], self.axisSignMapper[axis] * pos / 1000.0)
+            % (self.axis_mapper[axis], self.axis_sign_mapper[axis] * pos / 1000.0)
         )
-        self.sendXYPositionUpdates()
+        self.send_xy_position_updates()
 
-    def moveXYRelative(self, axis, delta):
+    def move_xy_relative(self, axis, delta):
         if not delta:
             # Received a bogus motion request.
             return
-        curPos = self.xyPositionCache[axis]
-        self.moveXYAbsolute(axis, curPos + delta)
+        cur_pos = self.xy_position_cache[axis]
+        self.move_xy_absolute(axis, cur_pos + delta)
 
-    def isMotionSafe(self, axis):
+    def is_motion_safe(self, axis):
         """Verify that the desired motion is safe, i.e. doesn't take us through
         either of the banned rectangles.
 
@@ -434,19 +434,19 @@ class PhysikInstrumenteM687(Device):
         """
         # Make copies of these values for safety's sake (so they don't get
         # unexpectedly altered).
-        start = tuple(self.xyPositionCache)
-        end = list(self.xyMotionTargets)
+        start = tuple(self.xy_position_cache)
+        end = list(self.xy_motion_targets)
         for i, val in enumerate(end):
             if val is None:
                 # Not moving this axis; hold it fixed.
                 end[i] = start[i]
         end = tuple(end)
         for rectangle in BANNED_RECTANGLES:
-            if self.doBoxesIntersect(start, end, rectangle):
+            if self.do_boxes_intersect(start, end, rectangle):
                 return False
         return True
 
-    def doBoxesIntersect(self, start, end, rectangle):
+    def do_boxes_intersect(self, start, end, rectangle):
         """Test if the given two axis-aligned rectangles overlap.
 
         We do this by looking to see if either of their axial projections
@@ -471,55 +471,55 @@ class PhysikInstrumenteM687(Device):
         return True
 
     @cockpit.util.threads.call_in_new_thread
-    def sendXYPositionUpdates(self):
+    def send_xy_position_updates(self):
         """Send updates on the XY stage's position, until it stops moving."""
         while True:
-            prevX, prevY = self.xyPositionCache
-            x, y = self.getXYPosition(shouldUseCache=False)
-            delta = abs(x - prevX) + abs(y - prevY)
+            prev_x, prev_y = self.xy_position_cache
+            x, y = self.get_xy_position(should_use_cache=False)
+            delta = abs(x - prev_x) + abs(y - prev_y)
             if delta < 5.0:
                 # No movement since last time; done moving.
                 for axis in [0, 1]:
                     events.publish(events.STAGE_STOPPED, "%d PI mover" % axis)
-                with self.xyLock:
-                    self.xyMotionTargets = [None, None]
+                with self.xy_lock:
+                    self.xy_motion_targets = [None, None]
                 return
             for axis in [0, 1]:
                 events.publish(events.STAGE_MOVER, axis)
             time.sleep(0.01)
 
-    def getXYPosition(self, axis=None, shouldUseCache=True):
+    def get_xy_position(self, axis=None, should_use_cache=True):
         """Get the position of the specified axis, or both axes by default.
 
-        If shouldUseCache is not set, then we will query the controller, which
+        If should_use_cache is not set, then we will query the controller, which
         takes some time.
         """
-        if not shouldUseCache:
-            position = self.sendXYCommand(b"POS?", 2, False)
+        if not should_use_cache:
+            position = self.send_xy_command(b"POS?", 2, False)
             y, x = position.split(b"\n", maxsplit=2)[:2]
             # Positions are in millimeters, and we need microns.
-            x = float(x.split(b"=")[1]) * 1000 * self.axisSignMapper[0]
-            y = float(y.split(b"=")[1]) * 1000 * self.axisSignMapper[1]
-            self.xyPositionCache = (x, y)
+            x = float(x.split(b"=")[1]) * 1000 * self.axis_sign_mapper[0]
+            y = float(y.split(b"=")[1]) * 1000 * self.axis_sign_mapper[1]
+            self.xy_position_cache = (x, y)
         if axis is None:
-            return self.xyPositionCache
-        return self.xyPositionCache[axis]
+            return self.xy_position_cache
+        return self.xy_position_cache[axis]
 
-    def makeInitialPublications(self):
-        self.sendXYPositionUpdates()
+    def make_initial_publications(self):
+        self.send_xy_position_updates()
 
-    def listXYParams(self):
+    def list_xy_params(self):
         """Debugging function: extract all valid parameters from the XY
         controller."""
-        # Don't use sendXYCommand here because its error handling doesn't
+        # Don't use send_xy_command here because its error handling doesn't
         # deal with HPA?'s output properly -- there's an extra blank line
         # that makes it think output is done when it actually isn't.
-        self.xyConnection.write(b"HPA?\n")
+        self.xy_connection.write(b"HPA?\n")
         lines = b""
         output = None
 
         while output or len(lines) < 1000:
-            output = self.xyConnection.read(100)
+            output = self.xy_connection.read(100)
             lines += output
         lines = lines.split(b"\n")
         handle = open("params.txt", "w")
@@ -529,7 +529,7 @@ class PhysikInstrumenteM687(Device):
                 param = line.split(b"=")[0]
                 desc = line.split(b"\t")[5]
                 for axis in (1, 2):
-                    val = self.sendXYCommand(b"SPA? %d %s" % (axis, param))
+                    val = self.send_xy_command(b"SPA? %d %s" % (axis, param))
                     # Note val has a newline at the end here.
                     handle.write("%s (%s): %s" % (desc, param, val.decode()))
             else:
@@ -538,8 +538,8 @@ class PhysikInstrumenteM687(Device):
         handle.write(b"\n\n")
         handle.close()
 
-    def testBoxIntersect(self):
-        """Debugging function: test doBoxesIntersect()."""
+    def test_box_intersect(self):
+        """Debugging function: test do_boxes_intersect()."""
         for items in [
             [(0, 0), (10, 10), ((5, 5), (15, 15)), True],
             [(5, 5), (15, 5), ((0, 0), (10, 10)), True],
@@ -547,34 +547,34 @@ class PhysikInstrumenteM687(Device):
             [(0, 0), (2, 2), ((6, 6), (8, 8)), False],
         ]:
             print(items)
-            start, end, (boxStart, boxEnd), desire = items
+            start, end, (box_start, box_end), desire = items
             assert (
-                self.doBoxesIntersect(start, end, (boxStart, boxEnd)) == desire
+                self.do_boxes_intersect(start, end, (box_start, box_end)) == desire
             )
             s1, s2 = start
             e1, e2 = end
-            bs1, bs2 = boxStart
-            be1, be2 = boxEnd
+            bs1, bs2 = box_start
+            be1, be2 = box_end
             assert (
-                self.doBoxesIntersect(
+                self.do_boxes_intersect(
                     (s2, s1), (e2, e1), ((bs2, bs1), (be2, be1))
                 )
                 == desire
             )
             assert (
-                self.doBoxesIntersect(
+                self.do_boxes_intersect(
                     (-s1, s2), (-e1, e2), ((-bs1, bs2), (-be1, be2))
                 )
                 == desire
             )
             assert (
-                self.doBoxesIntersect(
+                self.do_boxes_intersect(
                     (-s1, -s2), (-e1, -e2), ((-bs1, -bs2), (-be1, -be2))
                 )
                 == desire
             )
             assert (
-                self.doBoxesIntersect(
+                self.do_boxes_intersect(
                     (s1, -s2), (e1, -e2), ((bs1, -bs2), (be1, -be2))
                 )
                 == desire

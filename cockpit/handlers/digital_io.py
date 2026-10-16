@@ -31,9 +31,9 @@ from cockpit.handlers import device
 class DigitalIOHandler(device.DeviceHandler):
     """A handler for Digital IO devices."""
 
-    def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
+    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
         super().__init__(
-            name, groupName, isEligibleForExperiments, callbacks, depot.DIO
+            name, group_name, is_eligible_for_experiments, callbacks, depot.DIO
         )
         self.isEnabled = False
 
@@ -61,7 +61,7 @@ class DigitalIOHandler(device.DeviceHandler):
             if state:
                 self.callbacks["write line"](i, outputs[i])
 
-    def setEnabled(self, shouldEnable=True):
+    def set_enabled(self, shouldEnable=True):
         try:
             self.isEnabled = self.callbacks["enable"](shouldEnable)
         except:
@@ -70,11 +70,11 @@ class DigitalIOHandler(device.DeviceHandler):
         if self.isEnabled != shouldEnable:
             raise Exception("Problem enabling device with handler %s" % self)
 
-    def getIsEnabled(self):
-        """Return self.isEnabled."""
+    def get_is_enabled(self):
+        """Return self.is_enabled."""
         return self.isEnabled
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """UI functions"""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -113,7 +113,7 @@ class DigitalIOHandler(device.DeviceHandler):
             for key in otherbuttons.keys():
                 self.pathNameToButton[key].SetValue(otherbuttons[key])
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def updateAfterChange(self, *args):
         #        # Accept *args so that can be called directly as a Pyro callback
         #        # or an event handler.

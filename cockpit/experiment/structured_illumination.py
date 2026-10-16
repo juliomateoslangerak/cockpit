@@ -469,7 +469,7 @@ class SIExperiment(experiment.Experiment):
             return
 
         doc = cockpit.util.datadoc.DataDoc(self.savePath)
-        order_in = tuple(doc.image.Mrc.axisOrderStr())
+        order_in = tuple(doc.image.Mrc.axis_order_str())
 
         length_getters = {
             "a": self.numAngles,
@@ -481,7 +481,7 @@ class SIExperiment(experiment.Experiment):
         ## these are checked separetely.  See cockpit bug #289.
         header_z_lengths = tuple([length_getters[d] for d in z_order])
         nz_in_header = numpy.prod(header_z_lengths)
-        nz_in_data = doc.image.shape[doc.image.Mrc.axisOrderStr().index("z")]
+        nz_in_data = doc.image.shape[doc.image.Mrc.axis_order_str().index("z")]
         if nz_in_data == nz_in_header:
             z_lengths = header_z_lengths
         else:
@@ -496,16 +496,16 @@ class SIExperiment(experiment.Experiment):
         ## header.  We fake the struct by using multiple u1 per
         ## element.
         ext_header_stride = 4 * (
-            doc.imageHeader.NumIntegers + doc.imageHeader.NumFloats
+                doc.image_header.NumIntegers + doc.image_header.NumFloats
         )
         ext_header_dtype = ",".join(["u1"] * ext_header_stride)
         with open(self.savePath, "rb") as fh:
             fh.seek(1024)  # skip base header
             ext_header = numpy.fromfile(
-                fh, count=doc.getNPlanes(), dtype=ext_header_dtype
+                fh, count=doc.get_n_planes(), dtype=ext_header_dtype
             )
         assert (
-            doc.imageHeader.next == ext_header.nbytes
+                doc.image_header.next == ext_header.nbytes
         ), "next value from datadoc differs from computed length"
         assert order_in[-2:] == (
             "y",
@@ -518,7 +518,7 @@ class SIExperiment(experiment.Experiment):
         ## not the shape from the data in the datadoc instance.  See
         ## cockpit bug #289.
         header_shape = [
-            int(n) for n in cockpit.util.mrc.shapeFromHdr(doc.imageHeader)
+            int(n) for n in cockpit.util.mrc.shape_from_hdr(doc.image_header)
         ]
         ext_header = ext_header.reshape(header_shape[:-2])
 
@@ -535,7 +535,7 @@ class SIExperiment(experiment.Experiment):
         ## Save to a new file, reusing the original base header since
         ## we don't actually changed anything there.
         tmp_fh = tempfile.NamedTemporaryFile(delete=False)
-        cockpit.util.datadoc.writeMrcHeader(doc.imageHeader, tmp_fh)
+        cockpit.util.datadoc.write_mrc_header(doc.image_header, tmp_fh)
         ## Make sure the data is actually ordered for writing,
         ## otherwise at this point the arrays might be making use of
         ## views.
@@ -656,7 +656,7 @@ class BaseSIMExperimentUI(wx.Panel):
 
     def loadSettings(self):
         """Load the saved experiment settings, if any."""
-        result = cockpit.util.user_config.getValue(
+        result = cockpit.util.user_config.get_value(
             self.configKey, default=self._getDefaultSettings()
         )
 
@@ -679,7 +679,7 @@ class BaseSIMExperimentUI(wx.Panel):
         """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
-        cockpit.util.user_config.setValue(self.configKey, settings)
+        cockpit.util.user_config.set_value(self.configKey, settings)
 
 
 class ExperimentUI(BaseSIMExperimentUI):

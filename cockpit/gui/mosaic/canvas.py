@@ -167,7 +167,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
 
         # Non-zero objective offsets require expansion of area covered
         # by megatiles.
-        offsets = [h.offset for h in wx.GetApp().Objectives.GetHandlers()]
+        offsets = [h.offset for h in wx.GetApp().Objectives.get_handlers()]
         minmax = lambda l: (min(l), max(l))
         xOffLim = minmax([-offset[0] for offset in offsets])
         yOffLim = minmax([offset[1] for offset in offsets])
@@ -310,7 +310,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.deleteTilesList(self.getTilesIntersecting(start, end))
         events.publish(events.MOSAIC_UPDATE)
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def deleteTilesList(self, tilesToDelete):
         """Delete a list of tiles."""
         for tile in tilesToDelete:
@@ -361,10 +361,10 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self, data, pos, size, scalings=(None, None), layer=0, metadata=None
     ):
         """Add a new image to the mosaic.
-        @cockpit.util.threads.callInMainThread."""
+        @cockpit.util.threads.call_in_main_thread."""
         self.pendingImages.put((data, pos, size, scalings, layer, metadata))
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def rescale(self, minMax=None):
         """Rescale the tiles.
 
@@ -575,7 +575,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 : tile.textureData.shape[0],
                 : tile.textureData.shape[1],
             ] = tile.textureData
-        header = cockpit.util.datadoc.makeHeaderFor(imageData)
+        header = cockpit.util.datadoc.make_header_for(imageData)
         # meta data for mosaic image header
         #
         numIntegers = 8
@@ -589,7 +589,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         header.NumIntegers = numIntegers
         header.NumFloats = numFloats
         # we can only have one lens ID so just grab the current one.
-        header.LensNum = wx.GetApp().Objectives.GetCurrent().lens_ID
+        header.LensNum = wx.GetApp().Objectives.get_current().lens_ID
         extendedBytes = 4 * (numIntegers + numFloats) * len(self.tiles)
         header.next = extendedBytes
 
@@ -597,7 +597,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         dataOffset = 1024 + extendedBytes
 
         handle = open(mrcPath, "wb")
-        cockpit.util.datadoc.writeMrcHeader(header, handle)
+        cockpit.util.datadoc.write_mrc_header(header, handle)
         handle.seek(metadataOffset)
         for i in range(len(self.tiles)):
             metadata = self.tiles[i].metadata
@@ -672,16 +672,16 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 maximum=100,
             ),
         )
-        if doc.imageArray.shape[2] > len(tileStats):
+        if doc.image_array.shape[2] > len(tileStats):
             # More images in the file than we have stats for.
             _logger.warning(
                 "Loading mosaic with %d images; only have positioning information for %d.",
-                doc.imageArray.shape[2],
+                doc.image_array.shape[2],
                 len(tileStats),
             )
-        maxImages = min(doc.imageArray.shape[2], len(tileStats))
+        maxImages = min(doc.image_array.shape[2], len(tileStats))
         for i in range(maxImages):
-            image = doc.imageArray[0, 0, i]
+            image = doc.image_array[0, 0, i]
             stats = tileStats[i]
             try:
                 data = image[: int(stats[5]), : int(stats[6])]

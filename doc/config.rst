@@ -219,15 +219,15 @@ configuration.  For example:
 .. code:: ini
 
   [west]
-  type: cockpit.devices.microscopeCamera.MicroscopeCamera
+  type: cockpit.devices.microscope_camera.MicroscopeCamera
   uri: PYRO:WestCamera@127.0.0.1:8001
 
   [woody]
-  type: cockpit.devices.executorDevices.ExecutorDevice
+  type: cockpit.devices.executor_devices.ExecutorDevice
   uri: PYRO:Sheriff@192.168.0.2:8002
 
   [488nm]
-  type: cockpit.devices.microscopeDevice.MicroscopeLaser
+  type: cockpit.devices.microscope_device.MicroscopeLaser
   uri: PYRO:Deepstar488Laser@192.168.0.3:7001
   wavelength: 488
   triggerSource: woody

@@ -69,7 +69,7 @@ class HandlerPositionCtrl(wx.TextCtrl):
         self._axis = axis
         self._handler_index = handler_index
 
-        if self._handler_index != stage_mover.getCurHandlerIndex():
+        if self._handler_index != stage_mover.get_cur_handler_index():
             self.Disable()
 
         for event, handler in [
@@ -82,7 +82,7 @@ class HandlerPositionCtrl(wx.TextCtrl):
     def _OnMove(self, event: wx.CommandEvent) -> None:
         axis = event.EventData[0]
         if axis == self._axis:
-            pos = stage_mover.getAllPositions()[self._handler_index][self._axis]
+            pos = stage_mover.get_all_positions()[self._handler_index][self._axis]
             self.SetValue("%5.2f" % pos)
 
     def _OnHandlerChange(self, event: wx.CommandEvent) -> None:
@@ -114,7 +114,7 @@ class AxisStepCtrl(wx.TextCtrl):
         self.SetMinSize(self.GetSizeFromText("8888.88"))
         self._axis = axis
 
-        self._SetStepSizeValue(stage_mover.getCurStepSizes()[self._axis])
+        self._SetStepSizeValue(stage_mover.get_cur_step_sizes()[self._axis])
 
         # When we gain focus we will update the last value.  When we
         # then lose focus we set the new step size.  If that fails,
@@ -148,7 +148,7 @@ class AxisStepCtrl(wx.TextCtrl):
     def _OnKillFocus(self, event: wx.FocusEvent) -> None:
         try:
             new_step_size = float(self.GetValue())
-            wx.GetApp().Stage.SetStepSize(self._axis, new_step_size)
+            wx.GetApp().Stage.set_step_size(self._axis, new_step_size)
         except:
             self.ChangeValue(self._last_value)
         else:
@@ -256,35 +256,35 @@ class SaveTopBottomPanel(wx.Panel):
         self.SetSizer(sizer)
 
     def OnSaveTop(self, evt: wx.CommandEvent) -> None:
-        stage_mover.mover.SavedTop = stage_mover.getPosition()[2]
+        stage_mover.mover.saved_top = stage_mover.get_position()[2]
 
     def OnSaveBottom(self, evt: wx.CommandEvent) -> None:
-        stage_mover.mover.SavedBottom = stage_mover.getPosition()[2]
+        stage_mover.mover.saved_bottom = stage_mover.get_position()[2]
 
     def UpdateSavedPositions(self, evt: wx.CommandEvent) -> None:
-        self._top_ctrl.ChangeValue("%.1f" % stage_mover.mover.SavedTop)
-        self._bottom_ctrl.ChangeValue("%.1f" % stage_mover.mover.SavedBottom)
+        self._top_ctrl.ChangeValue("%.1f" % stage_mover.mover.saved_top)
+        self._bottom_ctrl.ChangeValue("%.1f" % stage_mover.mover.saved_bottom)
         self._height_ctrl.ChangeValue(
-            "%.2f" % (stage_mover.mover.SavedTop - stage_mover.mover.SavedBottom)
+            "%.2f" % (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom)
         )
 
     def OnEditTopPosition(self, evt: wx.CommandEvent) -> None:
-        stage_mover.mover.SavedTop = float(self._top_ctrl.GetValue())
+        stage_mover.mover.saved_top = float(self._top_ctrl.GetValue())
 
     def OnEditBottomPosition(self, evt: wx.CommandEvent) -> None:
-        stage_mover.mover.SavedBottom = float(self._bottom_ctrl.GetValue())
+        stage_mover.mover.saved_bottom = float(self._bottom_ctrl.GetValue())
 
     def OnGoToTop(self, evt: wx.CommandEvent) -> None:
-        stage_mover.moveZCheckMoverLimits(stage_mover.mover.SavedTop)
+        stage_mover.move_z_check_mover_limits(stage_mover.mover.saved_top)
 
     def OnGoToBottom(self, evt: wx.CommandEvent) -> None:
-        stage_mover.moveZCheckMoverLimits(stage_mover.mover.SavedBottom)
+        stage_mover.move_z_check_mover_limits(stage_mover.mover.saved_bottom)
 
     def OnGoToCentre(self, evt: wx.CommandEvent) -> None:
-        centre = stage_mover.mover.SavedBottom + (
-            (stage_mover.mover.SavedTop - stage_mover.mover.SavedBottom) / 2.0
+        centre = stage_mover.mover.saved_bottom + (
+            (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom) / 2.0
         )
-        stage_mover.moveZCheckMoverLimits(centre)
+        stage_mover.move_z_check_mover_limits(centre)
 
 
 class MacroStagePanel(wx.Panel):
@@ -376,17 +376,17 @@ class MacroStagePanel(wx.Panel):
         cockpit.gui.keyboard.setKeyboardHandlers(self)
 
     def OnSwitchControl(self, evt: wx.CommandEvent) -> None:
-        stage_mover.changeMover()
+        stage_mover.change_mover()
 
     def OnRecenter(self, evt: wx.CommandEvent) -> None:
-        stage_mover.recenterFineMotion()
+        stage_mover.recenter_fine_motion()
 
     def OnSetZSafeties(self, evt: wx.CommandEvent) -> None:
         cockpit.gui.dialogs.safety_min_dialog.showDialog(self)
 
     def OnTouchDown(self, ect: wx.CommandEvent) -> None:
         zpos = wx.GetApp().Config["stage"].getfloat("slideTouchdownAltitude")
-        stage_mover.goToZ(zpos)
+        stage_mover.go_to_z(zpos)
 
 
 class MacroStageWindow(wx.Frame):

@@ -29,8 +29,8 @@ class testStagePositioner(unittest.TestCase):
         self.callbacks = unittest.mock.MagicMock()
         self.args = {
             "name": "mock",
-            "groupName": "testsuite",
-            "isEligibleForExperiments": True,
+            "group_name": "testsuite",
+            "is_eligible_for_experiments": True,
             "callbacks": self.callbacks,
             "axis": 0,
             "hardLimits": (-10, 10),

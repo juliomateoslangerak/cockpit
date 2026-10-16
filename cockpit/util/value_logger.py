@@ -40,19 +40,19 @@ class ValueLogger:
         :param filename: logfile for output
         :param keys: keys that name fetched values; used in header
         """
-        self._fhLock = threading.Lock()
+        self._fh_lock = threading.Lock()
         self.keys = keys
         filename = (
             name + "_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
         )
-        self.setLogFile(
+        self.set_log_file(
             os.path.join(wx.GetApp().Config.getpath("log", "dir"), filename)
         )  # sets self._fh
 
     def __del__(self):
         self._fh.close()
 
-    def setLogFile(self, filename):
+    def set_log_file(self, filename):
         """Open a file and store file handle."""
         fh = open(filename, "a")
         if self.keys and fh.tell() == 0:
@@ -67,7 +67,7 @@ class ValueLogger:
             else:
                 fh.write("timestamp" + DELIMITER + str(self.keys) + "\n")
         # Use __condition to lock file IO while we set the file handle.
-        with self._fhLock:
+        with self._fh_lock:
             self._fh = fh
         ValueLogger._fhs.append(self._fh)
 
@@ -96,54 +96,54 @@ class ValueLogger:
         self._fh.flush()
 
     @classmethod
-    def getLogFiles(cls):
+    def get_log_files(cls):
         """Return the full path to all files opened in this session."""
         return [os.path.realpath(fh.name) for fh in cls._fhs]
 
 
 class PollingLogger(ValueLogger):
-    def __init__(self, name, dt, getValues, keys=None):
+    def __init__(self, name, dt, get_values, keys=None):
         """Initialise a PollingValueLogger.
         :param filename: logfile for output
         :param dt: polling interval in seconds
-        :param getValues: a callable to fetch a value or values to log
+        :param get_values: a callable to fetch a value or values to log
         :param keys: keys that name fetched values; used in header
         """
         super().__init__(name, keys)
         self.dt = dt
-        self.getValues = getValues
+        self.get_values = get_values
 
         self.__condition = threading.Condition()
-        self.__stopEvent = threading.Event()
+        self.__stop_event = threading.Event()
 
-        self.tNext = time.time() + self.dt
+        self.t_next = time.time() + self.dt
         self.__worker = threading.Thread(
             target=self.__work, name="Logger: %s" % name
         )
         self.__worker.daemon = True
         self.__worker.start()
 
-    def setPeriod(self, dt):
-        """Set polling period, updating tNext and notifying worker thread.
+    def set_period(self, dt):
+        """Set polling period, updating t_next and notifying worker thread.
         :param dt:   polling period in seconds
         """
         with self.__condition:
-            self.tNext = self.tNext - self.dt + dt
+            self.t_next = self.t_next - self.dt + dt
             self.dt = dt
             self.__condition.notify()
 
     def poll(self):
         """Poll for and log values."""
-        self.tNext = time.time() + self.dt
+        self.t_next = time.time() + self.dt
         ts = datetime.now()
-        values = self.getValues()
+        values = self.get_values()
         self.log(values, ts)
 
     def __work(self):
         """Worker thread target: periodically poll and log values."""
-        while not self.__stopEvent.isSet():
+        while not self.__stop_event.isSet():
             self.__condition.acquire()
-            if self.__condition.wait(self.tNext - time.time()):
+            if self.__condition.wait(self.t_next - time.time()):
                 # Woken early - something changed.
                 continue
             try:
@@ -155,9 +155,9 @@ class PollingLogger(ValueLogger):
 class TestSource:
     def __init__(self, name="ValueLoggerTest", dt=15):
         self.logger = PollingLogger(
-            name, dt, self.getValues, keys=["ch" + str(i) for i in range(4)]
+            name, dt, self.get_values, keys=["ch" + str(i) for i in range(4)]
         )
-        print("Logging to %s" % self.logger.getLogFiles())
+        print("Logging to %s" % self.logger.get_log_files())
 
-    def getValues(self):
+    def get_values(self):
         return [i + random.random() for i in range(4)]

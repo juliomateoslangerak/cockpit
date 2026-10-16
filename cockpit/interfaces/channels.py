@@ -67,13 +67,13 @@ class Channels(wx.EvtHandler):
         )  # type: typing.OrderedDict[str, Channel]
 
     @property
-    def Names(self) -> typing.List[str]:
+    def names(self) -> typing.List[str]:
         return list(self._map.keys())
 
-    def Get(self, name: str) -> Channel:
+    def get(self, name: str) -> Channel:
         return self._map[name]
 
-    def _ProcessChannelEvent(self, event_type, name: str) -> bool:
+    def _process_channel_event(self, event_type, name: str) -> bool:
         """Helper to call `wx.EvtHandler.ProcessEvent` for channel events.
 
         The reason to prefer `ProcessEvent` over `QueueEvent` is that
@@ -94,58 +94,58 @@ class Channels(wx.EvtHandler):
         event.SetString(name)
         return self.ProcessEvent(event)
 
-    def Add(self, name: str, channel: Channel) -> None:
-        """Add new channel. Use `Change` to modify existing channel."""
+    def add(self, name: str, channel: Channel) -> None:
+        """Add new channel. Use `change` to modify existing channel."""
         if name in self._map:
             raise ValueError("channel '%s' already exists" % name)
         self._map[name] = channel
-        self._ProcessChannelEvent(EVT_CHANNEL_ADDED, name)
+        self._process_channel_event(EVT_CHANNEL_ADDED, name)
 
-    def Change(self, name: str, channel: typing.Dict) -> None:
+    def change(self, name: str, channel: typing.Dict) -> None:
         self._map[name] = channel
 
-    def Remove(self, name: str) -> None:
+    def remove(self, name: str) -> None:
         self._map.pop(name)
-        self._ProcessChannelEvent(EVT_CHANNEL_REMOVED, name)
+        self._process_channel_event(EVT_CHANNEL_REMOVED, name)
 
-    def Update(self, other: "Channels") -> None:
+    def update(self, other: "Channels") -> None:
         """Update this instances with the channels from other."""
-        # We call Add/Change instead of OrderedDict.update because the
+        # We call add/change instead of OrderedDict.update because the
         # add/remove events are meant for one channel change.  We
         # could have other events but that would make updating the GUI
         # elements more complicated.
         for name, channel in other._map.items():
             if name in self._map:
-                self.Change(name, channel)
+                self.change(name, channel)
             else:
-                self.Add(name, channel)
+                self.add(name, channel)
 
 
-def CurrentChannel() -> Channel:
+def current_channel() -> Channel:
     """Returns current channel configuration."""
     new_channel = {}
     for handler in cockpit.depot.getAllHandlers():
-        if handler.deviceType in [
+        if handler.device_type in [
             cockpit.depot.CAMERA,
             cockpit.depot.LIGHT_FILTER,
             cockpit.depot.LIGHT_POWER,
             cockpit.depot.LIGHT_TOGGLE,
             cockpit.depot.DIO,
         ]:
-            new_channel[handler.name] = handler.onSaveSettings()
+            new_channel[handler.name] = handler.on_save_settings()
     return new_channel
 
 
-def ApplyChannel(channel: Channel) -> None:
+def apply_channel(channel: Channel) -> None:
     """Apply the given channel configuration."""
     for name, settings in channel.items():
         handler = cockpit.depot.getHandlerWithName(name)
         if handler is None:
             raise Exception("no handler named '%s'" % name)
-        handler.onLoadSettings(settings)
+        handler.on_load_settings(settings)
 
     for handler in cockpit.depot.getAllHandlers():
-        if handler.deviceType in [
+        if handler.device_type in [
             cockpit.depot.CAMERA,
             cockpit.depot.LIGHT_FILTER,
             cockpit.depot.LIGHT_POWER,
@@ -157,19 +157,19 @@ def ApplyChannel(channel: Channel) -> None:
                 )
 
 
-def SaveToFile(filepath: str, channels: Channels) -> None:
+def save_to_file(filepath: str, channels: Channels) -> None:
     with open(filepath, "w") as fh:
         # We should not be accessing internal attributes but
         # alternatives seems overkill since Channels is so simple.
         json.dump(channels._map, fh, indent=2)
 
 
-def LoadFromFile(filepath: str) -> Channels:
+def load_from_file(filepath: str) -> Channels:
     with open(filepath, "r") as fh:
         # We should not be doing this manually but alternatives seem
         # overkill since Channels is so simple.
         internal_map = json.load(fh)
     channels = Channels()
     for name, channel in internal_map.items():
-        channels.Add(name, channel)
+        channels.add(name, channel)
     return channels

@@ -66,10 +66,10 @@ class DummyAnalogDevice(device.Device):
     def initialize(self):
         pass
 
-    def getMovementTime(self, start, finish):
+    def get_movement_time(self, start, finish):
         return (abs(finish - start) * 1e-6, 1e-6)
 
-    def getHandlers(self):
+    def get_handlers(self):
         # Fetch analog configuration
         asource = self.config.get("analogsource", None)
         aline = self.config.get("analogline", None)
@@ -77,7 +77,7 @@ class DummyAnalogDevice(device.Device):
         offset = self.config.get("offset", 0)
         # Fetch source handler and generate line handler.
         exe = depot.getHandler(asource, depot.EXECUTOR)
-        h = exe.registerAnalog(self, aline, offset, gain, self.getMovementTime)
+        h = exe.registerAnalog(self, aline, offset, gain, self.get_movement_time)
         # Add indexed positions if specified in config.
         positions = self.config.get("positions", None)
         if positions:

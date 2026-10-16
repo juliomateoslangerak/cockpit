@@ -225,7 +225,7 @@ class ExperimentUI(wx.Panel):
         return params
 
     def loadSettings(self):
-        return cockpit.util.user_config.getValue(
+        return cockpit.util.user_config.get_value(
             self.configKey + "StutteredZStackSettings", default=[]
         )
 
@@ -238,6 +238,6 @@ class ExperimentUI(wx.Panel):
     def saveSettings(self, settings=None):
         if settings is None:
             settings = self.getSettingsDict()
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             self.configKey + "StutteredZStackSettings", settings
         )

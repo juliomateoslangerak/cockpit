@@ -35,7 +35,7 @@ active cameras.
 
     def trigger_event(line, state):
         if line == 3 and state is True:
-            wx.GetApp().Imager.takeImage()
+            wx.GetApp().Imager.take_image()
 
     events.subscribe(events.DIO_INPUT, trigger_event)
 

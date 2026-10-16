@@ -237,7 +237,7 @@ class EnableButton(wx.ToggleButton):
         self.SetBitmap(_BMP_OFF, wx.RIGHT)
         listener = EvtEmitter(self, DEVICE_STATUS)
         listener.Bind(EVT_COCKPIT, self.onStatusEvent)
-        self.Bind(wx.EVT_TOGGLEBUTTON, deviceHandler.toggleState)
+        self.Bind(wx.EVT_TOGGLEBUTTON, deviceHandler.toggle_state)
         self.state = None
         self.others = (
             []
@@ -250,7 +250,7 @@ class EnableButton(wx.ToggleButton):
             # others is not iterable
             self.others.append(others)
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def setState(self, state):
         if self.state == state:
             return
@@ -359,7 +359,7 @@ class SettingsEditor(wx.Frame):
         applyButton = wx.Button(self, id=wx.ID_APPLY)
         applyButton.SetToolTip(wx.ToolTip("Apply these settings."))
         applyButton.Bind(
-            wx.EVT_BUTTON, lambda evt: self.device.updateSettings(self.current)
+            wx.EVT_BUTTON, lambda evt: self.device.update_settings(self.current)
         )
         buttonSizer.Add(applyButton, 1, flag=wx.EXPAND)
 
@@ -376,7 +376,7 @@ class SettingsEditor(wx.Frame):
             events.SETTINGS_CHANGED % self.device, self.updateGrid
         )
         if evt.GetId() == wx.ID_OK:
-            self.device.updateSettings(self.current)
+            self.device.update_settings(self.current)
         self.Close()
         # Do stuff to update local device state.
 
@@ -409,8 +409,8 @@ class SettingsEditor(wx.Frame):
         for name, value in settings.items():
             if self.settings[name]["type"] == "enum":
                 settings[name] = self.settings[name]["values"][value]
-        cockpit.util.user_config.setValue(
-            self.handler.getIdentifier() + "_SETTINGS", settings
+        cockpit.util.user_config.set_value(
+            self.handler.get_identifier() + "_SETTINGS", settings
         )
 
     def updateGrid(self):

@@ -50,9 +50,9 @@ class LightPanel(wx.Panel):
         self.expCtrl = safe_controls.SafeSpinCtrlDouble(self, inc=5)
         self.expCtrl.Bind(
             safe_controls.EVT_SAFE_CONTROL_COMMIT,
-            lambda evt: self.light.setExposureTime(evt.Value),
+            lambda evt: self.light.set_exposure_time(evt.Value),
         )
-        lightToggle.addWatch("exposureTime", self.expCtrl.SetValue)
+        lightToggle.add_watch("exposureTime", self.expCtrl.SetValue)
         self.expCtrl.SetValue(lightToggle.exposureTime)
 
         self.Sizer.Add(self.button, flag=wx.EXPAND)
@@ -81,7 +81,7 @@ class LightPanel(wx.Panel):
                 fetch_current=lambda: lightPower.getPower() * 100.0,
             )
             self.powCtrl.SetValue(lightPower.powerSetPoint * 100.0)
-            lightPower.addWatch("powerSetPoint", self._SetPowerPercent)
+            lightPower.add_watch("powerSetPoint", self._SetPowerPercent)
             self.powCtrl.Bind(
                 safe_controls.EVT_SAFE_CONTROL_COMMIT,
                 lambda evt: lightPower.setPower(evt.Value / 100.0),
@@ -111,9 +111,9 @@ class LightPanel(wx.Panel):
         self.lightPower.lastPower = self.lightPower.callbacks["getPower"]()
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.light.removeWatch("exposureTime", self.expCtrl.SetValue)
+        self.light.remove_watch("exposureTime", self.expCtrl.SetValue)
         if self.lightPower is not None:
-            self.lightPower.removeWatch("powerSetPoint", self._SetPowerPercent)
+            self.lightPower.remove_watch("powerSetPoint", self._SetPowerPercent)
             self._timer.Stop()
         event.Skip()
 
@@ -155,7 +155,7 @@ class LightControlsPanel(wx.Panel):
         self.panels = {}
         for light in lightToggles:
             power = next(
-                filter(lambda p: p.groupName == light.groupName, lightPowers),
+                filter(lambda p: p.group_name == light.group_name, lightPowers),
                 None,
             )
             filters = list(
@@ -190,12 +190,12 @@ class CameraPanel(wx.Panel):
         # If there are problems here, it's because the inline function below is
         # being called outside of the main thread and needs taking out and
         # wrapping with wx.CallAfter.
-        camera.addWatch("wavelength", self.onWavelengthChange)
+        camera.add_watch("wavelength", self.onWavelengthChange)
         self.Sizer.AddSpacer(2)
 
-        if camera.callbacks.get("makeUI", None):
+        if camera.callbacks.get("make_ui", None):
             self.Sizer.Add(
-                camera.callbacks["makeUI"](self), wx.SizerFlags().Expand()
+                camera.callbacks["make_ui"](self), wx.SizerFlags().Expand()
             )
 
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
@@ -204,7 +204,7 @@ class CameraPanel(wx.Panel):
         self.SetSizerAndFit(self.Sizer)
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.camera.removeWatch("wavelength", self.onWavelengthChange)
+        self.camera.remove_watch("wavelength", self.onWavelengthChange)
         event.Skip()
 
     def onWavelengthChange(self, wl):
@@ -262,10 +262,10 @@ class ObjectiveControls(wx.Panel):
         super().__init__(parent)
         self._interface = interface
         label = PanelLabel(self, label="Objective")
-        self._choice = wx.Choice(self, choices=interface.GetNamesSorted())
-        if not self._choice.SetStringSelection(interface.GetName()):
+        self._choice = wx.Choice(self, choices=interface.get_names_sorted())
+        if not self._choice.SetStringSelection(interface.get_name()):
             raise Exception(
-                "failed to find objective '%s'" % interface.GetName()
+                "failed to find objective '%s'" % interface.get_name()
             )
 
         self._choice.Bind(wx.EVT_CHOICE, self._OnObjectiveChoice)
@@ -281,7 +281,7 @@ class ObjectiveControls(wx.Panel):
         self.SetSizerAndFit(sizer)
 
     def _OnObjectiveChoice(self, event: wx.CommandEvent) -> None:
-        self._interface.ChangeObjective(event.GetString())
+        self._interface.change_objective(event.GetString())
 
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
         if not self._choice.SetStringSelection(event.GetString()):
@@ -309,7 +309,7 @@ class FilterControls(wx.Panel):
 
         for i, f in enumerate(filters):
             subpanel.Sizer.Add(
-                f.makeUI(subpanel), 0, wx.EXPAND | wx.RIGHT | wx.BOTTOM, 8
+                f.make_ui(subpanel), 0, wx.EXPAND | wx.RIGHT | wx.BOTTOM, 8
             )
         self.Sizer.Layout()
         self.SetSizerAndFit(self.Sizer)
@@ -321,7 +321,7 @@ class ChannelsPanel(wx.Panel):
         label = PanelLabel(self, label="Channels")
         self._buttons_sizer = wx.WrapSizer(wx.VERTICAL)
 
-        for name in wx.GetApp().Channels.Names:
+        for name in wx.GetApp().Channels.names:
             self.AddButton(name)
 
         wx.GetApp().Channels.Bind(
@@ -385,5 +385,5 @@ class ChannelsPanel(wx.Panel):
     def OnButton(self, event: wx.CommandEvent) -> None:
         """Apply channel with same name as the button."""
         name = event.EventObject.Label
-        channel = wx.GetApp().Channels.Get(name)
-        cockpit.interfaces.channels.ApplyChannel(channel)
+        channel = wx.GetApp().Channels.get(name)
+        cockpit.interfaces.channels.apply_channel(channel)

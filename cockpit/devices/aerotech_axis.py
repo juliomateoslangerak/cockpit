@@ -61,7 +61,7 @@ class AerotechZStage(device.Device):
     .. code:: ini
 
         [aerotech]
-        type: cockpit.devices.aerotechAxis.AerotechZStage
+        type: cockpit.devices.aerotech_axis.AerotechZStage
         ipAddress: 192.168.0.5
         port: 8000
         softlimits: -45000, 5000
@@ -71,8 +71,8 @@ class AerotechZStage(device.Device):
     def __init__(self, name, config={}):
         super().__init__(name, config)
         try:
-            limitString = config.get("softlimits", "")
-            parsed = re.search(LIMITS_PAT, limitString)
+            limit_string = config.get("softlimits", "")
+            parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
                 raise Exception("Bad config: Aerotech Limits.")
@@ -85,7 +85,7 @@ class AerotechZStage(device.Device):
             self.softlimits = (-30000, 7000)
 
         # Subscribe to abort events.
-        events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(events.USER_ABORT, self.on_abort)
         # The cockpit axis does this stage moves along.
         self.axis = int(config.get("axis", 2))
         # Socket used to communicate with controller.
@@ -114,7 +114,7 @@ class AerotechZStage(device.Device):
 
         ## Was there a connection error?
         if retry:
-            self.openConnection()
+            self.open_connection()
             try:
                 self.socket.send(cmdstr)
             except:
@@ -147,25 +147,25 @@ class AerotechZStage(device.Device):
         else:
             return response_data
 
-    def getHandlers(self):
+    def get_handlers(self):
         result = []
         axis = self.axis
         # IMD 2015-03-02 changed hard limits to reflect DeepSIM should go into config file
-        minVal = self.softlimits[0]
-        maxVal = self.softlimits[1]
+        min_val = self.softlimits[0]
+        max_val = self.softlimits[1]
         handler = cockpit.handlers.stage_positioner.PositionerHandler(
             "%d %s" % (axis, NAME_STRING),
             "%d stage motion" % axis,
             False,
             {
-                "moveAbsolute": self.moveAbsolute,
-                "moveRelative": self.moveRelative,
-                "getPosition": self.getPosition,
-                "getMovementTime": self.getMovementTime,
+                "moveAbsolute": self.move_absolute,
+                "moveRelative": self.move_relative,
+                "getPosition": self.get_position,
+                "getMovementTime": self.get_movement_time,
             },
             axis,
-            (minVal, maxVal),
-            (minVal, maxVal),
+            (min_val, max_val),
+            (min_val, max_val),
         )
         result.append(handler)
         return result
@@ -173,23 +173,23 @@ class AerotechZStage(device.Device):
     def initialize(self):
         """Initialize the axis."""
         # Open a connection to the controller.
-        self.openConnection()
+        self.open_connection()
         self.position = self.command(b"CMDPOS").decode()
         self.speed = int(self.command(b"GETPARM(71)"))
         self.acceleration = int(self.command(b"GETPARM(72"))
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """Publish our current position."""
         axis = self.axis
         events.publish(events.STAGE_MOVER, axis)
 
-    def onAbort(self):
+    def on_abort(self):
         """User clicked the abort button; stop moving."""
         self.command(b"ABORT")
         axis = self.axis
         events.publish(events.STAGE_STOPPED, "%d %s" % (axis, NAME_STRING))
 
-    def moveAbsolute(self, axis, pos):
+    def move_absolute(self, axis, pos):
         """Move the stage to a given position."""
         self.command(b"ENABLE")
         self.command(b"MOVEABS D %f F %f" % (pos / 1000.0, self.speed))
@@ -202,7 +202,7 @@ class AerotechZStage(device.Device):
         events.publish(events.STAGE_STOPPED, "%d mover" % axis)
         self.command(b"DISABLE")
 
-    def moveRelative(self, axis, delta):
+    def move_relative(self, axis, delta):
         """Move the stage piezo by a given delta."""
         self.command(b"ENABLE")
         self.command(b"MOVEINC D %f F %f" % (delta / 1000.0, self.speed))
@@ -215,11 +215,11 @@ class AerotechZStage(device.Device):
         events.publish(events.STAGE_STOPPED, "%d %s" % (axis, NAME_STRING))
         self.command(b"DISABLE")
 
-    def getPosition(self, axis):
+    def get_position(self, axis):
         """Get the current piezo position."""
         return float(self.position) * 1000.0
 
-    def getMovementTime(self, axis, start, end):
+    def get_movement_time(self, axis, start, end):
         """Get the amount of time it would take the mover to move from the
         initial position to the final position, as well as the amount of time
         needed to stabilize after that point, both in milliseconds. This is
@@ -230,15 +230,15 @@ class AerotechZStage(device.Device):
         # acceleration mm/s**2
         a = self.acceleration
         # displacement - passed as um
-        dS = abs(start - end) / 1000.0
+        d_s = abs(start - end) / 1000.0
         # acceleration / braking distance
-        S_acc = 0.5 * v**2 / a
+        s_acc = 0.5 * v**2 / a
 
         # Determine time required for move, in ms.
-        if dS < 2 * S_acc:
-            dt = 1000 * 2 * (dS / a) ** 0.5
+        if d_s < 2 * s_acc:
+            dt = 1000 * 2 * (d_s / a) ** 0.5
         else:
-            dt = 1000 * ((dS / v) + (v / a))
+            dt = 1000 * ((d_s / v) + (v / a))
 
         # Add a few ms to allow for any network latency (measured at < 10ms).
         dt += 10
@@ -247,10 +247,10 @@ class AerotechZStage(device.Device):
         # Allow one or two servo cycles - servo rate is 1kHz.
         return (dt, 2)
 
-    def openConnection(self):
+    def open_connection(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.socket.connect((self.ipAddress, self.port))
+            self.socket.connect((self.ip_address, self.port))
         except:
             raise
 

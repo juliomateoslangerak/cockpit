@@ -45,14 +45,14 @@ import cockpit.util.threads
 
 
 class ProgressDialog(wx.ProgressDialog):
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def __init__(*args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def Update(*args, **kwargs):
         super().Update(*args, **kwargs)
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def Destroy(*args, **kwargs):
         super().Destroy(*args, **kwargs)

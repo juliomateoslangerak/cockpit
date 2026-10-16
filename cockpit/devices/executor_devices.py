@@ -89,7 +89,7 @@ class ExecutorDevice(device.Device):
     Sample depot configuration::
 
       [redpitaya]
-      type: cockpit.devices.executorDevices.ExecutorDevice
+      type: cockpit.devices.executor_devices.ExecutorDevice
       uri: PYRO:SomeExecutor@192.168.0.2:8000
       alines: 2  # number of analog lines
       dlines: 16  # number of digital lines
@@ -115,19 +115,19 @@ class ExecutorDevice(device.Device):
         self.connection._pyroTimeout = 6
         self.connection.Abort()
 
-    def onExit(self) -> None:
+    def on_exit(self) -> None:
         if self.connection is not None:
             self.connection._pyroRelease()
-        super().onExit()
+        super().on_exit()
 
-    def performSubscriptions(self):
+    def perform_subscriptions(self):
         """Subscribe to events."""
-        events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(events.USER_ABORT, self.on_abort)
         events.subscribe(
-            events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
+            events.PREPARE_FOR_EXPERIMENT, self.on_prepare_for_experiment
         )
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """As a side-effect of setting our initial positions, we will also
         publish them.
 
@@ -135,7 +135,7 @@ class ExecutorDevice(device.Device):
         """
         pass
 
-    def onAbort(self):
+    def on_abort(self):
         """User clicked the abort button."""
         self.connection.Abort()
         # Various threads could be waiting for a 'DSP done' event, preventing
@@ -143,13 +143,13 @@ class ExecutorDevice(device.Device):
         events.publish(events.EXECUTOR_DONE % self.name)
 
     @cockpit.util.threads.locked
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         # Tell the remote DSP computer how to talk to us.
         server = depot.getHandlersOfType(depot.SERVER)[0]
-        self.receiveUri = server.register(self.receiveData)
-        self.connection.receiveClient(self.receiveUri)
+        self.receive_uri = server.register(self.receiveData)
+        self.connection.receiveClient(self.receive_uri)
 
-    def getHandlers(self):
+    def get_handlers(self):
         """We control which light sources are active, as well as a set of stage
         motion piezos."""
         result = []
@@ -158,7 +158,7 @@ class ExecutorDevice(device.Device):
             "executor",
             {
                 "examineActions": lambda *args: None,
-                "executeTable": self.executeTable,
+                "executeTable": self.execute_table,
                 "readDigital": self.connection.ReadDigital,
                 "writeDigital": self.connection.WriteDigital,
                 "getAnalog": self.connection.ReadPosition,
@@ -187,42 +187,46 @@ class ExecutorDevice(device.Device):
         if action.lower() in ["done", "dsp done"]:
             events.publish(events.EXECUTOR_DONE % self.name)
 
-    def triggerNow(self, line, dt=0.01):
+    def trigger_now(self, line, dt=0.01):
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
         time.sleep(dt)
         self.connection.WriteDigital(self.connection.ReadDigital() ^ line)
 
-    def onPrepareForExperiment(self, *args):
+    def on_prepare_for_experiment(self, *args):
         """Prepare to run an experiment."""
         # Ensure remote has the correct URI set for sending data/notifications.
-        self.connection.receiveClient(self.receiveUri)
+        self.connection.receiveClient(self.receive_uri)
 
-    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+    def execute_table(
+        self, table, start_index, stop_index, num_reps, rep_duration
+    ):
         """Actually execute the events in an experiment ActionTable, starting
-        at startIndex and proceeding up to but not through stopIndex."""
-        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+        at start_index and proceeding up to but not through stop_index."""
+        actions = actions_from_table(
+            table, start_index, stop_index, rep_duration
+        )
 
-        actions = self._adaptActions(actions)
+        actions = self._adapt_actions(actions)
         events.publish(
             events.UPDATE_STATUS_LIGHT,
             "device waiting",
             "Waiting for DSP to finish",
         )
-        self.connection.PrepareActions(actions, numReps)
+        self.connection.PrepareActions(actions, num_reps)
         events.executeAndWaitFor(
             events.EXECUTOR_DONE % self.name, self.connection.RunActions
         )
         events.publish(events.EXPERIMENT_EXECUTION)
         return
 
-    def _adaptActions(self, actions):
+    def _adapt_actions(self, actions):
         """Subclass this method to adapt the actions table to your specific device.
         Return the modified version of action"""
         return actions
 
         ## Debugging function: set the digital output for the DSP.
 
-    def setDigital(self, value):
+    def set_digital(self, value):
         self.connection.WriteDigital(value)
 
 
@@ -255,37 +259,37 @@ class LegacyDSP(ExecutorDevice):
         #   the remote offers a function to set an absolute position in ADUs, but
         #   there is not a direct, transparent or documented way to read back in
         #   ADUs.
-        self._currentAnalogs = 4 * [0]
+        self._current_analogs = 4 * [0]
         # Absolute positions prior to the start of the experiment.
-        self._lastAnalogs = 4 * [0]
+        self._last_analogs = 4 * [0]
         # Store last movement profile for debugging
-        self._lastProfile = None
+        self._last_profile = None
 
-    def finalizeInitialization(self):
-        super().finalizeInitialization()
+    def finalize_initialization(self):
+        super().finalize_initialization()
         for line in range(4):
-            self.setAnalog(line, 65536 // 2)
+            self.set_analog(line, 65536 // 2)
 
-    def onPrepareForExperiment(self, *args):
-        super().onPrepareForExperiment(*args)
-        self._lastAnalogs = [line for line in self._currentAnalogs]
-        self._lastDigital = self.connection.ReadDigital()
+    def on_prepare_for_experiment(self, *args):
+        super().on_prepare_for_experiment(*args)
+        self._last_analogs = [line for line in self._current_analogs]
+        self._last_digital = self.connection.ReadDigital()
 
     def receiveData(self, action, *args):
         """Receive data from the DSP computer."""
         if action.lower() == "dsp done":
             events.publish(events.EXECUTOR_DONE % self.name)
 
-    def getAnalog(self, line):
+    def get_analog(self, line):
         """Return analog position in native units."""
-        return self._currentAnalogs[line]
+        return self._current_analogs[line]
 
-    def setAnalog(self, line, target):
+    def set_analog(self, line, target):
         """Set analog position in native units."""
-        self._currentAnalogs[line] = target
+        self._current_analogs[line] = target
         return self.connection.MoveAbsoluteADU(line, int(target))
 
-    def getHandlers(self):
+    def get_handlers(self):
         """We control which light sources are active, as well as a set of stage
         motion piezos."""
         result = []
@@ -294,11 +298,11 @@ class LegacyDSP(ExecutorDevice):
             "executor",
             {
                 "examineActions": lambda *args: None,
-                "executeTable": self.executeTable,
+                "executeTable": self.execute_table,
                 "readDigital": self.connection.ReadDigital,
                 "writeDigital": self.connection.WriteDigital,
-                "getAnalog": self.getAnalog,
-                "setAnalog": self.setAnalog,
+                "getAnalog": self.get_analog,
+                "setAnalog": self.set_analog,
             },
             dlines=16,
             alines=4,
@@ -318,9 +322,11 @@ class LegacyDSP(ExecutorDevice):
         self.handlers = set(result)
         return result
 
-    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+    def execute_table(
+        self, table, start_index, stop_index, num_reps, rep_duration
+    ):
         """Actually execute the events in an experiment ActionTable, starting
-        at startIndex and proceeding up to but not through stopIndex.
+        at start_index and proceeding up to but not through stop_index.
 
         Take time and arguments (i.e. omit handler) from table to generate
         actions.
@@ -331,7 +337,9 @@ class LegacyDSP(ExecutorDevice):
         - separate analogue and digital events into different lists;
         - generate a structure that describes the profile.
         """
-        actions = actions_from_table(table, startIndex, stopIndex, repDuration)
+        actions = actions_from_table(
+            table, start_index, stop_index, rep_duration
+        )
 
         # Profiles
         analogs = [
@@ -344,18 +352,18 @@ class LegacyDSP(ExecutorDevice):
         # Need to track time of last analog events to workaround a
         # DSP bug later. Also used to detect when events exceed timing
         # resolution
-        tLastA = None
+        t_last_a = None
 
         # The DSP executes an analogue movement profile, which is defined using
         # offsets relative to a baseline at the time the profile was initialized.
         # These offsets are encoded as unsigned integers, so at profile
         # initialization, each analogue channel must be at or below the lowest
         # value it needs to reach in the profile.
-        lowestAnalogs = list(np.amin([x[1][1] for x in actions], axis=0))
-        for line, lowest in enumerate(lowestAnalogs):
-            if lowest < self._lastAnalogs[line]:
-                self._lastAnalogs[line] = lowest
-                self.setAnalog(line, lowest)
+        lowest_analogs = list(np.amin([x[1][1] for x in actions], axis=0))
+        for line, lowest in enumerate(lowest_analogs):
+            if lowest < self._last_analogs[line]:
+                self._last_analogs[line] = lowest
+                self.set_analog(line, lowest)
 
         for t, (darg, aargs) in actions:
             # Convert t to ticks as int while rounding up. The rounding is
@@ -380,26 +388,26 @@ class LegacyDSP(ExecutorDevice):
             # Analogue actions - only enter into profile on change.
             # DSP uses offsets from value when the profile was loaded.
             offsets = map(
-                lambda base, new: new - base, self._lastAnalogs, aargs
+                lambda base, new: new - base, self._last_analogs, aargs
             )
             for offset, a in zip(offsets, analogs):
                 if (len(a) == 0) or (len(a) > 0 and offset != a[-1][1]):
                     a.append((ticks, offset))
-                    tLastA = t
+                    t_last_a = t
 
         # Work around some DSP bugs:
         # * The action table needs at least two events to execute correctly.
         # * Last action must be digital --- if the last analog action is at the same
         #   time or after the last digital action, it will not be performed.
         # Both can be avoided by adding a digital action that does nothing.
-        if len(digitals) == 1 or tLastA >= digitals[-1][0]:
+        if len(digitals) == 1 or t_last_a >= digitals[-1][0]:
             # Just duplicate the last digital action, one tick later.
             digitals.append((digitals[-1][0] + 1, digitals[-1][1]))
 
         # Update records of last positions.
-        self._lastDigital = digitals[-1][1]
-        self._lastAnalogs = list(
-            map(lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs)
+        self._last_digital = digitals[-1][1]
+        self._last_analogs = list(
+            map(lambda x, y: x - (y[-1:][1:] or 0), self._last_analogs, analogs)
         )
 
         events.publish(
@@ -408,9 +416,9 @@ class LegacyDSP(ExecutorDevice):
             "Waiting for DSP to finish",
         )
         # Convert digitals to array of uints.
-        digitalsArr = np.array(digitals, dtype=np.uint32).reshape(-1, 2)
+        digitals_arr = np.array(digitals, dtype=np.uint32).reshape(-1, 2)
         # Convert analogs to array of uints.
-        analogsArr = [
+        analogs_arr = [
             np.array(a, dtype=np.uint32).reshape(-1, 2) for a in analogs
         ]
 
@@ -424,35 +432,35 @@ class LegacyDSP(ExecutorDevice):
         description = {}
         description["count"] = maxticks
         description["clock"] = 1000.0 / float(self.tickrate)
-        description["InitDio"] = self._lastDigital
+        description["InitDio"] = self._last_digital
         description["nDigital"] = len(digitals)
         description["nAnalog"] = [len(a) for a in analogs]
 
-        self._lastProfile = (description, digitalsArr, analogsArr)
+        self._last_profile = (description, digitals_arr, analogs_arr)
 
-        self.connection.profileSet(description, digitalsArr, *analogsArr)
+        self.connection.profileSet(description, digitals_arr, *analogs_arr)
         self.connection.DownloadProfile()
-        self.connection.InitProfile(numReps)
+        self.connection.InitProfile(num_reps)
         events.executeAndWaitFor(
             events.EXECUTOR_DONE % self.name, self.connection.trigCollect
         )
         events.publish(events.EXPERIMENT_EXECUTION)
 
 
-def actions_from_table(table, startIndex, stopIndex, repDuration):
+def actions_from_table(table, start_index, stop_index, rep_duration):
     """Take time and arguments (i.e. omit handler) from table to generate
     actions."""
-    t0 = float(table[startIndex][0])
+    t0 = float(table[start_index][0])
     actions = [
         (float(row[0]) - t0,) + tuple(row[1:])
-        for row in table[startIndex:stopIndex]
+        for row in table[start_index:stop_index]
     ]
 
     ## If there are repeats, add an extra action to wait until
-    ## repDuration expired.
-    if repDuration is not None:
-        repDuration = float(repDuration)
-        if actions[-1][0] < repDuration:
-            ## Repeat the last event at t0 + repDuration
-            actions.append((t0 + repDuration,) + tuple(actions[-1][1:]))
+    ## rep_duration expired.
+    if rep_duration is not None:
+        rep_duration = float(rep_duration)
+        if actions[-1][0] < rep_duration:
+            ## Repeat the last event at t0 + rep_duration
+            actions.append((t0 + rep_duration,) + tuple(actions[-1][1:]))
     return actions

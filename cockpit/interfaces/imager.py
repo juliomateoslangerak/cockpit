@@ -67,23 +67,23 @@ from cockpit.handlers.imager import ImagerHandler
 # mode.
 
 
-def pauseVideo(func):
+def pause_video(func):
     """A wrapper to pause and resume video."""
 
     def wrapper(*args, **kwargs):
-        wasInVideoMode = wx.GetApp().Imager.amInVideoMode
-        if wasInVideoMode:
-            wx.GetApp().Imager.shouldStopVideoMode = True
+        was_in_video_mode = wx.GetApp().Imager.am_in_video_mode
+        if was_in_video_mode:
+            wx.GetApp().Imager.should_stop_video_mode = True
             tstart = time.time()
-            while wx.GetApp().Imager.amInVideoMode:
+            while wx.GetApp().Imager.am_in_video_mode:
                 time.sleep(0.05)
                 if time.time() > tstart + 1.0:
                     print("Timeout pausing video mode - abort and restart.")
                     events.publish(events.USER_ABORT)
                     break
         result = func(*args, **kwargs)
-        if wasInVideoMode:
-            wx.GetApp().Imager.videoMode()
+        if was_in_video_mode:
+            wx.GetApp().Imager.video_mode()
         return result
 
     return wrapper
@@ -94,152 +94,152 @@ class Imager:
 
     def __init__(self, handlers: typing.Sequence[ImagerHandler]) -> None:
         """List of Handlers capable of taking images."""
-        self._imageHandlers = handlers
+        self._image_handlers = handlers
         ## Set of active cameras, so we can check their framerates.
-        self.activeCameras = set()
+        self.active_cameras = set()
         ## Set of active light sources, so we can check their exposure times.
-        self.activeLights = set()
-        ## Time of last call to takeImage(), so we can avoid calling it
+        self.active_lights = set()
+        ## Time of last call to take_image(), so we can avoid calling it
         # faster than the time it takes to actually collect another image.
-        self.lastImageTime = time.time()
+        self.last_image_time = time.time()
         ## Boolean to control activity of the video mode thread.
-        self.shouldStopVideoMode = False
+        self.should_stop_video_mode = False
         ## Boolean that indicates if we're currently in video mode.
-        self.amInVideoMode = False
+        self.am_in_video_mode = False
 
         self._lock = threading.Lock()
         events.subscribe(events.LIGHT_SOURCE_ENABLE, self._on_light_enable)
         events.subscribe(events.CAMERA_ENABLE, self._on_camera_enable)
         events.subscribe(events.LIGHT_EXPOSURE_UPDATE, self._on_light_update)
 
-        events.subscribe(events.USER_ABORT, self.stopVideo)
+        events.subscribe(events.USER_ABORT, self.stop_video)
 
     def _get_exposure_time(self) -> int:
-        if self.activeLights:
-            return max([l.getExposureTime() for l in self.activeLights])
+        if self.active_lights:
+            return max([l.get_exposure_time() for l in self.active_lights])
         else:
             return 0
 
-    @pauseVideo
-    def _updateExposureTime(self):
+    @pause_video
+    def _update_exposure_time(self):
         e_time = self._get_exposure_time()
-        for c in self.activeCameras:
-            c.setExposureTime(e_time)
+        for c in self.active_cameras:
+            c.set_exposure_time(e_time)
 
-    def _toggle(self, container, thing, shouldAdd):
-        if shouldAdd:
+    def _toggle(self, container, thing, should_add):
+        if should_add:
             container.add(thing)
         else:
             container.discard(thing)
 
-    def _on_camera_enable(self, handler, isEnabled):
+    def _on_camera_enable(self, handler, is_enabled):
         with self._lock:
-            self._toggle(self.activeCameras, handler, isEnabled)
-            self._updateExposureTime()
+            self._toggle(self.active_cameras, handler, is_enabled)
+            self._update_exposure_time()
 
-    def _on_light_enable(self, handler, isEnabled):
+    def _on_light_enable(self, handler, is_enabled):
         with self._lock:
-            self._toggle(self.activeLights, handler, isEnabled)
-            self._updateExposureTime()
+            self._toggle(self.active_lights, handler, is_enabled)
+            self._update_exposure_time()
 
     def _on_light_update(self, handler):
         with self._lock:
-            self._updateExposureTime()
+            self._update_exposure_time()
 
-    def takeImage(self, shouldBlock=False, shouldStopVideo=True):
+    def take_image(self, should_block=False, should_stop_video=True):
         """Take an image.
 
         Args:
-            shouldBlock (bool): True if we want to wait for the cameras and
+            should_block (bool): True if we want to wait for the cameras and
                 lights to be ready so we can take the image; False if we don't
                 want to wait and should just give up if they aren't ready.
-            shouldStopVideo (bool): True if we should stop video mode. Only
-                really used by self.videoMode().
+            should_stop_video (bool): True if we should stop video mode. Only
+                really used by self.video_mode().
         """
         from cockpit.experiment import experiment
 
         if experiment.isRunning():
             print("Skipping takeImage because an experiment is running.")
             return
-        elif len(self.activeCameras) == 0:
+        elif len(self.active_cameras) == 0:
             message = "There are no cameras enabled."
             wx.MessageBox(message, caption="No cameras active")
             return
-        if shouldStopVideo:
-            self.stopVideo()
-        waitTime = self.getNextImageTime() - time.time()
-        if waitTime > 0:
-            if shouldBlock:
-                time.sleep(waitTime)
+        if should_stop_video:
+            self.stop_video()
+        wait_time = self.get_next_image_time() - time.time()
+        if wait_time > 0:
+            if should_block:
+                time.sleep(wait_time)
             else:
                 return
-        for handler in self._imageHandlers:
+        for handler in self._image_handlers:
             handler.takeImage()
-        self.lastImageTime = time.time()
+        self.last_image_time = time.time()
 
     @cockpit.util.threads.call_in_new_thread
-    def videoMode(self):
+    def video_mode(self):
         """Video mode: continuously take images at our maximum update rate.
 
-        We stop whenever the user invokes takeImage() manually or the abort
+        We stop whenever the user invokes take_image() manually or the abort
         button is pressed. We also limit our image rate if there are any non-
         room-light light sources to 1 image per second, to avoid excessive
         sample damage.
         """
-        if not self.activeCameras:
+        if not self.active_cameras:
             # No cameras, no video mode.
             events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
             return
-        if self.amInVideoMode:
+        if self.am_in_video_mode:
             # Just cancel the current video mode.
             events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
-            self.stopVideo()
+            self.stop_video()
             return
 
         events.publish(cockpit.events.VIDEO_MODE_TOGGLE, True)
-        self.shouldStopVideoMode = False
-        self.amInVideoMode = True
-        while not self.shouldStopVideoMode:
-            if not self.activeLights:
+        self.should_stop_video_mode = False
+        self.am_in_video_mode = True
+        while not self.should_stop_video_mode:
+            if not self.active_lights:
                 break
             # HACK: only wait for one camera.
-            camera = list(self.activeCameras)[0]
-            # Some cameras drop frames, i.e., takeImage() returns but
-            # an image is never received.  If that happens, videoMode
+            camera = list(self.active_cameras)[0]
+            # Some cameras drop frames, i.e., take_image() returns but
+            # an image is never received.  If that happens, video_mode
             # waits forever since there's no NEW_IMAGE event hence the
             # timeout.  On top of the time to actual acquire the
             # image, we add 5 seconds for any processing and transfer
             # which should be more than enough (see issue #584).
             timeout = 5.0 + (
-                (camera.getExposureTime() + camera.getTimeBetweenExposures())
+                (camera.get_exposure_time() + camera.get_time_between_exposures())
                 / 1000
             )
             try:
                 events.executeAndWaitForOrTimeout(
                     events.NEW_IMAGE % (camera.name),
-                    self.takeImage,
+                    self.take_image,
                     timeout,
-                    shouldBlock=True,
-                    shouldStopVideo=False,
+                    should_block=True,
+                    should_stop_video=False,
                 )
             except Exception as e:
                 print("Video mode failed:", e)
                 events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
                 traceback.print_exc()
                 break
-        self.amInVideoMode = False
+        self.am_in_video_mode = False
         events.publish(cockpit.events.VIDEO_MODE_TOGGLE, False)
 
-    def stopVideo(self):
+    def stop_video(self):
         """Stop our video thread, if relevant."""
-        self.shouldStopVideoMode = True
+        self.should_stop_video_mode = True
 
-    def getNextImageTime(self):
-        """Get the next time it's safe to call takeImage(), based on the
+    def get_next_image_time(self):
+        """Get the next time it's safe to call take_image(), based on the
         cameras' time between images and the light sources' exposure times."""
-        camLimiter = 0
-        for camera in self.activeCameras:
-            camLimiter = max(camLimiter, camera.getTimeBetweenExposures())
-        lightLimiter = self._get_exposure_time()
+        cam_limiter = 0
+        for camera in self.active_cameras:
+            cam_limiter = max(cam_limiter, camera.get_time_between_exposures())
+        light_limiter = self._get_exposure_time()
         # The limiters are in milliseconds; downconvert.
-        return self.lastImageTime + (camLimiter + lightLimiter) / 1000.0
+        return self.last_image_time + (cam_limiter + light_limiter) / 1000.0

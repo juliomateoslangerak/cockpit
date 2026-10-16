@@ -84,91 +84,91 @@ class DataDoc:
             filename (str): The filename of the MRC file you want to load.
         """
         ## Loaded MRC object. Note this is not just an array of pixels.
-        self.image = mrc.bindFile(filename)
+        self.image = mrc.bind_file(filename)
         ## Header for the image data, which tells us e.g. what the ordering
         # of X/Y/Z/time/wavelength is in the MRC file.
-        self.imageHeader = mrc.implement_hdr(self.image.Mrc.hdr._array.copy())
+        self.image_header = mrc.implement_hdr(self.image.Mrc.hdr._array.copy())
         ## Location the file is saved on disk.
-        self.filePath = self.image.Mrc.path
+        self.file_path = self.image.Mrc.path
 
         ## Number of wavelengths in the array.
-        self.numWavelengths = self.imageHeader.NumWaves
-        numTimepoints = self.imageHeader.NumTimes
-        numX = self.imageHeader.Num[0]
-        numY = self.imageHeader.Num[1]
-        numZ = self.imageHeader.Num[2] // (self.numWavelengths * numTimepoints)
+        self.num_wavelengths = self.image_header.NumWaves
+        num_timepoints = self.image_header.NumTimes
+        num_x = self.image_header.Num[0]
+        num_y = self.image_header.Num[1]
+        num_z = self.image_header.Num[2] // (self.num_wavelengths * num_timepoints)
         ## Size in pixels of the data, since having it as a Numpy array
-        # instead of a tuple (from self.imageArray.shape) is occasionally
+        # instead of a tuple (from self.image_array.shape) is occasionally
         # handy.
         self.size = numpy.array(
-            [self.numWavelengths, numTimepoints, numZ, numY, numX], dtype=int
+            [self.num_wavelengths, num_timepoints, num_z, num_y, num_x], dtype=int
         )
         ## 5D array of pixel data, indexed as
-        # self.imageArray[wavelength][time][z][y][x]
+        # self.image_array[wavelength][time][z][y][x]
         # In other words, in WTZYX order. In general we try to treat
         # Z and time as "just another axis", but wavelength is dealt with
         # specially.
-        self.imageArray = self.getImageArray()
+        self.image_array = self.get_image_array()
         ## Two arrays, one for ints, one for floats, for the extended header.
         # Indexed as
-        # self.extendedHeaderInts[wavelength, time, z, i]
+        # self.extended_header_ints[wavelength, time, z, i]
         # Either may be empty, depending on how big the extended header is.
-        self.extendedHeaderInts, self.extendedHeaderFloats = getExtendedHeader(
-            self.image.Mrc.e, self.imageHeader
+        self.extended_header_ints, self.extended_header_floats = get_extended_header(
+            self.image.Mrc.e, self.image_header
         )
         ## Datatype of our array.
-        self.dtype = self.imageArray.dtype.type
+        self.dtype = self.image_array.dtype.type
 
         ## Averages for each wavelength, used to provide fill values when
         # taking slices.
         self.averages = []
-        for wavelength in range(self.numWavelengths):
-            self.averages.append(self.imageArray[wavelength].mean())
+        for wavelength in range(self.num_wavelengths):
+            self.averages.append(self.image_array[wavelength].mean())
 
         ## Lower boundary of the cropped data.
-        self.cropMin = numpy.array([0, 0, 0, 0, 0], numpy.int32)
+        self.crop_min = numpy.array([0, 0, 0, 0, 0], numpy.int32)
         ## Upper boundary of the cropped data.
-        self.cropMax = numpy.array(self.size, numpy.int32)
+        self.crop_max = numpy.array(self.size, numpy.int32)
 
         ## Index of the single pixel that is visible in all different data
         # views.
-        self.curViewIndex = numpy.array(self.size / 2, int)
+        self.cur_view_index = numpy.array(self.size / 2, int)
         # Initial time view is at 0
-        self.curViewIndex[1] = 0
+        self.cur_view_index[1] = 0
 
         ## Parameters for transforming different wavelengths so they align
         # with each other. Order is dx, dy, dz, angle, zoom
-        self.alignParams = numpy.zeros((self.size[0], 5), numpy.float32)
+        self.align_params = numpy.zeros((self.size[0], 5), numpy.float32)
         # Default zoom to 1.0
-        self.alignParams[:, 4] = 1.0
+        self.align_params[:, 4] = 1.0
 
         ## List of functions to call whenever the alignment parameters change.
-        # Each will be passed self.alignParams so it can take whatever
+        # Each will be passed self.align_params so it can take whatever
         # action is necessary.
-        self.alignCallbacks = []
+        self.align_callbacks = []
 
-    def getNPlanes(self):
+    def get_n_planes(self):
         return numpy.prod(self.size[0:3])
 
-    def getImageArray(self):
+    def get_image_array(self):
         """Convert the loaded MRC image data into a 5D array of pixel data in
         WTZYX order."""
         # This is a string describing the dimension ordering as stored in
         # the file.
-        return reorderArray(
-            self.image, self.size, self.image.Mrc.axisOrderStr()
+        return reorder_array(
+            self.image, self.size, self.image.Mrc.axis_order_str()
         )
 
-    def takeSlice(self, axes, shouldTransform=True, order=1):
-        """Passthrough to takeSliceFromData, using our normal array."""
-        return self.takeSliceFromData(
-            self.imageArray, axes, shouldTransform, order
+    def take_slice(self, axes, should_transform=True, order=1):
+        """Passthrough to take_slice_from_data, using our normal array."""
+        return self.take_slice_from_data(
+            self.image_array, axes, should_transform, order
         )
 
-    def takeProjectedSlice(
-        self, axes, projectionAxis, shouldTransform, order=1
+    def take_projected_slice(
+        self, axes, projection_axis, should_transform, order=1
     ):
-        r"""As takeSlice, but do a max-intensity projection across one axis.
+        r"""As take_slice, but do a max-intensity projection across one axis.
 
         This becomes impossible to do efficiently if we have rotation or
         scaling in a given wavelength, so we just have to transform the entire
@@ -177,20 +177,20 @@ class DataDoc:
         only the wavelengths with nonzero rotation/scaling need to be
         transformed as volumes.
         """
-        if projectionAxis == 2 or (
-            numpy.all(self.alignParams[:, 3] == 0)
-            and numpy.all(self.alignParams[:, 4] == 1)
+        if projection_axis == 2 or (
+            numpy.all(self.align_params[:, 3] == 0)
+            and numpy.all(self.align_params[:, 4] == 1)
         ):
             # Scaling/rotation doesn't affect the projection; lucky us!
-            data = self.imageArray.max(axis=projectionAxis)
+            data = self.image_array.max(axis=projection_axis)
             # Augment data with an extra dimension to replace the one we
             # flattened out.
-            data = numpy.expand_dims(data, projectionAxis)
+            data = numpy.expand_dims(data, projection_axis)
             # Since we flattened out this axis, change its index to be the only
             # possible valid index.
-            axes[projectionAxis] = 0
-            return self.takeSliceFromData(data, axes, shouldTransform, order)
-        elif projectionAxis in [3, 4]:
+            axes[projection_axis] = 0
+            return self.take_slice_from_data(data, axes, should_transform, order)
+        elif projection_axis in [3, 4]:
             # Projecting through Y or X; just transform the local volume.
             dialog = wx.ProgressDialog(
                 title="Constructing projection",
@@ -198,20 +198,20 @@ class DataDoc:
                 maximum=self.size[0],
                 style=wx.PD_AUTO_HIDE | wx.PD_REMAINING_TIME,
             )
-            curTimepoint = self.curViewIndex[1]
+            cur_timepoint = self.cur_view_index[1]
             data = []
             for wavelength in range(self.size[0]):
                 data.append(
-                    self.transformArray(
-                        self.imageArray[wavelength, curTimepoint],
-                        *self.alignParams[wavelength],
+                    self.transform_array(
+                        self.image_array[wavelength, cur_timepoint],
+                        *self.align_params[wavelength],
                         order=1,
                     )
                 )
                 dialog.Update(wavelength)
             data = numpy.array(data, dtype=self.dtype)
             dialog.Destroy()
-            return data.max(axis=projectionAxis - 1)
+            return data.max(axis=projection_axis - 1)
         else:
             # Projecting through time; transform EVERY volume. Ouch.
             dialog = wx.ProgressDialog(
@@ -222,17 +222,17 @@ class DataDoc:
             )
             data = []
             for timepoint in range(self.size[1]):
-                timeData = []
+                time_data = []
                 for wavelength in range(self.size[0]):
-                    volume = self.transformArray(
-                        self.imageArray[wavelength, timepoint],
-                        *self.alignParams[wavelength],
+                    volume = self.transform_array(
+                        self.image_array[wavelength, timepoint],
+                        *self.align_params[wavelength],
                         order=1,
                     )
-                    timeData.append(volume)
+                    time_data.append(volume)
                     dialog.Update(timepoint * self.size[0] + wavelength)
-                timeData = numpy.array(timeData, dtype=self.dtype)
-                data.append(timeData)
+                time_data = numpy.array(time_data, dtype=self.dtype)
+                data.append(time_data)
 
             data = numpy.array(data, dtype=self.dtype)
             data = data.max(axis=0)
@@ -245,7 +245,7 @@ class DataDoc:
                     return data[slice]
             raise RuntimeError("Couldn't find a valid slice axis.")
 
-    def takeSliceFromData(self, data, axes, shouldTransform=True, order=1):
+    def take_slice_from_data(self, data, axes, should_transform=True, order=1):
         """Generate a 2D slice of the given data in each wavelength.
 
         Since the data is 5D (wavelength/time/Z/Y/X), there are three axes to
@@ -271,16 +271,16 @@ class DataDoc:
         actual pixel values. - Reshape the resulting array to match the slice
         shape.
         """
-        if shouldTransform:
-            targetShape = []
-            targetAxes = []
+        if should_transform:
+            target_shape = []
+            target_axes = []
             presets = [-1] * 5
             # Generate an array to hold the slice. Note this includes all
             # wavelengths.
             for i, size in enumerate(data.shape):
                 if i not in axes:
-                    targetShape.append(size)
-                    targetAxes.append(i)
+                    target_shape.append(size)
+                    target_axes.append(i)
                 else:
                     presets[i] = axes[i]
 
@@ -288,26 +288,26 @@ class DataDoc:
             # and height of the desired slice, and the remaining dimension
             # holds the desired XYZ coordinates for each pixel in the slice,
             # pre-transform. Note this is wavelength-agnostic.
-            targetCoords = numpy.empty(targetShape[1:] + [3])
-            haveAlreadyResized = False
+            target_coords = numpy.empty(target_shape[1:] + [3])
+            have_already_resized = False
             # Axes here are in WTZYX order, so we need to reorder them to XYZ.
             for axis in [2, 3, 4]:
-                if axis in targetAxes:
+                if axis in target_axes:
                     basis = numpy.arange(data.shape[axis])
                     if (
-                        data.shape[axis] == targetCoords.shape[0]
-                        and not haveAlreadyResized
+                        data.shape[axis] == target_coords.shape[0]
+                        and not have_already_resized
                     ):
                         # Reshape into a column vector. We only want to do this
                         # once, but unfortunately can't tell solely with the
                         # length of the array in the given axis since it's not
                         # uncommon for e.g. X and Y to have the same size.
                         basis.shape = data.shape[axis], 1
-                        haveAlreadyResized = True
-                    targetCoords[:, :, 4 - axis] = basis
+                        have_already_resized = True
+                    target_coords[:, :, 4 - axis] = basis
                 else:
-                    targetCoords[:, :, 4 - axis] = axes[axis]
-            return self.mapCoords(data, targetCoords, targetShape, axes, order)
+                    target_coords[:, :, 4 - axis] = axes[axis]
+            return self.map_coords(data, target_coords, target_shape, axes, order)
         else:
             # Simply take an ordinary slice.
             # Ellipsis is a builtin keyword for the full-array slice. Who knew?
@@ -319,7 +319,7 @@ class DataDoc:
                     slices.append(Ellipsis)
             return data[slices]
 
-    def mapCoords(self, data, targetCoords, targetShape, axes, order):
+    def map_coords(self, data, target_coords, target_shape, axes, order):
         """Inverse-transform the provided coordinates and use them to look up
         into the given array, to generate a transformed slice of the specified
         shape along the specified axes.
@@ -328,133 +328,133 @@ class DataDoc:
 
         Args:
             data (numpy.ndarray): A 5D array of pixel data (WTZYX).
-            targetCoords (numpy.ndarray): 4D array of WXYZ coordinates.
-            targetShape (tuple): Shape of the resulting slice.
+            target_coords (numpy.ndarray): 4D array of WXYZ coordinates.
+            target_shape (tuple): Shape of the resulting slice.
             axes (dict): Axes the slice cuts along.
             order (int): Spline order to use when mapping.
         """
         # Reshape into a 2D list of the desired coordinates
-        targetCoords.shape = numpy.product(targetShape[1:]), 3
+        target_coords.shape = numpy.product(target_shape[1:]), 3
         # Insert a dummy 4th dimension so we can use translation in an
         # affine transformation.
-        tmp = numpy.empty((targetCoords.shape[0], 4))
-        tmp[:, :3] = targetCoords
+        tmp = numpy.empty((target_coords.shape[0], 4))
+        tmp[:, :3] = target_coords
         tmp[:, 3] = 1
-        targetCoords = tmp
+        target_coords = tmp
 
-        transforms = self.getTransformationMatrices()
-        inverseTransforms = [numpy.linalg.inv(matrix) for matrix in transforms]
-        transposedCoords = targetCoords.T
+        transforms = self.get_transformation_matrices()
+        inverse_transforms = [numpy.linalg.inv(matrix) for matrix in transforms]
+        transposed_coords = target_coords.T
         # XYZ center, which needs to be added and subtracted from the
         # coordinates before/after transforming so that rotation is done
         # about the center of the image.
         center = numpy.array(data.shape[2:][::-1]).reshape(3, 1) / 2.0
-        transposedCoords[:3, :] -= center
-        result = numpy.zeros(targetShape, dtype=self.dtype)
+        transposed_coords[:3, :] -= center
+        result = numpy.zeros(target_shape, dtype=self.dtype)
         for wavelength in range(data.shape[0]):
             # Transform the coordinates according to the alignment
             # parameters for the specific wavelength.
-            transformedCoords = numpy.dot(
-                inverseTransforms[wavelength], transposedCoords
+            transformed_coords = numpy.dot(
+                inverse_transforms[wavelength], transposed_coords
             )
-            transformedCoords[:3, :] += center
+            transformed_coords[:3, :] += center
 
             # Chop off the trailing 1, reorder to ZYX, and insert the time
             # coordinate.
             tmp = numpy.zeros(
-                (4, transformedCoords.shape[1]), dtype=numpy.float
+                (4, transformed_coords.shape[1]), dtype=numpy.float
             )
             for i in range(3):
-                tmp[i + 1] = transformedCoords[2 - i]
+                tmp[i + 1] = transformed_coords[2 - i]
 
-            transformedCoords = tmp
+            transformed_coords = tmp
             if 1 not in axes:
                 # User wants a cut across time.
-                transformedCoords[0, :] = numpy.arange(data.shape[1]).repeat(
-                    transformedCoords.shape[1] / data.shape[1]
+                transformed_coords[0, :] = numpy.arange(data.shape[1]).repeat(
+                    transformed_coords.shape[1] / data.shape[1]
                 )
             else:
-                transformedCoords[0, :] = axes[1]
+                transformed_coords[0, :] = axes[1]
 
-            resultVals = scipy.ndimage.map_coordinates(
+            result_vals = scipy.ndimage.map_coordinates(
                 data[wavelength],
-                transformedCoords,
+                transformed_coords,
                 order=order,
                 cval=self.averages[wavelength],
             )
-            resultVals.shape = targetShape[1:]
-            result[wavelength] = resultVals
+            result_vals.shape = target_shape[1:]
+            result[wavelength] = result_vals
 
         return result
 
-    def getValuesAt(self, coord):
+    def get_values_at(self, coord):
         """Return the value for each wavelength at the specified TZYX
         coordinate, taking transforms into account.
 
         Also return the transformed coordinates.
 
-        \\todo This copies a fair amount of logic from self.mapCoords.
+        \\todo This copies a fair amount of logic from self.map_coords.
         """
-        transforms = self.getTransformationMatrices()
-        inverseTransforms = [numpy.linalg.inv(matrix) for matrix in transforms]
+        transforms = self.get_transformation_matrices()
+        inverse_transforms = [numpy.linalg.inv(matrix) for matrix in transforms]
         # Reorder to XYZ and add a dummy 4th dimension.
-        transposedCoord = numpy.array(
+        transposed_coord = numpy.array(
             [[coord[3]], [coord[2]], [coord[1]], [1]]
         )
         # XYZ center, which needs to be added and subtracted from the
         # coordinates before/after transforming so that rotation is done
         # about the center of the image.
         center = (self.size[2:][::-1] / 2.0).reshape(3, 1)
-        transposedCoord[:3] -= center
-        resultVals = numpy.zeros(self.numWavelengths, dtype=self.dtype)
-        resultCoords = numpy.zeros((self.numWavelengths, 4))
-        for wavelength in range(self.numWavelengths):
+        transposed_coord[:3] -= center
+        result_vals = numpy.zeros(self.num_wavelengths, dtype=self.dtype)
+        result_coords = numpy.zeros((self.num_wavelengths, 4))
+        for wavelength in range(self.num_wavelengths):
             # Transform the coordinates according to the alignment
             # parameters for the specific wavelength.
-            transformedCoord = numpy.dot(
-                inverseTransforms[wavelength], transposedCoord
+            transformed_coord = numpy.dot(
+                inverse_transforms[wavelength], transposed_coord
             )
-            transformedCoord[:3, :] += center
+            transformed_coord[:3, :] += center
             # Reorder to ZYX and insert the time dimension.
-            transformedCoord = numpy.array(
+            transformed_coord = numpy.array(
                 [
                     coord[0],
-                    transformedCoord[2],
-                    transformedCoord[1],
-                    transformedCoord[0],
+                    transformed_coord[2],
+                    transformed_coord[1],
+                    transformed_coord[0],
                 ],
                 dtype=int,
             )
-            resultCoords[wavelength, :] = transformedCoord
-            transformedCoord.shape = 4, 1
+            result_coords[wavelength, :] = transformed_coord
+            transformed_coord.shape = 4, 1
 
-            resultVals[wavelength] = scipy.ndimage.map_coordinates(
-                self.imageArray[wavelength],
-                transformedCoord,
+            result_vals[wavelength] = scipy.ndimage.map_coordinates(
+                self.image_array[wavelength],
+                transformed_coord,
                 order=1,
                 cval=self.averages[wavelength],
             )[0]
-        return resultVals, resultCoords
+        return result_vals, result_coords
 
-    def takeDefaultSlice(self, perpendicularAxes, shouldTransform=True):
+    def take_default_slice(self, perpendicular_axes, should_transform=True):
         """Take a default slice through our view indices perpendicular to the
         given axes."""
-        targetCoords = self.getSliceCoords(perpendicularAxes)
-        return self.takeSlice(targetCoords, shouldTransform)
+        target_coords = self.get_slice_coords(perpendicular_axes)
+        return self.take_slice(target_coords, should_transform)
 
-    def getTransformationMatrices(self):
-        """Generate a 4D transformation matrix based on self.alignParams for
+    def get_transformation_matrices(self):
+        """Generate a 4D transformation matrix based on self.align_params for
         each wavelength."""
         result = []
-        for wavelength in range(self.numWavelengths):
-            dx, dy, dz, angle, zoom = self.alignParams[wavelength]
+        for wavelength in range(self.num_wavelengths):
+            dx, dy, dz, angle, zoom = self.align_params[wavelength]
             angle = angle * numpy.pi / 180.0
-            cosTheta = numpy.cos(angle)
-            sinTheta = numpy.sin(angle)
+            cos_theta = numpy.cos(angle)
+            sin_theta = numpy.sin(angle)
             transform = zoom * numpy.array(
                 [
-                    [cosTheta, sinTheta, 0, dx],
-                    [-sinTheta, cosTheta, 0, dy],
+                    [cos_theta, sin_theta, 0, dx],
+                    [-sin_theta, cos_theta, 0, dy],
                     [0, 0, 1, dz],
                     [0, 0, 0, 1],
                 ]
@@ -462,35 +462,35 @@ class DataDoc:
             result.append(transform)
         return result
 
-    def hasZMotion(self):
+    def has_z_motion(self):
         """Return true if there is any Z motion in any wavelength's alignment
         parameters."""
-        return numpy.any(self.alignParams[:, 2] != 0)
+        return numpy.any(self.align_params[:, 2] != 0)
 
-    def hasTransformation(self):
+    def has_transformation(self):
         """Return true if there is any non-default transformation."""
-        for i, nullValue in enumerate([0, 0, 0, 0, 1]):
-            if not numpy.all(self.alignParams[:, i] == nullValue):
+        for i, null_value in enumerate([0, 0, 0, 0, 1]):
+            if not numpy.all(self.align_params[:, i] == null_value):
                 # At least one wavelength has a transformation here.
                 return True
         return False
 
-    def registerAlignmentCallback(self, callback):
+    def register_alignment_callback(self, callback):
         """Register a callback to be invoked when the alignment parameters
         change."""
-        self.alignCallbacks.append(callback)
+        self.align_callbacks.append(callback)
 
-    def setAlignParams(self, wavelength, params):
+    def set_align_params(self, wavelength, params):
         """Update the alignment parameters, then invoke our callbacks."""
-        self.alignParams[wavelength] = params
-        for callback in self.alignCallbacks:
-            callback(self.alignParams)
+        self.align_params[wavelength] = params
+        for callback in self.align_callbacks:
+            callback(self.align_params)
 
-    def getAlignParams(self, wavelength):
+    def get_align_params(self, wavelength):
         """Get the current alignment parameters for the specified wavelength."""
-        return self.alignParams[wavelength]
+        return self.align_params[wavelength]
 
-    def alignAndCrop(self, wavelengths=[], timepoints=[], savePath=None):
+    def align_and_crop(self, wavelengths=[], timepoints=[], save_path=None):
         r"""Apply our alignment parameters to the data, then crop them, and
         either return the result for the specified wavelength(s), or save the
         result to the specified file path.
@@ -506,53 +506,53 @@ class DataDoc:
         if not wavelengths:
             wavelengths = range(self.size[0])
         if not timepoints:
-            timepoints = range(self.cropMin[1], self.cropMax[1])
+            timepoints = range(self.crop_min[1], self.crop_max[1])
 
         # Generate the cropped shape of the file.
-        croppedShape = [len(wavelengths)]
-        for min, max in zip(self.cropMin[1:], self.cropMax[1:]):
-            croppedShape.append(max - min)
+        cropped_shape = [len(wavelengths)]
+        for min, max in zip(self.crop_min[1:], self.crop_max[1:]):
+            cropped_shape.append(max - min)
         # Reorder to time/wavelength/z/y/x for saving.
-        croppedShape[0], croppedShape[1] = croppedShape[1], croppedShape[0]
-        croppedShape = tuple(croppedShape)
+        cropped_shape[0], cropped_shape[1] = cropped_shape[1], cropped_shape[0]
+        cropped_shape = tuple(cropped_shape)
 
-        newHeader = mrc.makeHdrArray()
-        mrc.initHdrArrayFrom(newHeader, self.imageHeader)
-        newHeader.Num = (
-            croppedShape[4],
-            croppedShape[3],
-            croppedShape[2] * len(timepoints) * len(wavelengths),
+        new_header = mrc.make_hdr_array()
+        mrc.init_hdr_array_from(new_header, self.image_header)
+        new_header.Num = (
+            cropped_shape[4],
+            cropped_shape[3],
+            cropped_shape[2] * len(timepoints) * len(wavelengths),
         )
-        newHeader.NumTimes = len(timepoints)
-        newHeader.NumWaves = len(wavelengths)
+        new_header.NumTimes = len(timepoints)
+        new_header.NumWaves = len(wavelengths)
         # Size of the extended header -- forced to zero for now.
-        newHeader.next = 0
+        new_header.next = 0
         # Ordering of data in the file; 2 means z/w/t
-        newHeader.ImgSequence = 2
-        newHeader.PixelType = mrc.dtype2MrcMode(numpy.float32)
+        new_header.ImgSequence = 2
+        new_header.PixelType = mrc.dtype_to_mrc_mode(numpy.float32)
 
-        if not savePath:
-            outputArray = numpy.empty(croppedShape, numpy.float32)
+        if not save_path:
+            output_array = numpy.empty(cropped_shape, numpy.float32)
         else:
-            if self.filePath == savePath:
+            if self.file_path == save_path:
                 # \todo Why do we do this?
                 del self.image.Mrc
 
             # Write out the header.
-            outputFile = open(savePath, "wb")
-            outputFile.write(newHeader._array.tobytes())
+            output_file = open(save_path, "wb")
+            output_file.write(new_header._array.tobytes())
 
         # Slices to use to crop out the 3D volume we want to use for each
         # wave-timepoint pair.
-        volumeSlices = []
-        for min, max in zip(self.cropMin[2:], self.cropMax[2:]):
-            volumeSlices.append(slice(min, max))
+        volume_slices = []
+        for min, max in zip(self.crop_min[2:], self.crop_max[2:]):
+            volume_slices.append(slice(min, max))
 
         for timepoint in timepoints:
-            for waveIndex, wavelength in enumerate(wavelengths):
-                volume = self.imageArray[wavelength][timepoint]
+            for wave_index, wavelength in enumerate(wavelengths):
+                volume = self.image_array[wavelength][timepoint]
 
-                dx, dy, dz, angle, zoom = self.alignParams[wavelength]
+                dx, dy, dz, angle, zoom = self.align_params[wavelength]
                 if dz and self.size[2] == 1:
                     # HACK: no Z translate in 2D files. Even
                     # infinitesimal translates will zero out the entire slice,
@@ -560,40 +560,40 @@ class DataDoc:
                     dz = 0
                 if dx or dy or dz or angle or zoom != 1:
                     # Transform the volume.
-                    volume = self.transformArray(
+                    volume = self.transform_array(
                         volume, dx, dy, dz, angle, zoom
                     )
                 # Crop to the desired shape.
-                volume = volume[volumeSlices].astype(numpy.float32)
+                volume = volume[volume_slices].astype(numpy.float32)
 
-                if not savePath:
-                    outputArray[timepoint, waveIndex] = volume
+                if not save_path:
+                    output_array[timepoint, wave_index] = volume
                 else:
                     # Write to the file.
-                    for i, zSlice in enumerate(volume):
-                        outputFile.write(zSlice)
+                    for i, z_slice in enumerate(volume):
+                        output_file.write(z_slice)
 
-        if not savePath:
+        if not save_path:
             # Reorder to WTZYX since that's what the user expects.
-            return outputArray.transpose([1, 0, 2, 3, 4])
+            return output_array.transpose([1, 0, 2, 3, 4])
         else:
-            outputFile.close()
+            output_file.close()
 
-    def saveTo(self, savePath):
+    def save_to(self, save_path):
         """Just save our array to the specified file."""
-        filehandle = open(savePath, "wb")
-        writeMrcHeader(self.imageHeader, filehandle)
-        filehandle.write(self.imageArray)
+        filehandle = open(save_path, "wb")
+        write_mrc_header(self.image_header, filehandle)
+        filehandle.write(self.image_array)
         filehandle.close()
 
-    def getSliceSize(self, axis1, axis2):
+    def get_slice_size(self, axis1, axis2):
         """Get the size of a slice in the specified dimensions.
 
         Dimensions are as ordered in self.size
         """
         return numpy.array([self.size[axis1], self.size[axis2]])
 
-    def getSliceCoords(self, axes=None):
+    def get_slice_coords(self, axes=None):
         """Returns a mapping of axes to our view positions on those axes.
 
         If None, then operate on all axes.
@@ -603,38 +603,38 @@ class DataDoc:
         """
         if axes is None:
             axes = range(5)
-        return dict([(axis, self.curViewIndex[axis]) for axis in axes])
+        return dict([(axis, self.cur_view_index[axis]) for axis in axes])
 
-    def moveSliceLines(self, offset):
-        """Move self.curViewIndex by the specified amount, ensuring that we
+    def move_slice_lines(self, offset):
+        """Move self.cur_view_index by the specified amount, ensuring that we
         stay in-bounds."""
         for i, delta in enumerate(offset):
-            targetVal = self.curViewIndex[i] + delta
-            if targetVal >= 0 and targetVal < self.size[i]:
-                self.curViewIndex[i] = targetVal
+            target_val = self.cur_view_index[i] + delta
+            if target_val >= 0 and target_val < self.size[i]:
+                self.cur_view_index[i] = target_val
 
-    def moveCropbox(self, offset, isMin):
+    def move_crop_box(self, offset, is_min):
         """Move the crop box by the specified amount, ensuring that we stay
         in-bounds."""
-        if isMin:
-            self.cropMin += offset
-            for i, val in enumerate(self.cropMin):
-                self.cropMin[i] = max(0, min(self.size[i], val))
+        if is_min:
+            self.crop_min += offset
+            for i, val in enumerate(self.crop_min):
+                self.crop_min[i] = max(0, min(self.size[i], val))
         else:
-            self.cropMax += offset
-            for i, val in enumerate(self.cropMax):
-                self.cropMax[i] = max(0, min(self.size[i], val))
+            self.crop_max += offset
+            for i, val in enumerate(self.crop_max):
+                self.crop_max[i] = max(0, min(self.size[i], val))
 
-    def convertToMicrons(self, offsets):
+    def convert_to_microns(self, offsets):
         """Multiply the given XYZ offsets by our pixel sizes to get offsets in
         microns."""
-        return numpy.multiply(offsets, self.imageHeader.d)
+        return numpy.multiply(offsets, self.image_header.d)
 
-    def convertFromMicrons(self, offsets):
-        """As convertToMicrons, but in reverse."""
-        return numpy.divide(offsets, self.imageHeader.d)
+    def convert_from_microns(self, offsets):
+        """As convert_to_microns, but in reverse."""
+        return numpy.divide(offsets, self.image_header.d)
 
-    def transformArray(self, data, dx, dy, dz, angle, zoom, order=3):
+    def transform_array(self, data, dx, dy, dz, angle, zoom, order=3):
         """Apply a transformation to an input 3D array in ZYX order.
 
         Angle rotates each slice, zoom scales each slice (i.e. neither is 3D).
@@ -642,21 +642,21 @@ class DataDoc:
         # Input angle is in degrees, but scipy's transformations expect angles
         # in radians.
         angle = angle * numpy.pi / 180
-        cosTheta = numpy.cos(-angle)
-        sinTheta = numpy.sin(-angle)
-        affineTransform = zoom * numpy.array(
-            [[cosTheta, sinTheta], [-sinTheta, cosTheta]]
+        cos_theta = numpy.cos(-angle)
+        sin_theta = numpy.sin(-angle)
+        affine_transform = zoom * numpy.array(
+            [[cos_theta, sin_theta], [-sin_theta, cos_theta]]
         )
 
-        invertedTransform = numpy.linalg.inv(affineTransform)
-        yxCenter = numpy.array(data.shape[1:]) / 2.0
-        offset = -numpy.dot(invertedTransform, yxCenter) + yxCenter
+        inverted_transform = numpy.linalg.inv(affine_transform)
+        yx_center = numpy.array(data.shape[1:]) / 2.0
+        offset = -numpy.dot(inverted_transform, yx_center) + yx_center
 
         output = numpy.zeros(data.shape)
         for i, slice in enumerate(data):
             output[i] = scipy.ndimage.affine_transform(
                 slice,
-                invertedTransform,
+                inverted_transform,
                 offset,
                 output=numpy.float32,
                 cval=slice.min(),
@@ -666,38 +666,38 @@ class DataDoc:
         return output
 
 
-def makeHeaderFor(data, shouldSetMinMax=True, **kwargs):
+def make_header_for(data, should_set_min_max=True, **kwargs):
     """Generate an MRC header object based on the provided Numpy array.
 
     The input array must be five-dimensional, in WTZYX order. Just a
-    passthrough to makeHeaderForShape, really.
+    passthrough to make_header_for_shape, really.
 
     Args:
         data (numpy.ndarray): Array of pixels in (W, T, Z, Y, X) order.
-        shouldSetMinMax (bool): If True (the default), calculate the min and
+        should_set_min_max (bool): If True (the default), calculate the min and
             max values for each wavelength and put them in the header.
             Pointless if this will be overridden later, and may be costly
             depending on the size of the data array.
     """
-    header = makeHeaderForShape(data.shape, data.dtype.type, **kwargs)
-    if shouldSetMinMax:
+    header = make_header_for_shape(data.shape, data.dtype.type, **kwargs)
+    if should_set_min_max:
         # Set the min/max values. This is a bit ugly because they're in
         # differently-named fields on a per-wavelength basis...and the first
         # wavelength gets extra data stored, to boot.
         for i in range(data.shape[0]):
-            minVal = data[i].min()
-            maxVal = data[i].max()
+            min_val = data[i].min()
+            max_val = data[i].max()
             if i == 0:
                 setattr(
-                    header, "mmm1", (minVal, maxVal, numpy.median(data[i]))
+                    header, "mmm1", (min_val, max_val, numpy.median(data[i]))
                 )
             else:
-                setattr(header, "mm%d" % (i + 1), (minVal, maxVal))
+                setattr(header, "mm%d" % (i + 1), (min_val, max_val))
     return header
 
 
-def makeHeaderForShape(
-    shape, dtype, XYSize=None, ZSize=None, wavelengths=[], zxy0=None
+def make_header_for_shape(
+    shape, dtype, xy_size=None, z_size=None, wavelengths=[], zxy0=None
 ):
     """Generate an MRC header, filling in some values.
 
@@ -705,14 +705,14 @@ def makeHeaderForShape(
         shape (tuple): 5D tuple describing the shape of the data. Must be in
             (W, T, Z, Y, X) order.
         dtype (type): Datatype of the pixel data.
-        XYSize (float): Size of the (assumed square) pixels. Defaults to our
+        xy_size (float): Size of the (assumed square) pixels. Defaults to our
             current camera pixel size.
-        ZSize (float): Size of the Z-step between slices. Defaults to 0.
+        z_size (float): Size of the Z-step between slices. Defaults to 0.
         wavelengths (list): List of wavelengths (e.g. [488, 560]). Defaults to
             the currently active wavelengths.
     """
-    header = mrc.makeHdrArray()
-    mrc.init_simple(header, mrc.dtype2MrcMode(dtype), shape)
+    header = mrc.make_hdr_array()
+    mrc.init_simple(header, mrc.dtype_to_mrc_mode(dtype), shape)
     header.NumTimes = shape[1]
     header.NumWaves = shape[0]
     header.Num = (shape[4], shape[3], shape[0] * shape[1] * shape[2])
@@ -722,20 +722,20 @@ def makeHeaderForShape(
         else:
             header.wave[i] = 0
     header.ImgSequence = 2
-    header.d = [XYSize, XYSize, ZSize]
+    header.d = [xy_size, xy_size, z_size]
     if zxy0 is not None:
         header.zxy0 = zxy0
     return header
 
 
-def writeMrcHeader(header, filehandle):
+def write_mrc_header(header, filehandle):
     """Write just a header to the provided filehandle."""
     filehandle.seek(0)
     filehandle.write(header._array.tobytes())
 
 
-def writeDataAsMrc(
-    data, filename, XYSize=None, ZSize=None, wavelengths=[], zxy0=None
+def write_data_as_mrc(
+    data, filename, xy_size=None, z_size=None, wavelengths=[], zxy0=None
 ):
     """Write out the provided data array as if it were an MRC file.
 
@@ -746,30 +746,30 @@ def writeDataAsMrc(
     """
     shape = (5 - len(data.shape)) * [1] + list(data.shape)
     data_out = data.reshape(shape)
-    header = makeHeaderFor(
+    header = make_header_for(
         data_out,
-        XYSize=XYSize,
-        ZSize=ZSize,
+        xy_size=xy_size,
+        z_size=z_size,
         wavelengths=wavelengths,
         zxy0=zxy0,
     )
     handle = open(filename, "wb")
-    writeMrcHeader(header, handle)
+    write_mrc_header(header, handle)
     handle.seek(1024)  # Seek to end of header
     data_out.tofile(handle)
     handle.close()
 
 
-def writeDataAsMrcWithExthdr(
+def write_data_as_mrc_with_exthdr(
     data,
     filename,
-    XYSize=None,
-    ZSize=None,
+    xy_size=None,
+    z_size=None,
     wavelengths=[],
     zxy0=None,
-    lensID=None,
-    intMetadataBuffers=[],
-    floatMetadataBuffers=[],
+    lens_id=None,
+    int_metadata_buffers=[],
+    float_metadata_buffers=[],
 ):
     """Write out the provided data array as if it were an MRC file.
 
@@ -780,32 +780,32 @@ def writeDataAsMrcWithExthdr(
     """
     shape = (5 - len(data.shape)) * [1] + list(data.shape)
     data_out = data.reshape(shape)
-    header = makeHeaderFor(
+    header = make_header_for(
         data_out,
-        XYSize=XYSize,
-        ZSize=ZSize,
+        xy_size=xy_size,
+        z_size=z_size,
         wavelengths=wavelengths,
         zxy0=zxy0,
     )
     # deal with extended header meta data
-    numIntegers = len(intMetadataBuffers)
-    numFloats = len(floatMetadataBuffers)
-    header.NumIntegers = numIntegers
-    header.NumFloats = numFloats
-    header.LensNum = lensID
-    extendedBytes = 4 * (numIntegers + numFloats)
-    header.next = extendedBytes
+    num_integers = len(int_metadata_buffers)
+    num_floats = len(float_metadata_buffers)
+    header.NumIntegers = num_integers
+    header.NumFloats = num_floats
+    header.LensNum = lens_id
+    extended_bytes = 4 * (num_integers + num_floats)
+    header.next = extended_bytes
 
     handle = open(filename, "wb")
-    writeMrcHeader(header, handle)
+    write_mrc_header(header, handle)
 
-    metadataOffset = 1024
-    dataOffset = 1024 + extendedBytes
+    metadata_offset = 1024
+    data_offset = 1024 + extended_bytes
     try:
-        handle.seek(metadataOffset)
-        handle.write(intMetadataBuffers)
-        handle.write(floatMetadataBuffers)
-        handle.seek(dataOffset)  # Seek to end of header
+        handle.seek(metadata_offset)
+        handle.write(int_metadata_buffers)
+        handle.write(float_metadata_buffers)
+        handle.seek(data_offset)  # Seek to end of header
         data_out.tofile(handle)
     except Exception as e:
         print("Error writing image:", e)
@@ -813,84 +813,84 @@ def writeDataAsMrcWithExthdr(
     handle.close()
 
 
-def getExtendedHeader(data, header):
+def get_extended_header(data, header):
     """Given a buffer of memory that contains the extended header, and the
     standard header, return the extended header as two arrays: one of the ints,
     the other of the floats."""
-    numWavelengths = header.NumWaves
+    num_wavelengths = header.NumWaves
     # \todo Assuming the 'Num' array is in XYZ order.
-    imagesPerWavelength = header.Num[2] // numWavelengths
-    numInts = header.NumIntegers
-    numFloats = header.NumFloats
+    images_per_wavelength = header.Num[2] // num_wavelengths
+    num_ints = header.NumIntegers
+    num_floats = header.NumFloats
     # Start with blank bytes; we'll type-convert later.
-    intArray = numpy.zeros(
-        int(imagesPerWavelength * numWavelengths * numInts * 4),
+    int_array = numpy.zeros(
+        int(images_per_wavelength * num_wavelengths * num_ints * 4),
         dtype=numpy.uint8,
     )
-    floatArray = numpy.zeros(
-        int(imagesPerWavelength * numWavelengths * numFloats * 4),
+    float_array = numpy.zeros(
+        int(images_per_wavelength * num_wavelengths * num_floats * 4),
         dtype=numpy.uint8,
     )
     # Amount of memory per image allocated to ints.
-    intSize = int(numInts * 4)
+    int_size = int(num_ints * 4)
     # Ditto, for floats.
-    floatSize = int(numFloats * 4)
-    chunkSize = intSize + floatSize
+    float_size = int(num_floats * 4)
+    chunk_size = int_size + float_size
     # Load the extended header as a bytesequence.
-    for i in range(imagesPerWavelength * numWavelengths):
-        offset = int(i * chunkSize)
-        intArray[i * intSize : (i + 1) * intSize] = data[
-            offset : offset + intSize
+    for i in range(images_per_wavelength * num_wavelengths):
+        offset = int(i * chunk_size)
+        int_array[i * int_size: (i + 1) * int_size] = data[
+            offset : offset + int_size
         ]
-        floatArray[i * floatSize : (i + 1) * floatSize] = data[
-            offset + intSize : offset + chunkSize
+        float_array[i * float_size: (i + 1) * float_size] = data[
+            offset + int_size: offset + chunk_size
         ]
     # Cast to appropriate datatypes.
-    intArray.dtype = numpy.int32
-    floatArray.dtype = numpy.float32
+    int_array.dtype = numpy.int32
+    float_array.dtype = numpy.float32
 
     # Set the array dimensions as if the arrays were of image data.
     # Use the X axis to store the ints/floats (the Y axis is unused).
-    orderStr = mrc.axisOrderStr(header)
+    order_str = mrc.axis_order_str(header)
     shape = []
-    numTimepoints = header.NumTimes
-    numZ = header.Num[2] // (numWavelengths * numTimepoints)
-    keyToSize = {"w": numWavelengths, "t": numTimepoints, "z": numZ, "y": 1}
-    for key in orderStr:
-        if key in keyToSize:
-            shape.append(keyToSize[key])
-    intArray.shape = tuple(shape + [numInts])
-    floatArray.shape = tuple(shape + [numFloats])
+    num_timepoints = header.NumTimes
+    num_z = header.Num[2] // (num_wavelengths * num_timepoints)
+    key_to_size = {"w": num_wavelengths, "t": num_timepoints, "z": num_z, "y": 1}
+    for key in order_str:
+        if key in key_to_size:
+            shape.append(key_to_size[key])
+    int_array.shape = tuple(shape + [num_ints])
+    float_array.shape = tuple(shape + [num_floats])
     # Reorder the arrays to WTZYX order.
-    if numInts:
-        intArray = reorderArray(
-            intArray,
-            (numWavelengths, numTimepoints, numZ, 1, numInts),
-            orderStr,
+    if num_ints:
+        int_array = reorder_array(
+            int_array,
+            (num_wavelengths, num_timepoints, num_z, 1, num_ints),
+            order_str,
         )
-    if numFloats:
-        floatArray = reorderArray(
-            floatArray,
-            (numWavelengths, numTimepoints, numZ, 1, numFloats),
-            orderStr,
+    if num_floats:
+        float_array = reorder_array(
+            float_array,
+            (num_wavelengths, num_timepoints, num_z, 1, num_floats),
+            order_str,
         )
-    return intArray, floatArray
+    return int_array, float_array
 
 
-def loadHeader(path):
+def load_header(path):
     """Load just the header and extended header for the specified filepath."""
     data = numpy.memmap(path)
-    headerBuffer = data[:1024]
-    header = mrc.makeHdrArray(headerBuffer)
-    numBytes = header.next
-    extendedData = data[1024 : 1024 + numBytes]
-    ints, floats = getExtendedHeader(extendedData, header)
-    return header, headerBuffer, ints, floats
+    header_buffer = data[:1024]
+    header = mrc.make_hdr_array(header_buffer)
+    num_bytes = header.next
+    extended_data = data[1024: 1024 + num_bytes]
+    ints, floats = get_extended_header(extended_data, header)
+    return header, header_buffer, ints, floats
 
 
-def reorderArray(data, size, sequence):
+def reorder_array(data, size, sequence):
     """Given an input array, an expected final array shape, and a sequence
-    string (e.g. as generated by mrc.axisOrderStr()), reorder the array to be
+    string (e.g. as generated by mrc.axis_order_str()), reorder the array to be
     in WTZYX order, with any neccesary padding of the array elements.
 
     How we do this depends on the ordering of X/Y/Z/time/wavelength in the file
@@ -899,16 +899,16 @@ def reorderArray(data, size, sequence):
     we pad out the array until it is five-dimensional, and then rearrange its
     axes until its ordering is WTZYX.
     """
-    dimOrder = ["w", "t", "z", "y", "x"]
-    vals = list(zip(size, dimOrder))
-    dataCopy = numpy.array(data)
+    dim_order = ["w", "t", "z", "y", "x"]
+    vals = list(zip(size, dim_order))
+    data_copy = numpy.array(data)
     # Find missing axes and pad the array until it has 5 axes.
     for val, key in vals[:-2]:
         # The W/T/Z dimensions are left off if they have
         # length 1.
-        if val == 1 and len(dataCopy.shape) < 5:
+        if val == 1 and len(data_copy.shape) < 5:
             # The array is missing a dimension, so pad it out.
-            dataCopy = numpy.expand_dims(dataCopy, -1)
+            data_copy = numpy.expand_dims(data_copy, -1)
             if key in sequence:
                 # Remove the existing position for that key and add it to the
                 # end, since its existing position is actually wrong.
@@ -920,4 +920,4 @@ def reorderArray(data, size, sequence):
     for val, key in vals:
         ordering.append(sequence.index(key))
 
-    return dataCopy.transpose(ordering)
+    return data_copy.transpose(ordering)

@@ -51,9 +51,9 @@ class ObjectiveHandler(cockpit.handlers.device.DeviceHandler):
         super().__init__(
             name,
             group_name,
-            isEligibleForExperiments=False,
+            is_eligible_for_experiments=False,
             callbacks={},
-            deviceType=cockpit.depot.OBJECTIVE,
+            device_type=cockpit.depot.OBJECTIVE,
         )
         self.pixel_size = pixel_size
         self.transform = transform

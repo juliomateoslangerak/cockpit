@@ -76,17 +76,17 @@ class CockpitServer(device.Device):
     def __init__(self, name, config={}):
         super().__init__(name, config)
         ## IP address of the cockpit computer.
-        if not (hasattr(self, "ipAddress")):
-            self.ipAddress = "127.0.0.1"
+        if not (hasattr(self, "ip_address")):
+            self.ip_address = "127.0.0.1"
         ## Name used to represent us to the outside world.
         self.name = "mui"
         ## Auto-incrementing port ID.
-        self.uniquePortID = 7700
+        self.unique_port_id = 7700
         ## Maps registered functions to the ServerDaemon instances
         # used to serve them.
-        self.funcToDaemon = {}
+        self.func_to_daemon = {}
 
-    def getHandlers(self):
+    def get_handlers(self):
         return [
             cockpit.handlers.server.ServerHandler(
                 "Cockpit server",
@@ -95,28 +95,28 @@ class CockpitServer(device.Device):
             )
         ]
 
-    def register(self, func, localIP=None):
+    def register(self, func, local_ip=None):
         """Register a new function.
 
         Create a daemon to listen to calls on the appropriate port; those calls
         will be forwarded to the registered function. Return a URI used to
         connect to that daemon from outside.
         """
-        self.uniquePortID += 1
-        ipAddress = self.ipAddress
-        if localIP is not None:
+        self.unique_port_id += 1
+        ip_address = self.ip_address
+        if local_ip is not None:
             # Use the alternate address instead.
-            ipAddress = localIP
-        daemon = ServerDaemon(self.name, func, self.uniquePortID, ipAddress)
-        self.funcToDaemon[func] = daemon
+            ip_address = local_ip
+        daemon = ServerDaemon(self.name, func, self.unique_port_id, ip_address)
+        self.func_to_daemon[func] = daemon
         daemon.serve()
-        return "PYRO:%s@%s:%d" % (self.name, ipAddress, self.uniquePortID)
+        return "PYRO:%s@%s:%d" % (self.name, ip_address, self.unique_port_id)
 
     def unregister(self, func):
         """Stop a daemon."""
-        if func in self.funcToDaemon:
-            self.funcToDaemon[func].stop()
-            del self.funcToDaemon[func]
+        if func in self.func_to_daemon:
+            self.func_to_daemon[func].stop()
+            del self.func_to_daemon[func]
 
 
 class ServerDaemon:

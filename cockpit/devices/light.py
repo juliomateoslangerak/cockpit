@@ -42,7 +42,7 @@ class SimpleLight(cockpit.devices.device.Device):
 
     """
 
-    def getHandlers(self):
+    def get_handlers(self):
         self.handlers = []
         trigsource = self.config.get("triggersource", None)
         trigline = self.config.get("triggerline", None)
@@ -52,17 +52,17 @@ class SimpleLight(cockpit.devices.device.Device):
             )
         else:
             trighandler = None
-        self._exposureTime = 100
+        self._exposure_time = 100
         self.handlers.append(
             LightHandler(
                 self.name,
                 self.name + " light source",
                 {
-                    "setEnabled": lambda name, on: time.sleep(0.5),
-                    "setExposureTime": lambda name, value: setattr(
-                        self, "_exposureTime", value
+                    "set_enabled": lambda name, on: time.sleep(0.5),
+                    "set_exposure_time": lambda name, value: setattr(
+                        self, "_exposure_time", value
                     ),
-                    "getExposureTime": lambda name: self._exposureTime,
+                    "get_exposure_time": lambda name: self._exposure_time,
                 },
                 self.config.get("wavelength", None),
                 100,
@@ -88,9 +88,9 @@ class AmbientLight(cockpit.devices.device.Device):
         super().__init__(name, config)
         self._state = {"time": 100.0}
         callbacks = {
-            "getExposureTime": self._getExposureTime,
-            "setExposureTime": self._setExposureTime,
-            "setEnabled": self._setEnabled,
+            "get_exposure_time": self._get_exposure_time,
+            "set_exposure_time": self._set_exposure_time,
+            "set_enabled": self._set_enabled,
         }  # type: typing.Dict[str, typing.Callable]
         self._handlers = [
             LightHandler(
@@ -102,16 +102,16 @@ class AmbientLight(cockpit.devices.device.Device):
             )
         ]
 
-    def getHandlers(self) -> typing.List[LightHandler]:
+    def get_handlers(self) -> typing.List[LightHandler]:
         return self._handlers
 
-    def _getExposureTime(self, name: str) -> float:
+    def _get_exposure_time(self, name: str) -> float:
         return self._state["time"]
 
-    def _setExposureTime(self, name: str, value: float) -> None:
+    def _set_exposure_time(self, name: str, value: float) -> None:
         self._state["time"] = value
 
-    def _setEnabled(self, name: str, state: bool) -> None:
+    def _set_enabled(self, name: str, state: bool) -> None:
         # The ambient light source is always on, so we do nothing.  It
         # seems like there's no callback on the LightHandler to
         # actually check if the disabling/enabling worked (not that it

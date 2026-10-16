@@ -35,9 +35,9 @@ class TestWriteDataAsMrc(unittest.TestCase):
 
     def assertWriteAndReadingBack(self):
         with tempfile.NamedTemporaryFile() as fh:
-            datadoc.writeDataAsMrc(self.data, fh.name)
+            datadoc.write_data_as_mrc(self.data, fh.name)
             doc = datadoc.DataDoc(fh.name)
-        numpy.testing.assert_equal(doc.getImageArray().squeeze(), self.data)
+        numpy.testing.assert_equal(doc.get_image_array().squeeze(), self.data)
 
     def test_write_and_read(self):
         """writeDataAsMRC can read back what it writes"""

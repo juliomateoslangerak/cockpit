@@ -70,32 +70,32 @@ class CameraDevice(device.Device):
 
     def __init__(self, name, config):
         super().__init__(name, config)
-        # baseTransform depends on camera orientation and is constant.
+        # base_transform depends on camera orientation and is constant.
         if "transform" in config:
-            self.baseTransform = _config_to_transform(config.get("transform"))
+            self.base_transform = _config_to_transform(config.get("transform"))
         else:
-            self.baseTransform = [0, 0, 0]
+            self.base_transform = [0, 0, 0]
 
-    def updateTransform(self, pathTransform):
+    def update_transform(self, path_transform):
         """Apply a new pathTransform"""
         # pathTransform may change with changes in imaging path
-        base = self.baseTransform
+        base = self.base_transform
         # Flips cancel each other out. Rotations combine to flip both axes.
-        lr = base[0] ^ pathTransform[0]
-        ud = base[1] ^ pathTransform[1]
-        rot = base[2] ^ pathTransform[2]
-        if pathTransform[2] and base[2]:
+        lr = base[0] ^ path_transform[0]
+        ud = base[1] ^ path_transform[1]
+        rot = base[2] ^ path_transform[2]
+        if path_transform[2] and base[2]:
             lr = not lr
             ud = not ud
-        self._setTransform((lr, ud, rot))
+        self._set_transform((lr, ud, rot))
 
-    def _setTransform(self, transform):
+    def _set_transform(self, transform):
         # Subclasses should override this if transforms are done on the device.
         self._transform = transform
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         # Set fixed filter if defined in config
         if self.handler.wavelength is None and self.handler.dye is None:
             dye = self.config.get("dye", None)
             wavelength = self.config.get("wavelength", None)
-            self.handler.updateFilter(dye, wavelength)
+            self.handler.update_filter(dye, wavelength)

@@ -29,7 +29,7 @@ this package.  For example:
 .. code:: ini
 
     [XY stage]
-    type: cockpit.devices.microscopeDevice.MicroscopeStage
+    type: cockpit.devices.microscope_device.MicroscopeStage
     uri: PYRO:SomeXYStage@192.168.0.2:7001
     ...
 

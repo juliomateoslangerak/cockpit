@@ -36,11 +36,11 @@ class ClaritySlideHandler(FilterHandler):
         """Subclass FilterHandler for Clarity slider position"""
         # This gives us a filter-like UI for the slider.
         super().__init__(*args, **kwargs)
-        # Over-ride the deviceType so that this handler is not added
+        # Over-ride the device_type so that this handler is not added
         # to the filters panel.
         self.deviceType = depot.GENERIC_DEVICE
 
-    def makeUI(self, *args):
+    def make_ui(self, *args):
         # return None to prevent the slide controls being placed in their
         # own panel - the Clarity device draws the UI for this handler.
         return None
@@ -50,7 +50,7 @@ class Clarity(microscope_device.MicroscopeFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def checkStatus(self, event):
+    def check_status(self, event):
         busy = False
         try:
             status = self._proxy.get_status()
@@ -77,15 +77,15 @@ class Clarity(microscope_device.MicroscopeFilter):
             if state not in [STATES.error, STATES.busy]:
                 h.updateAfterMove()
 
-    def setEnabled(self, state):
+    def set_enabled(self, state):
         if state:
             self._proxy.enable()
         else:
             self._proxy.disable()
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
-        super().getHandlers()
+        super().get_handlers()
         h = ClaritySlideHandler(
             self.name + "_slide",
             "clarity",
@@ -94,8 +94,8 @@ class Clarity(microscope_device.MicroscopeFilter):
                 "setPosition": self.set_slide_position,
                 "getPosition": self._proxy.get_slide_position,
                 "getFilters": self.get_slides_as_filters,
-                "getIsEnabled": self._proxy.get_is_enabled,
-                "setEnabled": self.setEnabled,
+                "get_is_enabled": self._proxy.get_is_enabled,
+                "set_enabled": self.set_enabled,
             },
             [],
             [],
@@ -111,7 +111,7 @@ class Clarity(microscope_device.MicroscopeFilter):
     def get_slides_as_filters(self):
         return [Filter(k, v) for k, v in self._proxy.get_slides().items()]
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """Draw the Clarity's UI"""
         # Use an outer panel and a subpanel, so that the power button
         # can en/disable all other controls by managing the state of the
@@ -164,13 +164,13 @@ class Clarity(microscope_device.MicroscopeFilter):
         self._timer = wx.Timer(panel)
         self._timer.Start(1000)
         # ensure that we bind the window destroy event to stop the timer
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        panel.Bind(wx.EVT_TIMER, self.checkStatus, self._timer)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+        panel.Bind(wx.EVT_TIMER, self.check_status, self._timer)
         panel.Fit()
         self.panel = panel
         return outer
 
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
         """ensure that the timer is stopped on window destroy."""
         self._timer.Stop()
         event.Skip()

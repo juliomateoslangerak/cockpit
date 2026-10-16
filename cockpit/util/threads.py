@@ -44,14 +44,14 @@ def call_in_new_thread(function):
     Used as a decorator when a function needs to not block the UI thread.
     """
 
-    def wrappedFunc(*args, **kwargs):
+    def wrapped_func(*args, **kwargs):
         thread = threading.Thread(target=function, args=args, kwargs=kwargs)
         thread.name = function.__name__
         # Ensure the thread will exit when the program does.
         thread.daemon = True
         thread.start()
 
-    return wrappedFunc
+    return wrapped_func
 
 
 ## Call the passed-in function in the main thread once the current queue of
@@ -60,8 +60,8 @@ def call_in_new_thread(function):
 # thread to avoid unnecessary requeuing.
 
 
-def callInMainThread(function):
-    def wrappedFunc(*args, **kwargs):
+def call_in_main_thread(function):
+    def wrapped_func(*args, **kwargs):
         if threading.current_thread() is threading.main_thread():
             # Already in main thread.
             function(*args, **kwargs)
@@ -69,14 +69,14 @@ def callInMainThread(function):
             # Push call to main thread.
             wx.CallAfter(function, *args, **kwargs)
 
-    return wrappedFunc
+    return wrapped_func
 
 
 ## Maps objects (presumably class instances) to the Locks we maintain
 # for those objects.
-objectToLock = {}
+object_to_lock = {}
 ## Lock around modifying the above.
-locksLock = threading.Lock()
+locks_lock = threading.Lock()
 
 
 def locked(func):
@@ -88,11 +88,11 @@ def locked(func):
     threadsafe.
     """
 
-    def wrappedFunc(first, *args, **kwargs):
-        with locksLock:
-            if first not in objectToLock:
-                objectToLock[first] = threading.Lock()
-        with objectToLock[first]:
+    def wrapped_func(first, *args, **kwargs):
+        with locks_lock:
+            if first not in object_to_lock:
+                object_to_lock[first] = threading.Lock()
+        with object_to_lock[first]:
             return func(first, *args, **kwargs)
 
-    return wrappedFunc
+    return wrapped_func

@@ -87,7 +87,7 @@ class ActionTable:
 
         Return the time after the toggle is completed.
         """
-        time, dt = handler.addToggle(time, self)
+        time, dt = handler.add_toggle(time, self)
         return time
 
     def getLastActionFor(self, handler):

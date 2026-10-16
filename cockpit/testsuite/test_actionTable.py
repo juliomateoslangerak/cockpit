@@ -27,13 +27,13 @@ import cockpit.handlers.device
 
 
 class _MockDeviceHandler(cockpit.handlers.device.DeviceHandler):
-    def __init__(self, name="mock", groupName="testsuite"):
+    def __init__(self, name="mock", group_name="testsuite"):
         super().__init__(
             name,
-            groupName,
-            isEligibleForExperiments=False,
+            group_name,
+            is_eligible_for_experiments=False,
             callbacks={},
-            deviceType=cockpit.depot.GENERIC_DEVICE,
+            device_type=cockpit.depot.GENERIC_DEVICE,
         )
 
 

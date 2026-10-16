@@ -117,7 +117,7 @@ class DeviceHandler:
         return wrapper
 
     def __init__(
-        self, name, groupName, isEligibleForExperiments, callbacks, deviceType
+        self, name, group_name, is_eligible_for_experiments, callbacks, device_type
     ):
         """Set up the handler for a device.
 
@@ -125,16 +125,16 @@ class DeviceHandler:
             name (str): The name of the device being controlled. This should
                 be unique, as it is used to indicate the specific
                 DeviceHandler in many callback functions.
-            groupName (str): The name of the group of objects this object
+            group_name (str): The name of the group of objects this object
                 falls under. Multiple DeviceHandlers can correspond to a
                 single group when their purpose is similar.
-            isEligibleForExperiments (bool): True if the device can be used in
+            is_eligible_for_experiments (bool): True if the device can be used in
                 experiments (i.e. data collections).
             callbacks (dict): Mapping of strings to functions. Each Handler has
                 a different selection of functions that must be filled in by
                 the Device that created it. Refer to the Handler's constructor.
-            deviceType (str): Type of device this is; each subclass of
-                DeviceHandler should have a distinct deviceType. Normal users
+            device_type (str): Type of device this is; each subclass of
+                DeviceHandler should have a distinct device_type. Normal users
                 don't need to worry about this as it is provided automatically
                 by the DeviceHandler subclass.
         """
@@ -144,12 +144,12 @@ class DeviceHandler:
         self.state = None
         self.__cache = {}
         self.name = name
-        self.groupName = groupName
+        self.group_name = group_name
         self.callbacks = callbacks
-        self.isEligibleForExperiments = isEligibleForExperiments
-        self.deviceType = deviceType
+        self.is_eligible_for_experiments = is_eligible_for_experiments
+        self.device_type = device_type
         # A set of controls that listen for device events.
-        self.enableLock = threading.Lock()
+        self.enable_lock = threading.Lock()
         self.clear_cache = self.__cache.clear
 
     def __setattr__(self, key, value):
@@ -160,11 +160,11 @@ class DeviceHandler:
         """Define __lt__ to make handlers sortable."""
         return self.name.lower() < other.name.lower()
 
-    def getIdentifier(self):
+    def get_identifier(self):
         """Return a string that identifies the device."""
-        return "%s:%s" % (self.deviceType, self.name)
+        return "%s:%s" % (self.device_type, self.name)
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """Construct any necessary UI widgets for this Device to perform its
         job.
 
@@ -175,33 +175,33 @@ class DeviceHandler:
             wx.Sizer or None: A WX sizer holding the result, or None if
             nothing is to be inserted into the parent object.
         """
-        if "makeUI" in self.callbacks:
-            return self.callbacks["makeUI"](parent)
+        if "make_ui" in self.callbacks:
+            return self.callbacks["make_ui"](parent)
         else:
             return None
 
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
         """Publish any necessary events to declare our initial configuration to
         anything that cares.
 
         At this point, all device handlers should be initialized.
         """
-        getIsEnabled = getattr(
-            self, "getIsEnabled", None
-        ) or self.callbacks.get("getIsEnabled", None)
-        if getIsEnabled:
-            events.publish(events.DEVICE_STATUS, self, getIsEnabled())
+        get_is_enabled = getattr(
+            self, "get_is_enabled", None
+        ) or self.callbacks.get("get_is_enabled", None)
+        if get_is_enabled:
+            events.publish(events.DEVICE_STATUS, self, get_is_enabled())
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         """Do any final initialization actions, now that all devices are set up,
         all subscriptions have been made, and all initial publications are done."""
         pass
 
-    def getIsEligibleForExperiments(self):
+    def get_is_eligible_for_experiments(self):
         """Return True if we can be used during experiments."""
-        return self.isEligibleForExperiments
+        return self.is_eligible_for_experiments
 
-    def getSavefileInfo(self):
+    def get_savefile_info(self):
         """Generate a string of information that we want to save into the
         experiment file's header.
 
@@ -209,18 +209,18 @@ class DeviceHandler:
         should be preserved. This callback is optional; by default nothing is
         generated.
         """
-        if "getSavefileInfo" in self.callbacks:
-            return self.callbacks["getSavefileInfo"](self.name)
+        if "get_savefile_info" in self.callbacks:
+            return self.callbacks["get_savefile_info"](self.name)
         return ""
 
-    def cleanupAfterExperiment(self, isCleanupFinal=True):
+    def cleanup_after_experiment(self, is_cleanup_final=True):
         """Do any necessary cleanup when an experiment is finished.
 
         In that situation, some cleanup steps may be unnecessary and should be
         omitted for performance reasons.
 
         Args:
-            isCleanupFinal (bool): Indicates if we're about to leap into a
+            is_cleanup_final (bool): Indicates if we're about to leap into a
                 followup experiment.
         """
         pass
@@ -228,53 +228,53 @@ class DeviceHandler:
     def __repr__(self):
         """Debugging: print some pertinent info."""
         return "<%s named %s in group %s>" % (
-            self.deviceType,
+            self.device_type,
             self.name,
-            self.groupName,
+            self.group_name,
         )
 
-    def addWatch(self, name, callback):
+    def add_watch(self, name, callback):
         """Add a watch/callback on a device attribute."""
         self._publisher.subscribe(name, callback)
 
-    def removeWatch(self, name: str, callback) -> None:
+    def remove_watch(self, name: str, callback) -> None:
         """Remove a watch/callback on a device attribute."""
         self._publisher.unsubscribe(name, callback)
 
     @cockpit.util.threads.call_in_new_thread
-    def toggleState(self, *args, **kwargs):
+    def toggle_state(self, *args, **kwargs):
         """A function that any control can call to toggle enabled/disabled
         state."""
         if self.state == STATES.enabling:
             # Already processing a previous toggle request.
             return
-        getIsEnabled = getattr(
-            self, "getIsEnabled", None
-        ) or self.callbacks.get("getIsEnabled", None)
-        setEnabled = getattr(self, "setEnabled", None) or self.callbacks.get(
-            "setEnabled", None
+        get_is_enabled = getattr(
+            self, "get_is_enabled", None
+        ) or self.callbacks.get("get_is_enabled", None)
+        set_enabled = getattr(self, "set_enabled", None) or self.callbacks.get(
+            "set_enabled", None
         )
-        if not all([getIsEnabled, setEnabled]):
+        if not all([get_is_enabled, set_enabled]):
             raise Exception(
                 "toggleState dependencies not implemented for %s." % self.name
             )
 
         # Do nothing if lock locked as en/disable already in progress.
-        if not self.enableLock.acquire(False):
+        if not self.enable_lock.acquire(False):
             return
         events.publish(events.DEVICE_STATUS, self, STATES.enabling)
         try:
-            setEnabled(not (getIsEnabled()))
+            set_enabled(not (get_is_enabled()))
         except Exception as e:
             events.publish(events.DEVICE_STATUS, self, STATES.error)
             raise Exception(
                 "Problem encountered en/disabling %s:\n%s" % (self.name, e)
             )
         finally:
-            self.enableLock.release()
-        events.publish(events.DEVICE_STATUS, self, getIsEnabled())
+            self.enable_lock.release()
+        events.publish(events.DEVICE_STATUS, self, get_is_enabled())
 
-    def addToggle(self, time, table):
+    def add_toggle(self, time, table):
         """Add a toggle event to the action table.
 
         Return time of last action, and response time before ready after

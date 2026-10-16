@@ -97,9 +97,9 @@ class CamerasWindow(wx.Frame):
             cockpit.gui.view_file_drop_target.ViewFileDropTarget(self)
         )
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def onCameraEnableEvent(self, camera, enabled):
-        activeViews = [view for view in self.views if view.getIsEnabled()]
+        activeViews = [view for view in self.views if view.get_is_enabled()]
         if enabled and camera not in [view.curCamera for view in activeViews]:
             inactiveViews = set(self.views).difference(activeViews)
             inactiveViews.pop().enable(camera)
@@ -119,7 +119,7 @@ class CamerasWindow(wx.Frame):
         viewsToShow = []
         for view in self.views:
             view.Hide()
-            if view.getIsEnabled():
+            if view.get_is_enabled():
                 viewsToShow.append(view)
         # If there are no active views then display one empty panel.
         if not viewsToShow:
@@ -144,7 +144,7 @@ class CamerasWindow(wx.Frame):
     def rescaleViews(self):
         """Rescale each camera view."""
         for view in self.views:
-            if view.getIsEnabled():
+            if view.get_is_enabled():
                 view.canvas.resetPixelScale()
 
 

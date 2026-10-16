@@ -62,10 +62,10 @@ class ImagerHandler(device.DeviceHandler):
     like a DSP or DAQ board.
     """
 
-    def __init__(self, name, groupName, callbacks):
+    def __init__(self, name, group_name, callbacks):
         """callbacks should fill in the following functions:
         - takeImage(): Cause an image to be collected."""
-        super().__init__(name, groupName, False, callbacks, depot.IMAGER)
+        super().__init__(name, group_name, False, callbacks, depot.IMAGER)
 
     def takeImage(self):
         self.callbacks["takeImage"]()

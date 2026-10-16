@@ -70,7 +70,7 @@ class GridSitesDialog(wx.Dialog):
         super().__init__(parent, -1, "Place a Grid of Sites")
 
         ## Config-loaded settings for the form.
-        self.settings = cockpit.util.user_config.getValue(
+        self.settings = cockpit.util.user_config.get_value(
             "gridSitesDialog",
             default={
                 "numRows": "10",
@@ -144,11 +144,11 @@ class GridSitesDialog(wx.Dialog):
         """Create the grid of sites."""
         self.saveSettings()
 
-        curLoc = cockpit.interfaces.stage_mover.getPosition()
+        curLoc = cockpit.interfaces.stage_mover.get_position()
         imageWidth = float(self.imageWidth.GetValue())
         imageHeight = float(self.imageHeight.GetValue())
         markerSize = float(self.markerSize.GetValue())
-        pixelSize = wx.GetApp().Objectives.GetPixelSize()
+        pixelSize = wx.GetApp().Objectives.get_pixel_size()
 
         for xOffset in range(int(self.numColumns.GetValue())):
             xLoc = curLoc[0] - xOffset * pixelSize * imageWidth
@@ -158,12 +158,12 @@ class GridSitesDialog(wx.Dialog):
                 newSite = cockpit.interfaces.stage_mover.Site(
                     target, size=markerSize
                 )
-                cockpit.interfaces.stage_mover.saveSite(newSite)
+                cockpit.interfaces.stage_mover.save_site(newSite)
         self.Destroy()
 
     def saveSettings(self):
         """Save the user's settings to the configuration file."""
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             "gridSitesDialog",
             {
                 "numRows": self.numRows.GetValue(),

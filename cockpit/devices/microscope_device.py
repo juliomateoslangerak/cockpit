@@ -54,6 +54,7 @@ import wx
 from microscope import AxisLimits
 
 import cockpit.gui.device
+import cockpit.gui.gui_utils
 import cockpit.handlers.device
 import cockpit.handlers.digital_io
 import cockpit.handlers.filter
@@ -132,13 +133,13 @@ class MicroscopeBase(device.Device):
         self.describe_setting = self._proxy.describe_setting
         self.describe_settings = self._proxy.describe_settings
 
-    def onExit(self) -> None:
+    def on_exit(self) -> None:
         if self._proxy is not None:
             self._proxy._pyroRelease()
-        super().onExit()
+        super().on_exit()
 
-    def finalizeInitialization(self):
-        super().finalizeInitialization()
+    def finalize_initialization(self):
+        super().finalize_initialization()
         # Set default settings on remote device. These will be over-
         # ridden by any defaults in userConfig, later.
         # Currently, settings are an 'advanced' feature --- the remote
@@ -190,28 +191,28 @@ class MicroscopeBase(device.Device):
                     )
                     continue
             self.set_setting(k, v)
-        self._readUserConfig()
+        self._read_user_config()
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers. Derived classes may override this."""
         result = cockpit.handlers.device.DeviceHandler(
             "%s" % self.name,
             "universal devices",
             False,
-            {"makeUI": self.makeUI},
+            {"make_ui": self.make_ui},
             depot.GENERIC_DEVICE,
         )
         self.handlers = [result]
         return [result]
 
-    def showSettings(self, evt):
+    def show_settings(self, evt):
         if not self.settings_editor:
             # TODO - there's a problem with abstraction here. The settings
             # editor needs the describe/get/set settings functions from the
             # proxy, but it also needs to be able to invalidate the cache
             # on the handler. The handler should probably expose the
             # settings interface.
-            self.setAnyDefaults()
+            self.set_any_defaults()
             if self.handlers and isinstance(
                 self.handlers, collections.abc.Sequence
             ):
@@ -226,13 +227,13 @@ class MicroscopeBase(device.Device):
         self.settings_editor.SetPosition(wx.GetMousePosition())
         self.settings_editor.Raise()
 
-    def updateSettings(self, settings=None):
+    def update_settings(self, settings=None):
         if settings is not None:
             self._proxy.update_settings(settings)
         self.settings.update(self._proxy.get_all_settings())
         events.publish(events.SETTINGS_CHANGED % str(self))
 
-    def setAnyDefaults(self):
+    def set_any_defaults(self):
         # Set any defaults found in userConfig.
         if self.defaults != DEFAULTS_PENDING:
             # nothing to do
@@ -244,40 +245,40 @@ class MicroscopeBase(device.Device):
         else:
             self.defaults = DEFAULTS_SENT
 
-    def _readUserConfig(self):
+    def _read_user_config(self):
         idstr = self.name + "_SETTINGS"
-        defaults = cockpit.util.user_config.getValue(idstr)
+        defaults = cockpit.util.user_config.get_value(idstr)
         if defaults is None:
             self.defaults = DEFAULTS_NONE
             return
         self.settings.update(defaults)
         self.defaults = DEFAULTS_PENDING
-        self.setAnyDefaults()
+        self.set_any_defaults()
 
-    def prepareForExperiment(self, name, experiment):
+    def prepare_for_experiment(self, name, experiment):
         """Make the hardware ready for an experiment."""
         self.cached_settings.update(self.settings)
 
 
 class MicroscopeGenericDevice(MicroscopeBase):
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
         result = cockpit.handlers.device.DeviceHandler(
             "%s" % self.name,
             "universal devices",
             False,
-            {"makeUI": self.makeUI},
+            {"make_ui": self.make_ui},
             depot.GENERIC_DEVICE,
         )
         self.handlers = [result]
         return [result]
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """UI functions."""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
-            parent=self.panel, label=self.name, leftAction=self.showSettings
+            parent=self.panel, label=self.name, leftAction=self.show_settings
         )
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)
@@ -285,31 +286,31 @@ class MicroscopeGenericDevice(MicroscopeBase):
 
 
 class MicroscopeSwitchableDevice(MicroscopeBase):
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
         result = cockpit.handlers.device.DeviceHandler(
             "%s" % self.name,
             "universal devices",
             False,
-            {"makeUI": self.makeUI},
+            {"make_ui": self.make_ui},
             depot.GENERIC_DEVICE,
         )
         self.handlers = [result]
         return [result]
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         """UI functions."""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
-            parent=self.panel, label=self.name, leftAction=self.showSettings
+            parent=self.panel, label=self.name, leftAction=self.show_settings
         )
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)
         return self.panel
 
-    def finalizeInitialization(self):
-        super().finalizeInitialization()
+    def finalize_initialization(self):
+        super().finalize_initialization()
         self.enabled = self._proxy.get_is_enabled()
 
 
@@ -329,20 +330,20 @@ class MicroscopeLaser(MicroscopeBase):
       ...
     """
 
-    def _setEnabled(self, on):
+    def _set_enabled(self, on):
         if on:
             self._proxy.enable()
         else:
             self._proxy.disable()
 
-    def getHandlers(self):
+    def get_handlers(self):
         self.handlers.append(
             cockpit.handlers.light_power.LightPowerHandler(
                 self.name + " power",  # name
-                self.name + " light source",  # groupName
+                self.name + " light source",  # group_name
                 {
-                    "setPower": self._setPower,
-                    "getPower": self._getPower,
+                    "setPower": self._set_power,
+                    "getPower": self._get_power,
                 },
                 self.config.get("wavelength", None),
                 curPower=0.2,
@@ -355,17 +356,17 @@ class MicroscopeLaser(MicroscopeBase):
             trighandler = depot.getHandler(trigsource, depot.EXECUTOR)
         else:
             trighandler = None
-        self._exposureTime = 100
+        self._exposure_time = 100
         self.handlers.append(
             cockpit.handlers.light_source.LightHandler(
                 self.name,
                 self.name + " light source",
                 {
-                    "setEnabled": lambda name, on: self._setEnabled(on),
-                    "setExposureTime": lambda name, value: setattr(
-                        self, "_exposureTime", value
+                    "set_enabled": lambda name, on: self._set_enabled(on),
+                    "set_exposure_time": lambda name, value: setattr(
+                        self, "_exposure_time", value
                     ),
-                    "getExposureTime": lambda name: self._exposureTime,
+                    "get_exposure_time": lambda name: self._exposure_time,
                 },
                 self.config.get("wavelength", None),
                 100,
@@ -377,13 +378,13 @@ class MicroscopeLaser(MicroscopeBase):
         return self.handlers
 
     @cockpit.util.threads.call_in_new_thread
-    def _setPower(self, power: float) -> None:
+    def _set_power(self, power: float) -> None:
         self._proxy.power = power
 
-    def _getPower(self) -> float:
+    def _get_power(self) -> float:
         return self._proxy.power
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         # This should probably work the other way around:
         # after init, the handlers should query for the current state,
         # rather than the device pushing state info to the handlers as
@@ -425,16 +426,16 @@ class MicroscopeFilter(MicroscopeBase):
             cockpit.handlers.filter.Filter(*f) for f in fdefs
         ]
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
         h = cockpit.handlers.filter.FilterHandler(
             self.name,
             "filters",
             False,
             {
-                "setPosition": self.setPosition,
-                "getPosition": self.getPosition,
-                "getFilters": self.getFilters,
+                "setPosition": self.set_position,
+                "getPosition": self.get_position,
+                "getFilters": self.get_filters,
             },
             self.cameras,
             self.lights,
@@ -442,15 +443,15 @@ class MicroscopeFilter(MicroscopeBase):
         self.handlers = [h]
         return self.handlers
 
-    def setPosition(self, position, callback=None):
+    def set_position(self, position, callback=None):
         asproxy = Pyro4.Proxy(self._proxy._pyroUri)
         asproxy._pyroAsync()
         result = asproxy.set_position(position).then(callback)
 
-    def getPosition(self):
+    def get_position(self):
         return self._proxy.get_position()
 
-    def getFilters(self):
+    def get_filters(self):
         return self.filters
 
 
@@ -484,10 +485,10 @@ class _MicroscopeStageAxis:
         # TODO: to make it eligible for experiments, we need a
         # getMovementTime callback (see issue #614).
         callbacks = {
-            "getMovementTime": self.getMovementTime,
-            "getPosition": self.getPosition,
-            "moveAbsolute": self.moveAbsolute,
-            "moveRelative": self.moveRelative,
+            "getMovementTime": self.get_movement_time,
+            "getPosition": self.get_position,
+            "moveAbsolute": self.move_absolute,
+            "moveRelative": self.move_relative,
         }
 
         self._handler = PositionerHandler(
@@ -499,21 +500,23 @@ class _MicroscopeStageAxis:
             limits,
         )
 
-    def getHandler(self) -> PositionerHandler:
+    def get_handler(self) -> PositionerHandler:
         return self._handler
 
-    def getMovementTime(self, index: int, start: float, end: float) -> float:
+    def get_movement_time(
+        self, index: int, start: float, end: float
+    ) -> float:
         # TODO: this is not implemented yet but it shouldn't be called
         # anyway because we are not eligible for experiments.
         del index
         raise NotImplementedError("")
 
-    def getPosition(self, index: int) -> float:
+    def get_position(self, index: int) -> float:
         """Get the position for the specified axis."""
         del index
         return self._axis.position / self._units_per_micron
 
-    def moveAbsolute(self, index: int, position: float) -> None:
+    def move_absolute(self, index: int, position: float) -> None:
         """Move axis to the given position in microns."""
         # Currently, the move methods of a Python Microscope stage
         # blocks until the move is done.  When there is an async move
@@ -524,9 +527,9 @@ class _MicroscopeStageAxis:
         events.publish(events.STAGE_MOVER, index)
         events.publish(events.STAGE_STOPPED, self._name)
 
-    def moveRelative(self, index: int, delta: float) -> None:
+    def move_relative(self, index: int, delta: float) -> None:
         """Move the axis by the specified delta, in microns."""
-        # See comments on moveAbsolute about async moves.
+        # See comments on move_absolute about async moves.
         self._axis.move_by(delta * self._units_per_micron)
         events.publish(events.STAGE_MOVER, index)
         events.publish(events.STAGE_STOPPED, self._name)
@@ -550,7 +553,7 @@ class MicroscopeStage(MicroscopeBase):
     stage with 25nm steps, would have a configuration entry like so::
 
       [XY stage]
-      type: cockpit.devices.microscopeDevice.MicroscopeStage
+      type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeXYStage@192.168.0.2:7001
       x-axis-name: X
       y-axis-name: Y
@@ -559,7 +562,7 @@ class MicroscopeStage(MicroscopeBase):
       y-units-per-micron: 10 # 1 step == 0.1µm
 
       [Z stage]
-      type: cockpit.devices.microscopeDevice.MicroscopeStage
+      type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeZStage@192.168.0.2:7002
       z-axis-name: Z
       # Each step is 25nm, therefore 40 steps per µm
@@ -584,7 +587,7 @@ class MicroscopeStage(MicroscopeBase):
                 " If you press 'Cancel' the stage will not be homed"
                 " and its behaviour will be unpredictable." % (self.name)
             )
-            if cockpit.gui.guiUtils.getUserPermission(msg, title):
+            if cockpit.gui.gui_utils.getUserPermission(msg, title):
                 self._proxy.enable()
         else:
             self._proxy.enable()
@@ -644,16 +647,16 @@ class MicroscopeStage(MicroscopeBase):
         # the stage without cockpit knowing about it.
         # Note: currently this variable isnt checked, all stages are polled
         # in macrostageXY.
-        self.pollStage = bool(self.config.get("poll-stage", False))
-        if self.pollStage:
+        self.poll_stage = bool(self.config.get("poll-stage", False))
+        if self.poll_stage:
             if len(self._axes) == int(self.config.get("num-stage-axes", 0)):
                 # need to know in advance how many axis need to initialized
-                self.pollInterval = float(self.config.get("poll-interval", 10))
-                self._positionCache = [0.0 for x in range(len(self._axes))]
+                self.poll_interval = float(self.config.get("poll-interval", 10))
+                self._position_cache = [0.0 for x in range(len(self._axes))]
 
-    def getHandlers(self) -> typing.List[PositionerHandler]:
+    def get_handlers(self) -> typing.List[PositionerHandler]:
         # Override MicroscopeBase.getHandlers.  Do not call super.
-        return [x.getHandler() for x in self._axes]
+        return [x.get_handler() for x in self._axes]
 
 
 class MicroscopeDIO(MicroscopeBase):
@@ -672,33 +675,33 @@ class MicroscopeDIO(MicroscopeBase):
 
     def initialize(self) -> None:
         super().initialize()
-        self.numLines = self._proxy.get_num_lines()
+        self.num_lines = self._proxy.get_num_lines()
         # cache which we can read from if we dont want a roundtrip
         # to the remote.
-        self._cache = [False] * self.numLines
-        self.labels = [""] * self.numLines
-        self.IOMap = [None] * self.numLines
+        self._cache = [False] * self.num_lines
+        self.labels = [""] * self.num_lines
+        self.io_map = [None] * self.num_lines
 
         # read config entries if they exist to
-        iomapConfig = self.config.get("iomap", [None] * self.numLines)
-        if iomapConfig[0] is not None:
+        iomap_config = self.config.get("iomap", [None] * self.num_lines)
+        if iomap_config[0] is not None:
             # config is defined so read it into a bool variable,
             # else it is all [Nones]
-            iomap = iomapConfig.split(",")
+            iomap = iomap_config.split(",")
             for i, state in enumerate(iomap):
-                self.IOMap[i] = bool(int(state))
+                self.io_map[i] = bool(int(state))
         labels = self.config.get("labels", None)
         paths = self.config.get("paths", None)
 
-        if self.IOMap[0] is not None:
+        if self.io_map[0] is not None:
             # first entry is not None so map defined
-            self._proxy.set_all_IO_state(self.IOMap)
+            self._proxy.set_all_IO_state(self.io_map)
         else:
             # no map so set all lines to output
-            self._proxy.set_all_IO_state([True] * self.numLines)
+            self._proxy.set_all_IO_state([True] * self.num_lines)
         # start all output lines as false
-        for i in range(self.numLines):
-            if self.IOMap[i]:
+        for i in range(self.num_lines):
+            if self.io_map[i]:
                 self.write_line(i, False)
 
         ##extract names of lines from file, too many are ignored,
@@ -706,7 +709,7 @@ class MicroscopeDIO(MicroscopeBase):
         templabels = []
         if labels:
             templabels = eval(labels)
-        for i in range(self.numLines):
+        for i in range(self.num_lines):
             if i < len(templabels):
                 self.labels[i] = templabels[i]
             else:
@@ -725,11 +728,11 @@ class MicroscopeDIO(MicroscopeBase):
         events.subscribe(events.DIO_INPUT, self.log_state_change)
         events.subscribe(events.DIO_OUTPUT, self.log_state_change)
 
-    def read_line(self, line: int, cache=False, updateGUI=True) -> int:
+    def read_line(self, line: int, cache=False, update_gui=True) -> int:
         if cache:
             return self._cache[line]
         state = self._proxy.read_line(line)
-        if updateGUI:
+        if update_gui:
             # prevent a loop by calling this read line in the button
             # toggle code
             events.publish(events.DIO_INPUT, line, state)
@@ -754,13 +757,13 @@ class MicroscopeDIO(MicroscopeBase):
 
     def get_IO_state(self, line, cache=False):
         if cache:
-            return self.IOMap[line]
+            return self.io_map[line]
         state = self._proxy.get_IO_state(line)
-        self.IOMap[line] = state
+        self.io_map[line] = state
         return state
 
     def set_IO_state(self, line, state):
-        self.IOMap[line] = state
+        self.io_map[line] = state
         self._proxy.set_IO_state(line, state)
 
     def enable(self, state):
@@ -782,11 +785,11 @@ class MicroscopeDIO(MicroscopeBase):
 
     def showDebugWindow(self):
         """Debugging function: display a debug window."""
-        self.DIOdebugWindow = DIOOutputWindow(
+        self.dio_debug_window = DIOOutputWindow(
             self, parent=wx.GetApp().MainWindow
         ).Show()
 
-    def getHandlers(self):
+    def get_handlers(self):
         """Return device handlers."""
         ##nneds functions to get and set signals for save and load
         ##channel functionality.
@@ -799,26 +802,26 @@ class MicroscopeDIO(MicroscopeBase):
                 "setIOstate": self.set_IO_state,
                 "getOutputs": self.read_all_lines,
                 "getIOstate": self.get_IO_state,
-                "getPaths": self.getPaths,
+                "getPaths": self.get_paths,
                 "write line": self.write_line,
-                "get labels": self.getLabels,
+                "get labels": self.get_labels,
                 "enable": self.enable,
             },
         )
         self.handlers = [h]
         return self.handlers
 
-    def getLabels(self):
+    def get_labels(self):
         return self.labels
 
-    def getPaths(self):
+    def get_paths(self):
         return self.paths
 
     def receiveData(self, *args):
         """This function is called when input line state is received from
         the hardware."""
         (line, state), timestamp = args
-        if self.IOMap[line]:
+        if self.io_map[line]:
             # this is meant to be an output line!
             raise Exception("Input signal received on an output digital line")
         # State changed send event to interested parties.
@@ -830,100 +833,100 @@ class MicroscopeDIO(MicroscopeBase):
 
 
 class DIOOutputWindow(wx.Frame):
-    def __init__(self, DIO, parent, *args, **kwargs):
+    def __init__(self, dio, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         ## piDevice instance.
-        self.DIO = DIO
+        self.dio = dio
         # Contains all widgets.
         panel = wx.Panel(self)
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
-        toggleSizer = wx.GridSizer(1, DIO.numLines, 1, 1)
-        buttonSizer = wx.GridSizer(1, DIO.numLines, 1, 1)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        toggle_sizer = wx.GridSizer(1, dio.num_lines, 1, 1)
+        button_sizer = wx.GridSizer(1, dio.num_lines, 1, 1)
 
         ## Maps buttons to their lines.
-        self.lineToButton = {}
-        self.state = self.DIO._proxy.read_all_lines()
+        self.line_to_button = {}
+        self.state = self.dio._proxy.read_all_lines()
         # Set up the digital lineout buttons.
-        for i in range(DIO.numLines):
+        for i in range(dio.num_lines):
             # state of IO , output or Input
             toggle = wx.ToggleButton(panel, wx.ID_ANY)
-            toggle.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.updateState())
-            toggleSizer.Add(toggle, 1, wx.EXPAND)
-            ioState = self.DIO.get_IO_state(i)
-            toggle.SetValue(ioState)
-            if ioState:
+            toggle.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.update_state())
+            toggle_sizer.Add(toggle, 1, wx.EXPAND)
+            io_state = self.dio.get_IO_state(i)
+            toggle.SetValue(io_state)
+            if io_state:
                 toggle.SetLabel("Output")
             else:
                 toggle.SetLabel("Input")
             # Button to toggle state of output lines.
-            button = wx.ToggleButton(panel, wx.ID_ANY, self.DIO.labels[i])
+            button = wx.ToggleButton(panel, wx.ID_ANY, self.dio.labels[i])
             button.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.toggle())
-            buttonSizer.Add(button, 1, wx.EXPAND)
-            self.lineToButton[i] = [toggle, button]
+            button_sizer.Add(button, 1, wx.EXPAND)
+            self.line_to_button[i] = [toggle, button]
             if self.state[i] is not None:
                 button.SetValue(bool(self.state[i]))
             else:
                 # if no state reported from remote set to false
                 button.SetValue(False)
-            if ioState == False:
+            if io_state == False:
                 # need to do something like colour the button red
                 button.Disable()
-                button.SetLabel(str(int(self.DIO.read_line(i))))
+                button.SetLabel(str(int(self.dio.read_line(i))))
             else:
                 button.Enable()
 
-        mainSizer.Add(toggleSizer)
-        mainSizer.Add(buttonSizer)
-        panel.SetSizerAndFit(mainSizer)
+        main_sizer.Add(toggle_sizer)
+        main_sizer.Add(button_sizer)
+        panel.SetSizerAndFit(main_sizer)
         self.SetClientSize(panel.GetSize())
-        events.subscribe(events.DIO_OUTPUT, self.outputChanged)
-        events.subscribe(events.DIO_INPUT, self.inputChanged)
+        events.subscribe(events.DIO_OUTPUT, self.output_changed)
+        events.subscribe(events.DIO_INPUT, self.input_changed)
 
-    def outputChanged(self, line, state):
+    def output_changed(self, line, state):
         """functions to updated changes and GUI displays when DIO state
         changes."""
         # check this is an output line
-        if self.DIO.IOMap:
-            self.lineToButton[line][1].SetValue(state)
-            self.updateState(line, bool(state))
+        if self.dio.io_map:
+            self.line_to_button[line][1].SetValue(state)
+            self.update_state(line, bool(state))
 
-    def inputChanged(self, line, state):
-        self.updateState(line, bool(state))
+    def input_changed(self, line, state):
+        self.update_state(line, bool(state))
 
     def toggle(self):
         """One of our buttons was clicked; update the debug output."""
-        for line, (toggle, button) in self.lineToButton.items():
-            if self.DIO.get_IO_state(line):
-                self.DIO.write_line(line, button.GetValue())
+        for line, (toggle, button) in self.line_to_button.items():
+            if self.dio.get_IO_state(line):
+                self.dio.write_line(line, button.GetValue())
             else:
                 # read input state.
                 button.SetValue = bool(
-                    self.DIO.read_line(line, updateGUI=False)
+                    self.dio.read_line(line, update_gui=False)
                 )
 
-    @cockpit.util.threads.callInMainThread
-    def updateState(self, line=None, state=None):
+    @cockpit.util.threads.call_in_main_thread
+    def update_state(self, line=None, state=None):
         """One of our buttons was clicked; update the debug output."""
         if (line is not None) and (state is not None):
             _logger.debug("Line %d returned %s", line, str(state))
-            if self.DIO.get_IO_state(line):
+            if self.dio.get_IO_state(line):
                 # output button have names
-                self.lineToButton[line][1].SetLabel(self.DIO.labels[line])
+                self.line_to_button[line][1].SetLabel(self.dio.labels[line])
             else:
-                self.lineToButton[line][1].SetLabel(str(int(state)))
+                self.line_to_button[line][1].SetLabel(str(int(state)))
             return ()
-        for line, (toggle, button) in self.lineToButton.items():
+        for line, (toggle, button) in self.line_to_button.items():
             state = toggle.GetValue()
-            self.DIO.set_IO_state(line, state)
+            self.dio.set_IO_state(line, state)
             if state:
                 button.Enable()
                 toggle.SetLabel("Output")
-                button.SetLabel(self.DIO.labels[line])
+                button.SetLabel(self.dio.labels[line])
             else:
                 button.Disable()
                 toggle.SetLabel("Input")
-                state = self.DIO.read_line(line, updateGUI=False)
+                state = self.dio.read_line(line, update_gui=False)
                 button.SetLabel(str(int(state)))
 
 
@@ -943,27 +946,27 @@ class MicroscopeValueLogger(MicroscopeBase):
 
     def initialize(self) -> None:
         super().initialize()
-        self.numSensors = self._proxy.get_num_sensors()
+        self.num_sensors = self._proxy.get_num_sensors()
         # cache which we can read from if we dont want a roundtrip
         # to the remote.
-        self._cache = [False] * self.numSensors
-        self.labels = [""] * self.numSensors
+        self._cache = [False] * self.num_sensors
+        self.labels = [""] * self.num_sensors
         labels = self.config.get("labels", None)
         ##do we get data pushed or do we pull it from the remote.
-        self.pullData = self.config.get("pulldata", False)
-        self.pollInterval = int(self.config.get("pollinterval", 20))
+        self.pull_data = self.config.get("pulldata", False)
+        self.poll_interval = int(self.config.get("pollinterval", 20))
         ##extract names of lines from file, too many are ignored,
         ## too few are padded with str(line number)
         templabels = []
         if labels:
             templabels = eval(labels)
-        for i in range(self.numSensors):
+        for i in range(self.num_sensors):
             if i < len(templabels):
                 self.labels[i] = templabels[i]
             else:
                 self.labels[i] = "Sensor %d" % i
         # Lister to receive data back from hardware
-        if not self.pullData:
+        if not self.pull_data:
             # data is pushed so we need the start a listerner to receive the data
             self.listener = cockpit.util.listener.Listener(
                 self._proxy, lambda *args: self.receiveData(*args)
@@ -973,8 +976,8 @@ class MicroscopeValueLogger(MicroscopeBase):
         else:
             self.logger = value_logger.PollingLogger(
                 self.name,
-                self.pollInterval,
-                self.getRemoteValues,
+                self.poll_interval,
+                self.get_remote_values,
                 keys=self.labels,
             )
 
@@ -987,7 +990,7 @@ class MicroscopeValueLogger(MicroscopeBase):
         events.publish(events.VALUELOGGER_INPUT, data)
         self.logger.log(data)
 
-    def getRemoteValues(self):
+    def get_remote_values(self):
         """This calls the remote getValues() function to
         pull data from the remote hardware."""
         data = self._proxy.getValues()
@@ -997,12 +1000,12 @@ class MicroscopeValueLogger(MicroscopeBase):
     def enable(self, state):
         if state:
             self._proxy.enable()
-            if not self.pullData:
+            if not self.pull_data:
                 self.listener.connect()
             return True
         else:
             self._proxy.disable()
-            if not self.pullData:
+            if not self.pull_data:
                 self.listener.disconnect()
             else:
                 # Is this a race condition should we stop the event then
@@ -1010,6 +1013,6 @@ class MicroscopeValueLogger(MicroscopeBase):
                 self.logger.__stopEvent.set()
             return False
 
-    def onExit(self):
+    def on_exit(self):
         """ensure we stop the polling if we are shutting down."""
         self.enable(False)

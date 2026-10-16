@@ -81,10 +81,10 @@ def hsv_to_rgb(hue, saturation, value):
     hue = hue % 360
     hue /= 60.0
     sector = int(hue)
-    hueDecimal = hue - sector  # Portion of hue after decimal point
+    hue_decimal = hue - sector  # Portion of hue after decimal point
     p = value * (1 - saturation)
-    q = value * (1 - saturation * hueDecimal)
-    t = 1 - saturation * (1 - hueDecimal)
+    q = value * (1 - saturation * hue_decimal)
+    t = 1 - saturation * (1 - hue_decimal)
 
     if sector == 0:
         return (value, t, p)

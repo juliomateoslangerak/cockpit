@@ -52,7 +52,7 @@ And some of its modules are:
 - :mod:`cockpit.gui.fileViewerWindow`: displays MRC files; this code
   is invoked when an MRC file is dragged onto the main window.
 
-- :mod:`cockpit.gui.guiUtils`: utility functions for setting up and
+- :mod:`cockpit.gui.gui_utils`: utility functions for setting up and
   running the UI.
 
 - :mod:`cockpit.gui.keyboard`: binds keyboard shortcuts to windows.

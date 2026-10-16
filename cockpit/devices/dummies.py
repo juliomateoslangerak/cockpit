@@ -140,12 +140,12 @@ class DummyStage(
         test_stage = microscope.simulators.SimulatedStage(limits)
         super().__init__(test_stage, name, config)
 
-    def getHandlers(self) -> typing.List[PositionerHandler]:
-        handlers = super().getHandlers()
+    def get_handlers(self) -> typing.List[PositionerHandler]:
+        handlers = super().get_handlers()
         for handler in handlers:
             # XXX: cockpit's MicroscopeStage device class does not
             # have getMovementTime yet (issue #614) so it can't be
             # used in experiments.  So we modify the handlers.
-            handler.isEligibleForExperiments = True
+            handler.is_eligible_for_experiments = True
             handler.callbacks["getMovementTime"] = lambda *args: (1, 1)
         return handlers

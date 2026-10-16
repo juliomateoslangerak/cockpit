@@ -296,6 +296,15 @@ def _parse_paths(paths):
     return [_parse_path(s) for s in paths.split("\n") if s]
 
 
+## Module paths that have been renamed, mapped to their current paths, so
+## that existing depot configs using the old ``type:`` value still load.
+_LEGACY_TYPE_MODULES = {
+    "cockpit.devices.physikInstrumente_M687": (
+        "cockpit.devices.physik_instrumente_m687"
+    ),
+}
+
+
 def _parse_type(full_name):
     """``ConfigParser`` type converter for class fully-qualified names.
 
@@ -314,6 +323,7 @@ def _parse_type(full_name):
         else:
             module_name = "builtins"
 
+    module_name = _LEGACY_TYPE_MODULES.get(module_name, module_name)
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 

@@ -114,7 +114,7 @@ class Joystick:
         self._buttonDownTimes[event.ButtonChange] = ts
         if buttonTest(event.ButtonChange, 2):
             wx.CallLater(
-                _CLICKMS, self._longPress, 2, wx.GetApp().Imager.videoMode
+                _CLICKMS, self._longPress, 2, wx.GetApp().Imager.video_mode
             )
 
     def _onButtonUp(self, event):
@@ -126,16 +126,16 @@ class Joystick:
         if buttonTest(event.ButtonChange, 0):
             mosaic.window.centerCanvas()
         elif buttonTest(event.ButtonChange, 1):
-            from cockpit.interfaces.stage_mover import changeMover
+            from cockpit.interfaces.stage_mover import change_mover
 
-            changeMover()
+            change_mover()
         elif buttonTest(event.ButtonChange, 2):
-            wx.GetApp().Imager.takeImage()
+            wx.GetApp().Imager.take_image()
         elif buttonTest(event.ButtonChange, 3):
             mosaic.window.toggleMosaic()
 
     def _onMoveEvent(self, event):
-        from cockpit.interfaces.stage_mover import moveRelative
+        from cockpit.interfaces.stage_mover import move_relative
 
         delta = tuple(map(sub, event.Position, self._centre))
         absdelta = map(abs, delta)
@@ -146,9 +146,9 @@ class Joystick:
                 mosaic.window.canvas.multiplyZoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
-            moveRelative([-0.01 * d * self._speed for d in delta] + [0], False)
+            move_relative([-0.01 * d * self._speed for d in delta] + [0], False)
         elif buttonTest(event.ButtonState, 1):
-            moveRelative([0, 0, -0.01 * delta[1] * self._speed], False)
+            move_relative([0, 0, -0.01 * delta[1] * self._speed], False)
         else:
             mosaic.window.canvas.dragView(
                 tuple(0.01 * d * self._speed for d in delta)

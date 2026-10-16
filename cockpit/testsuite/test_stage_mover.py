@@ -19,6 +19,9 @@
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from unittest.mock import Mock, patch
+
+import numpy
 
 from cockpit.interfaces import stage_mover
 
@@ -26,14 +29,14 @@ from cockpit.interfaces import stage_mover
 class TestStepSizeSense(unittest.TestCase):
     def assertNextStepSize(self, step: float, expected: float) -> None:
         self.assertEqual(
-            stage_mover.SensibleNextStepSize(step),
+            stage_mover.sensible_next_step_size(step),
             expected,
             "expected step size after %f to be %f" % (step, expected),
         )
 
     def assertPreviousStepSize(self, step: float, expected: float) -> None:
         self.assertEqual(
-            stage_mover.SensiblePreviousStepSize(step),
+            stage_mover.sensible_previous_step_size(step),
             expected,
             "expected step size before %f to be %f" % (step, expected),
         )
@@ -67,6 +70,98 @@ class TestStepSizeSense(unittest.TestCase):
         ]:
             self.assertNextStepSize(step, up)
             self.assertPreviousStepSize(step, down)
+
+
+class TestStageMoverHandlerProtocol(unittest.TestCase):
+    def setUp(self):
+        saved_site_index = stage_mover.unique_site_index
+        self.addCleanup(
+            setattr, stage_mover, "unique_site_index", saved_site_index
+        )
+
+        self.handlers = []
+        for axis in range(3):
+            handler = Mock(spec=["getPosition", "moveAbsolute", "setSoftLimit"])
+            handler.name = "axis_%d" % axis
+            handler.getPosition.return_value = axis + 1
+            self.handlers.append(handler)
+
+        self.mover = object.__new__(stage_mover.StageMover)
+        self.mover.axis_to_handlers = {
+            axis: [handler] for axis, handler in enumerate(self.handlers)
+        }
+        self.mover.cur_handler_index = 0
+        self.mover.name_to_stopped_event = {}
+        self.mover.id_to_site = {}
+        mover_patch = patch.object(stage_mover, "mover", self.mover)
+        mover_patch.start()
+        self.addCleanup(mover_patch.stop)
+
+    def test_get_position_uses_handler_protocol(self):
+        self.assertEqual(stage_mover.get_position(), [1, 2, 3])
+        for handler in self.handlers:
+            handler.getPosition.assert_called_once_with()
+
+    def test_go_to_uses_handler_protocol(self):
+        stage_mover.go_to([4, 5, 6])
+
+        for axis, handler in enumerate(self.handlers):
+            handler.getPosition.assert_called_once_with()
+            handler.moveAbsolute.assert_called_once_with(axis + 4)
+
+    def test_move_relative_uses_handler_protocol(self):
+        stage_mover.move_relative([4, 5, 6])
+
+        for axis, handler in enumerate(self.handlers):
+            handler.moveAbsolute.assert_called_once_with(2 * axis + 5)
+
+    def test_save_site_uses_handler_protocol(self):
+        with patch.object(stage_mover.events, "publish"):
+            stage_mover.save_site()
+
+        site = next(iter(self.mover.id_to_site.values()))
+        self.assertEqual(site.position, [1, 2, 3])
+        for handler in self.handlers:
+            handler.getPosition.assert_called_once_with()
+
+    def test_set_soft_limit_uses_handler_protocol(self):
+        handler = self.handlers[0]
+        with patch.object(stage_mover.events, "publish") as publish:
+            self.assertTrue(stage_mover.set_soft_limit(0, 10.0, True))
+            handler.setSoftLimit.assert_called_once_with(10.0, True)
+            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 10.0, True)
+
+            stage_mover.set_soft_min(0, 0.0)
+            handler.setSoftLimit.assert_called_with(0.0, False)
+            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 0.0, False)
+
+            stage_mover.set_soft_max(0, 20.0)
+            handler.setSoftLimit.assert_called_with(20.0, True)
+            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 20.0, True)
+
+    def test_set_soft_limit_returns_false_when_handler_fails(self):
+        handler = self.handlers[0]
+        handler.setSoftLimit.side_effect = RuntimeError("device error")
+        with patch.object(stage_mover.events, "publish") as publish:
+            self.assertFalse(stage_mover.set_soft_limit(0, 10.0, True))
+            handler.setSoftLimit.assert_called_once_with(10.0, True)
+            publish.assert_not_called()
+
+    def test_site_serialization_round_trip(self):
+        site = stage_mover.Site(
+            numpy.array([1.0, 2.5, -3.0]),
+            group="test",
+            color=(1, 2, 3),
+            size=4.5,
+        )
+
+        restored = stage_mover.deserialize_site(site.serialize())
+
+        self.assertEqual(list(restored.position), [1.0, 2.5, -3.0])
+        self.assertEqual(restored.group, "test")
+        self.assertEqual(restored.color, (1.0, 2.0, 3.0))
+        self.assertEqual(restored.size, 4.5)
+        self.assertEqual(restored.unique_id, site.unique_id)
 
 
 if __name__ == "__main__":

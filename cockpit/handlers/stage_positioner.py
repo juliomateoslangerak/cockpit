@@ -84,8 +84,8 @@ class PositionerHandler(device.DeviceHandler):
     def __init__(
         self,
         name,
-        groupName,
-        isEligibleForExperiments,
+        group_name,
+        is_eligible_for_experiments,
         callbacks,
         axis,
         hardLimits,
@@ -93,8 +93,8 @@ class PositionerHandler(device.DeviceHandler):
     ):
         super().__init__(
             name,
-            groupName,
-            isEligibleForExperiments,
+            group_name,
+            is_eligible_for_experiments,
             callbacks,
             depot.STAGE_POSITIONER,
         )
@@ -171,7 +171,7 @@ class PositionerHandler(device.DeviceHandler):
 
         Only called if this device is experiment-eligible.
         """
-        if self.isEligibleForExperiments:
+        if self.is_eligible_for_experiments:
             # if (start < self.softLimits[0] or start > self.softLimits[1] or
             #         end < self.softLimits[0] or end > self.softLimits[1]):
             #     raise RuntimeError("Experiment tries to move [%s] from %.2f to %.2f, outside motion limits (%.2f, %.2f)" % (self.name, start, end, self.softLimits[0], self.softLimits[1]))

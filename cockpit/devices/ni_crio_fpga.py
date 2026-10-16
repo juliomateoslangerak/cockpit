@@ -99,56 +99,56 @@ class NIcRIO(executor_devices.ExecutorDevice):
         self.tickrate = config.get(
             "tickrate"
         )  # Number of ticks per ms. As of the resolution of the action table.
-        self.sendPort = config.get("sendport")
-        self.receivePort = config.get("receiveport")
-        self.port = [self.sendPort, self.receivePort]
+        self.send_port = config.get("sendport")
+        self.receive_port = config.get("receiveport")
+        self.port = [self.send_port, self.receive_port]
         self._dlines = self.config.get("dlines")
         self._alines = self.config.get("alines")
-        self._currentAnalogs = self._alines * [0]
+        self._current_analogs = self._alines * [0]
         # Absolute positions prior to the start of the experiment.
-        self._lastAnalogs = self._alines * [0]
+        self._last_analogs = self._alines * [0]
         # Store last movement profile for debugging
-        self._lastProfile = None
+        self._last_profile = None
 
     @cockpit.util.threads.locked
     def initialize(self):
         """Connect to ni's RT-ipAddress computer. Overrides ExecutorDevice's initialize."""
         self.connection = Connection(
             parent=self,
-            ipAddress=self.ipAddress,
+            ip_address=self.ip_address,
             port=self.port,
-            localIp=MASTER_IP,
+            local_ip=MASTER_IP,
         )
         self.connection.connect()
         self.connection.Abort()
 
-    def onExit(self) -> None:
+    def on_exit(self) -> None:
         if self.connection is not None:
             self.connection.disconnect()
         self.connection = None
 
-    def onPrepareForExperiment(
+    def on_prepare_for_experiment(
         self, *args
     ):  # TODO: Verify here for weird z movements
-        super().onPrepareForExperiment(*args)
-        self._lastAnalogs = [
+        super().on_prepare_for_experiment(*args)
+        self._last_analogs = [
             self.connection.ReadPosition(a) for a in range(self._alines)
         ]
-        self._lastAnalogs = list(self._currentAnalogs)
-        self._lastDigital = self.connection.ReadDigital()
+        self._last_analogs = list(self._current_analogs)
+        self._last_digital = self.connection.ReadDigital()
 
-    def experimentDone(self):
+    def experiment_done(self):
         events.publish(events.EXECUTOR_DONE % self.name)
 
-    def getAnalog(self, line):
+    def get_analog(self, line):
         """Returns the current output value of the analog line in native units
         line is an integer corresponding to the requested analog on the FPGA
         as entered in the analog config files.
         """
         line = "Analogue " + str(line)
-        return self.connection.status.getStatus(line)
+        return self.connection.status.get_status(line)
 
-    def setAnalog(self, line, target):
+    def set_analog(self, line, target):
         """Set analog position in native units.
 
         Args:
@@ -160,7 +160,7 @@ class NIcRIO(executor_devices.ExecutorDevice):
     def takeImage(self):
         pass
 
-    def _adaptActions(self, actions):
+    def _adapt_actions(self, actions):
         """Adapt tha actions table to the cRIO. We have to:
         - convert float in ms to integer clock ticks
         - separate analogue and digital events into different lists
@@ -207,15 +207,15 @@ class NIcRIO(executor_devices.ExecutorDevice):
                     pass
 
         # Update records of last positions.
-        self._lastDigital = digitals[-1][1]
-        self._lastAnalogs = map(
-            lambda x, y: x - (y[-1:][1:] or 0), self._lastAnalogs, analogs
+        self._last_digital = digitals[-1][1]
+        self._last_analogs = map(
+            lambda x, y: x - (y[-1:][1:] or 0), self._last_analogs, analogs
         )
 
         # Convert digitals to array of uints.
-        digitalsArr = np.array(digitals, dtype=np.uint32).reshape(-1, 2)
+        digitals_arr = np.array(digitals, dtype=np.uint32).reshape(-1, 2)
         # Convert analogs to array of uints.
-        analogsArr = [
+        analogs_arr = [
             np.array(a, dtype=np.uint32).reshape(-1, 2) for a in analogs
         ]
 
@@ -230,43 +230,43 @@ class NIcRIO(executor_devices.ExecutorDevice):
         description = {
             "count": maxticks,
             "clock": 1000.0 / float(self.tickrate),
-            "InitDio": self._lastDigital,
+            "InitDio": self._last_digital,
             "nDigital": len(digitals),
             "nAnalog": [len(a) for a in analogs],
         }
 
-        self._lastProfile = (description, digitalsArr, analogsArr)
+        self._last_profile = (description, digitals_arr, analogs_arr)
 
-        return [description, digitalsArr, [*analogsArr]]
+        return [description, digitals_arr, [*analogs_arr]]
 
     @cockpit.util.threads.locked
-    def runSequence(self, sequence):
+    def run_sequence(self, sequence):
         """Runs a sequence of times-digital pairs"""
         # Convert the times into ticks
         sequence = [(int(t * self.tickrate), d) for t, d in sequence]
-        self.connection.runSequence(sequence)
+        self.connection.run_sequence_on_fpga(sequence)
 
     @cockpit.util.threads.locked
-    def takeBurst(self, frameCount=10):
+    def take_burst(self, frame_count=10):
         """
         Use the internal triggering of the camera to take a burst of images
 
         Experimental
         """
-        cameraMask = 0
-        lightTimePairs = list()
-        maxTime = 0
-        for handler, line in self.handlerToDigitalLine.items():
-            if handler.name in self.activeLights:
-                maxTime = max(maxTime, handler.getExposureTime())
-                exposureTime = handler.getExposureTime()
-                lightTimePairs.append((line, exposureTime))
-                maxTime = max(maxTime, exposureTime)
-        for name, line in self.nameToDigitalLine.items():
-            if name in self.activeCameras:
-                cameraMask += line
+        camera_mask = 0
+        light_time_pairs = list()
+        max_time = 0
+        for handler, line in self.handler_to_digital_line.items():
+            if handler.name in self.active_lights:
+                max_time = max(max_time, handler.get_exposure_time())
+                exposure_time = handler.get_exposure_time()
+                light_time_pairs.append((line, exposure_time))
+                max_time = max(max_time, exposure_time)
+        for name, line in self.name_to_digital_line.items():
+            if name in self.active_cameras:
+                camera_mask += line
                 handler = depot.getHandlerWithName(name)
-                handler.setExposureTime(maxTime)
+                handler.set_exposure_time(max_time)
 
         sleep(5)
 
@@ -274,13 +274,13 @@ class NIcRIO(executor_devices.ExecutorDevice):
 class Connection:
     """This class handles the connection with NI's RT-ipAddress computer."""
 
-    def __init__(self, parent, ipAddress, port, localIp):
+    def __init__(self, parent, ip_address, port, local_ip):
         self.parent = parent
-        self.ipAddress = ipAddress
+        self.ip_address = ip_address
         self.port = port
         # Local IP address to use for communication, in the event that this
         # computer has multiple networks to choose from.
-        self.localIp = localIp
+        self.local_ip = local_ip
         # ## Function to call when we get something from the camera.
         # self.callback = None
         self.connection = None
@@ -291,7 +291,7 @@ class Connection:
         # that should operate at any moment.
         # Starting with 4 are synchronous commands that can only operate when the
         # FPGA is idle.
-        self.commandDict = {
+        self.command_dict = {
             "sendDigitals": 100,
             "sendAnalogues": 200,
             "abort": 301,
@@ -307,7 +307,7 @@ class Connection:
             "writeAnalogue": 411,
             "runSequence": 413,
         }
-        self.errorCodes = {
+        self.error_codes = {
             "0": None,
             "1": "Could not create socket",
             "2": "Could not create socket connection",
@@ -319,15 +319,15 @@ class Connection:
         pass
 
     def connect(self, timeout=40):
-        self.connection = self.createSendSocket(
-            self.ipAddress, self.port[0], timeout
+        self.connection = self.create_send_socket(
+            self.ip_address, self.port[0], timeout
         )
         # server = depot.getHandlersOfType(depot.SERVER)[0]
         # Create a status instance to query the FPGA status and run it in a separate thread
-        self.status = FPGAStatus(self, self.localIp, self.port[1])
+        self.status = FPGAStatus(self, self.local_ip, self.port[1])
         self.status.start()
 
-    def getIsConnected(self):
+    def get_is_connected(self):
         """Return whether or not our connection is active."""
         return self.connection is not None
 
@@ -341,7 +341,7 @@ class Connection:
                 )
             self.connection = None
 
-    def createSendSocket(self, host, port, timeout):
+    def create_send_socket(self, host, port, timeout):
         """Creates a TCP socket meant to send commands to the RT-ipAddress
         Returns the connected socket
         """
@@ -354,54 +354,54 @@ class Connection:
 
         return s
 
-    def writeReply(self):
+    def write_reply(self):
         """For debugging"""
         pass
 
-    def runCommand(self, command, args=(), msgLength=20):
+    def run_command(self, command, args=(), msg_length=20):
         """This method sends to the RT-ipAddress a Json command message in the following way
         - three numbers representing the command
         - if there are arguments to send:
-            - the length of the messages to follow = msglength
+            - the length of the messages to follow = msg_length
             - the amount of messages to follow
         - receives acknowledgement of reception receiving an error code
 
-        command is a 3 digits string obtained from commandDict
+        command is a 3 digits string obtained from command_dict
 
         args is a list of strings containing the arguments associated.
 
         Return a Dictionary with the error description:
         Error Status, Error code and Error Description
         """
-        # Transform args into a list of strings of msgLength chars
-        sendArgs = list()
+        # Transform args into a list of strings of msg_length chars
+        send_args = list()
         for arg in args:
             if type(arg) is float:
                 raise Exception("Arguments to send cannot be floats")
-            if type(arg) == str and len(arg) <= msgLength:
-                sendArgs.append(arg.rjust(msgLength, "0"))
-            elif type(arg) == int and len(str(arg)) <= msgLength:
-                sendArgs.append(str(arg).rjust(msgLength, "0"))
+            if type(arg) == str and len(arg) <= msg_length:
+                send_args.append(arg.rjust(msg_length, "0"))
+            elif type(arg) == int and len(str(arg)) <= msg_length:
+                send_args.append(str(arg).rjust(msg_length, "0"))
             else:
-                sendArgs.append(str(arg).rjust(msgLength, "0"))
+                send_args.append(str(arg).rjust(msg_length, "0"))
 
         # Create a dictionary to be flattened and sent as json string
-        messageCluster = {
+        message_cluster = {
             "Command": command,
-            "Message Length": msgLength,
-            "Number of Messages": len(sendArgs),
+            "Message Length": msg_length,
+            "Number of Messages": len(send_args),
         }
 
         try:
             # Send the actual command
-            self.connection.send(json.dumps(messageCluster).encode())
+            self.connection.send(json.dumps(message_cluster).encode())
             self.connection.send(b"\r\n")
         except socket.error as msg:
             print("Send messageCluster failed.\n", msg)
 
         try:
             # Send the actual messages buffer
-            buf = str("").join(sendArgs).encode()
+            buf = str("").join(send_args).encode()
             self.connection.sendall(buf)
         except socket.error as msg:
             print("Send buffer failed.\n", msg)
@@ -424,114 +424,114 @@ class Connection:
             print("Receiving error.\n", msg)
         return
 
-    def writeParameter(self, parameter, value):
+    def write_parameter(self, parameter, value):
         """Writes parameter value to RT-ipAddress"""
         pass
 
-    def waitForIdle(self):
+    def wait_for_idle(self):
         """Waits for the Idle status of the FPGA"""
-        while self.status.getStatus("FPGA Main State") != FPGA_IDLE_STATE:
+        while self.status.get_status("FPGA Main State") != FPGA_IDLE_STATE:
             time.sleep(0.1)
 
     def Abort(self):
         """Sends abort experiment command to FPGA"""
-        self.runCommand(self.commandDict["abort"])
+        self.run_command(self.command_dict["abort"])
 
-    def reInit(self, unit=None):
+    def re_init(self, unit=None):
         """Restarts the RT-ipAddress and FPGA unless 'ipAddress' or 'fpga' is specified as unit
 
         Returns nothing
         """
         if not unit:
-            self.runCommand(self.commandDict["reInit"])
+            self.run_command(self.command_dict["reInit"])
 
         if unit == "ipAddress":
-            self.runCommand(self.commandDict["reInitHost"])
+            self.run_command(self.command_dict["reInitHost"])
 
         if unit == "fpga":
-            self.runCommand(self.commandDict["reInitFPGA"])
+            self.run_command(self.command_dict["reInitFPGA"])
 
-    def updateNReps(self, newCount, msgLength=20):
+    def update_n_reps(self, new_count, msg_length=20):
         """Updates the number of repetitions to execute on the FPGA.
 
-        newCount must be msgLength characters or less
-        msgLength is an int indicating the length of newCount as a decimal string
+        new_count must be msg_length characters or less
+        msg_length is an int indicating the length of new_count as a decimal string
         """
-        newCount = [newCount]
+        new_count = [new_count]
 
-        self.runCommand(self.commandDict["updateNrReps"], newCount, msgLength)
+        self.run_command(self.command_dict["updateNrReps"], new_count, msg_length)
 
-    def sendTables(
+    def send_tables(
         self,
-        digitalsTable,
-        analogueTables,
-        msgLength=20,
-        digitalsBitDepth=32,
-        analoguesBitDepth=16,
+        digitals_table,
+        analogue_tables,
+        msg_length=20,
+        digitals_bit_depth=32,
+        analogues_bit_depth=16,
     ):
         """Sends through TCP the digitals and analogue tables to the RT-ipAddress.
 
         Analogues lists must be ordered form 0 onward and without gaps. That is,
         (0), (0,1), (0,1,2) or (0,1,2,3). If a table is missing a dummy table must be introduced
-        msgLength is an int indicating the length of every digital table element as a decimal string
+        msg_length is an int indicating the length of every digital table element as a decimal string
         """
         # Convert the digitals numpy table into a list of messages for the TCP
-        digitalsList = list()
+        digitals_list = list()
 
         for (
             t,
             value,
-        ) in digitalsTable:  # TODO: Change this into a more efficient code
-            digitalsValue = int(
+        ) in digitals_table:  # TODO: Change this into a more efficient code
+            digitals_value = int(
                 np.binary_repr(t, 32) + np.binary_repr(value, 32), 2
             )
-            digitalsList.append(digitalsValue)
+            digitals_list.append(digitals_value)
 
         # Send digitals after flushing the FPGA FIFOs
-        self.runCommand(self.commandDict["flushFIFOs"])
-        self.runCommand(
-            self.commandDict["sendDigitals"], digitalsList, msgLength
+        self.run_command(self.command_dict["flushFIFOs"])
+        self.run_command(
+            self.command_dict["sendDigitals"], digitals_list, msg_length
         )
 
         # Send Analogues
-        analogueChannel = 0
-        for analogueTable in analogueTables:
+        analogue_channel = 0
+        for analogue_table in analogue_tables:
             # Convert the analogues numpy table into a list of messages for the TCP
-            analogueList = list()
+            analogue_list = list()
 
-            for t, value in analogueTable:  # TODO: optimize this
-                analogueValue = int(
+            for t, value in analogue_table:  # TODO: optimize this
+                analogue_value = int(
                     np.binary_repr(t, 32) + np.binary_repr(value, 32), 2
                 )
-                analogueList.append(analogueValue)
+                analogue_list.append(analogue_value)
 
-            command = int(self.commandDict["sendAnalogues"]) + analogueChannel
-            self.runCommand(command, analogueList, msgLength)
-            analogueChannel = analogueChannel + 1
+            command = int(self.command_dict["sendAnalogues"]) + analogue_channel
+            self.run_command(command, analogue_list, msg_length)
+            analogue_channel = analogue_channel + 1
 
-    def writeIndexes(
+    def write_indexes(
         self,
-        indexSet,
-        digitalsStartIndex,
-        digitalsStopIndex,
-        analoguesStartIndexes,
-        analoguesStopIndexes,
-        msgLength=20,
+        index_set,
+        digitals_start_index,
+        digitals_stop_index,
+        analogues_start_indexes,
+        analogues_stop_indexes,
+        msg_length=20,
     ):
         """Writes to the FPGA the start and stop indexes of the actionTables that
         have to be run on an experiment. Actually, multiple 'indexSets' can be used
         (up to 16) to be used in combined experiments.
 
-        indexSet -- the indexSet where the indexes are to be sent to. integer from 0 to 15
-        digitalsStartIndex -- the start point of the digitals table. Included in
+        index_set -- the index_set where the indexes are to be sent to. integer from 0 to 15
+        digitals_start_index -- the start point of the digitals table. Included in
         the execution of the experiment. integer up to u32bit
-        digitalsStopIndex -- the stop point of the digitals table. NOT included in
+        digitals_stop_index -- the stop point of the digitals table. NOT included in
         the execution of the experiment. integer up to u32bit
-        analoguesStartIndexes -- iterable containing the start points of the analogues tables.
+        analogues_start_indexes -- iterable containing the start points of the analogues tables.
         Included in the execution or the experiment. list or tuple of integers up to u32bit
-        analoguesStopIndexes -- iterable containing the stop points of the analogues tables.
+        analogues_stop_indexes -- iterable containing the stop points of the analogues tables.
         NOT included in the execution or the experiment. list or tuple of integers up to u32bit
-        msgLength is an int indicating the length of every element as a decimal string
+        msg_length is an int indicating the length of every element as a decimal string
         """
         # TODO: Validate the value of indexSet is between 0 and 15
         # TODO: Validate that analogues lists are the same length
@@ -539,27 +539,27 @@ class Connection:
         # Merge everything in a single list to send. Note that we interlace the
         # analogue indexes (start, stop, start, stop,...) so in the future we can
         # put an arbitrary number.
-        sendList = [indexSet, digitalsStartIndex, digitalsStopIndex]
+        send_list = [index_set, digitals_start_index, digitals_stop_index]
 
-        analoguesInterleaved = [
+        analogues_interleaved = [
             x
-            for t in zip(analoguesStartIndexes, analoguesStopIndexes)
+            for t in zip(analogues_start_indexes, analogues_stop_indexes)
             for x in t
         ]
 
-        for index in analoguesInterleaved:
-            sendList.append(index)
+        for index in analogues_interleaved:
+            send_list.append(index)
 
         # send indexes.
-        self.runCommand(
-            self.commandDict["sendStartStopIndexes"], sendList, msgLength
+        self.run_command(
+            self.command_dict["sendStartStopIndexes"], send_list, msg_length
         )
 
-    def PrepareActions(self, actions, numReps):
+    def PrepareActions(self, actions, num_reps):
         """Sends a actions table to the cRIO and programs the execution of a number of repetitions.
         It does not trigger the execution"""
         # We upload the tables to the cRIO
-        self.sendTables(digitalsTable=actions[1], analogueTables=actions[2])
+        self.send_tables(digitals_table=actions[1], analogue_tables=actions[2])
 
         # Now we can send the Indexes.
         # The indexes will tell the FPGA where the table starts and ends.
@@ -568,52 +568,52 @@ class Connection:
         # Memory addresses on the FPGA are 0 based. We, however, use 1 based indexing so we
         # can initialize certain values on the 0 address of the FPGA, such as a safe state we can
         # securely rely on.
-        digitalsStartIndex = 1
-        digitalsStopIndex = len(actions[1])
-        analoguesStartIndexes = [1 for x in actions[2]]
-        analoguesStopIndexes = [len(x) for x in actions[2]]
-        self.writeIndexes(
-            indexSet=0,
-            digitalsStartIndex=digitalsStartIndex,
-            digitalsStopIndex=digitalsStopIndex,
-            analoguesStartIndexes=analoguesStartIndexes,
-            analoguesStopIndexes=analoguesStopIndexes,
-            msgLength=20,
+        digitals_start_index = 1
+        digitals_stop_index = len(actions[1])
+        analogues_start_indexes = [1 for x in actions[2]]
+        analogues_stop_indexes = [len(x) for x in actions[2]]
+        self.write_indexes(
+            index_set=0,
+            digitals_start_index=digitals_start_index,
+            digitals_stop_index=digitals_stop_index,
+            analogues_start_indexes=analogues_start_indexes,
+            analogues_stop_indexes=analogues_stop_indexes,
+            msg_length=20,
         )
 
         # We initialize the profile. That is tell the cRIO how many repetitions to produce and the interval.
         # TODO: Because the generic Executor is adding a last element in the table we put a 0 here. Change this
-        self.initProfile(numReps=numReps, repDuration=0)
+        self.init_profile(num_reps=num_reps, rep_duration=0)
 
         return True
 
     def RunActions(self):
-        self.triggerExperiment()
+        self.trigger_experiment()
 
-    def readError(self):
+    def read_error(self):
         """Gets error code from RT-ipAddress and FPGA
 
         Returns a tuple with the error code and the corresponding error message
         """
-        return self.status.getStatus(["Error code", "Error Description"])
+        return self.status.get_status(["Error code", "Error Description"])
 
-    def isIdle(self):
+    def is_idle(self):
         """Returns True if experiment is running and False if idle"""
-        if self.status.getStatus("Action State") == FPGA_IDLE_STATE:
+        if self.status.get_status("Action State") == FPGA_IDLE_STATE:
             return True
         else:
             return False
 
-    def isAborted(self):
+    def is_aborted(self):
         """Returns True if FPGA is aborted (in practice interlocked) and False if idle"""
-        if self.status.getStatus("Aborted"):
+        if self.status.get_status("Aborted"):
             return True
         else:
             return False
 
-    def flushFIFOs(self):
+    def flush_fifos(self):
         """Flushes the FIFOs of the FPGA."""
-        self.runCommand(self.commandDict["flushFIFOs"])
+        self.run_command(self.command_dict["flushFIFOs"])
 
     def ReadPosition(self, line):
         """Returns the current output value of the analog line in native units
@@ -621,83 +621,83 @@ class Connection:
         as entered in the analog config files.
         """
         line = "Analogue " + str(line)
-        return self.status.getStatus(line)
+        return self.status.get_status(line)
 
-    def MoveAbsolute(self, analogueChannel, analogueValueADU, msgLength=20):
-        """Changes an analogueChannel output to the specified analogueValue value
+    def MoveAbsolute(self, analogue_channel, analogue_value_adu, msg_length=20):
+        """Changes an analogue_channel output to the specified analogue_value_adu value
 
-        analogueValue is taken as a raw 16 or 32bit value
-        analogueChannel is an integer corresponding to the analogue in the FPGA as specified in the config files
-        msgLength is an int indicating the max length of the analogue as a decimal string
+        analogue_value_adu is taken as a raw 16 or 32bit value
+        analogue_channel is an integer corresponding to the analogue in the FPGA as specified in the config files
+        msg_length is an int indicating the max length of the analogue as a decimal string
         """
-        analogue = [analogueChannel, int(analogueValueADU)]
-        self.runCommand(self.commandDict["writeAnalogue"], analogue, msgLength)
+        analogue = [analogue_channel, int(analogue_value_adu)]
+        self.run_command(self.command_dict["writeAnalogue"], analogue, msg_length)
         while self.ReadPosition(analogue[0]) != analogue[1]:
             time.sleep(0.01)
         return
 
-    def writeAnalogueDelta(self, analogueDeltaValue, analogueChannel):
-        """Changes an analogueChannel output to the specified analogueValue delta-value
+    def write_analogue_delta(self, analogue_delta_value, analogue_channel):
+        """Changes an analogue_channel output to the specified analogue_value delta-value
 
-        analogueDeltaValue is taken as a raw 16bit value
-        analogueChannel is an integer corresponding to the analogue in the FPGA as specified in the config files
+        analogue_delta_value is taken as a raw 16bit value
+        analogue_channel is an integer corresponding to the analogue in the FPGA as specified in the config files
         """
         pass
 
-    def WriteDigital(self, digitalValue, msgLength=20):
+    def WriteDigital(self, digital_value, msg_length=20):
         """Write a specific value to the ensemble of the digitals through a 32bit
-        integer digitalValue.
-        msgLength is an int indicating the length of the digitalValue as a decimal string
+        integer digital_value.
+        msg_length is an int indicating the length of the digital_value as a decimal string
         """
-        digitalValue = [digitalValue]
-        self.runCommand(
-            self.commandDict["writeDigitals"], digitalValue, msgLength
+        digital_value = [digital_value]
+        self.run_command(
+            self.command_dict["writeDigitals"], digital_value, msg_length
         )
 
-    def ReadDigital(self, digitalChannel=None):
+    def ReadDigital(self, digital_channel=None):
         """Get the value of the current Digitals outputs as a 32bit integer.
-        If digitalChannel is specified, a 0 or 1 is returned.
+        If digital_channel is specified, a 0 or 1 is returned.
         """
-        value = np.binary_repr(self.status.getStatus("Digitals"))
+        value = np.binary_repr(self.status.get_status("Digitals"))
 
-        if digitalChannel is not None:
-            return int(value[-digitalChannel])
+        if digital_channel is not None:
+            return int(value[-digital_channel])
         else:
             return int(value, 2)
 
-    def initProfile(self, numReps, repDuration=0, msgLength=20):
+    def init_profile(self, num_reps, rep_duration=0, msg_length=20):
         """Prepare the FPGA to run the loaded profile.
         Send a certain number of parameters:
-        numberReps and a repDuration
+        num_reps and a rep_duration
 
-        numberReps -- the number of repetitions to run
-        repDuration -- the time interval between repetitions
-        msgLength -- int indicating the length of numberReps and repDuration as decimal strings
+        num_reps -- the number of repetitions to run
+        rep_duration -- the time interval between repetitions
+        msg_length -- int indicating the length of num_reps and rep_duration as decimal strings
         """
-        self.runCommand(
-            self.commandDict["initProfile"], [numReps, repDuration], msgLength
+        self.run_command(
+            self.command_dict["initProfile"], [num_reps, rep_duration], msg_length
         )
 
-    def getframedata(self):
+    def get_frame_data(self):
         """Get the current frame"""
         pass
 
-    def triggerExperiment(self):
+    def trigger_experiment(self):
         """Trigger the execution of an experiment."""
-        self.runCommand(self.commandDict["triggerExperiment"])
+        self.run_command(self.command_dict["triggerExperiment"])
 
-    def runSequence(
-        self, time_digital_sequence, digitalsBitDepth=32, msgLength=20
+    def run_sequence_on_fpga(
+        self, time_digital_sequence, digitals_bit_depth=32, msg_length=20
     ):
         """Runs a small sequence of digital outputs at determined times"""
-        sendList = list()
+        send_list = list()
         for t, d in time_digital_sequence:
             # binarize and concatenate time and digital value
-            value = np.binary_repr(t, 32) + np.binary_repr(d, digitalsBitDepth)
+            value = np.binary_repr(t, 32) + np.binary_repr(d, digitals_bit_depth)
             value = int(value, 2)
-            sendList.append(value)
+            send_list.append(value)
 
-        self.runCommand(self.commandDict["runSequence"], sendList, msgLength)
+        self.run_command(self.command_dict["runSequence"], send_list, msg_length)
 
 
 class FPGAStatus(threading.Thread):
@@ -707,17 +707,17 @@ class FPGAStatus(threading.Thread):
         self.host = host
         self.port = port
         # Create a dictionary to store the FPGA status and a lock to access it
-        self.currentFPGAStatus = {}
-        self.FPGAStatusLock = threading.Lock()
+        self.current_fpga_status = {}
+        self.fpga_status_lock = threading.Lock()
 
         # Create a socket
         self.socket = None
-        self.createReceiveSocket()
+        self.create_receive_socket()
 
         # Create a handle to stop the thread
-        self.shouldRun = True
+        self.should_run = True
 
-    def createReceiveSocket(self):
+    def create_receive_socket(self):
         """Creates a UDP socket meant to receive status information
         form the RT-ipAddress
 
@@ -733,18 +733,18 @@ class FPGAStatus(threading.Thread):
         except socket.error as msg:
             print("Failed to bind address.\n", msg)
 
-    def getStatus(self, key=None):
+    def get_status(self, key=None):
         """Method to call from outside to get the status"""
-        if key and self.currentFPGAStatus is not None:
+        if key and self.current_fpga_status is not None:
             try:
-                return self.currentFPGAStatus[key]
+                return self.current_fpga_status[key]
             except KeyError as e:
                 print(e)
         else:
-            with self.FPGAStatusLock:
-                return self.currentFPGAStatus
+            with self.fpga_status_lock:
+                return self.current_fpga_status
 
-    def getFPGAStatus(self):
+    def get_fpga_status(self):
         """This method polls to a UDP socket and get the status information
         of the RT-ipAddress and FPGA.
 
@@ -768,49 +768,49 @@ class FPGAStatus(threading.Thread):
 
         return status
 
-    def publishFPGAStatusChanges(self, newStatus):
+    def publish_fpga_status_changes(self, new_status):
         """FInd interesting status or status changes in the FPGA and publish them
 
-        return the newStatus but with the status reset so not to publish multiple times
+        return the new_status but with the status reset so not to publish multiple times
         """
-        if newStatus["Event"] in ["done", "FPGA done"]:
-            self.parent.parent.experimentDone()
-            newStatus["Event"] = ""
+        if new_status["Event"] in ["done", "FPGA done"]:
+            self.parent.parent.experiment_done()
+            new_status["Event"] = ""
 
-        return newStatus
+        return new_status
 
     def run(self):
-        self.currentFPGAStatus = self.getFPGAStatus()
+        self.current_fpga_status = self.get_fpga_status()
         update_rate = FPGA_HEARTBEAT_RATE / 2
         retries = 0
 
-        while self.shouldRun:
-            newFPGAStatus = self.getFPGAStatus()
+        while self.should_run:
+            new_fpga_status = self.get_fpga_status()
             if retries > 300:
                 # retrying to establish connection
                 try:
-                    self.createReceiveSocket()
+                    self.create_receive_socket()
                 except Exception as e:
                     print(
                         f"The status UDP connection to the Executor is lost after {retries} retries"
                     )
                     raise e
 
-            if newFPGAStatus is None:
+            if new_fpga_status is None:
                 retries += 1
                 continue
-            # with self.FPGAStatusLock:
+            # with self.fpga_status_lock:
             if (
-                newFPGAStatus["Event"] != self.currentFPGAStatus["Event"]
-                and newFPGAStatus["Event"] == "done"
-                and newFPGAStatus is not None
+                new_fpga_status["Event"] != self.current_fpga_status["Event"]
+                and new_fpga_status["Event"] == "done"
+                and new_fpga_status is not None
             ):
                 # Publish any interesting events
-                self.currentFPGAStatus = self.publishFPGAStatusChanges(
-                    newStatus=newFPGAStatus
+                self.current_fpga_status = self.publish_fpga_status_changes(
+                    new_status=new_fpga_status
                 )
             else:
-                self.currentFPGAStatus = newFPGAStatus
+                self.current_fpga_status = new_fpga_status
 
             # wait for a period of half the broadcasting rate of the FPGA
             time.sleep(update_rate)

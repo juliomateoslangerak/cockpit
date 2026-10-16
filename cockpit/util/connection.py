@@ -61,14 +61,14 @@ class Connection:
 
     def __init__(self, service_name, ip_address, port, local_ip=None):
         """Name of the service on the remote server."""
-        self.serviceName = service_name
+        self.service_name = service_name
         ## IP address to connect to.
-        self.ipAddress = ip_address
+        self.ip_address = ip_address
         ## Port to connect to.
         self.port = port
         ## Local IP address to use for communication, in the event that this
         # computer has multiple networks to choose from.
-        self.localIp = local_ip
+        self.local_ip = local_ip
         ## Function to call when we get something from the camera.
         self.callback = None
         ## Extant connection to the camera.
@@ -83,12 +83,12 @@ class Connection:
         """
         self.callback = callback
         connection = Pyro4.Proxy(
-            "PYRO:%s@%s:%d" % (self.serviceName, self.ipAddress, self.port)
+            "PYRO:%s@%s:%d" % (self.service_name, self.ip_address, self.port)
         )
         connection._pyroTimeout = timeout
         self.connection = connection
         server = depot.getHandlersOfType(depot.SERVER)[0]
-        uri = server.register(self.callback, self.localIp)
+        uri = server.register(self.callback, self.local_ip)
         self.connection.receiveClient(uri)
 
     def disconnect(self):
@@ -100,6 +100,6 @@ class Connection:
                 self.connection.receiveClient(None)
             except Exception as e:
                 print(
-                    "Couldn't disconnect from %s: %s" % (self.serviceName, e)
+                    "Couldn't disconnect from %s: %s" % (self.service_name, e)
                 )
             self.connection = None

@@ -111,7 +111,7 @@ class ObjectiveDevice(cockpit.devices.device.Device):
                     "invalid colour config '%s'" % config["colour"]
                 )
 
-    def getHandlers(self) -> typing.List[ObjectiveHandler]:
+    def get_handlers(self) -> typing.List[ObjectiveHandler]:
         handler = ObjectiveHandler(
             name=self.name,
             group_name="miscellaneous",

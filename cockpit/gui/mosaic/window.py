@@ -116,26 +116,26 @@ class MosaicCommon:
     # python 3, but threw TypeErrors in python 2.
     # TODO: refactor to eliminate this class; see notes on each method.
 
-    def goTo(self, target, shouldBlock=False):
+    def goTo(self, target, should_block=False):
         """Go to the specified XY position.
 
         If we have a focus plane defined, go to the appropriate Z position to
-        maintain focus. Refactoring: If the stageMover dealt with the focal
+        maintain focus. Refactoring: If the stage_mover dealt with the focal
         plane params and mover switching, this method could probably be
         eliminated.
         """
         if self.focalPlaneParams:
             targetZ = self.getFocusZ(target)
-            cockpit.interfaces.stage_mover.goTo(
-                (target[0], target[1], targetZ), shouldBlock
+            cockpit.interfaces.stage_mover.go_to(
+                (target[0], target[1], targetZ), should_block
             )
         else:
             # IMD 20150306 Save current mover, change to coarse to generate mosaic
             # do move, and change mover back.
-            originalMover = cockpit.interfaces.stage_mover.mover.curHandlerIndex
-            cockpit.interfaces.stage_mover.mover.curHandlerIndex = 0
-            cockpit.interfaces.stage_mover.goToXY(target, shouldBlock)
-            cockpit.interfaces.stage_mover.mover.curHandlerIndex = originalMover
+            originalMover = cockpit.interfaces.stage_mover.mover.cur_handler_index
+            cockpit.interfaces.stage_mover.mover.cur_handler_index = 0
+            cockpit.interfaces.stage_mover.go_to_xy(target, should_block)
+            cockpit.interfaces.stage_mover.mover.cur_handler_index = originalMover
 
     def drawOverlay(self):
         """Draw the overlay.
@@ -145,12 +145,12 @@ class MosaicCommon:
         probably move to the Canvas class by eliminating references to data on
         the MosaicWindow as follows: roll self.scalebar and self.drawCrosshairs
         into this method; put self.scalefont onto the canvas; pull self.offset
-        straight from the objective; move self.selectedSites to the stageMover
+        straight from the objective; move self.selectedSites to the stage_mover
         or some other space manager;
         """
         siteLineWidth = max(1, self.canvas.scale * 1.5)
         siteFontScale = 3 / max(5.0, self.canvas.scale)
-        for site in cockpit.interfaces.stage_mover.getAllSites():
+        for site in cockpit.interfaces.stage_mover.get_all_sites():
             # Draw a crude circle.
             x, y = site.position[:2]
             x = -x
@@ -169,11 +169,11 @@ class MosaicCommon:
             glPushMatrix()
             glTranslatef(x, y, 0)
             glScalef(siteFontScale, siteFontScale, 1)
-            self.site_face.render(str(site.uniqueID))
+            self.site_face.render(str(site.unique_id))
             glPopMatrix()
 
         self.drawCrosshairs(
-            cockpit.interfaces.stage_mover.getPosition()[:2],
+            cockpit.interfaces.stage_mover.get_position()[:2],
             (1, 0, 0),
             offset=True,
         )
@@ -215,8 +215,8 @@ class MosaicCommon:
         # Draw the soft and hard stage motion limits
         glEnable(GL_LINE_STIPPLE)
         glLineWidth(2)
-        softSafeties = cockpit.interfaces.stage_mover.getSoftLimits()[:2]
-        hardSafeties = cockpit.interfaces.stage_mover.getHardLimits()[:2]
+        softSafeties = cockpit.interfaces.stage_mover.get_soft_limits()[:2]
+        hardSafeties = cockpit.interfaces.stage_mover.get_hard_limits()[:2]
         for safeties, color, stipple in [
             (softSafeties, (0, 1, 0), 0x5555),
             (hardSafeties, (0, 0, 1), 0xAAAA),
@@ -330,8 +330,8 @@ class MosaicCommon:
         cams = wx.GetApp().Depot.getActiveCameras()
         # if there is a camera us its real pixel count
         if len(cams) > 0:
-            pixel_size = wx.GetApp().Objectives.GetPixelSize()
-            width, height = cams[0].getImageSize()
+            pixel_size = wx.GetApp().Objectives.get_pixel_size()
+            width, height = cams[0].get_image_size()
             self.crosshairBoxSize = width * pixel_size
             width = self.crosshairBoxSize
             height = height * pixel_size
@@ -381,7 +381,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.displayTrails = False
 
         ## Mosaic tile overlap
-        self.overlap = cockpit.util.user_config.getValue(
+        self.overlap = cockpit.util.user_config.get_value(
             "mosaicTileOverlap", default=0.0
         )
 
@@ -404,7 +404,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.scale_face = cockpit.gui.freetype.Face(self, 18)
 
         # default scale bar size is Zero
-        self.scalebar = cockpit.util.user_config.getValue(
+        self.scalebar = cockpit.util.user_config.get_value(
             "mosaicScaleBar", default=0
         )
         ## Maps button names to wx.Button instances.
@@ -560,7 +560,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         canvas_size = (side_panel_size[0] * 3, side_panel_size[1])
 
         ## MosaicCanvas instance.
-        limits = cockpit.interfaces.stage_mover.getHardLimits()[:2]
+        limits = cockpit.interfaces.stage_mover.get_hard_limits()[:2]
         self.canvas = canvas.MosaicCanvas(
             self, limits, self.drawOverlay, self.onMouse, size=canvas_size
         )
@@ -620,7 +620,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     def centerCanvas(self, event=None):
         """Now that we've been created, recenter the canvas."""
-        curPosition = cockpit.interfaces.stage_mover.getPosition()[:2]
+        curPosition = cockpit.interfaces.stage_mover.get_position()[:2]
         # As we read a position propagate a stage event to ensure
         # other interface components are in synch.
         events.publish(events.STAGE_POSITION, 0, curPosition[0])
@@ -629,8 +629,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # \todo Should we necessarily assume a 512x512 area here?
         # if we haven't previously set crosshairBoxSize (maybe no camera active)
         if self.crosshairBoxSize == 0:
-            self.crosshairBoxSize = 512 * wx.GetApp().Objectives.GetPixelSize()
-        self.offset = wx.GetApp().Objectives.GetOffset()
+            self.crosshairBoxSize = 512 * wx.GetApp().Objectives.get_pixel_size()
+        self.offset = wx.GetApp().Objectives.get_offset()
         scale = 150.0 / self.crosshairBoxSize
         self.canvas.zoomTo(
             -curPosition[0] + self.offset[0],
@@ -646,13 +646,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         if axis in [0, 1]:
             # Only care about the X and Y axes.
             # append new position
-            self.trails.append(cockpit.interfaces.stage_mover.getPosition()[:2])
+            self.trails.append(cockpit.interfaces.stage_mover.get_position()[:2])
             wx.CallAfter(self.canvas.Refresh)
 
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
         """User changed the objective in use; resize our crosshair box to suit."""
-        self.crosshairBoxSize = 512 * wx.GetApp().Objectives.GetPixelSize()
-        self.offset = wx.GetApp().Objectives.GetOffset()
+        self.crosshairBoxSize = 512 * wx.GetApp().Objectives.get_pixel_size()
+        self.offset = wx.GetApp().Objectives.get_offset()
         # force a redraw so that the crosshairs are properly sized
         # Refresh this and other mosaic views.
         events.publish(events.MOSAIC_UPDATE)
@@ -855,7 +855,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             if self.shouldRestart:
                 # Start a new spiral about current stage position.
                 stepper = self.mosaicStepper()
-                pos = cockpit.interfaces.stage_mover.getPosition()
+                pos = cockpit.interfaces.stage_mover.get_position()
                 centerX = pos[0] - self.offset[0]
                 centerY = pos[1] + self.offset[1]
                 self.shouldRestart = False
@@ -872,25 +872,25 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 if camera not in active:
                     camera = active[0]
                 # Set image width and height based on camera and objective.
-                pixel_size = wx.GetApp().Objectives.GetPixelSize()
-                width, height = camera.getImageSize()
+                pixel_size = wx.GetApp().Objectives.get_pixel_size()
+                width, height = camera.get_image_size()
                 width *= pixel_size
                 height *= pixel_size
-                self.offset = wx.GetApp().Objectives.GetOffset()
+                self.offset = wx.GetApp().Objectives.get_offset()
                 # Successfully reconfigured: clear the flag.
                 self.shouldReconfigure = False
 
-            pos = cockpit.interfaces.stage_mover.getPosition()
+            pos = cockpit.interfaces.stage_mover.get_position()
             curZ = pos[2] - self.offset[2]
             # Take an image. Use timeout to prevent getting stuck here.
             try:
                 data, metadata = events.executeAndWaitForOrTimeout(
                     events.NEW_IMAGE % camera.name,
-                    wx.GetApp().Imager.takeImage,
-                    camera.getExposureTime() / 1000
-                    + camera.getTimeBetweenExposures() / 1000
+                    wx.GetApp().Imager.take_image,
+                    camera.get_exposure_time() / 1000
+                    + camera.get_time_between_exposures() / 1000
                     + CAMERA_TIMEOUT,
-                    shouldBlock=True,
+                    should_block=True,
                 )
             except Exception as e:
                 # Go to idle state.
@@ -967,16 +967,16 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             atMouse=True,
         )
         self.overlap = float(value)
-        cockpit.util.user_config.setValue("mosaicTileOverlap", self.overlap)
+        cockpit.util.user_config.set_value("mosaicTileOverlap", self.overlap)
 
     def transferCameraImage(self):
         """Transfer an image from the active camera (or first camera) to the
         mosaic at the current stage position."""
         camera = self.camera
-        if camera is None or not camera.getIsEnabled():
+        if camera is None or not camera.get_is_enabled():
             # Select the first active camera.
             for cam in wx.GetApp().Depot.getHandlersOfType(depot.CAMERA):
-                if cam.getIsEnabled():
+                if cam.get_is_enabled():
                     camera = cam
                     break
         # Get image size in microns.
@@ -984,7 +984,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # settings, stage pos etc may have changed
         data, metadata = cockpit.gui.camera.window.getImageForCamera(camera)
         pixel_size = metadata["pixelsize"]
-        width, height = camera.getImageSize()
+        width, height = camera.get_image_size()
         width *= pixel_size
         height *= pixel_size
         x, y, z = metadata["imagePos"]
@@ -1010,7 +1010,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         else:
             self.scalebar = 1
         # store current state for future.
-        cockpit.util.user_config.setValue("mosaicScaleBar", self.scalebar)
+        cockpit.util.user_config.set_value("mosaicScaleBar", self.scalebar)
         # send a mosaic update event to update touch_screen
         events.publish(events.MOSAIC_UPDATE)
 
@@ -1018,7 +1018,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # toggle Display of trails in mosaic.
         self.displayTrails = not self.displayTrails
         # store current state for future.
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             "mosaicDisplayTrails", self.displayTrails
         )
         # send a mosaic update event to update touch_screen
@@ -1045,11 +1045,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         color (or our currently-selected color if none is provided)."""
         if color is None:
             color = self.siteColor
-        position = cockpit.interfaces.stage_mover.getPosition()
+        position = cockpit.interfaces.stage_mover.get_position()
         position[0] = position[0] - self.offset[0]
         position[1] = position[1] - self.offset[1]
         position[2] = position[2] - self.offset[2]
-        cockpit.interfaces.stage_mover.saveSite(
+        cockpit.interfaces.stage_mover.save_site(
             cockpit.interfaces.stage_mover.Site(
                 position, None, color, size=self.crosshairBoxSize
             )
@@ -1154,7 +1154,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             text = self.sitesBox.GetString(item)
             siteID = int(text.split(":")[0])
             self.selectedSites.add(
-                cockpit.interfaces.stage_mover.getSite(siteID)
+                cockpit.interfaces.stage_mover.get_site(siteID)
             )
         # Refresh this and other mosaic views.
         events.publish(events.MOSAIC_UPDATE)
@@ -1164,7 +1164,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         \todo Enforcing int site IDs here."""
         item = event.GetString()
         siteID = int(item.split(":")[0])
-        cockpit.interfaces.stage_mover.goToSite(siteID)
+        cockpit.interfaces.stage_mover.go_to_site(siteID)
 
     def getSelectedSites(self):
         """Return a list of of the currently-selected Sites."""
@@ -1172,7 +1172,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         for item in self.sitesBox.GetSelections()[::-1]:
             text = self.sitesBox.GetString(item)
             siteID = int(text.split(":")[0])
-            result.append(cockpit.interfaces.stage_mover.getSite(siteID))
+            result.append(cockpit.interfaces.stage_mover.get_site(siteID))
         return result
 
     def deleteSelectedSites(self, event=None):
@@ -1183,9 +1183,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             text = self.sitesBox.GetString(item)
             siteID = int(text.split(":")[0])
             self.selectedSites.remove(
-                cockpit.interfaces.stage_mover.getSite(siteID)
+                cockpit.interfaces.stage_mover.get_site(siteID)
             )
-            cockpit.interfaces.stage_mover.deleteSite(siteID)
+            cockpit.interfaces.stage_mover.delete_site(siteID)
             self.sitesBox.Delete(item)
         ## Deselect everything to work around issue #408 (under gtk,
         ## deleting items will move the selection to the next item)
@@ -1203,7 +1203,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         if offset is not None:
             for item in items:
                 siteID = int(self.sitesBox.GetString(item).split(":")[0])
-                site = cockpit.interfaces.stage_mover.getSite(siteID)
+                site = cockpit.interfaces.stage_mover.get_site(siteID)
                 # Account for the fact that the site position may be a
                 # (non-mutable) tuple; cast it to a list before modifying it.
                 position = list(site.position)
@@ -1212,7 +1212,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 site.position = tuple(position)
             # Redisplay the sites in the sitesbox.
             self.sitesBox.Clear()
-            for site in cockpit.interfaces.stage_mover.getAllSites():
+            for site in cockpit.interfaces.stage_mover.get_all_sites():
                 self._AddSiteToList(site, shouldRefresh=False)
             # Refresh this and other mosaic views.
             events.publish(events.MOSAIC_UPDATE)
@@ -1228,7 +1228,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
-        cockpit.interfaces.stage_mover.writeSitesToFile(dialog.GetPath())
+        cockpit.interfaces.stage_mover.write_sites_to_file(dialog.GetPath())
 
     def loadSavedSites(self, event=None):
         """Load sites from a file."""
@@ -1241,7 +1241,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
-        cockpit.interfaces.stage_mover.loadSites(dialog.GetPath())
+        cockpit.interfaces.stage_mover.load_sites(dialog.GetPath())
 
     def _OnNewSite(self, event: wx.CommandEvent) -> None:
         """A new site was created (from any source); add it to our sites box."""
@@ -1252,8 +1252,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # This display is a bit compressed, so that all positions are visible
         # even if there's a scrollbar in the sites box.
         position = ",".join(["%d" % p for p in site.position])
-        label = site.uniqueID
-        # HACK: most uniqueID instances will be ints, which we zero-pad
+        label = site.unique_id
+        # HACK: most unique_id instances will be ints, which we zero-pad
         # so that they stay in appropriate order.
         if type(label) is int:
             label = "%04d" % label
@@ -1266,7 +1266,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         """A site was deleted; remove it from our sites box."""
         site = event.EventData[0]
         for item in self.sitesBox.GetItems():
-            if site.uniqueID == item:
+            if site.unique_id == item:
                 self.sitesBox.Delete(item)
                 break
 
@@ -1308,7 +1308,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         else:
             menu = wx.Menu()
             for i, camera in enumerate(cameras):
-                menu.Append(i + 1, text % camera.descriptiveName)
+                menu.Append(i + 1, text % camera.descriptive_name)
                 self.Bind(
                     wx.EVT_MENU,
                     lambda event, camera=camera: action(camera),
@@ -1550,20 +1550,20 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         cameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
         camera = None
         for alt in cameras:
-            if alt.getIsEnabled():
+            if alt.get_is_enabled():
                 camera = alt
                 break
         for x, y, z in siteQueue:
             bestOffset = 0
             bestIntensity = None
             for offset in numpy.arange(-1, 1.1, 0.1):
-                cockpit.interfaces.stage_mover.goTo(
-                    (x, y, z + offset), shouldBlock=True
+                cockpit.interfaces.stage_mover.go_to(
+                    (x, y, z + offset), should_block=True
                 )
                 image, metadata = events.executeAndWaitFor(
                     events.NEW_IMAGE % camera.name,
-                    wx.GetApp().Imager.takeImage,
-                    shouldBlock=True,
+                    wx.GetApp().Imager.take_image,
+                    should_block=True,
                 )
                 timestamp = metadata["timestamp"]
                 if bestIntensity is None or image.max() > bestIntensity:
@@ -1572,7 +1572,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             newSite = cockpit.interfaces.stage_mover.Site(
                 (x, y, z + bestOffset), group="beads", size=2
             )
-            wx.CallAfter(cockpit.interfaces.stage_mover.saveSite, newSite)
+            wx.CallAfter(cockpit.interfaces.stage_mover.save_site, newSite)
         statusDialog.Destroy()
         wx.CallAfter(self.Refresh)
 

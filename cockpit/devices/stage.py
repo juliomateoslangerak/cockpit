@@ -58,31 +58,31 @@ class SimplePiezo(Device):
     def __init__(self, name, config):
         super(SimplePiezo, self).__init__(name, config)
 
-    def getHandlers(self):
+    def get_handlers(self):
         asource = self.config.get("analogsource", None)
         aline = self.config.get("analogline", None)
-        aHandler = depot.getHandler(asource, depot.EXECUTOR)
-        if aHandler is None:
+        a_handler = depot.getHandler(asource, depot.EXECUTOR)
+        if a_handler is None:
             raise Exception("No control source.")
         axis = AXIS_MAP[self.config.get("axis", 2)]
         offset = self.config.get("offset", 0)
         gain = self.config.get("gain", 1)
-        posMin = self.config.get("min", None)
-        posMax = self.config.get("max", None)
-        posRange = self.config.get("range", None)
-        haveMin, haveMax, haveRange = [
-            v is not None for v in [posMin, posMax, posRange]
+        pos_min = self.config.get("min", None)
+        pos_max = self.config.get("max", None)
+        pos_range = self.config.get("range", None)
+        have_min, have_max, have_range = [
+            v is not None for v in [pos_min, pos_max, pos_range]
         ]
-        if haveMin and haveMax:
+        if have_min and have_max:
             pass
-        elif (haveMin, haveMax, haveRange) == (True, False, True):
-            posMax = posMin + posRange
-        elif (haveMin, haveMax, haveRange) == (False, True, True):
-            posMin = posMax - posRange
-        elif (haveMin, haveMax, haveRange) == (False, False, True):
+        elif (have_min, have_max, have_range) == (True, False, True):
+            pos_max = pos_min + pos_range
+        elif (have_min, have_max, have_range) == (False, True, True):
+            pos_min = pos_max - pos_range
+        elif (have_min, have_max, have_range) == (False, False, True):
             # Assume range starts from zero.
-            posMin = 0
-            posMax = posRange
+            pos_min = 0
+            pos_max = pos_range
         else:
             raise Exception(
                 "No min, max or range specified for stage %s." % self.name
@@ -101,12 +101,12 @@ class SimplePiezo(Device):
                 )
             },
             axis,
-            (posMin, posMax),
-            (posMin, posMax),
+            (pos_min, pos_max),
+            (pos_min, pos_max),
         )
 
         # Connect handler to analogue source to populate movement callbacks.
-        handler.connectToAnalogSource(aHandler, aline, offset, gain)
+        handler.connectToAnalogSource(a_handler, aline, offset, gain)
 
         result.append(handler)
         return result

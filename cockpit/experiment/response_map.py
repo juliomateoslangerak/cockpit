@@ -156,7 +156,7 @@ class ResponseMapExperiment(
 
         self.cameraToReadoutTime = dict(
             [
-                (c, c.getTimeBetweenExposures(isExact=True))
+                (c, c.get_time_between_exposures(is_exact=True))
                 for c in self.cameras
             ]
         )
@@ -177,7 +177,7 @@ class ResponseMapExperiment(
             self.camToLock = {}
             for camera in self.cameras:
                 # Prepare a memory buffer to store images in.
-                width, height = camera.getImageSize()
+                width, height = camera.get_image_size()
                 self.camToImages[camera] = numpy.zeros(
                     (self.numExposures, height, width)
                 )
@@ -186,7 +186,7 @@ class ResponseMapExperiment(
                 # Indicate any frame transfer cameras for reset at start of
                 # table.
                 if (
-                    camera.getExposureMode()
+                    camera.get_exposure_mode()
                     == cockpit.handlers.camera.TRIGGER_AFTER
                 ):
                     self.cameraToIsReady[camera] = False
@@ -240,7 +240,7 @@ class ResponseMapExperiment(
                 allImages[wavelength, timepoint, 0, :height, :width] = image
                 exposureTimes.append(exposureTime)
 
-        header = cockpit.util.datadoc.makeHeaderFor(
+        header = cockpit.util.datadoc.make_header_for(
             allImages, wavelengths=[cam.wavelength for cam in self.cameras]
         )
 
@@ -379,7 +379,7 @@ class ResponseMapExperiment(
             raws.append(images[-1])
             if self.shouldPreserveIntermediaryFiles:
                 # Save the raw data.
-                cockpit.util.datadoc.writeDataAsMrc(
+                cockpit.util.datadoc.write_data_as_mrc(
                     images.astype(numpy.uint16),
                     "%s-raw-%s-%04.5fms"
                     % (self.savePath, camera.name, exposureTime),
@@ -505,7 +505,7 @@ class ExperimentUI(wx.Panel):
 
     def loadSettings(self):
         """Load the saved experiment settings, if any."""
-        return cockpit.util.user_config.getValue(
+        return cockpit.util.user_config.get_value(
             self.configKey + "responseMapExperimentSettings",
             default={
                 "responseMapCosmicRayThreshold": "10",
@@ -523,6 +523,6 @@ class ExperimentUI(wx.Panel):
         """Save the current experiment settings to config."""
         if settings is None:
             settings = self.getSettingsDict()
-        cockpit.util.user_config.setValue(
+        cockpit.util.user_config.set_value(
             self.configKey + "responseMapExperimentSettings", settings
         )

@@ -114,7 +114,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Create a new empty list.
         activeCams = []
         for camera in allCameras:
-            if camera.getIsEnabled():
+            if camera.get_is_enabled():
                 # Camera is enabled.
                 activeCams.append(camera)
 
@@ -148,7 +148,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Note: lasers, the DIA light source, and the EPI light source, are
         # mutually exclusive as they use different shutters and only one
         # shutter can be active at a time for some unknown reason.
-        laser488.setEnabled(True)
+        laser488.set_enabled(True)
 
         # Take images, using all current active camera views and light
         # sources; wait for the image (and time of acquisition) from the named
@@ -161,7 +161,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # script will get stuck at this point.
         eventName = "new image %s" % activeCams[0].name
         image, timestamp = events.executeAndWaitFor(
-            eventName, cockpit.interfaces.imager.takeImage, shouldBlock=True
+            eventName, cockpit.interfaces.imager.take_image, should_block=True
         )
 
         # Get the min, max, median, and standard deviation of the image
@@ -175,15 +175,15 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Some miscellaneous functions below.
 
         # Get the current stage position; positions are in microns.
-        curX, curY, curZ = cockpit.interfaces.stage_mover.getPosition()
+        curX, curY, curZ = cockpit.interfaces.stage_mover.get_position()
         # Move to a new Z position, and wait until we arrive.
-        cockpit.interfaces.stage_mover.goToZ(curZ + 5, shouldBlock=True)
+        cockpit.interfaces.stage_mover.go_to_z(curZ + 5, should_block=True)
         # Move to a new XY position.
         # Note: the goToXY function expects a "tuple" for the position,
         # hence the extra parentheses (i.e. "goToXY(x, y)" is invalid;
         # "goToXY((x, y))" is correct).
-        cockpit.interfaces.stage_mover.goToXY(
-            (curX + 50, curY - 50), shouldBlock=True
+        cockpit.interfaces.stage_mover.go_to_xy(
+            (curX + 50, curY - 50), should_block=True
         )
 
         # Get the device responsible for the dichroics and light sources

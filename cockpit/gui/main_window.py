@@ -67,6 +67,7 @@ import wx.adv
 import cockpit.experiment.experiment
 import cockpit.gui
 import cockpit.gui.file_viewer_window
+import cockpit.gui.gui_utils
 import cockpit.interfaces.channels
 import cockpit.util.user_config
 from cockpit import depot, events
@@ -115,14 +116,14 @@ class MainWindowPanel(wx.Panel):
         # Snap image button
         snapButton = wx.Button(self, wx.ID_ANY, "Snap\nimage")
         snapButton.Bind(
-            wx.EVT_BUTTON, lambda evt: wx.GetApp().Imager.takeImage()
+            wx.EVT_BUTTON, lambda evt: wx.GetApp().Imager.take_image()
         )
         buttonSizer.Add(snapButton, 1, wx.EXPAND)
 
         # Video mode button
         videoButton = wx.ToggleButton(self, wx.ID_ANY, "Live")
         videoButton.Bind(
-            wx.EVT_TOGGLEBUTTON, lambda evt: wx.GetApp().Imager.videoMode()
+            wx.EVT_TOGGLEBUTTON, lambda evt: wx.GetApp().Imager.video_mode()
         )
         events.subscribe(
             cockpit.events.VIDEO_MODE_TOGGLE,
@@ -178,7 +179,7 @@ class MainWindowPanel(wx.Panel):
             flag=wx.LEFT,
             border=2,
         )
-        ignoreThings.extend(wx.GetApp().Objectives.GetHandlers())
+        ignoreThings.extend(wx.GetApp().Objectives.get_handlers())
 
         # Make the UI elements for the cameras.
         rowSizer.Add(main_panels.CameraControlsPanel(self))
@@ -201,7 +202,7 @@ class MainWindowPanel(wx.Panel):
             if wx.GetApp().Depot.getHandler(thing, depot.CAMERA):
                 # Camera UIs already drawn.
                 continue
-            item = thing.makeUI(self)
+            item = thing.make_ui(self)
             if item is not None:
                 itemsizer = wx.BoxSizer(wx.VERTICAL)
                 itemsizer.Add(
@@ -252,9 +253,9 @@ class MainWindowPanel(wx.Panel):
             wx.GetApp().Depot.getHandlersOfType(depot.CAMERA),
             key=lambda c: c.name,
         )
-        roi = active.getROI()
+        roi = active.get_roi()
         for camera in cameras:
-            if camera.isEnabled and (camera.name is not camName):
+            if camera.is_enabled and (camera.name is not camName):
                 # another active camera camera so ask.
                 title = "Apply to other Cameras?"
                 msg = (
@@ -264,11 +265,11 @@ class MainWindowPanel(wx.Panel):
                 )
                 if not asked:
                     asked = True
-                    if cockpit.gui.guiUtils.getUserPermission(msg, title):
+                    if cockpit.gui.gui_utils.getUserPermission(msg, title):
                         # update ROI on this camera.
                         update = True
                 if update:
-                    camera.setROI(roi)
+                    camera.set_roi(roi)
         self.updateROI = False
 
     def onViewLastFile(self, event=None):
@@ -317,7 +318,7 @@ class EditMenu(wx.Menu):
         self.Bind(wx.EVT_MENU, self.OnResetUserConfig, menu_item)
 
     def OnResetUserConfig(self, evt: wx.CommandEvent) -> None:
-        cockpit.util.user_config.clearAllValues()
+        cockpit.util.user_config.clear_all_values()
 
 
 class ChannelsMenu(wx.Menu):
@@ -334,7 +335,7 @@ class ChannelsMenu(wx.Menu):
             self.Bind(wx.EVT_MENU, method, menu_item)
         self.AppendSeparator()
         self._n_control_items = len(control_items) + 1  # +1 for the separator
-        for name in wx.GetApp().Channels.Names:
+        for name in wx.GetApp().Channels.names:
             self.AddChannelItem(name)
 
         wx.GetApp().Channels.Bind(
@@ -391,22 +392,22 @@ class ChannelsMenu(wx.Menu):
         if not name:
             return
 
-        if name in wx.GetApp().Channels.Names:
+        if name in wx.GetApp().Channels.names:
             answer = wx.MessageBox(
                 'There is already a channel named "%s".' " Replace it?" % name,
                 caption="Channel already exists",
                 style=wx.YES_NO,
             )
             if answer == wx.YES:
-                channel = cockpit.interfaces.channels.CurrentChannel()
-                wx.GetApp().Channels.Change(name, channel)
+                channel = cockpit.interfaces.channels.current_channel()
+                wx.GetApp().Channels.change(name, channel)
         else:
-            channel = cockpit.interfaces.channels.CurrentChannel()
-            wx.GetApp().Channels.Add(name, channel)
+            channel = cockpit.interfaces.channels.current_channel()
+            wx.GetApp().Channels.add(name, channel)
 
     def OnRemoveChannel(self, event: wx.CommandEvent) -> None:
         """Remove one channel."""
-        if not wx.GetApp().Channels.Names:
+        if not wx.GetApp().Channels.names:
             wx.MessageBox(
                 "There are no channels to be removed.",
                 caption="Failed to remove channel",
@@ -417,11 +418,11 @@ class ChannelsMenu(wx.Menu):
         name = wx.GetSingleChoice(
             "Choose channel to be removed:",
             caption="Remove a channel",
-            aChoices=wx.GetApp().Channels.Names,
+            aChoices=wx.GetApp().Channels.names,
         )
         if not name:
             return
-        wx.GetApp().Channels.Remove(name)
+        wx.GetApp().Channels.remove(name)
 
     def OnExportChannels(self, event: wx.CommandEvent) -> None:
         """Save all channels to a file."""
@@ -429,7 +430,7 @@ class ChannelsMenu(wx.Menu):
         if not filepath:
             return
         try:
-            cockpit.interfaces.channels.SaveToFile(
+            cockpit.interfaces.channels.save_to_file(
                 filepath, wx.GetApp().Channels
             )
         except:
@@ -441,11 +442,11 @@ class ChannelsMenu(wx.Menu):
         if not filepath:
             return
         try:
-            new_channels = cockpit.interfaces.channels.LoadFromFile(filepath)
+            new_channels = cockpit.interfaces.channels.load_from_file(filepath)
         except:
             cockpit.gui.ExceptionBox("Failed to read to '%s'" % filepath)
-        current_names = wx.GetApp().Channels.Names
-        duplicated = [n for n in new_channels.Names if n in current_names]
+        current_names = wx.GetApp().Channels.names
+        duplicated = [n for n in new_channels.names if n in current_names]
         if duplicated:
             answer = wx.MessageBox(
                 "The import will overwrite the following"
@@ -456,13 +457,13 @@ class ChannelsMenu(wx.Menu):
             )
             if answer != wx.YES:
                 return
-        wx.GetApp().Channels.Update(new_channels)
+        wx.GetApp().Channels.update(new_channels)
 
     def OnChannel(self, event: wx.CommandEvent) -> None:
         """Apply channel with same name as the menu item."""
         name = self.FindItemById(event.GetId()).ItemLabelText
-        channel = wx.GetApp().Channels.Get(name)
-        cockpit.interfaces.channels.ApplyChannel(channel)
+        channel = wx.GetApp().Channels.get(name)
+        cockpit.interfaces.channels.apply_channel(channel)
 
 
 class WindowsMenu(wx.Menu):
@@ -487,7 +488,7 @@ class WindowsMenu(wx.Menu):
         # handled by some sort of plugin system and not hardcoded).
         menu_item = self.Append(wx.ID_ANY, "Launch ValueLogViewer")
         self.Bind(wx.EVT_MENU, self.OnLaunchValueLogViewer, menu_item)
-        if not ValueLogger.getLogFiles():
+        if not ValueLogger.get_log_files():
             menu_item.Enable(False)
 
         # Add item to launch SIM Intensity profile (XXX: this should
@@ -590,7 +591,7 @@ class WindowsMenu(wx.Menu):
             window.SetPosition(wx.GetMousePosition())
 
     def OnLaunchValueLogViewer(self, event: wx.CommandEvent) -> None:
-        log_files = ValueLogger.getLogFiles()
+        log_files = ValueLogger.get_log_files()
         window = CSVPlotter(None)
         window.add_data_sources(log_files, defer_open=True)
         window.Show()

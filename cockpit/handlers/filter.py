@@ -62,16 +62,16 @@ class FilterHandler(device.DeviceHandler):
     def __init__(
         self,
         name,
-        groupName,
-        isEligibleForExperiments,
+        group_name,
+        is_eligible_for_experiments,
         callbacks,
         cameras,
         lights,
     ):
         super().__init__(
             name,
-            groupName,
-            isEligibleForExperiments,
+            group_name,
+            is_eligible_for_experiments,
             callbacks,
             depot.LIGHT_FILTER,
         )
@@ -100,7 +100,7 @@ class FilterHandler(device.DeviceHandler):
             wx.EVT_CHOICE,
             lambda evt: self.setFilter(self.filters[evt.Selection]),
         )
-        self.addWatch("lastFilter", self.setFromName)
+        self.add_watch("lastFilter", self.setFromName)
         self.ctrl.Bind(wx.EVT_WINDOW_DESTROY, self.OnSelectorDestroy)
         self.ctrl.SetSelection(self.ctrl.FindString(str(self.lastFilter)))
         return self.ctrl
@@ -109,10 +109,10 @@ class FilterHandler(device.DeviceHandler):
         self.ctrl.SetSelection(self.ctrl.FindString(str(name)))
 
     def OnSelectorDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.removeWatch("lastFilter", self.setFromName)
+        self.remove_watch("lastFilter", self.setFromName)
         event.Skip()
 
-    def makeUI(self, parent):
+    def make_ui(self, parent):
         panel = wx.Panel(parent)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         panel.Sizer.Add(wx.StaticText(panel, label=self.name))
@@ -131,7 +131,7 @@ class FilterHandler(device.DeviceHandler):
             if f.position == position:
                 return f
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def updateAfterMove(self, *args):
         # Accept *args so that can be called directly as a Pyro callback
         # or an event handler.
@@ -140,10 +140,10 @@ class FilterHandler(device.DeviceHandler):
         for camera in self.cameras:
             h = depot.getHandler(camera, depot.CAMERA)
             if h is not None:
-                h.updateFilter(self.lastFilter.label, self.lastFilter.value)
+                h.update_filter(self.lastFilter.label, self.lastFilter.value)
         # Excitation filters
         for h in self.lights:
             pass
 
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
         self.updateAfterMove()

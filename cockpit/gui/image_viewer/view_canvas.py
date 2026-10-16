@@ -588,7 +588,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
         self.haveInitedGL = True
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def clear(self, shouldDestroy=False):
         """Stop displaying anything.
 
@@ -675,7 +675,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         return (self.blackPoint, self.whitePoint)
 
     def onPaint(self, event):
-        """@cockpit.util.threads.callInMainThread."""
+        """@cockpit.util.threads.call_in_main_thread."""
         if not self.shouldDraw:
             return
 
@@ -741,7 +741,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         finally:
             self.painting = False
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def drawCrosshair(self):
         glColor3f(0, 255, 255)
         glVertexPointerf(
@@ -754,7 +754,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         )
         glDrawArrays(GL_LINES, 0, 4)
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def drawROI(self):
         if self.roi_drag:
             glColor3f(255, 0, 0)
@@ -904,7 +904,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 else:
                     roi = self.roi_drag
 
-                camera.setROI(roi)
+                camera.set_roi(roi)
                 events.publish(events.UPDATE_ROI, camera.name)
 
                 self.roi = roi
@@ -973,9 +973,9 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
     def onClearROI(self, event=None):
         camera = self.Parent.Parent.curCamera
-        sensor_shape = camera.getSensorShape()
+        sensor_shape = camera.get_sensor_shape()
         roi = (0, 0, sensor_shape[0], sensor_shape[1])
-        camera.setROI(roi)
+        camera.set_roi(roi)
         self.roi = roi
         self.definedROI = False
         events.publish(events.UPDATE_ROI, camera.name)
@@ -1166,13 +1166,13 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             # 12 intensity scaling (usually 1)
             # 13 energy conversion factor (usually 1)
 
-        cockpit.util.datadoc.writeDataAsMrcWithExthdr(
+        cockpit.util.datadoc.write_data_as_mrc_with_exthdr(
             self.imageData,
             path,
-            XYSize=xysize,
+            xy_size=xysize,
             wavelengths=wls,
             zxy0=xyzpos,
-            lensID=lensID,
-            intMetadataBuffers=intMetadataBuffers,
-            floatMetadataBuffers=floatMetadataBuffers,
+            lens_id=lensID,
+            int_metadata_buffers=intMetadataBuffers,
+            float_metadata_buffers=floatMetadataBuffers,
         )

@@ -57,7 +57,7 @@ from cockpit.experiment import experiment
 
 class ImmediateModeExperiment(experiment.Experiment):
     """Immediate-mode experiments are Experiments which perform actions via the
-    standard cockpit interactions (e.g. using interfaces.imager.takeImage())
+    standard cockpit interactions (e.g. using interfaces.imager.take_image())
     instead of by generating an ActionTable.
 
     As a result, they are easier to write, but may not benefit from speed
@@ -103,13 +103,13 @@ class ImmediateModeExperiment(experiment.Experiment):
         ## List of cameras. Assume our cameras are all active cameras.
         self.cameras = []
         for cam in depot.getHandlersOfType(depot.CAMERA):
-            if cam.getIsEnabled():
+            if cam.get_is_enabled():
                 self.cameras.append(cam)
 
         ## List of light sources. Assume our lights are all active lights.
         self.lights = []
         for light in depot.getHandlersOfType(depot.LIGHT_TOGGLE):
-            if light.getIsEnabled():
+            if light.get_is_enabled():
                 self.lights.append(light)
 
         self.allHandlers += self.cameras + self.lights

@@ -148,7 +148,7 @@ class MrcDataSaver:
         ## Maps camera handlers to total images kept per rep.
         self.cameraToImagesKeptPerRep = {}
         for i, camera in enumerate(self.cameras):
-            width, height = camera.getImageSize()
+            width, height = camera.get_image_size()
             self.maxWidth = max(width, self.maxWidth)
             self.maxHeight = max(height, self.maxHeight)
             self.cameraToIndex[camera] = i
@@ -229,8 +229,8 @@ class MrcDataSaver:
         ## Lock on writing to each file.
         self.fileLocks = [threading.Lock() for handle in self.filehandles]
 
-        pixelSizeXY = wx.GetApp().Objectives.GetPixelSize()
-        lensID = wx.GetApp().Objectives.GetCurrent().lens_ID
+        pixelSizeXY = wx.GetApp().Objectives.get_pixel_size()
+        lensID = wx.GetApp().Objectives.get_current().lens_ID
         # wavelength should always be on camera even if "0"
         wavelengths = [c.wavelength for c in self.cameras]
 
@@ -251,7 +251,7 @@ class MrcDataSaver:
                 numTimepoints = self.numReps - (
                     self.maxRepsPerFile * (len(self.filehandles) - 1)
                 )
-            header = cockpit.util.datadoc.makeHeaderForShape(
+            header = cockpit.util.datadoc.make_header_for_shape(
                 (
                     len(self.cameras),
                     numTimepoints,
@@ -314,7 +314,7 @@ class MrcDataSaver:
         # values for each wavelength).
         for i, handle in enumerate(self.filehandles):
             with self.fileLocks[i]:
-                cockpit.util.datadoc.writeMrcHeader(self.headers[i], handle)
+                cockpit.util.datadoc.write_mrc_header(self.headers[i], handle)
 
         ## List of how many images we've received, on a per-camera basis.
         self.imagesReceived = [0] * len(self.cameras)
@@ -427,7 +427,7 @@ class MrcDataSaver:
         # Then, close the filehandle.
         for i, handle in enumerate(self.filehandles):
             with self.fileLocks[i]:
-                cockpit.util.datadoc.writeMrcHeader(self.headers[i], handle)
+                cockpit.util.datadoc.write_mrc_header(self.headers[i], handle)
                 handle.close()
 
     def cleanup(self):
@@ -1176,7 +1176,7 @@ class ZarrDataSaver:
             shape_z = self._cameraToImagesKeptPerRep[camera] // len(
                 self._cameraToChannelIds[camera]
             )
-            shape_xy = camera.getImageSize()
+            shape_xy = camera.get_image_size()
             self.channelShapes.append((shape_z, shape_xy[0], shape_xy[1]))
 
         # We want to make sure that the shape in z is consistent across all
@@ -1245,7 +1245,7 @@ class ZarrDataSaver:
         """Receive new data, and add it to the queue."""
         self._imageQueue.put((camera, imageData, metadata))
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def _createZarrArray(self):
         self._zarrRoot = zarr.create_group(
             store=self.savePath,
@@ -1358,7 +1358,7 @@ class ZarrDataSaver:
             list(self._cameraToImagesKeptPerRep.keys()).index(camera)
         )
 
-    @cockpit.util.threads.callInMainThread
+    @cockpit.util.threads.call_in_main_thread
     def appendImageToZarr(self, timeIndex, channelIndex, zIndex, imageData):
         """
         Append a new image to the zarr array.

@@ -74,7 +74,7 @@ class LightPowerHandler(device.DeviceHandler):
     def __init__(
         self,
         name,
-        groupName,
+        group_name,
         callbacks,
         wavelength,
         curPower: float,
@@ -90,18 +90,18 @@ class LightPowerHandler(device.DeviceHandler):
             )
             raise e
 
-        super().__init__(name, groupName, False, callbacks, depot.LIGHT_POWER)
+        super().__init__(name, group_name, False, callbacks, depot.LIGHT_POWER)
         self.wavelength = wavelength
         self.lastPower = curPower
         self.powerSetPoint = None
         self.isEnabled = isEnabled
 
-    def finalizeInitialization(self):
-        super().finalizeInitialization()
+    def finalize_initialization(self):
+        super().finalize_initialization()
         self._applyUserConfig()
 
     def _applyUserConfig(self):
-        targetPower = cockpit.util.user_config.getValue(
+        targetPower = cockpit.util.user_config.get_value(
             self.name + "-lightPower", default=0.01
         )
         try:
@@ -124,11 +124,11 @@ class LightPowerHandler(device.DeviceHandler):
             # Invalid power; just ignore it.
             print("Invalid power for %s: %s" % (self.name, settings))
 
-    def setEnabled(self, isEnabled):
+    def set_enabled(self, isEnabled):
         """Toggle accessibility of the handler."""
         self.isEnabled = isEnabled
 
-    def getIsEnabled(self):
+    def get_is_enabled(self):
         """Return True iff we're currently enabled (i.e. GUI is active)."""
         return self.isEnabled
 
@@ -145,12 +145,12 @@ class LightPowerHandler(device.DeviceHandler):
             )
         self.callbacks["setPower"](power)
         self.powerSetPoint = power
-        cockpit.util.user_config.setValue(self.name + "-lightPower", power)
+        cockpit.util.user_config.set_value(self.name + "-lightPower", power)
 
     def getWavelength(self):
         """Simple getter."""
         return self.wavelength
 
-    def getSavefileInfo(self):
+    def get_savefile_info(self):
         """Experiments should include the laser power."""
         return "%s: %.1f" % (self.name, self.lastPower)

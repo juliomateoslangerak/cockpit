@@ -70,7 +70,7 @@ from cockpit.handlers.generic_positioner import GenericPositionerHandler
 class ExecutorHandler(DeviceHandler):
     """This handler is responsible for executing portions of experiments."""
 
-    def __init__(self, name, groupName, callbacks, dlines=None, alines=None):
+    def __init__(self, name, group_name, callbacks, dlines=None, alines=None):
         """Set up the executor handler.
 
         callbacks must include the following:
@@ -82,15 +82,15 @@ class ExecutorHandler(DeviceHandler):
 
         Args:
             name (str): Handler name.
-            groupName (str): Handler and device group name.
+            group_name (str): Handler and device group name.
             callbacks (dict): Callbacks, as above.
             dlines (int): Optional, number of digital lines.
             alines (int): Optional, number of analogue lines.
         """
         # Note that even though this device is directly involved in running
         # experiments, it is never itself a part of an experiment, so
-        # we pass False for isEligibleForExperiments here.
-        super().__init__(name, groupName, False, callbacks, depot.EXECUTOR)
+        # we pass False for is_eligible_for_experiments here.
+        super().__init__(name, group_name, False, callbacks, depot.EXECUTOR)
         # Base class contains empty dicts used by mixins so that methods like
         # getNumRunnableLines can be implemented here for all mixin combos. This
         # works just great, but is probably a horrible abuse of OOP. It might be
@@ -117,7 +117,7 @@ class ExecutorHandler(DeviceHandler):
             events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
         )
         events.subscribe(
-            events.CLEANUP_AFTER_EXPERIMENT, self.cleanupAfterExperiment
+            events.CLEANUP_AFTER_EXPERIMENT, self.cleanup_after_experiment
         )
 
     def examineActions(self, table):
@@ -256,11 +256,11 @@ class ExecutorHandler(DeviceHandler):
             if hasattr(c, "_onPrepareForExperiment"):
                 c._onPrepareForExperiment(self)
 
-    def cleanupAfterExperiment(self, isCleanupFinal=True):
+    def cleanup_after_experiment(self, is_cleanup_final=True):
         # See comments in onPrepareForExperiment
         for c in self.__class__.__mro__[1:]:
             if hasattr(c, "_cleanupAfterExperiment"):
-                c._cleanupAfterExperiment(self, isCleanupFinal)
+                c._cleanupAfterExperiment(self, is_cleanup_final)
 
 
 class DigitalMixin:
@@ -310,8 +310,8 @@ class DigitalMixin:
     def activeLights(self):
         return list(
             filter(
-                lambda h: h.deviceType == depot.LIGHT_TOGGLE
-                and h.getIsEnabled(),
+                lambda h: h.device_type == depot.LIGHT_TOGGLE
+                          and h.get_is_enabled(),
                 self.digitalClients,
             )
         )
@@ -320,7 +320,7 @@ class DigitalMixin:
     def activeCameras(self):
         return list(
             filter(
-                lambda h: h.deviceType == depot.CAMERA and h.getIsEnabled(),
+                lambda h: h.device_type == depot.CAMERA and h.get_is_enabled(),
                 self.digitalClients,
             )
         )
@@ -335,9 +335,9 @@ class DigitalMixin:
 
         # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
         exposureStartTime = [
-            cam.getTimeBetweenExposures()
+            cam.get_time_between_exposures()
             for cam in self.activeCameras
-            if cam.getShutteringMode() == ElectronicShutteringMode.ROLLING
+            if cam.get_shuttering_mode() == ElectronicShutteringMode.ROLLING
         ]
         exposureStartTime = max(exposureStartTime, default=0)
 
@@ -348,7 +348,7 @@ class DigitalMixin:
         ltpairs = []
         for light in self.activeLights:
             lline = 1 << self.digitalClients[light]
-            ltime = light.getExposureTime()
+            ltime = light.get_exposure_time()
             ltpairs.append((lline, ltime))
 
         # Sort by exposure time
@@ -378,10 +378,10 @@ class DigitalMixin:
         # If there is an ambient light enabled, extend exposure as
         # necessary (see issue #669).
         ambient = depot.getHandlerWithName("Ambient")
-        if ambient is not None and ambient.getIsEnabled():
-            t = ambient.getExposureTime()
+        if ambient is not None and ambient.get_is_enabled():
+            t = ambient.get_exposure_time()
             if t > seq[-1][0]:
-                seq.append((ambient.getExposureTime(), 0))
+                seq.append((ambient.get_exposure_time(), 0))
 
         # Switch all lights and cameras off.
         seq.append((seq[-1][0] + 1, 0))
@@ -460,7 +460,7 @@ class AnalogMixin:
 
 class AnalogLineHandler(GenericPositionerHandler):
     def __init__(
-        self, name, groupName, asource, line, offset, gain, movementTimeFunc
+        self, name, group_name, asource, line, offset, gain, movementTimeFunc
     ):
         """A type of GenericPositioner for analog outputs.
 
@@ -468,7 +468,7 @@ class AnalogLineHandler(GenericPositionerHandler):
         time, handler, float or int indexed:    time, handler, (index,
         wavelength or None or 'default')
         """
-        super().__init__(name, groupName, True, {})
+        super().__init__(name, group_name, True, {})
         # Indexed positions. Can be a dict if wavelength-independent, or
         # a mapping of wavelengths (as floats or ints) to lists of same length.
         self.positions = []
@@ -497,7 +497,7 @@ class AnalogLineHandler(GenericPositionerHandler):
             )
         else:
             self.callbacks["getMovementTime"] = lambda *args: (0, 0)
-        super().__init__(name, groupName, True, self.callbacks)
+        super().__init__(name, group_name, True, self.callbacks)
 
     def savePosition(self):
         self._savedPos = self.getPosition()
@@ -690,11 +690,11 @@ class SimpleExecutor(DeviceHandler):
     """A class for a handler that can perform actions in an experiment, but
     doesn't have any analogue or digital capabilities."""
 
-    def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
+    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
         super().__init__(
             name,
-            groupName,
-            isEligibleForExperiments,
+            group_name,
+            is_eligible_for_experiments,
             callbacks,
             depot.EXECUTOR,
         )
@@ -715,7 +715,7 @@ class SimpleExecutor(DeviceHandler):
     def getNumRunnableLines(self, table, index):
         """Return number of lines this handler can run."""
         count = 0
-        if not self.isEligibleForExperiments:
+        if not self.is_eligible_for_experiments:
             return 0
         for time, handler, parameter in table[index:]:
             if handler is not self:
@@ -743,10 +743,10 @@ class TriggerProxy(DeviceHandler):
 
 
 class DelegateTrigger(SimpleExecutor):
-    def __init__(self, name, groupName, isEligibleForExperiments, callbacks):
-        """def __init__(self, name, groupName, trigSource, trigLine,
+    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
+        """def __init__(self, name, group_name, trigSource, trig_line,
         examineActions, movementTime=0):."""
-        super().__init__(name, groupName, isEligibleForExperiments, callbacks)
+        super().__init__(name, group_name, is_eligible_for_experiments, callbacks)
         self._trigger = None
         self._triggerTime = 0
         self._responseTime = 0
@@ -761,7 +761,7 @@ class DelegateTrigger(SimpleExecutor):
         self._triggerTime = trigTime
         self._responseTime = responseTime
 
-    def addToggle(self, time, table):
+    def add_toggle(self, time, table):
         """Add a toggle event to the action table.
 
         Return time of last action, and response time before ready after

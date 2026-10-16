@@ -32,7 +32,7 @@ example:
 .. code:: ini
 
   [Testcam]
-  type: cockpit.devices.microscopeCamera.MicroscopeCamera
+  type: cockpit.devices.microscope_camera.MicroscopeCamera
   uri: PYRO:TestCamera@10.1.10.229:8000
 
 
@@ -88,7 +88,7 @@ For example, a 3 axis stage might have:
 
 .. code:: ini
 
-  type: cockpit.devices.microscopeDevice.MicroscopeStage
+  type: cockpit.devices.microscope_device.MicroscopeStage
   uri: PYRO:stage@localhost:8000
   x-axis-name: x
   y-axis-name: y
@@ -188,7 +188,7 @@ computer providing the executor you have a section along the lines of:
 .. code:: ini
 
   [dsp]
-  type: cockpit.devices.executorDevices.ExecutorDevice
+  type: cockpit.devices.executor_devices.ExecutorDevice
   uri: PYRO:redPitaya@192.168.0.20:8005
   dlines: 16
   alines: 2
@@ -208,7 +208,7 @@ wavelength, e.g.:
 .. code:: ini
 
   [SI polariser]
-  type: cockpit.devices.polarizationRotator.PolarizationDevice
+  type: cockpit.devices.polarization_rotator.PolarizationDevice
   analogSource: dsp
   analogLine: 1
   gain: 1618.171641791

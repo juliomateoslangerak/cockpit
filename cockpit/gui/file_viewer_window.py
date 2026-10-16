@@ -59,6 +59,6 @@ class FileViewer(image_sequence_viewer.ImageSequenceViewer):
 
     def __init__(self, filename, *args, **kwargs):
         doc = cockpit.util.datadoc.DataDoc(filename)
-        images = doc.imageArray
+        images = doc.image_array
 
         super().__init__(images, "Viewer for %s" % filename, *args, **kwargs)

@@ -66,7 +66,7 @@ class RotatorSweepExperiment(experiment.Experiment):
         for step in range(vSteps):
             # Move to next polarization rotator voltage.
             vTarget = vStart + step * dv
-            table.addAction(curTime, self.lineHandler, vTarget)
+            table.add_action(curTime, self.lineHandler, vTarget)
             curTime += dt
             # Image the sample.
             for cameras, lightTimePairs in self.exposureSettings:
@@ -75,7 +75,7 @@ class RotatorSweepExperiment(experiment.Experiment):
                 # are strictly ordered.
                 curTime += decimal.Decimal(".001")
             # Hold the rotator angle constant during the exposure.
-            table.addAction(curTime, self.lineHandler, vTarget)
+            table.add_action(curTime, self.lineHandler, vTarget)
             # Advance time slightly so all actions are sorted (e.g. we
             # don't try to change angle and phase in the same timestep).
             curTime += dt

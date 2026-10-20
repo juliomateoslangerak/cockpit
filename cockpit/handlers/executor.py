@@ -767,7 +767,7 @@ class DelegateTrigger(SimpleExecutor):
         Return time of last action, and response time before ready after
         trigger.
         """
-        dt = max(self._triggerTime, table.toggleTime)
-        table.addAction(time, self._trigger, True)
-        table.addAction(time + dt, self._trigger, False)
+        dt = max(self._triggerTime, table.toggle_time)
+        table.add_action(time, self._trigger, True)
+        table.add_action(time + dt, self._trigger, False)
         return time + dt, self._responseTime

@@ -195,7 +195,7 @@ class ResponseMapExperiment(
             self.table.sort()
             self.examineActions()
             self.table.sort()
-            self.table.enforcePositiveTimepoints()
+            self.table.enforce_positive_timepoints()
             self.lastMinuteActions()
             self.doneReceivingThread = threading.Thread(target=self.waiter)
             self.doneReceivingThread.start()

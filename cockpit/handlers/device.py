@@ -280,6 +280,6 @@ class DeviceHandler:
         Return time of last action, and response time before ready after
         trigger.
         """
-        table.addAction(time, self, True)
-        table.addAction(time + table.toggleTime, self, False)
-        return time + table.toggleTime, 0
+        table.add_action(time, self, True)
+        table.add_action(time + table.toggle_time, self, False)
+        return time + table.toggle_time, 0

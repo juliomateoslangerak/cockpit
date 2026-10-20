@@ -60,7 +60,7 @@ class ActionTable:
     performed.
     """
 
-    toggleTime = decimal.Decimal(".1")
+    toggle_time = decimal.Decimal(".1")
 
     def __init__(self):
         # List of (time, handler, parameter) tuples indicating what actions
@@ -69,20 +69,20 @@ class ActionTable:
         # Time of our first action.
         # \todo How do we handle the removal of actions rendering this invalid?
         # For now, we don't.
-        self.firstActionTime = None
+        self.first_action_time = None
         # Time of our last action.
-        self.lastActionTime = None
+        self.last_action_time = None
 
-    def addAction(self, time, handler, parameter):
+    def add_action(self, time, handler, parameter):
         """Insert an element into self.actions."""
         self.actions.append((time, handler, parameter))
-        if self.firstActionTime is None or self.firstActionTime > time:
-            self.firstActionTime = time
-        if self.lastActionTime is None or self.lastActionTime < time:
-            self.lastActionTime = time
+        if self.first_action_time is None or self.first_action_time > time:
+            self.first_action_time = time
+        if self.last_action_time is None or self.last_action_time < time:
+            self.last_action_time = time
         return time
 
-    def addToggle(self, time, handler):
+    def add_toggle(self, time, handler):
         """Like addDigital, but rapidly toggle the output on and then off.
 
         Return the time after the toggle is completed.
@@ -90,14 +90,14 @@ class ActionTable:
         time, dt = handler.add_toggle(time, self)
         return time
 
-    def getLastActionFor(self, handler):
+    def get_last_action_for(self, handler):
         """Retrieve the last time and action we performed with the specified
         handler.
 
         NB assumes that self.actions has been sorted.
         """
-        for time, altHandler, parameter in reversed(self.actions):
-            if altHandler is handler:
+        for time, alt_handler, parameter in reversed(self.actions):
+            if alt_handler is handler:
                 return time, parameter
         return None, None
 
@@ -110,7 +110,7 @@ class ActionTable:
         # First element in each action is the timestamp.
         self.actions.sort(key=lambda a: a[0])
 
-    def clearBadEntries(self):
+    def clear_bad_entries(self):
         """Clear invalid entries from the list.
 
         Sometimes when the table is modified, an entry needs to be deleted
@@ -122,7 +122,7 @@ class ActionTable:
             if action is None:
                 del self.actions[i]
 
-    def enforcePositiveTimepoints(self):
+    def enforce_positive_timepoints(self):
         """Go through the table and ensure all timepoints are positive.
 
         NB assumes the table has been sorted.
@@ -137,10 +137,10 @@ class ActionTable:
                 self.actions[i][1],
                 self.actions[i][2],
             )
-        self.firstActionTime += delta
-        self.lastActionTime += delta
+        self.first_action_time += delta
+        self.last_action_time += delta
 
-    def shiftActionsBack(self, markTime, delta):
+    def shift_actions_back(self, markTime, delta):
         """Move all actions after the specified time back by the given offset.
 
         This makes room for some new action.
@@ -148,25 +148,25 @@ class ActionTable:
         for i, (actionTime, handler, action) in enumerate(self.actions):
             if actionTime >= markTime:
                 self.actions[i] = (actionTime + delta, handler, action)
-        if self.firstActionTime > markTime:
-            self.firstActionTime += delta
-        if self.lastActionTime > markTime:
-            self.lastActionTime += delta
+        if self.first_action_time > markTime:
+            self.first_action_time += delta
+        if self.last_action_time > markTime:
+            self.last_action_time += delta
 
-    def getFirstAndLastActionTimes(self, canUseCache=True):
+    def get_first_and_last_action_times(self, can_use_cache=True):
         """Return the time of the first and last action we have.
 
         Use our cached values if allowed.
         """
-        if canUseCache:
-            return self.firstActionTime, self.lastActionTime
-        firstTime = lastTime = None
-        for actionTime, handler, action in self.actions:
-            if firstTime is None:
-                firstTime = lastTime = actionTime
-            firstTime = min(firstTime, actionTime)
-            lastTime = max(lastTime, actionTime)
-        return firstTime, lastTime
+        if can_use_cache:
+            return self.first_action_time, self.last_action_time
+        first_time = last_time = None
+        for action_time, handler, action in self.actions:
+            if first_time is None:
+                first_time = last_time = action_time
+            first_time = min(first_time, action_time)
+            last_time = max(last_time, action_time)
+        return first_time, last_time
 
     def __getitem__(self, index):
         """Access an element in the table."""
@@ -180,7 +180,7 @@ class ActionTable:
         """Get the length of the table."""
         return len(self.actions)
 
-    def prettyString(self, handlers=[]):
+    def pretty_string(self, handlers=[]):
         """Generate pretty text for our table.
 
         Optionally only for the specified handler(s).
@@ -202,4 +202,4 @@ class ActionTable:
 
     def __repr__(self):
         """Cast to a string -- generate a textual description of our actions."""
-        return self.prettyString()
+        return self.pretty_string()

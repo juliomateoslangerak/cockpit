@@ -735,10 +735,10 @@ class Experiment:
                     # Center the light exposure.
                     timeSlop = maxExposureTime - exposureTime
                     offset = timeSlop / 2
-                table.addAction(
+                table.add_action(
                     exposureEndTime - exposureTime - offset, light, True
                 )
-                table.addAction(exposureEndTime - offset, light, False)
+                table.add_action(exposureEndTime - offset, light, False)
             # Record this exposure time.
             if exposureTime not in self.lightToExposureTime[light]:
                 self.lightToExposureTime[light].add(exposureTime)
@@ -754,12 +754,12 @@ class Experiment:
             if mode == cockpit.handlers.camera.TRIGGER_AFTER:
                 table.add_toggle(exposureEndTime, camera)
             elif mode == cockpit.handlers.camera.TRIGGER_DURATION:
-                table.addAction(exposureStartTime, camera, True)
-                table.addAction(exposureEndTime, camera, False)
+                table.add_action(exposureStartTime, camera, True)
+                table.add_action(exposureEndTime, camera, False)
             elif mode == cockpit.handlers.camera.TRIGGER_BEFORE:
                 table.add_toggle(exposureStartTime, camera)
             elif mode == cockpit.handlers.camera.TRIGGER_SOFT:
-                table.addAction(exposureStartTime, camera, True)
+                table.add_action(exposureStartTime, camera, True)
             else:
                 raise Exception("%s has no trigger mode set." % camera)
             self.cameraToImageCount[camera] += 1
@@ -801,8 +801,8 @@ class Experiment:
             if exposureMode == cockpit.handlers.camera.TRIGGER_AFTER:
                 table.add_toggle(exposureStart + minExposureTime, camera)
             elif exposureMode == cockpit.handlers.camera.TRIGGER_DURATION:
-                table.addAction(exposureStart, camera, True)
-                table.addAction(exposureStart + minExposureTime, camera, False)
+                table.add_action(exposureStart, camera, True)
+                table.add_action(exposureStart + minExposureTime, camera, False)
             else:  # TRIGGER_BEFORE case
                 table.add_toggle(exposureStart, camera)
             resetEndTime = max(resetEndTime, exposureStart + minExposureTime)
@@ -827,7 +827,7 @@ class Experiment:
         - For TRIGGER_BEFORE cameras (non-frame-transfer external trigger),
           the camera must wait (camera readout time + camera exposure time)
           after the last trigger event before it can be triggered again."""
-        lastUseTime, action = table.getLastActionFor(camera)
+        lastUseTime, action = table.get_last_action_for(camera)
         if lastUseTime is None:
             # No actions yet; assume camera is ready at the start of the
             # experiment.

@@ -224,19 +224,19 @@ class BoulderSLM(device.Device):
             # How long will the triggers take?
             # Time between triggers must be > table.toggleTime.
             ## Shift later table entries to allow for triggers and settling.
-            table.shiftActionsBack(time, dt)
+            table.shift_actions_back(time, dt)
             for trig in range(num_triggers):
-                t = table.addToggle(t, triggerHandler)
+                t = table.add_toggle(t, triggerHandler)
                 t += table.toggleTime
             """
             for trig in range(num_triggers):
                 t = table.add_toggle(t, self.handler)
-                t += table.toggleTime
+                t += table.toggle_time
 
             last_index += num_triggers
             if last_index >= sequence_length:
                 last_index = last_index % sequence_length
-        table.clearBadEntries()
+        table.clear_bad_entries()
         # Wait until SLM has finished generating and loading patterns.
         self.wait(async_result, "SLM is generating pattern sequence.")
         # Store the parameters used to generate the sequence.

@@ -261,17 +261,17 @@ class SIExperiment(experiment.Experiment):
         # Increment the time slightly after each "motion" so that actions are well-ordered.
         if self.angleHandler is not None:
             theta = self.angleHandler.indexedPosition(0)
-            table.addAction(curTime, self.angleHandler, theta)
+            table.add_action(curTime, self.angleHandler, theta)
             curTime += decimal.Decimal("1e-6")
         if self.phaseHandler is not None:
-            table.addAction(curTime, self.phaseHandler, 0)
+            table.add_action(curTime, self.phaseHandler, 0)
             curTime += decimal.Decimal("1")
-        table.addAction(curTime, self.zPositioner, self.zStart)
+        table.add_action(curTime, self.zPositioner, self.zStart)
         curTime += decimal.Decimal("1")
 
         if self.slmHandler is not None:
             # Add a first trigger of the SLM to get first new image.
-            table.addAction(curTime, self.slmHandler, 0)
+            table.add_action(curTime, self.slmHandler, 0)
             # Wait a few ms for any necessary SLM triggers.
             curTime = decimal.Decimal("5e-3")
 
@@ -284,7 +284,7 @@ class SIExperiment(experiment.Experiment):
             # Ensure we truly are doing this after all exposure events are done.
             curTime = max(
                 curTime,
-                table.getFirstAndLastActionTimes()[1]
+                table.get_first_and_last_action_times()[1]
                 + decimal.Decimal("1e-6"),
             )
             if angle != prevAngle and prevAngle is not None:
@@ -295,7 +295,7 @@ class SIExperiment(experiment.Experiment):
                         stabilizationTime,
                     ) = self.angleHandler.getMovementTime(prevAngle, theta)
                     # Move to the next position.
-                    table.addAction(
+                    table.add_action(
                         curTime + motionTime, self.angleHandler, theta
                     )
                     delayBeforeImaging = max(
@@ -312,9 +312,9 @@ class SIExperiment(experiment.Experiment):
                         stabilizationTime,
                     ) = self.phaseHandler.getMovementTime(prevPhase, phase)
                     # Hold flat.
-                    table.addAction(curTime, self.phaseHandler, prevPhase)
+                    table.add_action(curTime, self.phaseHandler, prevPhase)
                     # Move to the next position.
-                    table.addAction(
+                    table.add_action(
                         curTime + motionTime, self.phaseHandler, phase
                     )
                     delayBeforeImaging = max(
@@ -331,9 +331,9 @@ class SIExperiment(experiment.Experiment):
                         stabilizationTime,
                     ) = self.zPositioner.getMovementTime(prevZ, z)
                     # Hold flat.
-                    table.addAction(curTime, self.zPositioner, prevZ)
+                    table.add_action(curTime, self.zPositioner, prevZ)
                     # Move to the next position.
-                    table.addAction(curTime + motionTime, self.zPositioner, z)
+                    table.add_action(curTime + motionTime, self.zPositioner, z)
                     delayBeforeImaging = max(
                         delayBeforeImaging, motionTime + stabilizationTime
                     )
@@ -358,15 +358,15 @@ class SIExperiment(experiment.Experiment):
 
         # Hold Z, angle, and phase steady through to the end, then ramp down
         # to 0 to prep for the next experiment.
-        table.addAction(curTime, self.zPositioner, prevZ)
+        table.add_action(curTime, self.zPositioner, prevZ)
         motionTime, stabilizationTime = self.zPositioner.getMovementTime(
             self.zHeight, self.zStart
         )
-        table.addAction(curTime + motionTime, self.zPositioner, self.zStart)
+        table.add_action(curTime + motionTime, self.zPositioner, self.zStart)
         finalWaitTime = motionTime + stabilizationTime
 
         # Ramp down Z
-        table.addAction(curTime + finalWaitTime, self.zPositioner, self.zStart)
+        table.add_action(curTime + finalWaitTime, self.zPositioner, self.zStart)
 
         if self.angleHandler is not None:
             # Ramp down angle
@@ -374,25 +374,25 @@ class SIExperiment(experiment.Experiment):
             motionTime, stabilizationTime = self.angleHandler.getMovementTime(
                 prevAngle, theta
             )
-            table.addAction(curTime + motionTime, self.angleHandler, theta)
+            table.add_action(curTime + motionTime, self.angleHandler, theta)
             finalWaitTime = max(finalWaitTime, motionTime + stabilizationTime)
         if self.phaseHandler is not None:
             # Ramp down phase
-            table.addAction(curTime, self.phaseHandler, prevPhase)
+            table.add_action(curTime, self.phaseHandler, prevPhase)
             motionTime, stabilizationTime = self.phaseHandler.getMovementTime(
                 prevPhase, 0
             )
-            table.addAction(curTime + motionTime, self.phaseHandler, 0)
+            table.add_action(curTime + motionTime, self.phaseHandler, 0)
             finalWaitTime = max(finalWaitTime, motionTime + stabilizationTime)
         if self.polarizerHandler is not None:
             # Return to idle voltage.
-            table.addAction(curTime, self.polarizerHandler, (0, "default"))
+            table.add_action(curTime, self.polarizerHandler, (0, "default"))
             finalWaitTime = finalWaitTime + decimal.Decimal(1e-6)
 
         # Set SLM back to 0th image ready for next measurement in timelapse or multi-site.
         if self.slmHandler is not None:
             # Toggle the slmHandler's digital line handler to advance one frame.
-            table.addToggle(curTime, self.slmHandler)
+            table.add_toggle(curTime, self.slmHandler)
 
         return table
 
@@ -434,10 +434,10 @@ class SIExperiment(experiment.Experiment):
             # i)   track state in some attribute on Experiment
             # ii)  pass state between to this function and back again;
             # iii) have handlers track state as table is built.
-            lastpos = table.getLastActionFor(self.polarizerHandler)[1]
+            lastpos = table.get_last_action_for(self.polarizerHandler)[1]
             if lastpos is None:
                 lastpos = 0
-            table.addAction(
+            table.add_action(
                 curTime, self.polarizerHandler, (angle, longestWavelength)
             )
             dt = decimal.Decimal(
@@ -447,7 +447,7 @@ class SIExperiment(experiment.Experiment):
         # SLM trigger
         if self.slmHandler is not None:
             ## Add SLM event ot set pattern for phase, angle and longestWavelength.
-            table.addAction(
+            table.add_action(
                 curTime, self.slmHandler, (angle, phase, longestWavelength)
             )
             delay = max(delay, self.slmHandler.getMovementTime())

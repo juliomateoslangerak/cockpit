@@ -327,7 +327,7 @@ class MosaicCommon:
 
         glBegin(GL_LINE_LOOP)
         # Draw the box.
-        cams = wx.GetApp().Depot.getActiveCameras()
+        cams = wx.GetApp().Depot.get_active_cameras()
         # if there is a camera us its real pixel count
         if len(cams) > 0:
             pixel_size = wx.GetApp().Objectives.get_pixel_size()
@@ -862,7 +862,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
             if self.shouldReconfigure:
                 #  Check that camera is valid
-                active = wx.GetApp().Depot.getActiveCameras()
+                active = wx.GetApp().Depot.get_active_cameras()
                 if len(active) == 0:
                     self.shouldContinue.clear()
                     sys.stderr.write("Mosaic stopping: no active cameras.\n")
@@ -975,7 +975,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         camera = self.camera
         if camera is None or not camera.get_is_enabled():
             # Select the first active camera.
-            for cam in wx.GetApp().Depot.getHandlersOfType(depot.CAMERA):
+            for cam in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA):
                 if cam.get_is_enabled():
                     camera = cam
                     break
@@ -1297,7 +1297,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             action (callable): Function to call with the selected camera as a
                 parameter.
         """
-        cameras = wx.GetApp().Depot.getActiveCameras()
+        cameras = wx.GetApp().Depot.get_active_cameras()
         if len(cameras) == 0:
             wx.MessageBox(
                 "Please enable a camera to run a mosaic.",
@@ -1547,7 +1547,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # Scan each site in Z to get perfect focus. Look up/down +- 1 micron,
         # and pick the Z altitude with the brightest image.
         # HACK: use the first active camera we find.
-        cameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+        cameras = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
         camera = None
         for alt in cameras:
             if alt.get_is_enabled():

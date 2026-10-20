@@ -53,7 +53,7 @@ class Listener:
         By default we set a short timeout of 5s so that we find out fairly
         quickly if something went wrong.
         """
-        server = depot.getHandlersOfType(depot.SERVER)[0]
+        server = depot.get_handlers_of_type(depot.SERVER)[0]
         if self._listening:
             server.unregister(self._callback)
         if callback:
@@ -70,7 +70,7 @@ class Listener:
         if not self._listening:
             # Nothing to do.
             return
-        server = depot.getHandlersOfType(depot.SERVER)[0]
+        server = depot.get_handlers_of_type(depot.SERVER)[0]
         server.unregister(self._callback)
         try:
             self._proxy.receiveClient(None)

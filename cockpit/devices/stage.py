@@ -61,7 +61,7 @@ class SimplePiezo(Device):
     def get_handlers(self):
         asource = self.config.get("analogsource", None)
         aline = self.config.get("analogline", None)
-        a_handler = depot.getHandler(asource, depot.EXECUTOR)
+        a_handler = depot.get_handler(asource, depot.EXECUTOR)
         if a_handler is None:
             raise Exception("No control source.")
         axis = AXIS_MAP[self.config.get("axis", 2)]

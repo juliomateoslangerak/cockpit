@@ -96,7 +96,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
     # rep, etc.).
     def executeRep(self, repNum):
         # Get all light sources that the microscope has.
-        allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         # getHandlersOfType returns an unordered set datatype. If we want to
         # index into allLights, we need to convert it to a list first.
         allLights = list(allLights)
@@ -104,13 +104,13 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         for light in allLights:
             print(light.name)
         # Get all power controls for light sources.
-        allLightPowers = depot.getHandlersOfType(depot.LIGHT_POWER)
+        allLightPowers = depot.get_handlers_of_type(depot.LIGHT_POWER)
         # Get all light source filters.
-        allLightFilters = depot.getHandlersOfType(depot.LIGHT_FILTER)
+        allLightFilters = depot.get_handlers_of_type(depot.LIGHT_FILTER)
 
         # Get all camera handlers that the microscope has, and filter it
         # down to the ones that are currently active.
-        allCameras = depot.getHandlersOfType(depot.CAMERA)
+        allCameras = depot.get_handlers_of_type(depot.CAMERA)
         # Create a new empty list.
         activeCams = []
         for camera in allCameras:
@@ -119,10 +119,10 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
                 activeCams.append(camera)
 
         # Get a specific light.
-        led650 = depot.getHandlerWithName("650 LED")
+        led650 = depot.get_handler_with_name("650 LED")
 
         # Get a specific light's power control (ditto).
-        led650power = depot.getHandlerWithName("650 LED power")
+        led650power = depot.get_handler_with_name("650 LED power")
 
         # Set the output power to use for this light source, when it is active.
         led650power.setPower(2.5)
@@ -139,7 +139,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Get another light source. The "\n" in the name is a newline, which
         # was inserted (when this light source handler was created) to make
         # the light control button look nice.
-        laser488 = depot.getHandlerWithName("488\nlight")
+        laser488 = depot.get_handler_with_name("488\nlight")
 
         # Set this light source to be enabled when we take images.
         # Note: for lasers, an AOM in the laser box that acts as a light

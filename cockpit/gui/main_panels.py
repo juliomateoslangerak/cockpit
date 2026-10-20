@@ -143,13 +143,13 @@ class LightControlsPanel(wx.Panel):
         self.Sizer.Add(sz)
 
         lightToggles = sorted(
-            depot.getHandlersOfType(depot.LIGHT_TOGGLE),
+            depot.get_handlers_of_type(depot.LIGHT_TOGGLE),
             key=lambda l: l.wavelength,
         )
-        lightPowers = depot.getHandlersOfType(depot.LIGHT_POWER)
+        lightPowers = depot.get_handlers_of_type(depot.LIGHT_POWER)
         lightFilters = list(
             filter(
-                lambda f: f.lights, depot.getHandlersOfType(depot.LIGHT_FILTER)
+                lambda f: f.lights, depot.get_handlers_of_type(depot.LIGHT_FILTER)
             )
         )
         self.panels = {}
@@ -237,7 +237,7 @@ class CameraControlsPanel(wx.Panel):
         self.Sizer.Add(sz)
 
         cameras = sorted(
-            depot.getHandlersOfType(depot.CAMERA), key=lambda c: c.name
+            depot.get_handlers_of_type(depot.CAMERA), key=lambda c: c.name
         )
 
         self.panels = {}
@@ -302,7 +302,7 @@ class FilterControls(wx.Panel):
         self.Sizer.Add(subpanel, 1, wx.EXPAND)
         subpanel.Sizer = wx.WrapSizer(orient=wx.VERTICAL)
 
-        filters = depot.getHandlersOfType(depot.LIGHT_FILTER)
+        filters = depot.get_handlers_of_type(depot.LIGHT_FILTER)
         if not filters:
             self.Hide()
             return

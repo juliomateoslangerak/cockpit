@@ -166,7 +166,7 @@ class DrawerHandler(device.DeviceHandler):
     def changeDrawer(self, newSetting: DrawerSettings) -> None:
         """Set dye and wavelength on each camera, and update our UI."""
         for cname in newSetting.cameraNames:
-            handler = depot.getHandler(cname, depot.CAMERA)
+            handler = depot.get_handler(cname, depot.CAMERA)
             handler.update_filter(
                 newSetting.cameraToDye[cname],
                 newSetting.cameraToWavelength[cname],

@@ -47,7 +47,7 @@ class SimpleLight(cockpit.devices.device.Device):
         trigsource = self.config.get("triggersource", None)
         trigline = self.config.get("triggerline", None)
         if trigsource:
-            trighandler = cockpit.depot.getHandler(
+            trighandler = cockpit.depot.get_handler(
                 trigsource, cockpit.depot.EXECUTOR
             )
         else:

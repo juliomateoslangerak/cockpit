@@ -169,7 +169,7 @@ class StageMover:
 
     def __init__(self):
         """Maps axis to the handlers for that axis, sorted by their range of motion."""
-        self.axis_to_handlers = depot.getSortedStageMovers()
+        self.axis_to_handlers = depot.get_sorted_stage_movers()
         if set(self.axis_to_handlers.keys()) != {0, 1, 2}:
             raise ValueError("stage mover requires 3 axis: X, Y, and Z")
 
@@ -201,7 +201,7 @@ class StageMover:
             # cockpit requirements that all axis have the same number
             # of handlers (see comments on issue #413).
             for handler in set(self.axis_to_handlers[axis]):
-                handler_limits = handler.getHardLimits()
+                handler_limits = handler.get_hard_limits()
                 lower += handler_limits[0]
                 upper += handler_limits[1]
             hard_limits[axis] = (lower, upper)
@@ -219,7 +219,7 @@ class StageMover:
         for stage_index in range(self.n_stages):
             default_step_sizes = []
             for axis in (0, 1, 2):
-                limits = self.axis_to_handlers[axis][stage_index].getHardLimits()
+                limits = self.axis_to_handlers[axis][stage_index].get_hard_limits()
                 step_size = sensible_previous_step_size(
                     (limits[1] - limits[0]) / 100.0
                 )
@@ -409,7 +409,7 @@ def recenter_fine_motion():
             # Assume that the fine-motion devices want to be in the center
             # of their ranges.
             cur_position = handler.getPosition()
-            safeties = handler.getHardLimits()
+            safeties = handler.get_hard_limits()
             target = (safeties[1] - safeties[0]) / 2 + safeties[0]
             handler.moveAbsolute(target)
             total_delta += target - cur_position
@@ -594,7 +594,7 @@ def get_hard_limits() -> StageLimits:
 
 def get_individual_hard_limits(axis):
     """Returns a list of all hard motion limits for the given axis."""
-    return [handler.getHardLimits() for handler in mover.axis_to_handlers[axis]]
+    return [handler.get_hard_limits() for handler in mover.axis_to_handlers[axis]]
 
 
 def get_soft_limits_for_axis(axis):

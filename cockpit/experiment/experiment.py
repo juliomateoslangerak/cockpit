@@ -360,7 +360,7 @@ class Experiment:
         # anything but the innermost Z mover is selected. Needs a proper fix.
         if (
             cockpit.interfaces.stage_mover.mover.cur_handler_index
-            < len(depot.getSortedStageMovers()[2]) - 1
+            < len(depot.get_sorted_stage_movers()[2]) - 1
         ):
             wx.MessageBox("Wrong axis mover selected.")
             raise Exception("Wrong axis mover selected.")
@@ -379,7 +379,7 @@ class Experiment:
     def examineActions(self):
         """Allow devices to examine the ActionTable we will be running, and
         modify it if necessary."""
-        for handler in depot.getHandlersOfType(depot.EXECUTOR):
+        for handler in depot.get_handlers_of_type(depot.EXECUTOR):
             handler.examineActions(self.table)
 
     def lastMinuteActions(self):
@@ -405,7 +405,7 @@ class Experiment:
         _logger.info("Experiment.execute started.")
         # Iteratively find the ExperimentExecutor that can tackle the largest
         # portion of self.table, have them run it, and wait for them to finish.
-        executors = depot.getHandlersOfType(depot.EXECUTOR)
+        executors = depot.get_handlers_of_type(depot.EXECUTOR)
         self.shouldAbort = False
         for rep in range(self.numReps):
             startTime = time.time()
@@ -557,7 +557,7 @@ class Experiment:
         # Include light filters for our active lights, even though they aren't
         # a part of self.allHandlers.
         typeToHandlers[depot.LIGHT_FILTER] = []
-        filters = depot.getHandlersOfType(depot.LIGHT_FILTER)
+        filters = depot.get_handlers_of_type(depot.LIGHT_FILTER)
         for light in self.lights:
             wavelength = light.getWavelength()
             for filterHandler in filters:
@@ -607,7 +607,7 @@ class Experiment:
                     # Record the exposure duration(s) of the light source.
                     # find associated power entries (if they have them)
 
-                    for hand in depot.getHandlersInGroup(handler.group_name):
+                    for hand in depot.get_handlers_in_group(handler.group_name):
                         if hand.device_type == depot.LIGHT_POWER:
                             text += " %3.3f mW" % hand.lastPower
                 if text:

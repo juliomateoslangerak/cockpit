@@ -102,13 +102,13 @@ class ImmediateModeExperiment(experiment.Experiment):
 
         ## List of cameras. Assume our cameras are all active cameras.
         self.cameras = []
-        for cam in depot.getHandlersOfType(depot.CAMERA):
+        for cam in depot.get_handlers_of_type(depot.CAMERA):
             if cam.get_is_enabled():
                 self.cameras.append(cam)
 
         ## List of light sources. Assume our lights are all active lights.
         self.lights = []
-        for light in depot.getHandlersOfType(depot.LIGHT_TOGGLE):
+        for light in depot.get_handlers_of_type(depot.LIGHT_TOGGLE):
             if light.get_is_enabled():
                 self.lights.append(light)
 

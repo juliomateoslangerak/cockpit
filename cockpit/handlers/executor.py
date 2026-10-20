@@ -377,7 +377,7 @@ class DigitalMixin:
 
         # If there is an ambient light enabled, extend exposure as
         # necessary (see issue #669).
-        ambient = depot.getHandlerWithName("Ambient")
+        ambient = depot.get_handler_with_name("Ambient")
         if ambient is not None and ambient.get_is_enabled():
             t = ambient.get_exposure_time()
             if t > seq[-1][0]:
@@ -755,7 +755,7 @@ class DelegateTrigger(SimpleExecutor):
     def delegateTo(self, trigSource, trigLine, trigTime=0, responseTime=0):
         """Delegate trigger actions to some trigSource."""
         if isinstance(trigSource, str):
-            trigSource = depot.getHandler(trigSource, depot.EXECUTOR)
+            trigSource = depot.get_handler(trigSource, depot.EXECUTOR)
         self._trigger = trigSource.registerDigital(self, trigLine)
         self.triggerNow = self._trigger.triggerNow
         self._triggerTime = trigTime

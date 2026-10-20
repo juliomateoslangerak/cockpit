@@ -145,7 +145,7 @@ class ExecutorDevice(device.Device):
     @cockpit.util.threads.locked
     def finalize_initialization(self):
         # Tell the remote DSP computer how to talk to us.
-        server = depot.getHandlersOfType(depot.SERVER)[0]
+        server = depot.get_handlers_of_type(depot.SERVER)[0]
         self.receive_uri = server.register(self.receiveData)
         self.connection.receiveClient(self.receive_uri)
 

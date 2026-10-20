@@ -106,7 +106,7 @@ class MicroscopeBase(device.Device):
         if "controller" not in self.config:
             self._proxy = Pyro4.Proxy(self.uri)
         else:
-            c = depot.getDeviceWithName(self.config["controller"])
+            c = depot.get_device_with_name(self.config["controller"])
             c_name = self.config.get("controller.name", None)
             if c_name is not None:
                 try:
@@ -353,7 +353,7 @@ class MicroscopeLaser(MicroscopeBase):
         trigsource = self.config.get("triggersource", None)
         trigline = self.config.get("triggerline", None)
         if trigsource:
-            trighandler = depot.getHandler(trigsource, depot.EXECUTOR)
+            trighandler = depot.get_handler(trigsource, depot.EXECUTOR)
         else:
             trighandler = None
         self._exposure_time = 100

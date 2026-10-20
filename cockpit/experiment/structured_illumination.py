@@ -208,7 +208,7 @@ class SIExperiment(experiment.Experiment):
         # Store the collection order in the MRC header.
         metadata = "SI order: %s" % collectionOrder
         # Store the diffraction angle in MRC metadata
-        slmdev = depot.getDeviceWithName("slm")
+        slmdev = depot.get_device_with_name("slm")
         if slmdev:
             diffangle = slmdev.connection.get_sim_diffraction_angle()
             metadata += ": SLM diff_angle %.3f" % diffangle
@@ -595,7 +595,7 @@ class BaseSIMExperimentUI(wx.Panel):
         super().__init__(parent=parent)
 
         self.configKey = configKey + self._CONFIG_KEY_SUFFIX
-        self.allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        self.allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         self.settings = self.loadSettings()
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -631,10 +631,10 @@ class BaseSIMExperimentUI(wx.Panel):
         params["numAngles"] = 3
         params["numPhases"] = 5
         params["collectionOrder"] = self.siCollectionOrder.GetStringSelection()
-        params["angleHandler"] = depot.getHandlerWithName("SI angle")
-        params["phaseHandler"] = depot.getHandlerWithName("SI phase")
-        params["polarizerHandler"] = depot.getHandlerWithName("SI polarizer")
-        params["slmHandler"] = depot.getHandler("slm", depot.EXECUTOR)
+        params["angleHandler"] = depot.get_handler_with_name("SI angle")
+        params["phaseHandler"] = depot.get_handler_with_name("SI phase")
+        params["polarizerHandler"] = depot.get_handler_with_name("SI polarizer")
+        params["slmHandler"] = depot.get_handler("slm", depot.EXECUTOR)
         compensations = {}
         for i, light in enumerate(self.allLights):
             val = gui_utils.tryParseNum(self.bleachCompensations[i], float)
@@ -647,7 +647,7 @@ class BaseSIMExperimentUI(wx.Panel):
         return params
 
     def _getDefaultSettings(self):
-        allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         default = {
             "bleachCompensations": ["" for l in self.allLights],
             "siCollectionOrder": 0,
@@ -660,7 +660,7 @@ class BaseSIMExperimentUI(wx.Panel):
             self.configKey, default=self._getDefaultSettings()
         )
 
-        allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         if len(result["bleachCompensations"]) != len(self.allLights):
             # Number of light sources has changed; invalidate the config.
             result["bleachCompensations"] = ["" for light in self.allLights]

@@ -181,7 +181,7 @@ class ActionsPanel(wx.Panel):
             self,
             choices=[
                 camera.name
-                for camera in wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+                for camera in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
             ],
         )
         sizer_cam.Add(self._sel_cam, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
@@ -329,7 +329,7 @@ class ActionsPanel(wx.Panel):
         mosaic_panel = self.GetTopLevelParent().GetChildren()[3]
         if button.GetValue():
             # Pressed => start mosaic
-            camera = wx.GetApp().Depot.getHandlerWithName(
+            camera = wx.GetApp().Depot.get_handler_with_name(
                 self._sel_cam.GetString(self._sel_cam.GetSelection())
             )
             if camera.get_is_enabled():
@@ -370,10 +370,10 @@ class ActionsPanel(wx.Panel):
 
     def _cb_snap(self, e):
         # Check that there is at least one camera and one light source active
-        cams = wx.GetApp().Depot.getActiveCameras()
+        cams = wx.GetApp().Depot.get_active_cameras()
         lights = [
             light
-            for light in wx.GetApp().Depot.getHandlersOfType(
+            for light in wx.GetApp().Depot.get_handlers_of_type(
                 depot.LIGHT_TOGGLE
             )
             if light.get_is_enabled()
@@ -394,10 +394,10 @@ class ActionsPanel(wx.Panel):
     def _cb_live(self, e):
         button = e.GetEventObject()
         # Check that there is at least one camera and one light source active
-        cams = wx.GetApp().Depot.getActiveCameras()
+        cams = wx.GetApp().Depot.get_active_cameras()
         lights = [
             light
-            for light in wx.GetApp().Depot.getHandlersOfType(
+            for light in wx.GetApp().Depot.get_handlers_of_type(
                 depot.LIGHT_TOGGLE
             )
             if light.get_is_enabled()
@@ -714,10 +714,10 @@ class LightsPanel(wx.Panel):
         spanel = wx.lib.scrolledpanel.ScrolledPanel(self)
         sizer_spanel = wx.BoxSizer(wx.VERTICAL)
         lightToggleHandlers = sorted(
-            wx.GetApp().Depot.getHandlersOfType(depot.LIGHT_TOGGLE),
+            wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_TOGGLE),
             key=lambda l: l.wavelength,
         )
-        lightPowerHandlers = wx.GetApp().Depot.getHandlersOfType(
+        lightPowerHandlers = wx.GetApp().Depot.get_handlers_of_type(
             depot.LIGHT_POWER
         )
         for index, light_handler in enumerate(lightToggleHandlers):
@@ -758,7 +758,7 @@ class CamerasPanelEntry(wx.Panel):
             kwargs["style"] = wx.BORDER_RAISED
         super().__init__(parent, **kwargs)
         self.camera_handler = camera_handler
-        self.camera = wx.GetApp().Depot.getDeviceWithName(camera_handler.name)
+        self.camera = wx.GetApp().Depot.get_device_with_name(camera_handler.name)
         self._set_properties()
         self._do_layout()
 
@@ -806,7 +806,7 @@ class CamerasPanel(wx.lib.scrolledpanel.ScrolledPanel):
 
     def _do_layout(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
-        cameraHandlers = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+        cameraHandlers = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
         for index, camera_handler in enumerate(cameraHandlers):
             if index < len(cameraHandlers) - 1:
                 sizer.Add(
@@ -1001,7 +1001,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
             wx.CallAfter(self.Refresh)
 
     def onObjectiveChange(self, event: wx.CommandEvent) -> None:
-        handler = wx.GetApp().Depot.getHandlerWithName(event.GetString())
+        handler = wx.GetApp().Depot.get_handler_with_name(event.GetString())
         # User changed the objective in use; resize our crosshair box to suit
         self.crosshairBoxSize = 512 * handler.pixel_size
         self.offset = handler.offset
@@ -1585,7 +1585,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
     def _do_layout(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
         # Add a viewPanel for every camera
-        for camera in wx.GetApp().Depot.getHandlersOfType(depot.CAMERA):
+        for camera in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA):
             vpanel = ViewPanel(self)
             vpanel.change_size(_VIEWPANEL_SIZE)
             sizer.Add(vpanel)

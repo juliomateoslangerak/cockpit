@@ -40,7 +40,7 @@ class ShutterDevice(device.Device):
         """Replace lights strings with their handlers."""
         handlers = []
         for name in self.lights:
-            h = depot.getHandler(name, depot.LIGHT_TOGGLE)
+            h = depot.get_handler(name, depot.LIGHT_TOGGLE)
             if h:
                 handlers.append(h)
         self.lights = handlers

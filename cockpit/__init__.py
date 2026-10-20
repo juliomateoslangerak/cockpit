@@ -107,7 +107,7 @@ class CockpitApp(wx.App):
         # FIXME: some places still access the depot singleton instance
         # in the module (through the module free functions) so we need
         # to keep a reference to this object there.
-        cockpit.depot.deviceDepot = self._depot
+        cockpit.depot.device_depot = self._depot
         super().__init__(redirect=False)
 
     @property
@@ -182,11 +182,11 @@ class CockpitApp(wx.App):
             updateNum += 1
 
             self._imager = cockpit.interfaces.imager.Imager(
-                self.Depot.getHandlersOfType(cockpit.depot.IMAGER)
+                self.Depot.get_handlers_of_type(cockpit.depot.IMAGER)
             )
             cockpit.interfaces.stage_mover.initialize()
             self._objectives = cockpit.interfaces.Objectives(
-                self.Depot.getHandlersOfType(cockpit.depot.OBJECTIVE)
+                self.Depot.get_handlers_of_type(cockpit.depot.OBJECTIVE)
             )
             self._stage = cockpit.interfaces.stage_mover.mover
             self._channels = cockpit.interfaces.channels.Channels()
@@ -297,7 +297,7 @@ class CockpitApp(wx.App):
         except:
             _logger.error("Error on USER_ABORT during exit")
             _logger.error(traceback.format_exc())
-        for dev in self.Depot.getAllDevices():
+        for dev in self.Depot.get_all_devices():
             try:
                 dev.on_exit()
             except:

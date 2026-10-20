@@ -95,11 +95,11 @@ class OptoExperiment(z_stack.ZStackExperiment):
         # Convert from light source names to light handlers.
         self.lightToSequence = {}
         for name, sequence in lightToSequence.items():
-            handler = depot.getHandlerWithName(name)
+            handler = depot.get_handler_with_name(name)
             self.lightToSequence[handler] = sequence
         self.lightToIsOnDuringAcquisition = {}
         for name, isOn in lightToIsOnDuringAcquisition.items():
-            handler = depot.getHandlerWithName(name)
+            handler = depot.get_handler_with_name(name)
             self.lightToIsOnDuringAcquisition[handler] = isOn
         # Call the ZStackExperiment constructor with all of our remaining
         # parameters, which are in the "kwargs" dictionary object.
@@ -177,7 +177,7 @@ class ExperimentUI(wx.Panel):
         self.configKey = configKey
 
         ## List of all light sources available for use.
-        self.allLights = depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        self.allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
 
         ## User config settings.
         self.settings = self.loadSettings()

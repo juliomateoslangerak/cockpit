@@ -87,16 +87,16 @@ class TestMicroscopeSettings(unittest.TestCase):
         To avoid issues, we create a new DeviceDepot instance before each test
         and remove it at the end.
         """
-        cockpit.depot.deviceDepot = cockpit.depot.DeviceDepot()
+        cockpit.depot.device_depot = cockpit.depot.DeviceDepot()
 
     def tearDown(self):
-        cockpit.depot.deviceDepot = None
+        cockpit.depot.device_depot = None
 
     def _do_the_whole_init_routine(self, device_name, config_dict):
         """Settings are parsed and applied during `finalizeInitialization` so
         we need to have DeviceDepot does the whole init routine first."""
         device = CockpitDeviceWithTestSetting(device_name, config_dict)
-        cockpit.depot.deviceDepot.initDevice(device)
+        cockpit.depot.device_depot.initDevice(device)
         device.finalize_initialization()
         return device
 

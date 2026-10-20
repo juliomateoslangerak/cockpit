@@ -142,7 +142,7 @@ class PositionerHandler(device.DeviceHandler):
         """Retrieve the current position."""
         return self.callbacks["getPosition"](self.axis)
 
-    def getHardLimits(self):
+    def get_hard_limits(self):
         """Simple getter."""
         return self.hardLimits
 

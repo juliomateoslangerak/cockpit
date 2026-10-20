@@ -95,7 +95,7 @@ class MainWindowPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Find out what devices we have to work with.
-        lightToggles = wx.GetApp().Depot.getHandlersOfType(depot.LIGHT_TOGGLE)
+        lightToggles = wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
 
         ## Maps LightSource handlers to their associated panels of controls.
         self.lightToPanel = dict()
@@ -156,21 +156,21 @@ class MainWindowPanel(wx.Panel):
         # Make UIs for any other handlers / devices and insert them into
         # our window, if possible.
         # Light power things will be handled later.
-        lightPowerThings = wx.GetApp().Depot.getHandlersOfType(
+        lightPowerThings = wx.GetApp().Depot.get_handlers_of_type(
             depot.LIGHT_POWER
         )
         lightPowerThings.sort(key=lambda l: l.wavelength)
         # Camera UIs are drawn separately. Currently, they are drawn first,
         # but this separation may make it easier to implement cameras in
         # ordered slots, giving the user control over exposure order.
-        cameraThings = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+        cameraThings = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
         # Ignore anything that is handled specially.
         ignoreThings = lightToggles + lightPowerThings
         ignoreThings += cameraThings
         # Remove ignoreThings from the full list of devices.
-        otherThings = list(wx.GetApp().Depot.getAllDevices())
+        otherThings = list(wx.GetApp().Depot.get_all_devices())
         otherThings.sort(key=lambda d: d.__class__.__name__)
-        otherThings.extend(wx.GetApp().Depot.getAllHandlers())
+        otherThings.extend(wx.GetApp().Depot.get_all_handlers())
         rowSizer = wx.WrapSizer(wx.HORIZONTAL)
 
         # Add objective control
@@ -187,7 +187,7 @@ class MainWindowPanel(wx.Panel):
 
         # Add light controls.
         lightfilters = sorted(
-            wx.GetApp().Depot.getHandlersOfType(depot.LIGHT_FILTER)
+            wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_FILTER)
         )
         ignoreThings.extend(lightfilters)
 
@@ -199,7 +199,7 @@ class MainWindowPanel(wx.Panel):
             if thing in otherThings:
                 otherThings.remove(thing)
         for thing in sorted(otherThings):
-            if wx.GetApp().Depot.getHandler(thing, depot.CAMERA):
+            if wx.GetApp().Depot.get_handler(thing, depot.CAMERA):
                 # Camera UIs already drawn.
                 continue
             item = thing.make_ui(self)
@@ -248,9 +248,9 @@ class MainWindowPanel(wx.Panel):
         self.updateROI = True
         asked = False
         update = False
-        active = wx.GetApp().Depot.getHandlerWithName(camName)
+        active = wx.GetApp().Depot.get_handler_with_name(camName)
         cameras = sorted(
-            wx.GetApp().Depot.getHandlersOfType(depot.CAMERA),
+            wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA),
             key=lambda c: c.name,
         )
         roi = active.get_roi()
@@ -502,8 +502,8 @@ class WindowsMenu(wx.Menu):
         # handlers (probably piDIO device should provide an executor
         # handler).
         for obj in chain(
-            wx.GetApp().Depot.getAllHandlers(),
-            wx.GetApp().Depot.getAllDevices(),
+            wx.GetApp().Depot.get_all_handlers(),
+            wx.GetApp().Depot.get_all_devices(),
         ):
             if hasattr(obj, "showDebugWindow"):
                 label = "debug %s (%s)" % (obj.name, obj.__class__.__name__)

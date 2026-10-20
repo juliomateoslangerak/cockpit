@@ -204,7 +204,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         trigsource = self.config.get("triggersource", None)
         trigline = self.config.get("triggerline", None)
         if trigsource:
-            trighandler = depot.getHandler(trigsource, depot.EXECUTOR)
+            trighandler = depot.get_handler(trigsource, depot.EXECUTOR)
         else:
             trighandler = None
 
@@ -347,7 +347,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             # Finds active lights, sorts in reverse order and then finds the
             # first that is lower than the emission wavelength.
             lights = []
-            for light in depot.getHandlersOfType("light source"):
+            for light in depot.get_handlers_of_type("light source"):
                 if light.get_is_enabled():
                     lights.append(float(light.wavelength))
                     lights.sort()

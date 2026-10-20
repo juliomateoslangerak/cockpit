@@ -132,14 +132,14 @@ class CameraHandler(device.DeviceHandler):
             h = trig_handler.registerDigital(self, trig_line)
             self.triggerNow = h.triggerNow
         else:
-            softTrigger = self.callbacks.get("softTrigger", None)
-            self.triggerNow = lambda: softTrigger
-            if softTrigger:
-                depot.addHandler(
+            soft_trigger = self.callbacks.get("soft_trigger", None)
+            self.triggerNow = lambda: soft_trigger
+            if soft_trigger:
+                depot.add_handler(
                     cockpit.handlers.imager.ImagerHandler(
                         "%s imager" % name,
                         "imager",
-                        {"takeImage": softTrigger},
+                        {"takeImage": soft_trigger},
                     )
                 )
 

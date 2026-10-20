@@ -265,7 +265,7 @@ class NIcRIO(executor_devices.ExecutorDevice):
         for name, line in self.name_to_digital_line.items():
             if name in self.active_cameras:
                 camera_mask += line
-                handler = depot.getHandlerWithName(name)
+                handler = depot.get_handler_with_name(name)
                 handler.set_exposure_time(max_time)
 
         sleep(5)

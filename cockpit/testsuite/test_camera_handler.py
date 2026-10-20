@@ -80,7 +80,7 @@ class CameraHandlerTestCase(unittest.TestCase):
 
         So just build a new depot and reinitialise the imager.
         """
-        cockpit.depot.deviceDepot = cockpit.depot.DeviceDepot()
+        cockpit.depot.device_depot = cockpit.depot.DeviceDepot()
 
         self.callback_mocks = {
             "set_enabled": unittest.mock.Mock(side_effect=lambda n, s: s),

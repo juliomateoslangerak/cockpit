@@ -124,7 +124,7 @@ class Channels(wx.EvtHandler):
 def current_channel() -> Channel:
     """Returns current channel configuration."""
     new_channel = {}
-    for handler in cockpit.depot.getAllHandlers():
+    for handler in cockpit.depot.get_all_handlers():
         if handler.device_type in [
             cockpit.depot.CAMERA,
             cockpit.depot.LIGHT_FILTER,
@@ -139,12 +139,12 @@ def current_channel() -> Channel:
 def apply_channel(channel: Channel) -> None:
     """Apply the given channel configuration."""
     for name, settings in channel.items():
-        handler = cockpit.depot.getHandlerWithName(name)
+        handler = cockpit.depot.get_handler_with_name(name)
         if handler is None:
             raise Exception("no handler named '%s'" % name)
         handler.on_load_settings(settings)
 
-    for handler in cockpit.depot.getAllHandlers():
+    for handler in cockpit.depot.get_all_handlers():
         if handler.device_type in [
             cockpit.depot.CAMERA,
             cockpit.depot.LIGHT_FILTER,

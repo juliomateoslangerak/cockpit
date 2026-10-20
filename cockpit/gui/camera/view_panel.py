@@ -152,7 +152,7 @@ class ViewPanel(wx.Panel):
             )
         else:
             # Get all inactive cameras.
-            cameras = wx.GetApp().Depot.getHandlersOfType(depot.CAMERA)
+            cameras = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
             cameras.sort(key=lambda c: c.descriptive_name)
             for camera in cameras:
                 if not camera.get_is_enabled():

@@ -142,7 +142,7 @@ class ExperimentUI(wx.Panel):
         params["startV"] = gui_utils.tryParseNum(self.startVControl, float)
         params["maxV"] = gui_utils.tryParseNum(self.maxVControl, float)
         params["vSteps"] = gui_utils.tryParseNum(self.vStepsControl)
-        params["polarizerHandler"] = depot.getHandlerWithName("SI polarizer")
+        params["polarizerHandler"] = depot.get_handler_with_name("SI polarizer")
         return params
 
     def loadSettings(self):

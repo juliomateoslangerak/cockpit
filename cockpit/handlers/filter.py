@@ -138,7 +138,7 @@ class FilterHandler(device.DeviceHandler):
         self.lastFilter = self.currentFilter()
         # Emission filters
         for camera in self.cameras:
-            h = depot.getHandler(camera, depot.CAMERA)
+            h = depot.get_handler(camera, depot.CAMERA)
             if h is not None:
                 h.update_filter(self.lastFilter.label, self.lastFilter.value)
         # Excitation filters

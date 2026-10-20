@@ -87,14 +87,14 @@ class Connection:
         )
         connection._pyroTimeout = timeout
         self.connection = connection
-        server = depot.getHandlersOfType(depot.SERVER)[0]
+        server = depot.get_handlers_of_type(depot.SERVER)[0]
         uri = server.register(self.callback, self.local_ip)
         self.connection.receiveClient(uri)
 
     def disconnect(self):
         """Remove the connection and stop listening to the service."""
         if self.connection is not None:
-            server = depot.getHandlersOfType(depot.SERVER)[0]
+            server = depot.get_handlers_of_type(depot.SERVER)[0]
             server.unregister(self.callback)
             try:
                 self.connection.receiveClient(None)

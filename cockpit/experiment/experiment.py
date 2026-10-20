@@ -257,7 +257,7 @@ class Experiment:
             )
             if not gui_utils.getUserPermission(warning):
                 return False
-            # set repDuration to the last table action
+            # set rep_duration to the last table action
             self.repDuration = float(self.table.lastActionTime) / 1000.0
 
         if not self.lastMinuteActions():
@@ -293,40 +293,40 @@ class Experiment:
             if self.savePath.endswith((".dv", ".mrc")):
                 saver = data_saver.MrcDataSaver(
                     cameras=self.cameras,
-                    numReps=self.numReps,
-                    repDuration=self.repDuration,
-                    cameraToImagesPerRep=self.cameraToImageCount,
-                    cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
-                    runThread=self.runThread,
-                    savePath=self.savePath,
-                    pixelSizeZ=self.sliceHeight,
+                    num_reps=self.numReps,
+                    rep_duration=self.repDuration,
+                    camera_to_images_per_rep=self.cameraToImageCount,
+                    camera_to_ignored_image_indices=self.cameraToIgnoredImageIndices,
+                    run_thread=self.runThread,
+                    save_path=self.savePath,
+                    pixel_size_z=self.sliceHeight,
                     titles=self.generateTitles(),
-                    cameraToExcitation=cameraToExcitation,
+                    camera_to_excitation=cameraToExcitation,
                 )
             elif self.savePath.endswith(".zarr"):
                 saver = data_saver.ZarrDataSaver(
-                    exposureSettings=self.exposureSettings,
-                    numReps=self.numReps,
-                    repDuration=self.repDuration,
-                    cameraToImagesPerRep=self.cameraToImageCount,
-                    cameraToIgnoredImageIndices=self.cameraToIgnoredImageIndices,
-                    runThread=self.runThread,
-                    savePath=self.savePath,
-                    pixelSizeXY=wx.GetApp().Objectives.get_pixel_size(),
-                    sliceHeight=self.sliceHeight,
+                    exposure_settings=self.exposureSettings,
+                    num_reps=self.numReps,
+                    rep_duration=self.repDuration,
+                    camera_to_images_per_rep=self.cameraToImageCount,
+                    camera_to_ignored_image_indices=self.cameraToIgnoredImageIndices,
+                    run_thread=self.runThread,
+                    save_path=self.savePath,
+                    pixel_size_xy=wx.GetApp().Objectives.get_pixel_size(),
+                    slice_height=self.sliceHeight,
                 )
             else:
                 raise RuntimeError(
                     "Unsupported file format %s" % self.savePath
                 )
 
-            generatedFilenames.append(saver.getFilenames())
+            generatedFilenames.append(saver.get_filenames())
 
         self.runThread.start()
 
         cleanup_thread = threading.Thread(
             target=self.cleanup,
-            args=[self.runThread, saver.saveThread],
+            args=[self.runThread, saver.save_thread],
             name="Experiment-cleanup",
         )
         cleanup_thread.start()
@@ -538,7 +538,7 @@ class Experiment:
             )
         events.publish(events.EXPERIMENT_COMPLETE)
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
-        # Ensure the saveThread's memory, which includes all the images
+        # Ensure the save_thread's memory, which includes all the images
         # collected thus far, is garbage collected. Otherwise memory tends
         # to pile up and then the GC has more work to do, which can interfere
         # with future experiments.

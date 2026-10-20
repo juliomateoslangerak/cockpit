@@ -619,7 +619,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
     @cockpit.util.threads.call_in_new_thread
     def processImages(self):
-        """Consume images out of self.imageQueue and either display them or
+        """Consume images out of self.image_queue and either display them or
         discard them.
 
         Because images can arrive very rapidly at times, we want to ensure that

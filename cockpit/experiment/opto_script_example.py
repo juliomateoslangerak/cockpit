@@ -108,7 +108,7 @@ class OptoExperiment(z_stack.ZStackExperiment):
     def execute(self):
         """This function overrides the base execute() function in the
         Experiment class."""
-        # HACK: replace self.numReps since it's referred to in
+        # HACK: replace self.num_reps since it's referred to in
         # Experiment.execute(), and we want to handle repeats at a higher
         # level.
         numReps = self.numReps

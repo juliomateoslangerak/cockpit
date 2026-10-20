@@ -33,7 +33,7 @@ DELIMITER = ";"
 
 
 class ValueLogger:
-    _fhs = []  # A list of all filehandles opened in this session.
+    _fhs = []  # A list of all file_handles opened in this session.
 
     def __init__(self, name, keys=None):
         """Initialize a ValueLogger.

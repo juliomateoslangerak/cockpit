@@ -172,7 +172,7 @@ class ExperimentConfigPanel(wx.Panel):
             self,
             universalSizer,
             label="Number of reps:",
-            defaultValue=self.settings["numReps"],
+            defaultValue=self.settings["num_reps"],
         )
         self.numReps.SetValidator(gui_utils.INTVALIDATOR)
 
@@ -180,7 +180,7 @@ class ExperimentConfigPanel(wx.Panel):
             self,
             universalSizer,
             label="Rep duration (s):",
-            defaultValue=self.settings["repDuration"],
+            defaultValue=self.settings["rep_duration"],
             helperString="Amount of time that must pass between the start "
             + "of each rep. Use 0 if you don't want any wait time.",
         )
@@ -207,7 +207,7 @@ class ExperimentConfigPanel(wx.Panel):
             self,
             universalSizer,
             label="Slice height (\u03bcm):",
-            defaultValue=self.settings["sliceHeight"],
+            defaultValue=self.settings["slice_height"],
         )
         self.sliceHeight.SetValidator(gui_utils.FLOATVALIDATOR)
 
@@ -435,14 +435,14 @@ class ExperimentConfigPanel(wx.Panel):
         result = cockpit.util.user_config.get_value(
             self.configKey,
             default={
-                "numReps": "1",
-                "repDuration": "0",
+                "num_reps": "1",
+                "rep_duration": "0",
                 "sequencedExposureSettings": [
                     ["" for l in self.allLights] for c in self.allCameras
                 ],
                 "exposure_mode": 0,
                 "simultaneousExposureTimes": ["" for l in self.allLights],
-                "sliceHeight": ".15",
+                "slice_height": ".15",
                 "stackHeight": "4",
                 "ZPositionMode": 0,
             },
@@ -728,14 +728,14 @@ class ExperimentConfigPanel(wx.Panel):
             return True
 
         params = {
-            "numReps": gui_utils.tryParseNum(self.numReps),
-            "repDuration": gui_utils.tryParseNum(self.repDuration, float),
+            "num_reps": gui_utils.tryParseNum(self.numReps),
+            "rep_duration": gui_utils.tryParseNum(self.repDuration, float),
             "zPositioner": mover,
             "altBottom": altBottom,
             "zHeight": zHeight,
-            "sliceHeight": sliceHeight,
-            "exposureSettings": exposureSettings,
-            "savePath": savePath,
+            "slice_height": sliceHeight,
+            "exposure_settings": exposureSettings,
+            "save_path": savePath,
         }
         experimentType = self.experimentType.GetStringSelection()
         module = self.experimentStringToModule[experimentType]
@@ -757,12 +757,12 @@ class ExperimentConfigPanel(wx.Panel):
 
         newSettings = {
             "filenameTemplate": self.filepath_panel.GetTemplate(),
-            "numReps": self.numReps.GetValue(),
-            "repDuration": self.repDuration.GetValue(),
+            "num_reps": self.numReps.GetValue(),
+            "rep_duration": self.repDuration.GetValue(),
             "sequencedExposureSettings": sequencedExposureSettings,
             "exposure_mode": self.exposureMode.GetSelection(),
             "simultaneousExposureTimes": simultaneousTimes,
-            "sliceHeight": self.sliceHeight.GetValue(),
+            "slice_height": self.sliceHeight.GetValue(),
             "stackHeight": self.stackHeight.GetValue(),
             "ZPositionMode": self.zPositionMode.GetSelection(),
         }

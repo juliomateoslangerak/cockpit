@@ -75,7 +75,7 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         recommence from the beginning.
 
         Args:
-            sampleRates (list): A list of (interval, numReps) tuples
+            sampleRates (list): A list of (interval, num_reps) tuples
                 indicating the amount of time in seconds between each rep, and
                 the number of reps to perform at that rate.
         """
@@ -90,9 +90,9 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         self.shouldAbort = True
 
     def execute(self):
-        """Call Experiment.execute() repeatedly, while varying self.numReps and
-        self.repDuration so that we do the right sequence with the right timings."""
-        # HACK: replace self.numReps since it's used in Experiment.execute(),
+        """Call Experiment.execute() repeatedly, while varying self.num_reps and
+        self.rep_duration so that we do the right sequence with the right timings."""
+        # HACK: replace self.num_reps since it's used in Experiment.execute(),
         # which we will be calling from within this function. We'll handle
         # reps more directly.
         trueReps = self.numReps

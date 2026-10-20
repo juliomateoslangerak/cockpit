@@ -338,7 +338,7 @@ class ResponseMapExperiment(
     def generateActions(self, exposureTime):
         """Create the ActionTable needed to run the experiment.
 
-        We basically ignore the values in self.exposureSettings in favor of the
+        We basically ignore the values in self.exposure_settings in favor of the
         provided exposure time.
         """
         table = action_table.ActionTable()

@@ -54,7 +54,7 @@ def patched_env(values):
 
 
 class MockConfigRead:
-    """Mocks ``ConfigParser.read`` to record requested filenames."""
+    """Mocks ``ConfigParser.read`` to record requested file_names."""
 
     def __init__(self):
         self.reset_mock()
@@ -317,7 +317,7 @@ class TestLinuxPaths(unittest.TestCase):
 class TestConfigReading(unittest.TestCase):
     """Test what config files are read under different conditions.
 
-    This is done by mocking the read method and record the filenames.
+    This is done by mocking the read method and record the file_names.
     Ideally we should check what configuration we obtain at the end of
     the process, not which files get read and under what order.
     However, that's tricky because it would require us to patch the
@@ -332,7 +332,7 @@ class TestConfigReading(unittest.TestCase):
             read_mock: instance of our :class:``MockConfigRead``
             files: list of our :class:``TempConfigFile``
         """
-        self.assertEqual(read_mock.filenames, [f.path for f in files])
+        self.assertEqual(read_mock.file_names, [f.path for f in files])
 
     @mock_depot_config_read
     @mock_cockpit_config_read
@@ -348,12 +348,12 @@ class TestConfigReading(unittest.TestCase):
         call_cockpit()
         read_files = {
             "cockpit": {
-                "all": cockpit_read_mock.filenames,
+                "all": cockpit_read_mock.file_names,
                 "user": [],
                 "system": [],
             },
             "depot": {
-                "all": depot_read_mock.filenames,
+                "all": depot_read_mock.file_names,
                 "user": [],
                 "system": [],
             },
@@ -366,8 +366,8 @@ class TestConfigReading(unittest.TestCase):
             cockpit_read_mock.reset_mock()
             depot_read_mock.reset_mock()
             call_cockpit(option)
-            read_files["cockpit"][group] = cockpit_read_mock.filenames
-            read_files["depot"][group] = depot_read_mock.filenames
+            read_files["cockpit"][group] = cockpit_read_mock.file_names
+            read_files["depot"][group] = depot_read_mock.file_names
 
         for files in read_files.values():
             for group in ("all", "user", "system"):

@@ -96,7 +96,7 @@ class ImmediateModeExperiment(experiment.Experiment):
         # Number of images to be collected per camera per rep.
         self.imagesPerRep = imagesPerRep
 
-        # We didn't pass a proper exposureSettings value when calling
+        # We didn't pass a proper exposure_settings value when calling
         # the Experiment constructor so we must fix the cameras and
         # lights attributes, as well as related attributes, ourselves.
 

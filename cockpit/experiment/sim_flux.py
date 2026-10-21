@@ -37,21 +37,21 @@ class ExperimentUI(structured_illumination.BaseSIMExperimentUI):
         super().__init__(*args, **kwargs)
 
         rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.numPhases = gui_utils.addLabeledInput(
+        self.numPhases = gui_utils.add_labeled_input(
             self,
             rowSizer,
             label="Number of phases",
-            helperString="How many phases do you want?",
+            helper_string="How many phases do you want?",
         )
         self.numPhases.SetValue(str(self.settings["numPhases"]))
         self.Sizer.Insert(0, rowSizer)
 
         rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.numAngles = gui_utils.addLabeledInput(
+        self.numAngles = gui_utils.add_labeled_input(
             self,
             rowSizer,
             label="Number of angles",
-            helperString="How many angles do you want?",
+            helper_string="How many angles do you want?",
         )
         self.numAngles.SetValue(str(self.settings["numAngles"]))
         self.Sizer.Insert(1, rowSizer)

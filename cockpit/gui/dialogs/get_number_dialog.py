@@ -72,16 +72,16 @@ class GetNumberDialog(wx.Dialog):
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.value = cockpit.gui.gui_utils.addLabeledInput(
+        self.value = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
             sizer=mainSizer,
             label=prompt,
-            defaultValue=str(default),
+            default_value=str(default),
             size=(70, -1),
-            minSize=(150, -1),
-            shouldRightAlignInput=True,
+            min_size=(150, -1),
+            should_right_align_input=True,
             border=3,
-            controlType=wx.TextCtrl,
+            control_type=wx.TextCtrl,
         )
 
         buttonsBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -120,16 +120,16 @@ class GetManyNumbersDialog(wx.Dialog):
 
         self.controls = []
         for i, prompt in enumerate(prompts):
-            control = cockpit.gui.gui_utils.addLabeledInput(
+            control = cockpit.gui.gui_utils.add_labeled_input(
                 parent=self,
                 sizer=mainSizer,
                 label=prompt,
-                defaultValue=str(defaultValues[i]),
+                default_value=str(defaultValues[i]),
                 size=(70, -1),
-                minSize=(150, -1),
-                shouldRightAlignInput=True,
+                min_size=(150, -1),
+                should_right_align_input=True,
                 border=3,
-                controlType=wx.TextCtrl,
+                control_type=wx.TextCtrl,
             )
             self.controls.append(control)
 

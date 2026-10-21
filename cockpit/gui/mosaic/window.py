@@ -748,7 +748,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             menu.Append(menuId, "Clear old trails")
             self.Bind(wx.EVT_MENU, lambda event: self.clearTrails(), id=menuId)
 
-            cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
+            cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
         self.prevMousePos = mousePos
 
@@ -1078,7 +1078,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 lambda event, color=color: self.setSiteColor(color),
                 id=i + 1,
             )
-        cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
+        cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
     def setFocalPlane(self, event=None):
         """Calculate the focal plane of the sample."""
@@ -1314,7 +1314,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     lambda event, camera=camera: action(camera),
                     id=i + 1,
                 )
-            cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
+            cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
     def setSelectFunc(self, func):
         """Set the function to use when the user selects tiles."""
@@ -1337,7 +1337,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def onDeleteAllTiles(self, event=None):
         """Delete all tiles in the mosaic, after prompting the user for
         confirmation."""
-        if not cockpit.gui.gui_utils.getUserPermission(
+        if not cockpit.gui.gui_utils.get_user_permission(
             "Are you sure you want to delete every tile in the mosaic?",
             "Delete confirmation",
         ):

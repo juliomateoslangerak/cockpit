@@ -99,18 +99,18 @@ class SafetyMinDialog(wx.Dialog):
             10,
         )
 
-        self.minStageZ = cockpit.gui.gui_utils.addLabeledInput(
+        self.minStageZ = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
             sizer=self.mainSizer,
             label="Stage Z minimum (µm):",
-            defaultValue=str(
+            default_value=str(
                 cockpit.interfaces.stage_mover.get_soft_limits()[2][0]
             ),
             size=(70, -1),
-            minSize=(150, -1),
-            shouldRightAlignInput=True,
+            min_size=(150, -1),
+            should_right_align_input=True,
             border=3,
-            controlType=wx.TextCtrl,
+            control_type=wx.TextCtrl,
         )
         rowSizer = wx.BoxSizer(wx.HORIZONTAL)
         slideSafetyButton = wx.Button(self, -1, "Slide")

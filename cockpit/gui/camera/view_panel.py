@@ -164,7 +164,7 @@ class ViewPanel(wx.Panel):
                         lambda event, cam=camera: cam.toggle_state(),
                         item,
                     )
-        cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
+        cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
     def disable(self):
         """Deactivate the view."""

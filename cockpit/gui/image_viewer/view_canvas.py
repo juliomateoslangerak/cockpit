@@ -888,7 +888,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             self.mouseDragX = self.curMouseX
             self.mouseDragY = self.curMouseY
         elif event.RightDown():
-            cockpit.gui.gui_utils.placeMenuAtMouse(self, self._menu)
+            cockpit.gui.gui_utils.place_menu_at_mouse(self, self._menu)
         elif event.LeftUp():
             if self.definingROI:
                 camera = self.Parent.Parent.curCamera

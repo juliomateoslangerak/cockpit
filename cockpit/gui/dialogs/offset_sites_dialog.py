@@ -76,13 +76,13 @@ class OffsetSites_Dialog(wx.Dialog):
         self.controls = []
         for label in ("X", "Y", "Z"):
             self.controls.append(
-                cockpit.gui.gui_utils.addLabeledInput(
+                cockpit.gui.gui_utils.add_labeled_input(
                     parent=self,
                     sizer=sizer,
                     label="%s:" % label,
-                    defaultValue="",
+                    default_value="",
                     size=(60, -1),
-                    minSize=(100, -1),
+                    min_size=(100, -1),
                     border=5,
                 )
             )

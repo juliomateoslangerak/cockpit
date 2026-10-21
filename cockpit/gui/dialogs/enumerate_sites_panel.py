@@ -86,13 +86,13 @@ class EnumerateSitesPanel(wx.Panel):
     ):
         super().__init__(parent, id)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.sites = cockpit.gui.gui_utils.addLabeledInput(
+        self.sites = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
             sizer=sizer,
             label=label,
-            defaultValue="",
+            default_value="",
             size=size,
-            minSize=min_size,
+            min_size=min_size,
         )
         self.sites.SetToolTip(
             wx.ToolTip(

@@ -376,8 +376,8 @@ class OptoPanel(wx.Panel):
     def onAdd(self, event=None):
         """Add a new entry to the illumination settings, merging entries as
         necessary."""
-        start = gui_utils.tryParseNum(self.startText, float)
-        stop = gui_utils.tryParseNum(self.stopText, float)
+        start = gui_utils.try_parse_num(self.startText, float)
+        stop = gui_utils.try_parse_num(self.stopText, float)
         if start >= stop:
             # No-op; easiest way for this to happen is for the stop text to
             # have no value.

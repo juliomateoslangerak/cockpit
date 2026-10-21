@@ -215,7 +215,7 @@ class Experiment:
         # Returns True to close config dialog box, False or None otherwise.
         # Check if the user is set to save to an already-existing file.
         if self.save_path and os.path.exists(self.save_path):
-            if not gui_utils.getUserPermission(
+            if not gui_utils.get_user_permission(
                 ("The file:\n%s\nalready exists. " % self.save_path)
                 + "Are you sure you want to overwrite it?"
             ):
@@ -255,7 +255,7 @@ class Experiment:
                 "\n    'OK' to run repeats as fast as possible;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not gui_utils.getUserPermission(warning):
+            if not gui_utils.get_user_permission(warning):
                 return False
             # set rep_duration to the last table action
             self.rep_duration = float(self.table.last_action_time) / 1000.0

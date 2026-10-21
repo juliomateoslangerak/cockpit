@@ -137,7 +137,7 @@ class Nanomover(Device):
         cur_time = time.time()
         delay = cur_time - last_exercise_timestamp
         days_passed = delay / float(24 * 60 * 60)
-        if days_passed > 7 and cockpit.gui.gui_utils.getUserPermission(
+        if days_passed > 7 and cockpit.gui.gui_utils.get_user_permission(
             ("It has been %.1f days since " % days_passed)
             + "the stage was last exercised. Please exercise "
             + "the stage regularly.\n\nExercise stage?",

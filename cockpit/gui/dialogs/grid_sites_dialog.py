@@ -91,35 +91,35 @@ class GridSitesDialog(wx.Dialog):
         )
         sizer.Add(label, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        self.numRows = cockpit.gui.gui_utils.addLabeledInput(
+        self.numRows = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Number of rows:",
-            defaultValue=self.settings["numRows"],
+            default_value=self.settings["numRows"],
         )
-        self.numColumns = cockpit.gui.gui_utils.addLabeledInput(
+        self.numColumns = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Number of columns:",
-            defaultValue=self.settings["numColumns"],
+            default_value=self.settings["numColumns"],
         )
-        self.imageWidth = cockpit.gui.gui_utils.addLabeledInput(
+        self.imageWidth = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Horizontal spacing (pixels):",
-            defaultValue=self.settings["imageWidth"],
+            default_value=self.settings["imageWidth"],
         )
-        self.imageHeight = cockpit.gui.gui_utils.addLabeledInput(
+        self.imageHeight = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Vertical spacing (pixels):",
-            defaultValue=self.settings["imageHeight"],
+            default_value=self.settings["imageHeight"],
         )
-        self.markerSize = cockpit.gui.gui_utils.addLabeledInput(
+        self.markerSize = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Marker size (default 25):",
-            defaultValue=self.settings["markerSize"],
+            default_value=self.settings["markerSize"],
         )
 
         buttonBox = wx.BoxSizer(wx.HORIZONTAL)

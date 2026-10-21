@@ -265,7 +265,7 @@ class MainWindowPanel(wx.Panel):
                 )
                 if not asked:
                     asked = True
-                    if cockpit.gui.gui_utils.getUserPermission(msg, title):
+                    if cockpit.gui.gui_utils.get_user_permission(msg, title):
                         # update ROI on this camera.
                         update = True
                 if update:

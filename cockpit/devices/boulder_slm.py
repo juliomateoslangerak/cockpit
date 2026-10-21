@@ -376,7 +376,7 @@ class BoulderSLM(device.Device):
         ]:
             menu_item = menu.Append(wx.ID_ANY, item=label)
             menu.Bind(wx.EVT_MENU, lambda evt: method, menu_item)
-        cockpit.gui.gui_utils.placeMenuAtMouse(event.GetEventObject(), menu)
+        cockpit.gui.gui_utils.place_menu_at_mouse(event.GetEventObject(), menu)
 
     def test_sim_sequence(self):
         inputs = cockpit.gui.dialogs.get_number_dialog.getManyNumbersFromUser(

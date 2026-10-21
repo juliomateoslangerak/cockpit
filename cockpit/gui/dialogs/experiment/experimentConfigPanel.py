@@ -161,53 +161,53 @@ class ExperimentConfigPanel(wx.Panel):
             self, choices=list(self.experimentStringToModule.keys())
         )
         self.experimentType.SetSelection(0)
-        gui_utils.addLabeledInput(
+        gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Experiment type:",
             control=self.experimentType,
         )
 
-        self.numReps = gui_utils.addLabeledInput(
+        self.numReps = gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Number of reps:",
-            defaultValue=self.settings["num_reps"],
+            default_value=self.settings["num_reps"],
         )
         self.numReps.SetValidator(gui_utils.INTVALIDATOR)
 
-        self.repDuration = gui_utils.addLabeledInput(
+        self.repDuration = gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Rep duration (s):",
-            defaultValue=self.settings["rep_duration"],
-            helperString="Amount of time that must pass between the start "
-            + "of each rep. Use 0 if you don't want any wait time.",
+            default_value=self.settings["rep_duration"],
+            helper_string="Amount of time that must pass between the start "
+                          + "of each rep. Use 0 if you don't want any wait time.",
         )
         self.repDuration.SetValidator(gui_utils.FLOATVALIDATOR)
 
         self.zPositionMode = wx.Choice(self, choices=Z_POSITION_MODES)
         self.zPositionMode.SetSelection(0)
-        gui_utils.addLabeledInput(
+        gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Z position mode:",
             control=self.zPositionMode,
         )
 
-        self.stackHeight = gui_utils.addLabeledInput(
+        self.stackHeight = gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Stack height (\u03bcm):",
-            defaultValue=self.settings["stackHeight"],
+            default_value=self.settings["stackHeight"],
         )
         self.stackHeight.SetValidator(gui_utils.FLOATVALIDATOR)
 
-        self.sliceHeight = gui_utils.addLabeledInput(
+        self.sliceHeight = gui_utils.add_labeled_input(
             self,
             universalSizer,
             label="Slice height (\u03bcm):",
-            defaultValue=self.settings["slice_height"],
+            default_value=self.settings["slice_height"],
         )
         self.sliceHeight.SetValidator(gui_utils.FLOATVALIDATOR)
 
@@ -264,7 +264,7 @@ class ExperimentConfigPanel(wx.Panel):
         )
 
         ## Ordered list of exposure times for simultaneous exposure mode.
-        self.lightExposureTimes, timeSizer = gui_utils.makeLightsControls(
+        self.lightExposureTimes, timeSizer = gui_utils.make_lights_controls(
             self.simultaneousExposurePanel,
             [str(l.name) for l in self.allLights],
             self.settings["simultaneousExposureTimes"],
@@ -611,7 +611,7 @@ class ExperimentConfigPanel(wx.Panel):
             lightTimePairs = [
                 (
                     light,
-                    gui_utils.tryParseNum(
+                    gui_utils.try_parse_num(
                         self.lightExposureTimes[i], decimal.Decimal
                     ),
                 )
@@ -621,7 +621,7 @@ class ExperimentConfigPanel(wx.Panel):
                     and self.lightExposureTimes[i].GetValue()
                 )
             ]
-            if not lightTimePairs and not gui_utils.getUserPermission(
+            if not lightTimePairs and not gui_utils.get_user_permission(
                 "No enabled light has a define exposure time. Are you sure you want to continue?"
             ):
                 return True
@@ -641,7 +641,7 @@ class ExperimentConfigPanel(wx.Panel):
                         settings.append(
                             (
                                 light,
-                                gui_utils.tryParseNum(
+                                gui_utils.try_parse_num(
                                     timeControl, decimal.Decimal
                                 ),
                             )
@@ -706,14 +706,14 @@ class ExperimentConfigPanel(wx.Panel):
         altitude = cockpit.interfaces.stage_mover.get_position_for_axis(2)
         # Default to "current is bottom"
         altBottom = altitude
-        zHeight = gui_utils.tryParseNum(self.stackHeight, float)
+        zHeight = gui_utils.try_parse_num(self.stackHeight, float)
         if self.zPositionMode.GetStringSelection() == "Current is center":
             altBottom = altitude - zHeight / 2
         elif self.zPositionMode.GetStringSelection() == "Use saved top/bottom":
             altBottom = cockpit.interfaces.stage_mover.mover.saved_bottom
             zHeight = cockpit.interfaces.stage_mover.mover.saved_top - altBottom
 
-        sliceHeight = gui_utils.tryParseNum(self.sliceHeight, float)
+        sliceHeight = gui_utils.try_parse_num(self.sliceHeight, float)
         if zHeight == 0:
             # 2D mode.
             zHeight = 1e-6
@@ -728,8 +728,8 @@ class ExperimentConfigPanel(wx.Panel):
             return True
 
         params = {
-            "num_reps": gui_utils.tryParseNum(self.numReps),
-            "rep_duration": gui_utils.tryParseNum(self.repDuration, float),
+            "num_reps": gui_utils.try_parse_num(self.numReps),
+            "rep_duration": gui_utils.try_parse_num(self.repDuration, float),
             "z_positioner": mover,
             "alt_bottom": altBottom,
             "z_height": zHeight,

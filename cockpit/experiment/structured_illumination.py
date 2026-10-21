@@ -574,7 +574,7 @@ class SIExperiment(experiment.Experiment):
                 "\n    'OK' to run as is;"
                 "\n    'Cancel' to go back and change parameters."
             )
-            if not gui_utils.getUserPermission(warning):
+            if not gui_utils.get_user_permission(warning):
                 return False
         return True
 
@@ -604,7 +604,7 @@ class BaseSIMExperimentUI(wx.Panel):
         text = wx.StaticText(self, -1, "Exposure bleach compensation (%):")
         rowSizer.Add(text, 0, wx.ALL, 5)
         ## Ordered list of bleach compensation percentages.
-        self.bleachCompensations, subSizer = gui_utils.makeLightsControls(
+        self.bleachCompensations, subSizer = gui_utils.make_lights_controls(
             self,
             [str(l.name) for l in self.allLights],
             self.settings["bleachCompensations"],
@@ -613,12 +613,12 @@ class BaseSIMExperimentUI(wx.Panel):
         sizer.Add(rowSizer)
         # Now a row for the collection order.
         rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.siCollectionOrder = gui_utils.addLabeledInput(
+        self.siCollectionOrder = gui_utils.add_labeled_input(
             self,
             rowSizer,
             label="Collection order",
             control=wx.Choice(self, choices=sorted(COLLECTION_ORDERS.keys())),
-            helperString='What order to change the angle, phase, and Z step of the experiment. E.g. for "Angle, Phase, Z" Angle will change most slowly and Z will change fastest.',
+            helper_string='What order to change the angle, phase, and Z step of the experiment. E.g. for "Angle, Phase, Z" Angle will change most slowly and Z will change fastest.',
         )
         self.siCollectionOrder.SetSelection(self.settings["siCollectionOrder"])
         sizer.Add(rowSizer)
@@ -637,7 +637,7 @@ class BaseSIMExperimentUI(wx.Panel):
         params["slmHandler"] = depot.get_handler("slm", depot.EXECUTOR)
         compensations = {}
         for i, light in enumerate(self.allLights):
-            val = gui_utils.tryParseNum(self.bleachCompensations[i], float)
+            val = gui_utils.try_parse_num(self.bleachCompensations[i], float)
             if val:
                 # Convert from percentage to multiplier
                 compensations[light] = 0.01 * float(val)

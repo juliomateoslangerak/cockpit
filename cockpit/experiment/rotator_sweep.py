@@ -98,35 +98,35 @@ class ExperimentUI(wx.Panel):
         ## Maps strings to TextCtrls describing how to configure
         # response curve experiments.
         self.settings = self.loadSettings()
-        self.settlingTimeControl = gui_utils.addLabeledInput(
+        self.settlingTimeControl = gui_utils.add_labeled_input(
             self,
             sizer,
             label="settling time",
-            defaultValue=self.settings["settlingTime"],
+            default_value=self.settings["settlingTime"],
         )
         self.settlingTimeControl.SetValidator(FLOATVALIDATOR)
 
-        self.vStepsControl = gui_utils.addLabeledInput(
+        self.vStepsControl = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V steps",
-            defaultValue=self.settings["vSteps"],
+            default_value=self.settings["vSteps"],
         )
         self.vStepsControl.SetValidator(INTVALIDATOR)
 
-        self.startVControl = gui_utils.addLabeledInput(
+        self.startVControl = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V start",
-            defaultValue=self.settings["startV"],
+            default_value=self.settings["startV"],
         )
         self.startVControl.SetValidator(FLOATVALIDATOR)
 
-        self.maxVControl = gui_utils.addLabeledInput(
+        self.maxVControl = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V max",
-            defaultValue=self.settings["maxV"],
+            default_value=self.settings["maxV"],
         )
         self.maxVControl.SetValidator(FLOATVALIDATOR)
 
@@ -136,12 +136,12 @@ class ExperimentUI(wx.Panel):
         """Given a parameters dict (parameter name to value) to hand to the
         experiment instance, augment them with our special parameters."""
         self.saveSettings()
-        params["settlingTime"] = gui_utils.tryParseNum(
+        params["settlingTime"] = gui_utils.try_parse_num(
             self.settlingTimeControl, float
         )
-        params["startV"] = gui_utils.tryParseNum(self.startVControl, float)
-        params["maxV"] = gui_utils.tryParseNum(self.maxVControl, float)
-        params["vSteps"] = gui_utils.tryParseNum(self.vStepsControl)
+        params["startV"] = gui_utils.try_parse_num(self.startVControl, float)
+        params["maxV"] = gui_utils.try_parse_num(self.maxVControl, float)
+        params["vSteps"] = gui_utils.try_parse_num(self.vStepsControl)
         params["polarizerHandler"] = depot.get_handler_with_name("SI polarizer")
         return params
 

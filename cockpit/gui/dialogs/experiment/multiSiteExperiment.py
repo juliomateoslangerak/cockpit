@@ -129,54 +129,54 @@ class MultiSiteExperimentDialog(wx.Dialog):
         )
         columnSizer.Add(self.sitesPanel)
 
-        self.numCycles = gui_utils.addLabeledInput(
+        self.numCycles = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Number of cycles:",
-            defaultValue=self.settings["numCycles"],
+            default_value=self.settings["numCycles"],
             size=FIELD_SIZE,
-            minSize=CONTROL_SIZE,
+            min_size=CONTROL_SIZE,
         )
 
-        self.cycleDuration = gui_utils.addLabeledInput(
+        self.cycleDuration = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Min cycle duration (s):",
-            defaultValue=self.settings["cycleDuration"],
+            default_value=self.settings["cycleDuration"],
             size=FIELD_SIZE,
-            minSize=CONTROL_SIZE,
-            helperString="Minimum amount of time to pass between each cycle. If the "
-            + "cycle finishes early, then I will wait until this much "
-            + "time has passed. You can enter multiple values here "
-            + "separated by commas; I will then use each wait time in "
-            + 'sequence; e.g. "60,120,180" means the first '
-            + "cycle takes one minute, the second two, the third three, "
-            + "the fourth one, the fifth two, and so on.",
+            min_size=CONTROL_SIZE,
+            helper_string="Minimum amount of time to pass between each cycle. If the "
+                          + "cycle finishes early, then I will wait until this much "
+                          + "time has passed. You can enter multiple values here "
+                          + "separated by commas; I will then use each wait time in "
+                          + 'sequence; e.g. "60,120,180" means the first '
+                          + "cycle takes one minute, the second two, the third three, "
+                          + "the fourth one, the fifth two, and so on.",
         )
 
-        self.delayBeforeStarting = gui_utils.addLabeledInput(
+        self.delayBeforeStarting = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Delay before starting (min):",
-            defaultValue=self.settings["delayBeforeStarting"],
+            default_value=self.settings["delayBeforeStarting"],
             size=FIELD_SIZE,
-            minSize=CONTROL_SIZE,
-            helperString="Amount of time to wait before starting the experiment. "
-            + "This is useful if you have a lengthy period to wait for "
-            + "your cells to reach the stage you're interested in, for "
-            + "example.",
+            min_size=CONTROL_SIZE,
+            helper_string="Amount of time to wait before starting the experiment. "
+                          + "This is useful if you have a lengthy period to wait for "
+                          + "your cells to reach the stage you're interested in, for "
+                          + "example.",
         )
 
-        self.delayBeforeImaging = gui_utils.addLabeledInput(
+        self.delayBeforeImaging = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Delay before imaging (s):",
-            defaultValue=self.settings["delayBeforeImaging"],
+            default_value=self.settings["delayBeforeImaging"],
             size=FIELD_SIZE,
-            minSize=CONTROL_SIZE,
-            helperString="Amount of time to wait after moving to a site before "
-            + "I start imaging the site. This is mostly useful if "
-            + "your stage needs time to stabilize after moving.",
+            min_size=CONTROL_SIZE,
+            helper_string="Amount of time to wait after moving to a site before "
+                          + "I start imaging the site. This is mostly useful if "
+                          + "your stage needs time to stabilize after moving.",
         )
 
         controlsSizer.Add(columnSizer, 0, wx.ALL, 5)
@@ -190,48 +190,48 @@ class MultiSiteExperimentDialog(wx.Dialog):
         if powerHandlers:
             # There are devices that we could potentially turn off at end of
             # experiment.
-            self.shouldPowerDownWhenDone = gui_utils.addLabeledInput(
+            self.shouldPowerDownWhenDone = gui_utils.add_labeled_input(
                 self.panel,
                 columnSizer,
                 label="Power off devices when done:",
                 control=wx.CheckBox(self.panel),
-                labelHeightAdjustment=0,
+                label_height_adjustment=0,
                 border=3,
                 flags=wx.ALL,
-                helperString="If checked, then at the end of the experiment, I will "
-                + "power down all the devices I can.",
+                helper_string="If checked, then at the end of the experiment, I will "
+                              + "power down all the devices I can.",
             )
 
-        self.shouldOptimizeSiteOrder = gui_utils.addLabeledInput(
+        self.shouldOptimizeSiteOrder = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Optimize route:",
-            defaultValue=self.settings["shouldOptimizeSiteOrder"],
+            default_value=self.settings["shouldOptimizeSiteOrder"],
             control=wx.CheckBox(self.panel),
-            labelHeightAdjustment=0,
+            label_height_adjustment=0,
             border=3,
             flags=wx.ALL,
-            helperString="If checked, then I will calculate an ordering of the sites "
-            + "that will minimize the total time spent in transit; "
-            + "otherwise, I will use the order you specify.",
+            helper_string="If checked, then I will calculate an ordering of the sites "
+                          + "that will minimize the total time spent in transit; "
+                          + "otherwise, I will use the order you specify.",
         )
 
-        self.shouldCustomizeLightFrequencies = gui_utils.addLabeledInput(
+        self.shouldCustomizeLightFrequencies = gui_utils.add_labeled_input(
             self.panel,
             columnSizer,
             label="Customize light frequencies:",
-            defaultValue=self.settings["shouldCustomizeLightFrequencies"],
+            default_value=self.settings["shouldCustomizeLightFrequencies"],
             control=wx.CheckBox(self.panel),
-            labelHeightAdjustment=0,
+            label_height_adjustment=0,
             border=3,
             flags=wx.ALL,
-            helperString="This allows you to set up experiments where different "
-            + "light sources are enabled for different cycles. If you "
-            + "set a frequency of 5 for a given light, for example, "
-            + "then that light will only be used for every 5th pass "
-            + "(the 1st, 6th, 11th, etc. cycles). You can specify an "
-            + 'offset, too: "5 + 1" would enable the light for the '
-            + "2nd, 7th, 12th, etc. cycles.",
+            helper_string="This allows you to set up experiments where different "
+                          + "light sources are enabled for different cycles. If you "
+                          + "set a frequency of 5 for a given light, for example, "
+                          + "then that light will only be used for every 5th pass "
+                          + "(the 1st, 6th, 11th, etc. cycles). You can specify an "
+                          + 'offset, too: "5 + 1" would enable the light for the '
+                          + "2nd, 7th, 12th, etc. cycles.",
         )
         self.shouldCustomizeLightFrequencies.Bind(
             wx.EVT_CHECKBOX, self.onCustomizeLightFrequencies
@@ -239,7 +239,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.lightFrequenciesPanel = wx.Panel(
             self.panel, style=wx.BORDER_SUNKEN | wx.TAB_TRAVERSAL
         )
-        self.lightFrequencies, sizer = gui_utils.makeLightsControls(
+        self.lightFrequencies, sizer = gui_utils.make_lights_controls(
             self.lightFrequenciesPanel,
             [str(l.wavelength) for l in self.allLights],
             self.settings["lightFrequencies"],

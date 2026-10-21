@@ -407,12 +407,12 @@ class ExperimentUI(wx.Panel):
                 FLOATVALIDATOR,
             ),
         ]:
-            control = gui_utils.addLabeledInput(
+            control = gui_utils.add_labeled_input(
                 self,
                 sizer,
                 label=label,
-                defaultValue=self.settings[key],
-                helperString=helper_string,
+                default_value=self.settings[key],
+                helper_string=helper_string,
             )
             control.SetValidator(validator)
             self.correction_args[key] = control
@@ -422,7 +422,7 @@ class ExperimentUI(wx.Panel):
             self.settings["correction_should_preserve_intermediary_files"]
         )
         row_sizer.Add(control)
-        gui_utils.addHelperString(
+        gui_utils.add_helper_string(
             self,
             row_sizer,
             "Keep the raw data in addition to the averaged files.",
@@ -437,19 +437,19 @@ class ExperimentUI(wx.Panel):
         """Given a parameters dict (parameter name to value) to hand to the
         experiment instance, augment them with our special parameters."""
         self.save_settings()
-        params["num_exposures"] = gui_utils.tryParseNum(
+        params["num_exposures"] = gui_utils.try_parse_num(
             self.correction_args["correction_num_exposures"]
         )
-        params["num_collections"] = gui_utils.tryParseNum(
+        params["num_collections"] = gui_utils.try_parse_num(
             self.correction_args["correction_num_collections"]
         )
-        params["exposure_multiplier"] = gui_utils.tryParseNum(
+        params["exposure_multiplier"] = gui_utils.try_parse_num(
             self.correction_args["correction_exposure_multiplier"], float
         )
-        params["max_intensity"] = gui_utils.tryParseNum(
+        params["max_intensity"] = gui_utils.try_parse_num(
             self.correction_args["correction_max_intensity"]
         )
-        params["cosmic_ray_threshold"] = gui_utils.tryParseNum(
+        params["cosmic_ray_threshold"] = gui_utils.try_parse_num(
             self.correction_args["correction_cosmic_ray_threshold"], float
         )
         params["should_preserve_intermediary_files"] = self.correction_args[

@@ -587,7 +587,7 @@ class MicroscopeStage(MicroscopeBase):
                 " If you press 'Cancel' the stage will not be homed"
                 " and its behaviour will be unpredictable." % (self.name)
             )
-            if cockpit.gui.gui_utils.getUserPermission(msg, title):
+            if cockpit.gui.gui_utils.get_user_permission(msg, title):
                 self._proxy.enable()
         else:
             self._proxy.enable()

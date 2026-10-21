@@ -459,12 +459,12 @@ class ExperimentUI(wx.Panel):
                 FLOATVALIDATOR,
             ),
         ]:
-            control = gui_utils.addLabeledInput(
+            control = gui_utils.add_labeled_input(
                 self,
                 sizer,
                 label=label,
-                defaultValue=self.settings[key],
-                helperString=helper_string,
+                default_value=self.settings[key],
+                helper_string=helper_string,
             )
             if validator is not None:
                 control.SetValidator(validator)
@@ -475,7 +475,7 @@ class ExperimentUI(wx.Panel):
             self.settings["response_map_should_preserve_intermediary_files"]
         )
         row_sizer.Add(control)
-        gui_utils.addHelperString(
+        gui_utils.add_helper_string(
             self,
             row_sizer,
             "Keep the raw data in addition to the averaged files.",
@@ -489,13 +489,13 @@ class ExperimentUI(wx.Panel):
     def augment_params(self, params):
         """Given a parameters dict (parameter name to value) to hand to the experiment instance, augment them with our special parameters."""
         self.save_settings()
-        params["num_exposures"] = gui_utils.tryParseNum(
+        params["num_exposures"] = gui_utils.try_parse_num(
             self.response_args["response_map_num_exposures"]
         )
         tokens = self.response_args["response_map_exposure_times"].GetValue()
         tokens = tokens.split(",")
         params["exposure_times"] = map(float, tokens)
-        params["cosmic_ray_threshold"] = gui_utils.tryParseNum(
+        params["cosmic_ray_threshold"] = gui_utils.try_parse_num(
             self.response_args["response_map_cosmic_ray_threshold"]
         )
         params["should_preserve_intermediary_files"] = self.response_args[

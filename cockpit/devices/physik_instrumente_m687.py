@@ -202,7 +202,7 @@ class PhysikInstrumenteM687(Device):
         cur_time = time.time()
         delay = cur_time - last_exercise_timestamp
         days_passed = delay / float(24 * 60 * 60)
-        if days_passed > 7 and cockpit.gui.gui_utils.getUserPermission(
+        if days_passed > 7 and cockpit.gui.gui_utils.get_user_permission(
             ("It has been %.1f days since " % days_passed)
             + "the stage was last exercised. Please exercise "
             + "the stage regularly.\n\nExercise stage?",
@@ -258,7 +258,7 @@ class PhysikInstrumenteM687(Device):
                     Ensure that there are no obstructions, then press 'OK' 
                     to home the stage.
                     """
-                    if cockpit.gui.gui_utils.getUserPermission(msg):
+                    if cockpit.gui.gui_utils.get_user_permission(msg):
                         self.home_motors()
                 elif error not in [0, 10]:
                     error_desc = ERROR_CODES.get(
@@ -530,7 +530,7 @@ class PhysikInstrumenteM687(Device):
                 desc = line.split(b"\t")[5]
                 for axis in (1, 2):
                     val = self.send_xy_command(b"SPA? %d %s" % (axis, param))
-                    # Note val has a newline at the end here.
+                    # Note value has a newline at the end here.
                     handle.write("%s (%s): %s" % (desc, param, val.decode()))
             else:
                 # Lines at the beginning/end don't have parameters in them.

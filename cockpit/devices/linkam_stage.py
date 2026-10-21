@@ -83,7 +83,7 @@ class RefillTimerPanel(wx.Panel):
         menu = wx.Menu()
         menu.Append(1, "Start refill")
         self.Bind(wx.EVT_MENU, lambda e: self._refill_func(), id=1)
-        cockpit.gui.gui_utils.placeMenuAtMouse(self, menu)
+        cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
     def format(self, dt, prefix=""):
         prefix = "{:3.3} ".format(prefix)

@@ -99,6 +99,7 @@ class _BaseValidator(wx.Validator):
         if not (ctrl.Enabled and ctrl.Shown):
             return True
 
+        # TODO: Window does not have GetValue
         val = ctrl.GetValue().strip()
 
         # Validate empty case
@@ -133,11 +134,11 @@ class FloatValidator(_BaseValidator):
     * _validate() tests that string can be parsed as a float.
     """
 
-    def _validate(self, val):
+    def _validate(self, value):
         # Allow special case of single decimal point.
-        if val == ".":
-            val = "0."
-        return float(val)
+        if value == ".":
+            value = "0."
+        return float(value)
 
     def OnChar(self, event):
         key = event.GetKeyCode()
@@ -165,8 +166,8 @@ class IntValidator(_BaseValidator):
     * Restricts input to numeric characters.
     * _validate() tests that string can be parsed as an int."""
 
-    def _validate(self, val):
-        return int(val)
+    def _validate(self, value):
+        return int(value)
 
     def OnChar(self, event):
         key = event.GetKeyCode()
@@ -186,9 +187,9 @@ class CSVValidator(_BaseValidator):
     * _validate() tests that string can be parsed as a float.
     """
 
-    def _validate(self, val):
+    def _validate(self, value):
         converted = []
-        for v in val.split(","):
+        for v in value.split(","):
             converted.append(float(v))
         return converted
 
@@ -217,29 +218,30 @@ INTVALIDATOR = IntValidator()
 CSVVALIDATOR = CSVValidator()
 
 
-def makeLightsControls(parent, labels, defaults):
+def make_lights_controls(parent, labels, defaults):
     """Generate a set of small text boxes for controlling individual lights.
 
     Return a list of the controls, and the sizer they are contained in.
     """
     sizer = wx.FlexGridSizer(2, len(labels), 0, 4)
     controls = []
-    for label, defaultVal in zip(labels, defaults):
+    for label, default_val in zip(labels, defaults):
         sizer.Add(
             wx.StaticText(parent, -1, label), 0, wx.ALIGN_RIGHT | wx.ALL, 5
         )
         # Changed 'control' to 'ctrl' to more clearly discriminate from 'controls'.
         ctrl = wx.TextCtrl(parent, size=(40, -1), name=label)
-        ctrl.SetValue(defaultVal)
+        ctrl.SetValue(default_val)
         # allowEmpty=True lets validator know this control may be empty
         ctrl.SetValidator(FLOATVALIDATOR)
+        # TODO: TextCtrl does not have allowEmpty
         ctrl.allowEmpty = True
         controls.append(ctrl)
         sizer.Add(ctrl, 0, wx.ALL, 5)
     return controls, sizer
 
 
-def addHelperString(parent, sizer, text, border=0, flags=wx.ALL):
+def add_helper_string(parent, sizer, text, border=0, flags=wx.ALL):
     """Add some explanatory text to the given sizer."""
     label = wx.StaticText(parent, -1, " (What is this?)")
     label.SetForegroundColour((100, 100, 255))
@@ -247,20 +249,20 @@ def addHelperString(parent, sizer, text, border=0, flags=wx.ALL):
     sizer.Add(label, 0, flags, border)
 
 
-def addLabeledInput(
+def add_labeled_input(
     parent,
     sizer,
     id=-1,
     label="",
-    defaultValue="",
+    default_value="",
     size=(-1, -1),
-    minSize=(-1, -1),
-    shouldRightAlignInput=True,
+    min_size=(-1, -1),
+    should_right_align_input=True,
     border=0,
-    labelHeightAdjustment=3,
+    label_height_adjustment=3,
     control=None,
-    controlType=None,
-    helperString="",
+    control_type=None,
+    helper_string="",
     flags=wx.ALL,
 ):
     """Add a labeled form input to the given sizer.
@@ -271,68 +273,68 @@ def addLabeledInput(
     \\todo The checkbox logic results in substantial code duplication.
 
     Args:
-        defaultValue (str): The default value the form input should have.
-        labelHeightAdjustment (int): Number of pixels to push the input's
+        default_value (str): The default value the form input should have.
+        label_height_adjustment (int): Number of pixels to push the input's
             label down by. Sometimes labels and inputs don't align nicely
             otherwise.
-        controlType (type): The type of the form input to make. Defaults to
+        control_type (type): The type of the form input to make. Defaults to
             wx.TextCtrl.
         control (wx.Control): The specific control object to use. Mutually
             exclusive with the controlType parameter.
-        helperString (str): Help text to insert, using addHelperString.
+        helper_string (str): Help text to insert, using add_helper_string.
         flags (int): Any wx flags to use when inserting the object into the
             sizer.
     """
     if control is None:
-        if controlType is None:
-            controlType = wx.TextCtrl
-        control = controlType(parent, id, defaultValue, size=size, name=label)
+        if control_type is None:
+            control_type = wx.TextCtrl
+        control = control_type(parent, id, default_value, size=size, name=label)
     text = wx.StaticText(parent, -1, label)
-    rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-    rowSizer.SetMinSize(minSize)
+    row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    row_sizer.SetMinSize(min_size)
 
-    if controlType == wx.CheckBox:
-        rowSizer.Add(control)
-        if shouldRightAlignInput:
-            rowSizer.Add((10, -1), 1, wx.EXPAND | wx.ALL, 0)
-        rowSizer.Add(text, 0, wx.TOP, labelHeightAdjustment)
-        if helperString != "":
-            addHelperString(
+    if control_type == wx.CheckBox:
+        row_sizer.Add(control)
+        if should_right_align_input:
+            row_sizer.Add((10, -1), 1, wx.EXPAND | wx.ALL, 0)
+        row_sizer.Add(text, 0, wx.TOP, label_height_adjustment)
+        if helper_string != "":
+            add_helper_string(
                 parent,
-                rowSizer,
-                helperString,
-                border=labelHeightAdjustment,
+                row_sizer,
+                helper_string,
+                border=label_height_adjustment,
                 flags=wx.TOP,
             )
     else:
-        rowSizer.Add(text, 0, wx.TOP, labelHeightAdjustment)
-        if helperString != "":
-            addHelperString(
+        row_sizer.Add(text, 0, wx.TOP, label_height_adjustment)
+        if helper_string != "":
+            add_helper_string(
                 parent,
-                rowSizer,
-                helperString,
-                border=labelHeightAdjustment,
+                row_sizer,
+                helper_string,
+                border=label_height_adjustment,
                 flags=wx.TOP,
             )
-        if shouldRightAlignInput:
+        if should_right_align_input:
             # Add an empty to suck up horizontal space
-            rowSizer.Add((10, -1), 1, wx.EXPAND | wx.ALL, 0)
-        rowSizer.Add(control)
-    sizer.Add(rowSizer, 1, flags | wx.EXPAND, border)
+            row_sizer.Add((10, -1), 1, wx.EXPAND | wx.ALL, 0)
+        row_sizer.Add(control)
+    sizer.Add(row_sizer, 1, flags | wx.EXPAND, border)
     return control
 
 
-def placeMenuAtMouse(frame, menu):
+def place_menu_at_mouse(frame, menu):
     """Simple utility function to pop up the supplied menu at the current mouse
     location."""
     # Get the Mouse Position on the Screen
-    mousePos = wx.GetMousePosition()
+    mouse_pos = wx.GetMousePosition()
     # Translate the Mouse's Screen Position to the Mouse's Control Position
-    mousePosRelative = frame.ScreenToClient(mousePos)
-    frame.PopupMenu(menu, mousePosRelative)
+    mouse_pos_relative = frame.ScreenToClient(mouse_pos)
+    frame.PopupMenu(menu, mouse_pos_relative)
 
 
-def getUserPermission(text, title="Warning"):
+def get_user_permission(text, title="Warning"):
     """Pop up a warning dialog, and return the user's reaction."""
     response = wx.MessageDialog(
         None,
@@ -343,10 +345,10 @@ def getUserPermission(text, title="Warning"):
     return response == wx.ID_OK
 
 
-def tryParseNum(control, convertFunc=int, default=0):
+def try_parse_num(control, convert_func=int, default=0):
     """Given a control, try to parse its value as a number, returning a default
     value on failure."""
     try:
-        return convertFunc(control.GetValue())
+        return convert_func(control.GetValue())
     except:
         return default

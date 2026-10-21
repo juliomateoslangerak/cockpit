@@ -525,7 +525,7 @@ class ExperimentConfigPanel(wx.Panel):
             # Have specific parameters for this experiment type; store them
             # too.
             settings["experimentSpecificValues"] = (
-                self.experimentModuleToPanel[module].getSettingsDict()
+                self.experimentModuleToPanel[module].get_settings_dict()
             )
 
         # Get the filepath to save settings to.
@@ -571,7 +571,7 @@ class ExperimentConfigPanel(wx.Panel):
         module = self.experimentStringToModule[experimentType]
         if module in self.experimentModuleToPanel:
             panel = self.experimentModuleToPanel[module]
-            panel.saveSettings(settings["experimentSpecificValues"])
+            panel.save_settings(settings["experimentSpecificValues"])
             del settings["experimentSpecificValues"]
         cockpit.util.user_config.set_value(self.configKey, settings)
         # Reset the panel, destroying us and creating a new panel with
@@ -685,7 +685,7 @@ class ExperimentConfigPanel(wx.Panel):
                             decimal.Decimal(
                                 float(
                                     channelSettings[light_handler.name][
-                                        "exposureTime"
+                                        "exposure_time"
                                     ]
                                 )
                             ),
@@ -741,7 +741,7 @@ class ExperimentConfigPanel(wx.Panel):
         module = self.experimentStringToModule[experimentType]
         if module in self.experimentModuleToPanel:
             # Add on the special parameters needed by this experiment type.
-            params = self.experimentModuleToPanel[module].augmentParams(params)
+            params = self.experimentModuleToPanel[module].augment_params(params)
 
         self.runner = module.EXPERIMENT_CLASS(**params)
         return self.runner.run()

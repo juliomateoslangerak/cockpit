@@ -99,23 +99,23 @@ class ResponseMapExperiment(
         cameras,
         lights,
         exposure_settings,
-        numExposures,
+        num_exposures,
         save_path,
-        exposureTimes,
-        cosmicRayThreshold,
-        shouldPreserveIntermediaryFiles,
+        exposure_times,
+        cosmic_ray_threshold,
+        should_preserve_intermediary_files,
         **kwargs,
     ):
         """Set up the response map experiment.
 
         Args:
-            numExposures (int): How many images to take for each exposure
+            num_exposures (int): How many images to take for each exposure
                 time.
-            exposureTimes (list): Exposure times to take images for.
-            cosmicRayThreshold (float): If any pixels are more than this many
+            exposure_times (list): Exposure times to take images for.
+            cosmic_ray_threshold (float): If any pixels are more than this many
                 standard deviations away from the median of the overall
                 image, then the image is discarded.
-            shouldPreserveIntermediaryFiles (bool): If True, then save the raw
+            should_preserve_intermediary_files (bool): If True, then save the raw
                 data in addition to the averaged files.
         """
         # Fill in some dummy values here for parameters that we don't actually
@@ -124,21 +124,21 @@ class ResponseMapExperiment(
             cameras,
             lights,
             exposure_settings,
-            numExposures,
+            num_exposures,
             save_path,
-            exposureMultiplier=0,
-            maxIntensity=None,
-            cosmicRayThreshold=cosmicRayThreshold,
-            shouldPreserveIntermediaryFiles=shouldPreserveIntermediaryFiles,
+            exposure_multiplier=0,
+            max_intensity=None,
+            cosmic_ray_threshold=cosmic_ray_threshold,
+            should_preserve_intermediary_files=should_preserve_intermediary_files,
         )
-        self.numExposures = numExposures
-        self.savePath = save_path
-        self.exposureTimes = map(decimal.Decimal, exposureTimes)
-        self.cosmicRayThreshold = cosmicRayThreshold
+        self.num_exposures = num_exposures
+        self.save_path = save_path
+        self.exposure_times = map(decimal.Decimal, exposure_times)
+        self.cosmic_ray_threshold = cosmic_ray_threshold
         ## List of (exposure time, averaged images, sample raw image) tuples.
-        self.timesAndImages = []
+        self.times_and_images = []
         ## Maximum width/height of an image for any camera we use.
-        self.maxImageDims = [0, 0]
+        self.max_image_dims = [0, 0]
 
     @cockpit.util.threads.call_in_new_thread
     def run(self):
@@ -154,35 +154,35 @@ class ResponseMapExperiment(
         self.sanity_check_environment()
         self.prepare_handlers()
 
-        self.cameraToReadoutTime = dict(
+        self.camera_to_readout_time = dict(
             [
                 (c, c.get_time_between_exposures(is_exact=True))
                 for c in self.cameras
             ]
         )
-        for camera, readTime in self.cameraToReadoutTime.items():
-            if type(readTime) is not decimal.Decimal:
+        for camera, read_time in self.camera_to_readout_time.items():
+            if type(read_time) is not decimal.Decimal:
                 raise RuntimeError(
                     "Camera %s did not provide an exact (decimal.Decimal) readout time"
                     % camera.name
                 )
 
-        for camera, func in self.camToFunc.items():
+        for camera, func in self.cam_to_func.items():
             events.subscribe(events.NEW_IMAGE % camera.name, func)
-        for exposureTime in self.exposureTimes:
+        for exposure_time in self.exposure_times:
             if self.should_abort:
                 break
-            self.camToImages = {}
-            self.camToNumImagesReceived = {}
-            self.camToLock = {}
+            self.cam_to_images = {}
+            self.cam_to_num_images_received = {}
+            self.cam_to_lock = {}
             for camera in self.cameras:
                 # Prepare a memory buffer to store images in.
                 width, height = camera.get_image_size()
-                self.camToImages[camera] = numpy.zeros(
-                    (self.numExposures, height, width)
+                self.cam_to_images[camera] = numpy.zeros(
+                    (self.num_exposures, height, width)
                 )
-                self.camToNumImagesReceived[camera] = 0
-                self.camToLock[camera] = threading.Lock()
+                self.cam_to_num_images_received[camera] = 0
+                self.cam_to_lock[camera] = threading.Lock()
                 # Indicate any frame transfer cameras for reset at start of
                 # table.
                 if (
@@ -191,109 +191,109 @@ class ResponseMapExperiment(
                 ):
                     self.camera_to_is_ready[camera] = False
 
-            self.table = self.generate_actions(exposureTime)
+            self.table = self.generate_actions(exposure_time)
             self.table.sort()
             self.examine_actions()
             self.table.sort()
             self.table.enforce_positive_timepoints()
             self.last_minute_actions()
-            self.doneReceivingThread = threading.Thread(target=self.waiter)
-            self.doneReceivingThread.start()
+            self.done_receiving_thread = threading.Thread(target=self.waiter)
+            self.done_receiving_thread.start()
             self.execute()
 
             if self.should_abort:
                 break
 
             # Wait until it's been a short time after the last received image.
-            self.doneReceivingThread.join()
+            self.done_receiving_thread.join()
             progress = cockpit.gui.progress_dialog.ProgressDialog(
                 "Processing images",
-                "Processing images for exposure time %.4f" % exposureTime,
+                "Processing images for exposure time %.4f" % exposure_time,
                 parent=None,
             )
-            self.processImages(exposureTime)
+            self.process_images(exposure_time)
             progress.Destroy()
 
-        for camera, func in self.camToFunc.items():
+        for camera, func in self.cam_to_func.items():
             events.unsubscribe(events.NEW_IMAGE % camera.name, func)
 
         self.save()
-        self.showResults()
+        self.show_results()
         self.cleanup()
 
     def save(self):
         """Save our averaged images together in a single file, with the exposure time in the extended header."""
         # First, re-order our images into WTZ order (with the Z axis being
         # flat).
-        numTimes = len(self.timesAndImages)
-        numCams = len(self.timesAndImages[0][1])
-        allImages = numpy.zeros(
-            (numCams, numTimes, 1, self.maxImageDims[0], self.maxImageDims[1]),
+        num_times = len(self.times_and_images)
+        num_cams = len(self.times_and_images[0][1])
+        all_images = numpy.zeros(
+            (num_cams, num_times, 1, self.max_image_dims[0], self.max_image_dims[1]),
             dtype=numpy.float32,
         )
-        exposureTimes = []
-        for timepoint, (exposureTime, images, rawImages) in enumerate(
-            self.timesAndImages
+        exposure_times = []
+        for timepoint, (exposure_time, images, raw_images) in enumerate(
+            self.times_and_images
         ):
             for wavelength, image in enumerate(images):
                 height, width = image.shape
-                allImages[wavelength, timepoint, 0, :height, :width] = image
-                exposureTimes.append(exposureTime)
+                all_images[wavelength, timepoint, 0, :height, :width] = image
+                exposure_times.append(exposure_time)
 
         header = cockpit.util.datadoc.make_header_for(
-            allImages, wavelengths=[cam.wavelength for cam in self.cameras]
+            all_images, wavelengths=[cam.wavelength for cam in self.cameras]
         )
 
         # Number of bytes allocated to the extended header: 4 per image, since
         # we use a 32-bit floating point for the exposure time.
-        header.next = 4 * numCams * numTimes
+        header.next = 4 * num_cams * num_times
         header.NumFloats = 1
-        handle = open(self.savePath, "wb")
+        handle = open(self.save_path, "wb")
         handle.write(header._array.tobytes())
-        exposureTimes = numpy.array(exposureTimes, dtype=numpy.float32)
-        handle.write(exposureTimes)
-        handle.write(allImages)
+        exposure_times = numpy.array(exposure_times, dtype=numpy.float32)
+        handle.write(exposure_times)
+        handle.write(all_images)
         handle.close()
 
-    def showResults(self):
+    def show_results(self):
         """Demonstrate our results to the user in a number of ways."""
         # First, show plots of the linearity of some of the pixels, before
         # and after correction.
-        xVals = numpy.array([d[0] for d in self.timesAndImages])
-        averagedImages = numpy.array([d[1] for d in self.timesAndImages])
-        rawImages = numpy.array([d[2] for d in self.timesAndImages])
-        self.plotPixels(
-            xVals, rawImages, "Pre-corrected pixel linearity survey"
+        x_vals = numpy.array([d[0] for d in self.times_and_images])
+        averaged_images = numpy.array([d[1] for d in self.times_and_images])
+        raw_images = numpy.array([d[2] for d in self.times_and_images])
+        self.plot_pixels(
+            x_vals, raw_images, "Pre-corrected pixel linearity survey"
         )
-        correctedImages = numpy.empty(rawImages.shape)
-        for cam in range(rawImages.shape[1]):
+        corrected_images = numpy.empty(raw_images.shape)
+        for cam in range(raw_images.shape[1]):
             corrector = cockpit.util.correct_nonlinear.Corrector(
-                xVals, averagedImages[:, cam]
+                x_vals, averaged_images[:, cam]
             )
-            correctedImages[:, cam] = map(corrector.correct, rawImages[:, cam])
-        self.plotPixels(
-            xVals, correctedImages, "Corrected pixel linearity survey"
+            corrected_images[:, cam] = map(corrector.correct, raw_images[:, cam])
+        self.plot_pixels(
+            x_vals, corrected_images, "Corrected pixel linearity survey"
         )
 
         # Also show what the images look like before and after correction.
         # This requires reordering the images from (exposure time, cam, Y, X)
         # to (cam, exposure time, 1, Y, X)
-        rawImages.shape = list(rawImages.shape) + [1]
-        correctedImages.shape = rawImages.shape
+        raw_images.shape = list(raw_images.shape) + [1]
+        corrected_images.shape = raw_images.shape
         # T, W, Y, X, Z -> W, T, Z, Y, X
-        rawImages = rawImages.transpose(1, 0, 4, 2, 3)
-        correctedImages = correctedImages.transpose(1, 0, 4, 2, 3)
+        raw_images = raw_images.transpose(1, 0, 4, 2, 3)
+        corrected_images = corrected_images.transpose(1, 0, 4, 2, 3)
         # Ensure we have valid datatypes for display.
-        rawImages = numpy.float32(rawImages)
-        correctedImages = numpy.float32(correctedImages)
+        raw_images = numpy.float32(raw_images)
+        corrected_images = numpy.float32(corrected_images)
         viewer1 = cockpit.gui.image_sequence_viewer.ImageSequenceViewer(
-            rawImages, "Uncorrected sample images", parent=None
+            raw_images, "Uncorrected sample images", parent=None
         )
         viewer2 = cockpit.gui.image_sequence_viewer.ImageSequenceViewer(
-            correctedImages, "Corrected sample images", parent=None
+            corrected_images, "Corrected sample images", parent=None
         )
 
-    def plotPixels(self, xVals, images, title):
+    def plot_pixels(self, x_vals, images, title):
         """Given some images, plot a few pixels."""
         figure = matplotlib.figure.Figure((6, 4), dpi=100, facecolor=(1, 1, 1))
         axes = figure.add_subplot(1, 1, 1)
@@ -307,22 +307,22 @@ class ResponseMapExperiment(
         lines = []
         labels = []
         for cam in range(images.shape[1]):
-            camImages = images[:, cam]
-            height, width = camImages[0].shape
+            cam_images = images[:, cam]
+            height, width = cam_images[0].shape
             cy = height / 2
             cx = width / 2
-            for color, xOffset, yOffset in [
+            for color, x_offset, y_offset in [
                 ("r", -1, -1),
                 ("g", -1, 1),
                 ("b", 1, 1),
                 ("c", 1, -1),
                 ("m", 0, 0),
             ]:
-                y = cy + yOffset * height / 4
-                x = cx + xOffset * width / 4
-                lines.append(axes.plot(xVals, camImages[:, y, x], color))
+                y = cy + y_offset * height / 4
+                x = cx + x_offset * width / 4
+                lines.append(axes.plot(x_vals, cam_images[:, y, x], color))
                 labels.append("Pixel at %d, %d for cam %d" % (x, y, cam))
-            lines.append(axes.plot(xVals, map(numpy.mean, camImages), "k"))
+            lines.append(axes.plot(x_vals, map(numpy.mean, cam_images), "k"))
             labels.append("Average for cam %d" % cam)
         figure.legend(lines, labels, loc="upper left")
         frame = wx.Frame(None, title="Linearity plot")
@@ -335,92 +335,92 @@ class ResponseMapExperiment(
         frame.SetSize((640, 480))
         frame.Show()
 
-    def generate_actions(self, exposureTime):
+    def generate_actions(self, exposure_time):
         """Create the ActionTable needed to run the experiment.
 
         We basically ignore the values in self.exposure_settings in favor of the
         provided exposure time.
         """
         table = action_table.ActionTable()
-        curTime = 0
-        allCams = set(self.cameras)
-        for cameras, lightTimePairs in self.exposure_settings:
-            usedCams = allCams.intersection(cameras)
-            if usedCams:
+        cur_time = 0
+        all_cams = set(self.cameras)
+        for cameras, light_time_pairs in self.exposure_settings:
+            used_cams = all_cams.intersection(cameras)
+            if used_cams:
                 settings = []
-                for light, time in lightTimePairs:
+                for light, time in light_time_pairs:
                     # We can't actually have a zero exposure time, so use
                     # 1ns as a minimum.
-                    exposureTime = max(
-                        exposureTime, decimal.Decimal(".000001")
+                    exposure_time = max(
+                        exposure_time, decimal.Decimal(".000001")
                     )
-                    settings.append((light, exposureTime))
-                for i in range(self.numExposures):
-                    curTime = self.expose(curTime, usedCams, settings, table)
+                    settings.append((light, exposure_time))
+                for i in range(self.num_exposures):
+                    cur_time = self.expose(cur_time, used_cams, settings, table)
         return table
 
-    def processImages(self, exposureTime):
-        """Examine the images in self.camToImages, discard any that indicate cosmic ray strikes or have unusual median intensities, average the remainder, and put them into self.camToAverages.
+    def process_images(self, exposure_time):
+        """Examine the images in self.cam_to_images, discard any that indicate cosmic ray strikes or have unusual median intensities, average the remainder, and put them into self.cam_to_averages.
 
         Return a (possibly empty) set of cameras that had at least 1 valid
         image.
         """
-        activeCameras = set()
+        active_cameras = set()
         averages = []
         raws = []
-        cameras = sorted(self.camToImages.keys())
+        cameras = sorted(self.cam_to_images.keys())
         for camera in cameras:
-            images = self.camToImages[camera][
-                : self.camToNumImagesReceived[camera]
+            images = self.cam_to_images[camera][
+                : self.cam_to_num_images_received[camera]
             ]
             # Save the last image, on the assumption that any issue with
             # camera or light variance will have gotten flattened out by that
             # time.
             raws.append(images[-1])
-            if self.shouldPreserveIntermediaryFiles:
+            if self.should_preserve_intermediary_files:
                 # Save the raw data.
                 cockpit.util.datadoc.write_data_as_mrc(
                     images.astype(numpy.uint16),
                     "%s-raw-%s-%04.5fms"
-                    % (self.savePath, camera.name, exposureTime),
+                    % (self.save_path, camera.name, exposure_time),
                 )
 
             # Calculate a threshold for cosmic ray strikes.
-            stdDev = numpy.std(images)
+            std_dev = numpy.std(images)
             median = numpy.median(images)
             print(
-                "For camera", camera, "have median", median, "and std", stdDev
+                "For camera", camera, "have median", median, "and std", std_dev
             )
-            threshold = self.cosmicRayThreshold * stdDev + median
+            threshold = self.cosmic_ray_threshold * std_dev + median
             # To cope with the fact that some images may be improperly
             # exposed, we want to find statistics that are true for most
             # of the images, hence the per-image statistics here.
-            medianStd = numpy.median([numpy.std(image) for image in images])
-            medianMedian = numpy.median(
+            median_std = numpy.median([numpy.std(image) for image in images])
+            median_median = numpy.median(
                 [numpy.median(image) for image in images]
             )
             accumulator = numpy.zeros(images[0].shape, dtype=numpy.float32)
-            numCleanImages = 0
+            num_clean_images = 0
             for image in images:
-                imageMax = image.max()
-                imageMedian = numpy.median(image)
+                image_max = image.max()
+                image_median = numpy.median(image)
                 if (
-                    imageMax < threshold
-                    and abs(imageMedian - medianMedian) < medianStd
+                    image_max < threshold
+                    and abs(image_median - median_median) < median_std
                 ):
                     # Verified no cosmic ray strike and sensible intensity.
                     accumulator += image
-                    numCleanImages += 1
+                    num_clean_images += 1
 
-            accumulator /= numCleanImages
+            accumulator /= num_clean_images
 
             averages.append(accumulator)
             for i in range(2):
-                self.maxImageDims[i] = max(
-                    self.maxImageDims[i], accumulator.shape[i]
+                self.max_image_dims[i] = max(
+                    self.max_image_dims[i], accumulator.shape[i]
                 )
-            print(numCleanImages, "images are valid")
-        self.timesAndImages.append((exposureTime, averages, raws))
+            print(num_clean_images, "images are valid")
+        self.times_and_images.append((exposure_time, averages, raws))
 
 
 ## A consistent name to use to refer to the experiment class itself.
@@ -431,29 +431,29 @@ from cockpit.gui.gui_utils import CSVVALIDATOR, FLOATVALIDATOR, INTVALIDATOR
 class ExperimentUI(wx.Panel):
     """Generate the UI for special parameters used by this experiment."""
 
-    def __init__(self, parent, configKey):
+    def __init__(self, parent, config_key):
         super().__init__(parent=parent)
-        self.configKey = configKey
+        self.config_key = config_key
         sizer = wx.GridSizer(2, 2, 2, 2)
         ## Maps strings to TextCtrls describing how to configure
         # response curve experiments.
-        self.settings = self.loadSettings()
-        self.responseArgs = {}
-        for key, label, helperString, validator in [
+        self.settings = self.load_settings()
+        self.response_args = {}
+        for key, label, helper_string, validator in [
             (
-                "responseMapNumExposures",
+                "response_map_num_exposures",
                 "Number of exposures",
                 "How many exposures to take for each exposure time.",
                 INTVALIDATOR,
             ),
             (
-                "responseMapExposureTimes",
+                "response_map_exposure_times",
                 "Exposure times",
                 "Comma-separated list of exposure times at which to collect data.",
                 CSVVALIDATOR,
             ),
             (
-                "responseMapCosmicRayThreshold",
+                "response_map_cosmic_ray_threshold",
                 "Cosmic ray threshold",
                 "If any pixels in an image are more than this many standard deviations from the median, then the image is discarded.",
                 FLOATVALIDATOR,
@@ -464,65 +464,65 @@ class ExperimentUI(wx.Panel):
                 sizer,
                 label=label,
                 defaultValue=self.settings[key],
-                helperString=helperString,
+                helperString=helper_string,
             )
             if validator is not None:
                 control.SetValidator(validator)
-            self.responseArgs[key] = control
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
+            self.response_args[key] = control
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
         control = wx.CheckBox(self, label="Preserve intermediary files")
         control.SetValue(
-            self.settings["responseMapShouldPreserveIntermediaryFiles"]
+            self.settings["response_map_should_preserve_intermediary_files"]
         )
-        rowSizer.Add(control)
+        row_sizer.Add(control)
         gui_utils.addHelperString(
             self,
-            rowSizer,
+            row_sizer,
             "Keep the raw data in addition to the averaged files.",
         )
-        self.responseArgs["responseMapShouldPreserveIntermediaryFiles"] = (
+        self.response_args["response_map_should_preserve_intermediary_files"] = (
             control
         )
-        sizer.Add(rowSizer)
+        sizer.Add(row_sizer)
         self.SetSizerAndFit(sizer)
 
-    def augmentParams(self, params):
+    def augment_params(self, params):
         """Given a parameters dict (parameter name to value) to hand to the experiment instance, augment them with our special parameters."""
-        self.saveSettings()
-        params["numExposures"] = gui_utils.tryParseNum(
-            self.responseArgs["responseMapNumExposures"]
+        self.save_settings()
+        params["num_exposures"] = gui_utils.tryParseNum(
+            self.response_args["response_map_num_exposures"]
         )
-        tokens = self.responseArgs["responseMapExposureTimes"].GetValue()
+        tokens = self.response_args["response_map_exposure_times"].GetValue()
         tokens = tokens.split(",")
-        params["exposureTimes"] = map(float, tokens)
-        params["cosmicRayThreshold"] = gui_utils.tryParseNum(
-            self.responseArgs["responseMapCosmicRayThreshold"]
+        params["exposure_times"] = map(float, tokens)
+        params["cosmic_ray_threshold"] = gui_utils.tryParseNum(
+            self.response_args["response_map_cosmic_ray_threshold"]
         )
-        params["shouldPreserveIntermediaryFiles"] = self.responseArgs[
-            "responseMapShouldPreserveIntermediaryFiles"
+        params["should_preserve_intermediary_files"] = self.response_args[
+            "response_map_should_preserve_intermediary_files"
         ].GetValue()
         return params
 
-    def loadSettings(self):
+    def load_settings(self):
         """Load the saved experiment settings, if any."""
         return cockpit.util.user_config.get_value(
-            self.configKey + "responseMapExperimentSettings",
+            self.config_key + "response_map_experiment_settings",
             default={
-                "responseMapCosmicRayThreshold": "10",
-                "responseMapExposureTimes": "1,2,3,4,5",
-                "responseMapNumExposures": "250",
-                "responseMapShouldPreserveIntermediaryFiles": False,
+                "response_map_cosmic_ray_threshold": "10",
+                "response_map_exposure_times": "1,2,3,4,5",
+                "response_map_num_exposures": "250",
+                "response_map_should_preserve_intermediary_files": False,
             },
         )
 
-    def getSettingsDict(self):
+    def get_settings_dict(self):
         """Generate a dict of our settings."""
-        return {(key, c.GetValue()) for key, c in self.responseArgs.items()}
+        return {(key, c.GetValue()) for key, c in self.response_args.items()}
 
-    def saveSettings(self, settings=None):
+    def save_settings(self, settings=None):
         """Save the current experiment settings to config."""
         if settings is None:
-            settings = self.getSettingsDict()
+            settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.configKey + "responseMapExperimentSettings", settings
+            self.config_key + "response_map_experiment_settings", settings
         )

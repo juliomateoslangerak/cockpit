@@ -52,7 +52,7 @@ class LightPanel(wx.Panel):
             safe_controls.EVT_SAFE_CONTROL_COMMIT,
             lambda evt: self.light.set_exposure_time(evt.Value),
         )
-        lightToggle.add_watch("exposureTime", self.expCtrl.SetValue)
+        lightToggle.add_watch("exposure_time", self.expCtrl.SetValue)
         self.expCtrl.SetValue(lightToggle.exposureTime)
 
         self.Sizer.Add(self.button, flag=wx.EXPAND)
@@ -111,7 +111,7 @@ class LightPanel(wx.Panel):
         self.lightPower.lastPower = self.lightPower.callbacks["getPower"]()
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.light.remove_watch("exposureTime", self.expCtrl.SetValue)
+        self.light.remove_watch("exposure_time", self.expCtrl.SetValue)
         if self.lightPower is not None:
             self.lightPower.remove_watch("powerSetPoint", self._SetPowerPercent)
             self._timer.Stop()

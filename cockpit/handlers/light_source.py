@@ -136,13 +136,13 @@ class LightHandler(device.DeviceHandler):
     def onSaveSettings(self):
         return {
             "is_enabled": self.get_is_enabled(),
-            "exposureTime": self.get_exposure_time(),
+            "exposure_time": self.get_exposure_time(),
         }
 
     def onLoadSettings(self, settings):
         # Only change settings if needed.
-        if self.get_exposure_time() != settings["exposureTime"]:
-            self.set_exposure_time(settings["exposureTime"])
+        if self.get_exposure_time() != settings["exposure_time"]:
+            self.set_exposure_time(settings["exposure_time"])
         if self.get_is_enabled() != settings["is_enabled"]:
             self.toggle_state()
 

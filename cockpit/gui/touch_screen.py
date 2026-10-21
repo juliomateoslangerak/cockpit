@@ -616,7 +616,7 @@ class LightsPanelEntry(wx.Panel):
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
             lambda e: self.light.set_exposure_time(e.GetClientData()[1]),
         )
-        self.light.add_watch("exposureTime", self.exposure_ctrl.set_value)
+        self.light.add_watch("exposure_time", self.exposure_ctrl.set_value)
         sizer_row1.Add(
             wx.StaticBitmap(self, bitmap=exposure_img.ConvertToBitmap()),
             0,
@@ -687,7 +687,7 @@ class LightsPanelEntry(wx.Panel):
         self.Layout()
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.light.remove_watch("exposureTime", self.exposure_ctrl.set_value)
+        self.light.remove_watch("exposure_time", self.exposure_ctrl.set_value)
         self.power.remove_watch("powerSetPoint", self._set_power_ctrl_percent)
         self.power.remove_watch("powerSetPoint", self._set_slider_power_percent)
         event.Skip()

@@ -611,7 +611,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
     def setImage(self, newImage):
         """Receive a new image.
 
-        This will trigger processImages(), below, to actually display the
+        This will trigger process_images(), below, to actually display the
         image.
         """
         self.imageQueue.put_nowait(newImage)

@@ -394,44 +394,44 @@ def initialize(config):
 
 
 def make_initial_publications():
-    device_depot.makeInitialPublications()
+    device_depot.make_initial_publications()
 
 
 def get_handler_with_name(name):
-    return device_depot.getHandlerWithName(name)
+    return device_depot.get_handler_with_name(name)
 
 
-def get_handlers_of_type(deviceType):
-    return device_depot.getHandlersOfType(deviceType)
+def get_handlers_of_type(device_type):
+    return device_depot.get_handlers_of_type(device_type)
 
 
-def get_handlers_in_group(groupName):
-    return device_depot.getHandlersInGroup(groupName)
+def get_handlers_in_group(group_name):
+    return device_depot.get_handlers_in_group(group_name)
 
 
 def get_all_handlers():
-    return device_depot.getAllHandlers()
+    return device_depot.get_all_handlers()
 
 
 def get_all_devices():
-    return device_depot.getAllDevices()
+    return device_depot.get_all_devices()
 
 
 def get_sorted_stage_movers():
-    return device_depot.getSortedStageMovers()
+    return device_depot.get_sorted_stage_movers()
 
 
 def get_active_cameras():
-    return device_depot.getActiveCameras()
+    return device_depot.get_active_cameras()
 
 
 def add_handler(handler, device=None):
-    return device_depot.addHandler(handler, device)
+    return device_depot.add_handler(handler, device)
 
 
 def get_device_with_name(name):
-    return device_depot.nameToDevice.get(name)
+    return device_depot.name_to_device.get(name)
 
 
-def get_handler(nameOrDevice, handlerType):
-    return device_depot.getHandler(nameOrDevice, handlerType)
+def get_handler(name_or_device, handler_type):
+    return device_depot.get_handler(name_or_device, handler_type)

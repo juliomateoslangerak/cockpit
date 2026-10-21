@@ -62,7 +62,7 @@ class OpenShutterSweepExperiment(experiment.Experiment):
     """This class handles open-shutter sweep experiments, where we move the
     sample continuously while exposing."""
 
-    def generateActions(self):
+    def generate_actions(self):
         """Create the ActionTable needed to run the experiment.
 
         We simply start an exposure at the bottom of the "stack" and end it at
@@ -70,48 +70,48 @@ class OpenShutterSweepExperiment(experiment.Experiment):
         """
         table = action_table.ActionTable()
         curTime = 0
-        for cameras, lightTimePairs in self.exposureSettings:
+        for cameras, lightTimePairs in self.exposure_settings:
             # Start the stage at the bottom.
-            table.add_action(curTime, self.zPositioner, 0)
+            table.add_action(curTime, self.z_positioner, 0)
             # Ensure our exposure is at least as long as the time needed to
             # move through the sample.
-            motionTime, stabilizationTime = self.zPositioner.getMovementTime(
-                0, self.zHeight
+            motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+                0, self.z_height
             )
             # Image the sample.
             curTime = self.expose(curTime, cameras, lightTimePairs, table)
 
             # End the exposure with the stage at the top.
-            table.add_action(curTime, self.zPositioner, self.zHeight)
+            table.add_action(curTime, self.z_positioner, self.z_height)
             curTime += stabilizationTime
             # Move back to the start so we're ready for the next set of cameras
             # or the next rep.
-            motionTime, stabilizationTime = self.zPositioner.getMovementTime(
-                self.zHeight, 0
+            motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+                self.z_height, 0
             )
             curTime += motionTime
-            table.add_action(curTime, self.zPositioner, 0)
+            table.add_action(curTime, self.z_positioner, 0)
             # Hold flat for the stabilization time, and any time needed for
             # the cameras to be ready. Only needed if we're doing multiple
             # reps, so we can proceed immediately to the next one.
             cameraReadyTime = 0
-            if self.numReps > 1:
-                for cameras, lightTimePairs in self.exposureSettings:
+            if self.num_reps > 1:
+                for cameras, lightTimePairs in self.exposure_settings:
                     for camera in cameras:
                         cameraReadyTime = max(
                             cameraReadyTime,
-                            self.getTimeWhenCameraCanExpose(table, camera),
+                            self.get_time_when_camera_can_expose(table, camera),
                         )
                 table.add_action(
                     max(curTime + stabilizationTime, cameraReadyTime),
-                    self.zPositioner,
+                    self.z_positioner,
                     0,
                 )
 
         return table
 
-    def expose(self, curTime, cameras, lightTimePairs, table):
-        return curTime
+    def expose(self, cur_time, cameras, light_time_pairs, table):
+        return cur_time
 
 
 ## A consistent name to use to refer to the class itself.

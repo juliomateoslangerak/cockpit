@@ -75,7 +75,7 @@ class ExecutorHandler(DeviceHandler):
 
         callbacks must include the following:
 
-        - examineActions(name, table): Perform any necessary validation or
+        - examine_actions(name, table): Perform any necessary validation or
           modification of the experiment's ActionTable.
         - executeTable(name, table, startIndex, stopIndex): Actually perform
           actions through the specified lines in the ActionTable.
@@ -92,7 +92,7 @@ class ExecutorHandler(DeviceHandler):
         # we pass False for is_eligible_for_experiments here.
         super().__init__(name, group_name, False, callbacks, depot.EXECUTOR)
         # Base class contains empty dicts used by mixins so that methods like
-        # getNumRunnableLines can be implemented here for all mixin combos. This
+        # get_num_runnable_lines can be implemented here for all mixin combos. This
         # works just great, but is probably a horrible abuse of OOP. It might be
         # cleaner to have a single list of clients.
         self.digitalClients = {}
@@ -121,9 +121,9 @@ class ExecutorHandler(DeviceHandler):
         )
 
     def examineActions(self, table):
-        return self.callbacks["examineActions"](table)
+        return self.callbacks["examine_actions"](table)
 
-    def getNumRunnableLines(self, table, index):
+    def get_num_runnable_lines(self, table, index):
         """Return number of lines this handler can run."""
         count = 0
         for time, handler, parameter in table[index:]:
@@ -481,7 +481,7 @@ class AnalogLineHandler(GenericPositionerHandler):
         self._savedPos = None
         # Set up callbacks used by GenericPositionHandler methods.
         self.callbacks = {}
-        self.callbacks["moveAbsolute"] = lambda pos: asource.setAnalogLine(
+        self.callbacks["move_absolute"] = lambda pos: asource.setAnalogLine(
             line, self.posToNative(pos)
         )
         self.callbacks["getPosition"] = lambda: self.nativeToPos(
@@ -506,7 +506,7 @@ class AnalogLineHandler(GenericPositionerHandler):
         self.moveAbsolute(self._savedPos)
 
     def moveRelative(self, delta):
-        self.callbacks["moveAbsolute"](self.callbacks["getPosition"]() + delta)
+        self.callbacks["move_absolute"](self.callbacks["getPosition"]() + delta)
 
     def posToNative(self, pos):
         return self.gain * (self.offset + pos)
@@ -680,10 +680,10 @@ class ExecutorDebugWindow(wx.Frame):
 
     def _OnDisplayLastExperiment(self, evt: wx.CommandEvent) -> None:
         del evt
-        if experiment.lastExperiment is None:
+        if experiment.last_experiment is None:
             wx.MessageBox("No experiment has been done yet.")
         else:
-            plot_action_table_profile(experiment.lastExperiment.table)
+            plot_action_table_profile(experiment.last_experiment.table)
 
 
 class SimpleExecutor(DeviceHandler):
@@ -745,7 +745,7 @@ class TriggerProxy(DeviceHandler):
 class DelegateTrigger(SimpleExecutor):
     def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
         """def __init__(self, name, group_name, trigSource, trig_line,
-        examineActions, movementTime=0):."""
+        examine_actions, movementTime=0):."""
         super().__init__(name, group_name, is_eligible_for_experiments, callbacks)
         self._trigger = None
         self._triggerTime = 0

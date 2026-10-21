@@ -55,7 +55,7 @@ class RotatorSweepExperiment(experiment.Experiment):
         # Add voltage parameters to the metadata.
         self.metadata = "Rotator start and delta: [%f, %f]" % (startV, vDelta)
 
-    def generateActions(self):
+    def generate_actions(self):
         """Create the ActionTable needed to run the experiment."""
         table = action_table.ActionTable()
         curTime = 0
@@ -69,7 +69,7 @@ class RotatorSweepExperiment(experiment.Experiment):
             table.add_action(curTime, self.lineHandler, vTarget)
             curTime += dt
             # Image the sample.
-            for cameras, lightTimePairs in self.exposureSettings:
+            for cameras, lightTimePairs in self.exposure_settings:
                 curTime = self.expose(curTime, cameras, lightTimePairs, table)
                 # Advance the time very slightly so that all exposures
                 # are strictly ordered.

@@ -98,9 +98,9 @@ class ResponseMapExperiment(
         self,
         cameras,
         lights,
-        exposureSettings,
+        exposure_settings,
         numExposures,
-        savePath,
+        save_path,
         exposureTimes,
         cosmicRayThreshold,
         shouldPreserveIntermediaryFiles,
@@ -123,16 +123,16 @@ class ResponseMapExperiment(
         super().__init__(
             cameras,
             lights,
-            exposureSettings,
+            exposure_settings,
             numExposures,
-            savePath,
+            save_path,
             exposureMultiplier=0,
             maxIntensity=None,
             cosmicRayThreshold=cosmicRayThreshold,
             shouldPreserveIntermediaryFiles=shouldPreserveIntermediaryFiles,
         )
         self.numExposures = numExposures
-        self.savePath = savePath
+        self.savePath = save_path
         self.exposureTimes = map(decimal.Decimal, exposureTimes)
         self.cosmicRayThreshold = cosmicRayThreshold
         ## List of (exposure time, averaged images, sample raw image) tuples.
@@ -149,10 +149,10 @@ class ResponseMapExperiment(
         We also generate some output at the end to demonstrate our results.
         """
         # For debugging purposes
-        experiment.lastExperiment = self
+        experiment.last_experiment = self
 
-        self.sanityCheckEnvironment()
-        self.prepareHandlers()
+        self.sanity_check_environment()
+        self.prepare_handlers()
 
         self.cameraToReadoutTime = dict(
             [
@@ -170,7 +170,7 @@ class ResponseMapExperiment(
         for camera, func in self.camToFunc.items():
             events.subscribe(events.NEW_IMAGE % camera.name, func)
         for exposureTime in self.exposureTimes:
-            if self.shouldAbort:
+            if self.should_abort:
                 break
             self.camToImages = {}
             self.camToNumImagesReceived = {}
@@ -189,19 +189,19 @@ class ResponseMapExperiment(
                     camera.get_exposure_mode()
                     == cockpit.handlers.camera.TRIGGER_AFTER
                 ):
-                    self.cameraToIsReady[camera] = False
+                    self.camera_to_is_ready[camera] = False
 
-            self.table = self.generateActions(exposureTime)
+            self.table = self.generate_actions(exposureTime)
             self.table.sort()
-            self.examineActions()
+            self.examine_actions()
             self.table.sort()
             self.table.enforce_positive_timepoints()
-            self.lastMinuteActions()
+            self.last_minute_actions()
             self.doneReceivingThread = threading.Thread(target=self.waiter)
             self.doneReceivingThread.start()
             self.execute()
 
-            if self.shouldAbort:
+            if self.should_abort:
                 break
 
             # Wait until it's been a short time after the last received image.
@@ -335,7 +335,7 @@ class ResponseMapExperiment(
         frame.SetSize((640, 480))
         frame.Show()
 
-    def generateActions(self, exposureTime):
+    def generate_actions(self, exposureTime):
         """Create the ActionTable needed to run the experiment.
 
         We basically ignore the values in self.exposure_settings in favor of the
@@ -344,7 +344,7 @@ class ResponseMapExperiment(
         table = action_table.ActionTable()
         curTime = 0
         allCams = set(self.cameras)
-        for cameras, lightTimePairs in self.exposureSettings:
+        for cameras, lightTimePairs in self.exposure_settings:
             usedCams = allCams.intersection(cameras)
             if usedCams:
                 settings = []

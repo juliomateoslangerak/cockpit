@@ -279,7 +279,7 @@ class MainWindowPanel(wx.Panel):
         A bit tricky when there's multiple files generated due to the splitting
         logic. We just view the first one in that case.
         """
-        filenames = cockpit.experiment.experiment.getLastFilenames()
+        filenames = cockpit.experiment.experiment.get_last_filenames()
         if filenames:
             window = file_viewer_window.FileViewer(filenames[0], self)
             if len(filenames) > 1:

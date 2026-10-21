@@ -386,7 +386,7 @@ class PhysikInstrumenteM687(Device):
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.move_xy_absolute,
+                        "move_absolute": self.move_xy_absolute,
                         "moveRelative": self.move_xy_relative,
                         "getPosition": self.get_xy_position,
                     },

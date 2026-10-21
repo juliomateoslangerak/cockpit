@@ -233,7 +233,7 @@ class LightHandler(device.DeviceHandler):
         return self.callbacks["get_exposure_time"](self.name)
 
     @cached
-    def getWavelength(self):
+    def get_wavelength(self):
         """Simple getter."""
         return self.wavelength
 

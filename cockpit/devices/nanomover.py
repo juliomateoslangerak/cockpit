@@ -197,7 +197,7 @@ class Nanomover(Device):
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.move_absolute,
+                        "move_absolute": self.move_absolute,
                         "moveRelative": self.move_relative,
                         "getPosition": self.get_position,
                     },

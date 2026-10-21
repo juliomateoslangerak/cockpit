@@ -342,7 +342,7 @@ class PicoMotorDevice(device.Device):
                     "%d stage motion" % axis,
                     False,
                     {
-                        "moveAbsolute": self.move_xy_absolute,
+                        "move_absolute": self.move_xy_absolute,
                         "moveRelative": self.move_xy_relative,
                         "getPosition": lambda axis=axis: self.get_xy_position(
                             axis=axis

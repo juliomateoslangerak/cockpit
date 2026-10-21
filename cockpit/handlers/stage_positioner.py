@@ -59,7 +59,7 @@ class PositionerHandler(device.DeviceHandler):
     """This handler is for stage positioner devices.
 
     Callbacks should fill in the following functions:
-    - moveAbsolute(axis, position): Move the axis to the given position,
+    - move_absolute(axis, position): Move the axis to the given position,
       in microns.
     - moveRelative(axis, delta): Move the axis by the specified delta,
       in microns.
@@ -115,10 +115,10 @@ class PositionerHandler(device.DeviceHandler):
         # Cast to a list since we may need to modify these later.
         self.softLimits = list(softLimits)
 
-    def moveAbsolute(self, pos):
+    def move_absolute(self, pos):
         """Handle being told to move to a specific position."""
         if self.softLimits[0] <= pos <= self.softLimits[1]:
-            self.callbacks["moveAbsolute"](self.axis, pos)
+            self.callbacks["move_absolute"](self.axis, pos)
         else:
             raise RuntimeError(
                 "Tried to move %s " % (self.name)
@@ -202,7 +202,7 @@ class PositionerHandler(device.DeviceHandler):
 
             return call
 
-        self.callbacks["moveAbsolute"] = wrapMoveFunc(h.moveAbsolute)
+        self.callbacks["move_absolute"] = wrapMoveFunc(h.move_absolute)
         self.callbacks["moveRelative"] = wrapMoveFunc(h.moveRelative)
 
         # Sensorless devices will infer position from analogue output.

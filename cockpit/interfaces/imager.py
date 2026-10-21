@@ -158,7 +158,7 @@ class Imager:
         """
         from cockpit.experiment import experiment
 
-        if experiment.isRunning():
+        if experiment.is_running():
             print("Skipping takeImage because an experiment is running.")
             return
         elif len(self.active_cameras) == 0:

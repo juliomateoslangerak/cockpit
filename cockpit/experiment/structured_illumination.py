@@ -220,8 +220,8 @@ class SIExperiment(experiment.Experiment):
         super().__init__(*args, **kwargs)
         self.numAngles = numAngles
         self.numPhases = numPhases
-        self.numZSlices = int(math.ceil(self.zHeight / self.sliceHeight))
-        if self.zHeight > 1e-6:
+        self.numZSlices = int(math.ceil(self.z_height / self.slice_height))
+        if self.z_height > 1e-6:
             # Non-2D experiment; tack on an extra image to hit the top of
             # the volume.
             self.numZSlices += 1
@@ -244,9 +244,9 @@ class SIExperiment(experiment.Experiment):
                     angle = vals[ordering.index(0)]
                     phase = vals[ordering.index(1)]
                     z = vals[ordering.index(2)]
-                    yield (angle, phase, self.zStart + z * self.sliceHeight)
+                    yield (angle, phase, self.z_start + z * self.slice_height)
 
-    def generateActions(self):
+    def generate_actions(self):
         """Create the ActionTable needed to run the experiment.
 
         We do three Z-stacks for three different angles, and take five images
@@ -266,7 +266,7 @@ class SIExperiment(experiment.Experiment):
         if self.phaseHandler is not None:
             table.add_action(curTime, self.phaseHandler, 0)
             curTime += decimal.Decimal("1")
-        table.add_action(curTime, self.zPositioner, self.zStart)
+        table.add_action(curTime, self.z_positioner, self.z_start)
         curTime += decimal.Decimal("1")
 
         if self.slmHandler is not None:
@@ -329,11 +329,11 @@ class SIExperiment(experiment.Experiment):
                     (
                         motionTime,
                         stabilizationTime,
-                    ) = self.zPositioner.getMovementTime(prevZ, z)
+                    ) = self.z_positioner.getMovementTime(prevZ, z)
                     # Hold flat.
-                    table.add_action(curTime, self.zPositioner, prevZ)
+                    table.add_action(curTime, self.z_positioner, prevZ)
                     # Move to the next position.
-                    table.add_action(curTime + motionTime, self.zPositioner, z)
+                    table.add_action(curTime + motionTime, self.z_positioner, z)
                     delayBeforeImaging = max(
                         delayBeforeImaging, motionTime + stabilizationTime
                     )
@@ -351,22 +351,22 @@ class SIExperiment(experiment.Experiment):
             # short delay before exposure, but is the best way to support SIM
             # in a series of exposures at different wavelengths, with the SIM
             # pattern optimised for each wavelength.
-            for cameras, lightTimePairs in self.exposureSettings:
+            for cameras, lightTimePairs in self.exposure_settings:
                 curTime = self.expose(
                     curTime, cameras, lightTimePairs, angle, phase, table
                 )
 
         # Hold Z, angle, and phase steady through to the end, then ramp down
         # to 0 to prep for the next experiment.
-        table.add_action(curTime, self.zPositioner, prevZ)
-        motionTime, stabilizationTime = self.zPositioner.getMovementTime(
-            self.zHeight, self.zStart
+        table.add_action(curTime, self.z_positioner, prevZ)
+        motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+            self.z_height, self.z_start
         )
-        table.add_action(curTime + motionTime, self.zPositioner, self.zStart)
+        table.add_action(curTime + motionTime, self.z_positioner, self.z_start)
         finalWaitTime = motionTime + stabilizationTime
 
         # Ramp down Z
-        table.add_action(curTime + finalWaitTime, self.zPositioner, self.zStart)
+        table.add_action(curTime + finalWaitTime, self.z_positioner, self.z_start)
 
         if self.angleHandler is not None:
             # Ramp down angle
@@ -396,11 +396,11 @@ class SIExperiment(experiment.Experiment):
 
         return table
 
-    def expose(self, curTime, cameras, lightTimePairs, angle, phase, table):
+    def expose(self, cur_time, cameras, light_time_pairs, angle, phase, table):
         """Wrapper around Experiment.expose() that: 1: adjusts exposure times
         based on the current angle, to compensate for bleaching; 2: uses an SLM
         (if available) to optimise SIM for each exposure."""
-        # new lightTimePairs with exposure times adjusted for bleaching.
+        # new light_time_pairs with exposure times adjusted for bleaching.
         newPairs = []
         # If a SIM pattern puts the 1st-order spots for a given wavelength at
         # the edge of the back pupil, the 1st-order spots from longer wave-
@@ -409,7 +409,7 @@ class SIExperiment(experiment.Experiment):
         wavelengths = []
         # Using tExp rather than 'time' to avoid confusion between table event
         # times and exposure durations.
-        for light, tExp in lightTimePairs:
+        for light, tExp in light_time_pairs:
             # SIM wavelength
             wavelengths.append(light.wavelength)
             # Bleaching compensation
@@ -438,7 +438,7 @@ class SIExperiment(experiment.Experiment):
             if lastpos is None:
                 lastpos = 0
             table.add_action(
-                curTime, self.polarizerHandler, (angle, longestWavelength)
+                cur_time, self.polarizerHandler, (angle, longestWavelength)
             )
             dt = decimal.Decimal(
                 sum(self.polarizerHandler.getMovementTime(lastpos, pos))
@@ -448,11 +448,11 @@ class SIExperiment(experiment.Experiment):
         if self.slmHandler is not None:
             ## Add SLM event ot set pattern for phase, angle and longestWavelength.
             table.add_action(
-                curTime, self.slmHandler, (angle, phase, longestWavelength)
+                cur_time, self.slmHandler, (angle, phase, longestWavelength)
             )
             delay = max(delay, self.slmHandler.getMovementTime())
-        curTime += delay
-        return super().expose(curTime, cameras, newPairs, table)
+        cur_time += delay
+        return super().expose(cur_time, cameras, newPairs, table)
 
     def reorder_img_file(self):
         """Reorder the Z dimension in the file.
@@ -468,7 +468,7 @@ class SIExperiment(experiment.Experiment):
             # Already in order; don't do anything.
             return
 
-        doc = cockpit.util.datadoc.DataDoc(self.savePath)
+        doc = cockpit.util.datadoc.DataDoc(self.save_path)
         order_in = tuple(doc.image.Mrc.axis_order_str())
 
         length_getters = {
@@ -499,7 +499,7 @@ class SIExperiment(experiment.Experiment):
                 doc.image_header.NumIntegers + doc.image_header.NumFloats
         )
         ext_header_dtype = ",".join(["u1"] * ext_header_stride)
-        with open(self.savePath, "rb") as fh:
+        with open(self.save_path, "rb") as fh:
             fh.seek(1024)  # skip base header
             ext_header = numpy.fromfile(
                 fh, count=doc.get_n_planes(), dtype=ext_header_dtype
@@ -552,22 +552,22 @@ class SIExperiment(experiment.Experiment):
         del img_data
 
         # Copy permissions to new file
-        shutil.copymode(self.savePath, tmp_fh.name)
+        shutil.copymode(self.save_path, tmp_fh.name)
 
         ## Windows needs to have the file removed first.
         if os.name == "nt":
-            os.remove(self.savePath)
-        shutil.move(tmp_fh.name, self.savePath)
+            os.remove(self.save_path)
+        shutil.move(tmp_fh.name, self.save_path)
         return
 
-    def cleanup(self, runThread=None, saveThread=None):
-        super().cleanup(runThread, saveThread)
-        if self.savePath:
+    def cleanup(self, run_thread=None, save_thread=None):
+        super().cleanup(run_thread, save_thread)
+        if self.save_path:
             self.reorder_img_file()
         return
 
-    def lastMinuteActions(self):
-        if self.sliceHeight != 0.125:
+    def last_minute_actions(self):
+        if self.slice_height != 0.125:
             warning = (
                 "Slice height must be 0.125 for softWoRx 3D "
                 "reconstruction. Choose:"

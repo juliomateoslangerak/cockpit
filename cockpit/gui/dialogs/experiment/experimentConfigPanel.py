@@ -730,9 +730,9 @@ class ExperimentConfigPanel(wx.Panel):
         params = {
             "num_reps": gui_utils.tryParseNum(self.numReps),
             "rep_duration": gui_utils.tryParseNum(self.repDuration, float),
-            "zPositioner": mover,
-            "altBottom": altBottom,
-            "zHeight": zHeight,
+            "z_positioner": mover,
+            "alt_bottom": altBottom,
+            "z_height": zHeight,
             "slice_height": sliceHeight,
             "exposure_settings": exposureSettings,
             "save_path": savePath,

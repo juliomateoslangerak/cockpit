@@ -64,7 +64,7 @@ EXPERIMENT_NAME = "Z-stack"
 class ZStackExperiment(experiment.Experiment):
     """This class handles classic Z-stack experiments."""
 
-    def generateActions(self):
+    def generate_actions(self):
         """Create the ActionTable needed to run the experiment.
 
         We simply move to each Z-slice in turn, take an image, then move to the
@@ -73,56 +73,56 @@ class ZStackExperiment(experiment.Experiment):
         table = action_table.ActionTable()
         curTime = 0
         prevAltitude = None
-        numZSlices = int(math.ceil(self.zHeight / self.sliceHeight))
-        if self.zHeight > 1e-6:
+        numZSlices = int(math.ceil(self.z_height / self.slice_height))
+        if self.z_height > 1e-6:
             # Non-2D experiment; tack on an extra image to hit the top of
             # the volume.
             numZSlices += 1
         for zIndex in range(numZSlices):
             # Move to the next position, then wait for the stage to
             # stabilize.
-            zTarget = self.zStart + self.sliceHeight * zIndex
+            zTarget = self.z_start + self.slice_height * zIndex
             motionTime, stabilizationTime = 0, 0
             if prevAltitude is not None:
                 (
                     motionTime,
                     stabilizationTime,
-                ) = self.zPositioner.getMovementTime(prevAltitude, zTarget)
+                ) = self.z_positioner.getMovementTime(prevAltitude, zTarget)
             curTime += motionTime
-            table.add_action(curTime, self.zPositioner, zTarget)
+            table.add_action(curTime, self.z_positioner, zTarget)
             curTime += stabilizationTime
             prevAltitude = zTarget
 
             # Image the sample.
-            for cameras, lightTimePairs in self.exposureSettings:
+            for cameras, lightTimePairs in self.exposure_settings:
                 curTime = self.expose(curTime, cameras, lightTimePairs, table)
                 # Advance the time very slightly so that all exposures
                 # are strictly ordered.
                 curTime += decimal.Decimal("1e-10")
             # Hold the Z motion flat during the exposure.
-            table.add_action(curTime, self.zPositioner, zTarget)
+            table.add_action(curTime, self.z_positioner, zTarget)
 
         # Move back to the start so we're ready for the next rep.
-        motionTime, stabilizationTime = self.zPositioner.getMovementTime(
-            self.zHeight, 0
+        motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+            self.z_height, 0
         )
         curTime += motionTime
-        table.add_action(curTime, self.zPositioner, self.zStart)
+        table.add_action(curTime, self.z_positioner, self.z_start)
         # Hold flat for the stabilization time, and any time needed for
         # the cameras to be ready. Only needed if we're doing multiple
         # reps, so we can proceed immediately to the next one.
         cameraReadyTime = 0
-        if self.numReps > 1:
-            for cameras, lightTimePairs in self.exposureSettings:
+        if self.num_reps > 1:
+            for cameras, lightTimePairs in self.exposure_settings:
                 for camera in cameras:
                     cameraReadyTime = max(
                         cameraReadyTime,
-                        self.getTimeWhenCameraCanExpose(table, camera),
+                        self.get_time_when_camera_can_expose(table, camera),
                     )
         table.add_action(
             max(curTime + stabilizationTime, cameraReadyTime),
-            self.zPositioner,
-            self.zStart,
+            self.z_positioner,
+            self.z_start,
         )
 
         return table

@@ -83,9 +83,9 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         self.sampleRates = sampleRates
         self.shouldAbort = False
 
-        events.subscribe(events.USER_ABORT, self.onAbort)
+        events.subscribe(events.USER_ABORT, self.on_abort)
 
-    def onAbort(self):
+    def on_abort(self):
         """User aborted."""
         self.shouldAbort = True
 
@@ -95,7 +95,7 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         # HACK: replace self.num_reps since it's used in Experiment.execute(),
         # which we will be calling from within this function. We'll handle
         # reps more directly.
-        trueReps = self.numReps
+        trueReps = self.num_reps
         numRepsPerformed = 0
         sequenceIndex = 0
         wasSuccessful = True

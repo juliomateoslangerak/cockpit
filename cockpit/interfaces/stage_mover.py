@@ -340,7 +340,7 @@ class StageMover:
                 event = threading.Event()
                 waiters.append(event)
                 self.name_to_stopped_event[handler.name] = event
-                handler.moveAbsolute(target - offset)
+                handler.move_absolute(target - offset)
         if should_block:
             for event in waiters:
                 try:
@@ -411,7 +411,7 @@ def recenter_fine_motion():
             cur_position = handler.getPosition()
             safeties = handler.get_hard_limits()
             target = (safeties[1] - safeties[0]) / 2 + safeties[0]
-            handler.moveAbsolute(target)
+            handler.move_absolute(target)
             total_delta += target - cur_position
         handlers[0].moveRelative(-total_delta)
 

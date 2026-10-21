@@ -37,7 +37,7 @@ are available.  Some of its modules are:
 
 - :mod:`cockpit.experiment.experiment`: base ``Experiment`` class that
   all other experiments subclass from.  Never used directly on its
-  own.  The ``experiment.lastExperiment`` value holds the last class
+  own.  The ``experiment.last_experiment`` value holds the last class
   instance that was used to run an experiment, which can be useful for
   debugging.
 

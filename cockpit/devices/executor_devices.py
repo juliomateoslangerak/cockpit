@@ -157,7 +157,7 @@ class ExecutorDevice(device.Device):
             self.name,
             "executor",
             {
-                "examineActions": lambda *args: None,
+                "examine_actions": lambda *args: None,
                 "executeTable": self.execute_table,
                 "readDigital": self.connection.ReadDigital,
                 "writeDigital": self.connection.WriteDigital,
@@ -297,7 +297,7 @@ class LegacyDSP(ExecutorDevice):
             self.name,
             "executor",
             {
-                "examineActions": lambda *args: None,
+                "examine_actions": lambda *args: None,
                 "executeTable": self.execute_table,
                 "readDigital": self.connection.ReadDigital,
                 "writeDigital": self.connection.WriteDigital,

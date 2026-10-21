@@ -71,7 +71,7 @@ class OptoExperiment(z_stack.ZStackExperiment):
     It is identical to a standard Z-stack experiment except that it turns on
     and off lights in a configurable timed sequence before running the stack
     Note that this class inherits from the ZStackExperiment class in
-    experiment/z_stack.py; the generateActions() function in that class is what
+    experiment/z_stack.py; the generate_actions() function in that class is what
     collects the actual data. We just modify the execute() function (inherited
     from the base Experiment class in experiment/experiment.py) to engage the
     lights as specified before each rep. See below this class for the
@@ -111,10 +111,10 @@ class OptoExperiment(z_stack.ZStackExperiment):
         # HACK: replace self.num_reps since it's referred to in
         # Experiment.execute(), and we want to handle repeats at a higher
         # level.
-        numReps = self.numReps
+        numReps = self.num_reps
         self.numReps = 1
         for i in range(numReps):
-            if self.shouldAbort:
+            if self.should_abort:
                 # User aborted experiment.
                 break
             # Create a new thread for activating each light in parallel.

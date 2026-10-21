@@ -86,9 +86,9 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         self,
         cameras,
         lights,
-        exposureSettings,
+        exposure_settings,
         numExposures,
-        savePath,
+        save_path,
         exposureMultiplier=2,
         maxIntensity=2**12,
         cosmicRayThreshold=10,
@@ -120,18 +120,18 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         # setting up arbitrary experiments that assumes e.g. a Z stack), but
         # we ignore them.
         super().__init__(
-            numReps=1,
-            repDuration=0,
-            zPositioner=None,
-            altBottom=0,
-            zHeight=0,
-            sliceHeight=0,
+            num_reps=1,
+            rep_duration=0,
+            z_positioner=None,
+            alt_bottom=0,
+            z_height=0,
+            slice_height=0,
             cameras=cameras,
             lights=lights,
-            exposureSettings=exposureSettings,
+            exposure_settings=exposure_settings,
         )
         self.numExposures = numExposures
-        self.savePath = savePath
+        self.savePath = save_path
         self.exposureMultiplier = decimal.Decimal(exposureMultiplier)
         self.maxIntensity = maxIntensity
         self.cosmicRayThreshold = cosmicRayThreshold
@@ -166,10 +166,10 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         """Broadly similar to Experiment.run(), but we generate and execute
         multiple tables."""
         # For debugging purposes
-        experiment.lastExperiment = self
+        experiment.last_experiment = self
 
-        self.sanityCheckEnvironment()
-        self.prepareHandlers()
+        self.sanity_check_environment()
+        self.prepare_handlers()
 
         self.cameraToReadoutTime = dict(
             [
@@ -190,7 +190,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
             events.subscribe(events.NEW_IMAGE % camera.name, func)
         activeCameras = set(self.cameras)
         for i in range(self.numCollections):
-            if not activeCameras or self.shouldAbort:
+            if not activeCameras or self.should_abort:
                 break
             print("Running with cams", activeCameras)
             self.camToImages = {}
@@ -210,14 +210,14 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
                     camera.get_exposure_mode()
                     == cockpit.handlers.camera.TRIGGER_AFTER
                 ):
-                    self.cameraToIsReady[camera] = False
+                    self.camera_to_is_ready[camera] = False
 
-            self.table = self.generateActions(multiplier, activeCameras)
+            self.table = self.generate_actions(multiplier, activeCameras)
             self.table.sort()
-            self.examineActions()
+            self.examine_actions()
             self.table.sort()
             self.table.enforce_positive_timepoints()
-            self.lastMinuteActions()
+            self.last_minute_actions()
             self.doneReceivingThread = threading.Thread(target=self.waiter)
             self.doneReceivingThread.start()
             self.execute()
@@ -234,7 +234,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         for camera, func in self.camToFunc.items():
             events.unsubscribe(events.NEW_IMAGE % camera.name, func)
 
-        if self.shouldAbort:
+        if self.should_abort:
             # Don't bother processing images.
             self.cleanup()
             return
@@ -265,7 +265,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
 
         self.cleanup()
 
-    def generateActions(self, multiplier, activeCameras):
+    def generate_actions(self, multiplier, activeCameras):
         """Create the ActionTable needed to run the experiment.
 
         Args:
@@ -275,7 +275,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         """
         table = action_table.ActionTable()
         curTime = 0
-        for cameras, lightTimePairs in self.exposureSettings:
+        for cameras, lightTimePairs in self.exposure_settings:
             usedCams = activeCameras.intersection(cameras)
             if usedCams:
                 settings = []

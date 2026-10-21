@@ -263,7 +263,7 @@ class BoulderSLM(device.Device):
             "slm group",
             True,
             {
-                "examineActions": self.examine_actions,
+                "examine_actions": self.examine_actions,
                 "getMovementTime": lambda *args: dt,
                 "executeTable": self.execute_table,
                 "set_enabled": self.set_enabled,

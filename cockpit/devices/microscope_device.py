@@ -487,7 +487,7 @@ class _MicroscopeStageAxis:
         callbacks = {
             "getMovementTime": self.get_movement_time,
             "getPosition": self.get_position,
-            "moveAbsolute": self.move_absolute,
+            "move_absolute": self.move_absolute,
             "moveRelative": self.move_relative,
         }
 

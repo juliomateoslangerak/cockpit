@@ -64,7 +64,7 @@ class GenericPositionerHandler(device.DeviceHandler):
     the sample around.
 
     Callbacks should fill in the following functions:
-    - moveAbsolute(name, position): Move to the given position, in whatever
+    - move_absolute(name, position): Move to the given position, in whatever
       units are appropriate.
     - moveRelative(name, delta): Move by the specified delta, again in
       whatever units are appropriate.
@@ -92,7 +92,7 @@ class GenericPositionerHandler(device.DeviceHandler):
 
     def moveAbsolute(self, pos):
         """Handle being told to move to a specific position."""
-        self.callbacks["moveAbsolute"](pos)
+        self.callbacks["move_absolute"](pos)
 
     def moveRelative(self, delta):
         """Handle being told to move by a specific delta."""

@@ -81,7 +81,7 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
 
         self.handlers = []
         for axis in range(3):
-            handler = Mock(spec=["getPosition", "moveAbsolute", "setSoftLimit"])
+            handler = Mock(spec=["getPosition", "move_absolute", "setSoftLimit"])
             handler.name = "axis_%d" % axis
             handler.getPosition.return_value = axis + 1
             self.handlers.append(handler)
@@ -107,13 +107,13 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
 
         for axis, handler in enumerate(self.handlers):
             handler.getPosition.assert_called_once_with()
-            handler.moveAbsolute.assert_called_once_with(axis + 4)
+            handler.move_absolute.assert_called_once_with(axis + 4)
 
     def test_move_relative_uses_handler_protocol(self):
         stage_mover.move_relative([4, 5, 6])
 
         for axis, handler in enumerate(self.handlers):
-            handler.moveAbsolute.assert_called_once_with(2 * axis + 5)
+            handler.move_absolute.assert_called_once_with(2 * axis + 5)
 
     def test_save_site_uses_handler_protocol(self):
         with patch.object(stage_mover.events, "publish"):

@@ -66,12 +66,12 @@ class ImmediateModeExperiment(experiment.Experiment):
 
     def __init__(
         self,
-        numReps,
-        repDuration,
+        num_reps,
+        rep_duration,
         imagesPerRep,
-        sliceHeight=0,
+        slice_height=0,
         metadata="",
-        savePath="",
+        save_path="",
     ):
         """We need to provide enough information here to fill in certain
         important values in the header.
@@ -83,15 +83,15 @@ class ImmediateModeExperiment(experiment.Experiment):
         Optionally, additional metadata can be supplied.
         """
         super().__init__(
-            numReps,
-            repDuration,
+            num_reps,
+            rep_duration,
             None,
             0,
             0,
-            sliceHeight,
+            slice_height,
             {},
             metadata=metadata,
-            savePath=savePath,
+            save_path=save_path,
         )
         # Number of images to be collected per camera per rep.
         self.imagesPerRep = imagesPerRep
@@ -112,18 +112,18 @@ class ImmediateModeExperiment(experiment.Experiment):
             if light.get_is_enabled():
                 self.lights.append(light)
 
-        self.allHandlers += self.cameras + self.lights
+        self.all_handlers += self.cameras + self.lights
 
         self.lightToExposureTime = {l: set() for l in self.lights}
         self.cameraToIsReady = {c: True for c in self.cameras}
         self.cameraToImageCount = {c: 0 for c in self.cameras}
         self.cameraToIgnoredImageIndices = {c: set() for c in self.cameras}
 
-    def prepareHandlers(self):
+    def prepare_handlers(self):
         """Unlike with normal experiments, we don't prep handlers."""
         pass
 
-    def createValidActionTable(self):
+    def create_valid_action_table(self):
         pass
 
     def run(self):
@@ -140,13 +140,13 @@ class ImmediateModeExperiment(experiment.Experiment):
         Return True if it was successful. This will call self.executeRep()
         iteratively, taking care of the time to pass between reps for you.
         """
-        for i in range(self.numReps):
-            if self.shouldAbort:
+        for i in range(self.num_reps):
+            if self.should_abort:
                 break
             startTime = time.time()
             self.executeRep(i)
             endTime = time.time()
-            waitTime = self.repDuration - (endTime - startTime)
+            waitTime = self.rep_duration - (endTime - startTime)
             time.sleep(max(0, waitTime))
 
     def executeRep(self, repNum):

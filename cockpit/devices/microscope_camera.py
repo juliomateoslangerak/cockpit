@@ -329,7 +329,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
     def receiveData(self, *args):
         """This function is called when data is received from the hardware."""
         image, timestamp = args
-        if not experiment.isRunning():
+        if not experiment.is_running():
             wavelength = None
             if self.handler.wavelength is not None:
                 wavelength = float(self.handler.wavelength)

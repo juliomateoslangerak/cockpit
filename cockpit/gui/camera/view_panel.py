@@ -228,7 +228,7 @@ class ViewPanel(wx.Panel):
     def onImage(self, data, metadata, *args):
         """Receive a new image and send it to our canvas."""
         self.canvas.setImage(data)
-        if not experiment.isRunning():
+        if not experiment.is_running():
             self.metadata = metadata
             self.imagePos = self.metadata["imagePos"]
 

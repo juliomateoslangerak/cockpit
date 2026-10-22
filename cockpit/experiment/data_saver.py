@@ -286,7 +286,7 @@ class MrcDataSaver:
             header.title[: len(temp_titles)] = temp_titles
             # Write the size of the extended header, in bytes.
             header.next = (
-                self.float_metadata_buffer
+                self.extended_bytes
                 * self.max_images_per_rep
                 * len(self.cameras)
                 * num_timepoints

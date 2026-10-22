@@ -174,7 +174,7 @@ class Imager:
             else:
                 return
         for handler in self._image_handlers:
-            handler.takeImage()
+            handler.take_image()
         self.last_image_time = time.time()
 
     @cockpit.util.threads.call_in_new_thread

@@ -67,5 +67,5 @@ class ImagerHandler(device.DeviceHandler):
         - take_image(): Cause an image to be collected."""
         super().__init__(name, group_name, False, callbacks, depot.IMAGER)
 
-    def takeImage(self):
+    def take_image(self):
         self.callbacks["take_image"]()

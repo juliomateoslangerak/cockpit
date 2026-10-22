@@ -46,7 +46,7 @@ class ValueLogger:
             name + "_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
         )
         self.set_log_file(
-            os.path.join(wx.GetApp().Config.getpath("log", "dir"), filename)
+            os.path.join(wx.GetApp().config.getpath("log", "dir"), filename)
         )  # sets self._fh
 
     def __del__(self):

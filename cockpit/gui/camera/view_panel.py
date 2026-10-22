@@ -121,7 +121,7 @@ class ViewPanel(wx.Panel):
             if self.imagePos is None:
                 self.imagePos = cockpit.interfaces.stage_mover.get_position()
             x, y = event.GetPosition() * self.GetContentScaleFactor()
-            pixelSize = wx.GetApp().Objectives.get_pixel_size()
+            pixelSize = wx.GetApp().objectives.get_pixel_size()
             x0, y0 = self.canvas.glToIndices(0, 0)
             dy, dx = self.canvas.canvasToIndices(x, y)
             dx -= x0
@@ -152,7 +152,7 @@ class ViewPanel(wx.Panel):
             )
         else:
             # Get all inactive cameras.
-            cameras = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+            cameras = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
             cameras.sort(key=lambda c: c.descriptive_name)
             for camera in cameras:
                 if not camera.get_is_enabled():

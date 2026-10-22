@@ -174,7 +174,7 @@ class Nanomover(Device):
         self.publish_position()
         self.send_xy_position_updates()
 
-    ## The XY Macro Stage view is painting itself; draw the banned
+    ## The XY Macro stage view is painting itself; draw the banned
     # rectangles as pink excluded zones.
     #    def onMacroStagePaint(self, stage):
     #        glColor3f(1, .6, .6)

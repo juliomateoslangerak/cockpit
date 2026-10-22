@@ -141,7 +141,7 @@ class RefillTimerPanel(wx.Panel):
 class LinkamStage(MicroscopeBase, Device):
     """Cockpit-side module for Linkam stages.
 
-    Tested with CMS196.  Config uses following parameters:
+    Tested with CMS196.  config uses following parameters:
 
     ``type``
         Needs to be ``cockpit.devices.linkam_stage.LinkamStage``.

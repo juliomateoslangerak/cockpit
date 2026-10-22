@@ -155,19 +155,19 @@ class ActionsPanel(wx.Panel):
             wx.ALIGN_CENTER,
         )
         self._sel_obj = wx.Choice(
-            self, choices=wx.GetApp().Objectives.get_names_sorted()
+            self, choices=wx.GetApp().objectives.get_names_sorted()
         )
         sizer_obj.Add(self._sel_obj, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
         self._sel_obj.Bind(
             wx.EVT_CHOICE,
-            lambda e: wx.GetApp().Objectives.change_objective(e.GetString()),
+            lambda e: wx.GetApp().objectives.change_objective(e.GetString()),
         )
-        wx.GetApp().Objectives.Bind(
+        wx.GetApp().objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
             self._on_objective_changed,
         )
         self._sel_obj.SetSelection(
-            self._sel_obj.FindString(wx.GetApp().Objectives.get_name())
+            self._sel_obj.FindString(wx.GetApp().objectives.get_name())
         )
         sizer.Add(sizer_obj, 0, wx.EXPAND | wx.BOTTOM, 5)
         # Camera choice
@@ -181,7 +181,7 @@ class ActionsPanel(wx.Panel):
             self,
             choices=[
                 camera.name
-                for camera in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+                for camera in wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
             ],
         )
         sizer_cam.Add(self._sel_cam, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
@@ -329,7 +329,7 @@ class ActionsPanel(wx.Panel):
         mosaic_panel = self.GetTopLevelParent().GetChildren()[3]
         if button.GetValue():
             # Pressed => start mosaic
-            camera = wx.GetApp().Depot.get_handler_with_name(
+            camera = wx.GetApp().depot.get_handler_with_name(
                 self._sel_cam.GetString(self._sel_cam.GetSelection())
             )
             if camera.get_is_enabled():
@@ -370,10 +370,10 @@ class ActionsPanel(wx.Panel):
 
     def _cb_snap(self, e):
         # Check that there is at least one camera and one light source active
-        cams = wx.GetApp().Depot.get_active_cameras()
+        cams = wx.GetApp().depot.get_active_cameras()
         lights = [
             light
-            for light in wx.GetApp().Depot.get_handlers_of_type(
+            for light in wx.GetApp().depot.get_handlers_of_type(
                 depot.LIGHT_TOGGLE
             )
             if light.get_is_enabled()
@@ -386,7 +386,7 @@ class ActionsPanel(wx.Panel):
         # Take the image
         events.executeAndWaitFor(
             events.NEW_IMAGE % camera_name,
-            wx.GetApp().Imager.take_image,
+            wx.GetApp().imager.take_image,
             should_stop_video=False,
         )
         mosaic.transferCameraImage()
@@ -394,10 +394,10 @@ class ActionsPanel(wx.Panel):
     def _cb_live(self, e):
         button = e.GetEventObject()
         # Check that there is at least one camera and one light source active
-        cams = wx.GetApp().Depot.get_active_cameras()
+        cams = wx.GetApp().depot.get_active_cameras()
         lights = [
             light
-            for light in wx.GetApp().Depot.get_handlers_of_type(
+            for light in wx.GetApp().depot.get_handlers_of_type(
                 depot.LIGHT_TOGGLE
             )
             if light.get_is_enabled()
@@ -408,7 +408,7 @@ class ActionsPanel(wx.Panel):
         # Find the name of the active (first) camera
         camera_name = cams[0].name
         # Toggle the video mode
-        wx.GetApp().Imager.video_mode()
+        wx.GetApp().imager.video_mode()
         if button.GetValue():
             # Pressed => transfer new images when they arrive
             events.subscribe(
@@ -714,10 +714,10 @@ class LightsPanel(wx.Panel):
         spanel = wx.lib.scrolledpanel.ScrolledPanel(self)
         sizer_spanel = wx.BoxSizer(wx.VERTICAL)
         lightToggleHandlers = sorted(
-            wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_TOGGLE),
+            wx.GetApp().depot.get_handlers_of_type(depot.LIGHT_TOGGLE),
             key=lambda l: l.wavelength,
         )
-        lightPowerHandlers = wx.GetApp().Depot.get_handlers_of_type(
+        lightPowerHandlers = wx.GetApp().depot.get_handlers_of_type(
             depot.LIGHT_POWER
         )
         for index, light_handler in enumerate(lightToggleHandlers):
@@ -758,7 +758,7 @@ class CamerasPanelEntry(wx.Panel):
             kwargs["style"] = wx.BORDER_RAISED
         super().__init__(parent, **kwargs)
         self.camera_handler = camera_handler
-        self.camera = wx.GetApp().Depot.get_device_with_name(camera_handler.name)
+        self.camera = wx.GetApp().depot.get_device_with_name(camera_handler.name)
         self._set_properties()
         self._do_layout()
 
@@ -806,7 +806,7 @@ class CamerasPanel(wx.lib.scrolledpanel.ScrolledPanel):
 
     def _do_layout(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
-        cameraHandlers = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+        cameraHandlers = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
         for index, camera_handler in enumerate(cameraHandlers):
             if index < len(cameraHandlers) - 1:
                 sizer.Add(
@@ -935,14 +935,14 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         events.subscribe(events.MOSAIC_START, self.mosaicStart)
         events.subscribe(events.MOSAIC_STOP, self.mosaicStop)
         events.subscribe(events.MOSAIC_UPDATE, self.mosaicUpdate)
-        wx.GetApp().Objectives.Bind(
+        wx.GetApp().objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
             self.onObjectiveChange,
         )
         self.Bind(wx.EVT_SIZE, self.onSize)
         self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
         for item in [self, self.canvas]:
-            cockpit.gui.keyboard.setKeyboardHandlers(item)
+            cockpit.gui.keyboard.set_keyboard_handlers(item)
 
     def Refresh(self, *args, **kwargs):
         """Refresh, with explicit refresh of glCanvases on Mac.
@@ -975,8 +975,8 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         # \todo Should we necessarily assume a 512x512 area here?
         # if we havent previously set crosshairBoxSize (maybe no camera active)
         if self.crosshairBoxSize == 0:
-            self.crosshairBoxSize = 512 * wx.GetApp().Objectives.get_pixel_size()
-        self.offset = wx.GetApp().Objectives.get_offset()
+            self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
+        self.offset = wx.GetApp().objectives.get_offset()
         scale = 150.0 / self.crosshairBoxSize
         self.canvas.zoomTo(
             -curPosition[0] + self.offset[0],
@@ -1001,7 +1001,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
             wx.CallAfter(self.Refresh)
 
     def onObjectiveChange(self, event: wx.CommandEvent) -> None:
-        handler = wx.GetApp().Depot.get_handler_with_name(event.GetString())
+        handler = wx.GetApp().depot.get_handler_with_name(event.GetString())
         # User changed the objective in use; resize our crosshair box to suit
         self.crosshairBoxSize = 512 * handler.pixel_size
         self.offset = handler.offset
@@ -1147,7 +1147,7 @@ class StageControlXY(wx.Panel):
         )
         varctrl_step_x = VariableControlContinuous(
             self,
-            init_val=wx.GetApp().Stage.get_step_sizes()[0],
+            init_val=wx.GetApp().stage.get_step_sizes()[0],
             step_scale=5,
             units="um",
         )
@@ -1156,7 +1156,7 @@ class StageControlXY(wx.Panel):
         # same time
         varctrl_step_x.Bind(
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-            lambda e: wx.GetApp().Stage.set_step_size(0, e.GetClientData()[1]),
+            lambda e: wx.GetApp().stage.set_step_size(0, e.GetClientData()[1]),
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
@@ -1174,13 +1174,13 @@ class StageControlXY(wx.Panel):
         )
         varctrl_step_y = VariableControlContinuous(
             self,
-            init_val=wx.GetApp().Stage.get_step_sizes()[1],
+            init_val=wx.GetApp().stage.get_step_sizes()[1],
             step_scale=5,
             units="um",
         )
         varctrl_step_y.Bind(
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-            lambda e: wx.GetApp().Stage.set_step_size(1, e.GetClientData()[1]),
+            lambda e: wx.GetApp().stage.set_step_size(1, e.GetClientData()[1]),
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
@@ -1252,25 +1252,25 @@ class StageControlXY(wx.Panel):
 
     def _cb_move_left(self, e):
         pose = stage_mover.get_position()[:2]
-        step = wx.GetApp().Stage.get_step_sizes()[0]
+        step = wx.GetApp().stage.get_step_sizes()[0]
         pose[0] += step
         stage_mover.go_to_xy(pose)
 
     def _cb_move_up(self, e):
         pose = stage_mover.get_position()[:2]
-        step = wx.GetApp().Stage.get_step_sizes()[1]
+        step = wx.GetApp().stage.get_step_sizes()[1]
         pose[1] += step
         stage_mover.go_to_xy(pose)
 
     def _cb_move_down(self, e):
         pose = stage_mover.get_position()[:2]
-        step = wx.GetApp().Stage.get_step_sizes()[1]
+        step = wx.GetApp().stage.get_step_sizes()[1]
         pose[1] -= step
         stage_mover.go_to_xy(pose)
 
     def _cb_move_right(self, e):
         pose = stage_mover.get_position()[:2]
-        step = wx.GetApp().Stage.get_step_sizes()[0]
+        step = wx.GetApp().stage.get_step_sizes()[0]
         pose[0] -= step
         stage_mover.go_to_xy(pose)
 
@@ -1297,13 +1297,13 @@ class StageControlZ(wx.Panel):
         )
         varctrl_step_z = VariableControlContinuous(
             self,
-            init_val=wx.GetApp().Stage.get_step_sizes()[2],
+            init_val=wx.GetApp().stage.get_step_sizes()[2],
             step_scale=5,
             units="um",
         )
         varctrl_step_z.Bind(
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-            lambda e: wx.GetApp().Stage.set_step_size(2, e.GetClientData()[1]),
+            lambda e: wx.GetApp().stage.set_step_size(2, e.GetClientData()[1]),
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
@@ -1432,18 +1432,18 @@ class StageControlZ(wx.Panel):
 
     def _cb_move_up(self, e):
         stage_mover.go_to_z(
-            stage_mover.get_position()[2] + wx.GetApp().Stage.get_step_sizes()[2]
+            stage_mover.get_position()[2] + wx.GetApp().stage.get_step_sizes()[2]
         )
 
     def _cb_save_top(self, e):
-        wx.GetApp().Stage.saved_top = stage_mover.get_position()[2]
+        wx.GetApp().stage.saved_top = stage_mover.get_position()[2]
 
     def _cb_move_top(self, e):
-        stage_mover.move_z_check_mover_limits(wx.GetApp().Stage.saved_top)
+        stage_mover.move_z_check_mover_limits(wx.GetApp().stage.saved_top)
 
     def _cb_move_centre(self, e):
-        bottom = wx.GetApp().Stage.saved_bottom
-        top = wx.GetApp().Stage.saved_top
+        bottom = wx.GetApp().stage.saved_bottom
+        top = wx.GetApp().stage.saved_top
         centre = bottom + (top - bottom) / 2.0
         stage_mover.move_z_check_mover_limits(centre)
 
@@ -1452,18 +1452,18 @@ class StageControlZ(wx.Panel):
 
     def _cb_move_down(self, e):
         stage_mover.go_to_z(
-            stage_mover.get_position()[2] - wx.GetApp().Stage.get_step_sizes()[2]
+            stage_mover.get_position()[2] - wx.GetApp().stage.get_step_sizes()[2]
         )
 
     def _cb_save_bottom(self, e):
-        wx.GetApp().Stage.saved_bottom = stage_mover.get_position()[2]
+        wx.GetApp().stage.saved_bottom = stage_mover.get_position()[2]
 
     def _cb_move_bottom(self, e):
-        stage_mover.move_z_check_mover_limits(wx.GetApp().Stage.saved_bottom)
+        stage_mover.move_z_check_mover_limits(wx.GetApp().stage.saved_bottom)
 
     def _cb_touchdown(self, e):
         stage_mover.go_to_z(
-            wx.GetApp().Config["stage"].getfloat("slideTouchdownAltitude")
+            wx.GetApp().config["stage"].getfloat("slideTouchdownAltitude")
         )
 
     def _cb_switch(self, e):
@@ -1577,7 +1577,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
     def _set_properties(self):
         self.SetMinClientSize(wx.Size(250, -1))
         # Subscribe to all camera new image events
-        # for camera in wx.GetApp().Depot.getHandlersOfType(depot.CAMERA):
+        # for camera in wx.GetApp().depot.getHandlersOfType(depot.CAMERA):
         #    # Subscribe to new image events only after canvas is prepared.
         #    events.subscribe("new image %s" % camera.name, self._on_new_image)
         events.subscribe(events.CAMERA_ENABLE, self.onCameraEnableEvent)
@@ -1585,7 +1585,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
     def _do_layout(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
         # Add a viewPanel for every camera
-        for camera in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA):
+        for camera in wx.GetApp().depot.get_handlers_of_type(depot.CAMERA):
             vpanel = ViewPanel(self)
             vpanel.change_size(_VIEWPANEL_SIZE)
             sizer.Add(vpanel)
@@ -1821,5 +1821,5 @@ class TouchScreenWindow(wx.Frame):
         self.GetChildren()[3].centerCanvas()
 
 
-def makeWindow(parent):
+def make_window(parent):
     TouchScreenWindow(parent, title="Touch Screen view")

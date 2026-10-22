@@ -102,7 +102,7 @@ class SafetyMinDialog(wx.Dialog):
         self.minStageZ = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
             sizer=self.mainSizer,
-            label="Stage Z minimum (µm):",
+            label="stage Z minimum (µm):",
             default_value=str(
                 cockpit.interfaces.stage_mover.get_soft_limits()[2][0]
             ),

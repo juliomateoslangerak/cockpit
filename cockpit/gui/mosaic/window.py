@@ -327,10 +327,10 @@ class MosaicCommon:
 
         glBegin(GL_LINE_LOOP)
         # Draw the box.
-        cams = wx.GetApp().Depot.get_active_cameras()
+        cams = wx.GetApp().depot.get_active_cameras()
         # if there is a camera us its real pixel count
         if len(cams) > 0:
-            pixel_size = wx.GetApp().Objectives.get_pixel_size()
+            pixel_size = wx.GetApp().objectives.get_pixel_size()
             width, height = cams[0].get_image_size()
             self.crosshairBoxSize = width * pixel_size
             width = self.crosshairBoxSize
@@ -354,7 +354,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        ## Prevent r-click on buttons displaying MainWindow context menu.
+        ## Prevent r-click on buttons displaying main_window context menu.
         self.Bind(wx.EVT_CONTEXT_MENU, lambda event: None)
         ## Last known location of the mouse.
         self.prevMousePos = None
@@ -370,7 +370,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.shouldContinue = threading.Event()
         self.shouldExit = threading.Event()
         primitive_specs = (
-            wx.GetApp().Config["stage"].getlines("primitives", [])
+            wx.GetApp().config["stage"].getlines("primitives", [])
         )
         self.primitives = [Primitive.factory(spec) for spec in primitive_specs]
 
@@ -576,13 +576,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         abort_emitter = cockpit.gui.EvtEmitter(self, events.USER_ABORT)
         abort_emitter.Bind(cockpit.gui.EVT_COCKPIT, self.onAbort)
 
-        wx.GetApp().Objectives.Bind(
+        wx.GetApp().objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
             self._OnObjectiveChanged,
         )
         self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
         for item in [self, self.canvas, self.sitesPanel]:
-            cockpit.gui.keyboard.setKeyboardHandlers(item)
+            cockpit.gui.keyboard.set_keyboard_handlers(item)
 
         self.mosaicThread = None
 
@@ -629,8 +629,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # \todo Should we necessarily assume a 512x512 area here?
         # if we haven't previously set crosshairBoxSize (maybe no camera active)
         if self.crosshairBoxSize == 0:
-            self.crosshairBoxSize = 512 * wx.GetApp().Objectives.get_pixel_size()
-        self.offset = wx.GetApp().Objectives.get_offset()
+            self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
+        self.offset = wx.GetApp().objectives.get_offset()
         scale = 150.0 / self.crosshairBoxSize
         self.canvas.zoomTo(
             -curPosition[0] + self.offset[0],
@@ -651,8 +651,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
         """User changed the objective in use; resize our crosshair box to suit."""
-        self.crosshairBoxSize = 512 * wx.GetApp().Objectives.get_pixel_size()
-        self.offset = wx.GetApp().Objectives.get_offset()
+        self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
+        self.offset = wx.GetApp().objectives.get_offset()
         # force a redraw so that the crosshairs are properly sized
         # Refresh this and other mosaic views.
         events.publish(events.MOSAIC_UPDATE)
@@ -862,7 +862,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
             if self.shouldReconfigure:
                 #  Check that camera is valid
-                active = wx.GetApp().Depot.get_active_cameras()
+                active = wx.GetApp().depot.get_active_cameras()
                 if len(active) == 0:
                     self.shouldContinue.clear()
                     sys.stderr.write("Mosaic stopping: no active cameras.\n")
@@ -872,11 +872,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 if camera not in active:
                     camera = active[0]
                 # Set image width and height based on camera and objective.
-                pixel_size = wx.GetApp().Objectives.get_pixel_size()
+                pixel_size = wx.GetApp().objectives.get_pixel_size()
                 width, height = camera.get_image_size()
                 width *= pixel_size
                 height *= pixel_size
-                self.offset = wx.GetApp().Objectives.get_offset()
+                self.offset = wx.GetApp().objectives.get_offset()
                 # Successfully reconfigured: clear the flag.
                 self.shouldReconfigure = False
 
@@ -886,7 +886,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             try:
                 data, metadata = events.executeAndWaitForOrTimeout(
                     events.NEW_IMAGE % camera.name,
-                    wx.GetApp().Imager.take_image,
+                    wx.GetApp().imager.take_image,
                     camera.get_exposure_time() / 1000
                     + camera.get_time_between_exposures() / 1000
                     + CAMERA_TIMEOUT,
@@ -903,7 +903,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # Get the scaling for the camera we're using, since they may
             # have changed.
             try:
-                minVal, maxVal = cockpit.gui.camera.window.getCameraScaling(
+                minVal, maxVal = cockpit.gui.camera.window.get_camera_scaling(
                     camera
                 )
                 # HACK: If this is the first image being acquired the
@@ -919,12 +919,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     (
                         minVal,
                         maxVal,
-                    ) = cockpit.gui.camera.window.getCameraScaling(camera)
+                    ) = cockpit.gui.camera.window.get_camera_scaling(camera)
             except Exception as e:
                 # Go to idle state.
                 self.shouldContinue.clear()
                 sys.stderr.write(
-                    "Mosaic stopping - problem in getCameraScaling: %s\n"
+                    "Mosaic stopping - problem in get_camera_scaling: %s\n"
                     % str(e)
                 )
                 continue
@@ -975,14 +975,14 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         camera = self.camera
         if camera is None or not camera.get_is_enabled():
             # Select the first active camera.
-            for cam in wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA):
+            for cam in wx.GetApp().depot.get_handlers_of_type(depot.CAMERA):
                 if cam.get_is_enabled():
                     camera = cam
                     break
         # Get image size in microns.
         # This data should be grabbed from the metadata as the system
         # settings, stage pos etc may have changed
-        data, metadata = cockpit.gui.camera.window.getImageForCamera(camera)
+        data, metadata = cockpit.gui.camera.window.get_image_for_camera(camera)
         pixel_size = metadata["pixelsize"]
         width, height = camera.get_image_size()
         width *= pixel_size
@@ -997,7 +997,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 z - self.offset[2],
             ),
             (width, height),
-            scalings=cockpit.gui.camera.window.getCameraScaling(camera),
+            scalings=cockpit.gui.camera.window.get_camera_scaling(camera),
             metadata=metadata,
         )
         # Refresh this and other mosaic views.
@@ -1224,7 +1224,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             style=wx.FD_SAVE,
             wildcard="*.txt",
             message="Please select where to save the file.",
-            defaultDir=wx.GetApp().Config.getpath("global", "data-dir"),
+            defaultDir=wx.GetApp().config.getpath("global", "data-dir"),
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
@@ -1237,7 +1237,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             style=wx.FD_OPEN,
             wildcard="*.txt",
             message="Please select the file to load.",
-            defaultDir=wx.GetApp().Config.getpath("global", "data-dir"),
+            defaultDir=wx.GetApp().config.getpath("global", "data-dir"),
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
@@ -1297,7 +1297,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             action (callable): Function to call with the selected camera as a
                 parameter.
         """
-        cameras = wx.GetApp().Depot.get_active_cameras()
+        cameras = wx.GetApp().depot.get_active_cameras()
         if len(cameras) == 0:
             wx.MessageBox(
                 "Please enable a camera to run a mosaic.",
@@ -1360,7 +1360,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def rescaleWithCamera(self, camera):
         """Given a camera handler, rescale the mosaic tiles based on that
         camera's display's black- and white-points."""
-        self.canvas.rescale(cockpit.gui.camera.window.getCameraScaling(camera))
+        self.canvas.rescale(cockpit.gui.camera.window.get_camera_scaling(camera))
 
     def saveMosaic(self, event=None):
         """Save the mosaic to disk.
@@ -1373,7 +1373,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             style=wx.FD_SAVE,
             wildcard="*.txt",
             message="Please select where to save the file.",
-            defaultDir=wx.GetApp().Config.getpath("global", "data-dir"),
+            defaultDir=wx.GetApp().config.getpath("global", "data-dir"),
         )
         if dialog.ShowModal() != wx.ID_OK:
             return
@@ -1547,7 +1547,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # Scan each site in Z to get perfect focus. Look up/down +- 1 micron,
         # and pick the Z altitude with the brightest image.
         # HACK: use the first active camera we find.
-        cameras = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+        cameras = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
         camera = None
         for alt in cameras:
             if alt.get_is_enabled():
@@ -1562,7 +1562,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 )
                 image, metadata = events.executeAndWaitFor(
                     events.NEW_IMAGE % camera.name,
-                    wx.GetApp().Imager.take_image,
+                    wx.GetApp().imager.take_image,
                     should_block=True,
                 )
                 timestamp = metadata["timestamp"]
@@ -1587,7 +1587,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 window = None
 
 
-def makeWindow(parent):
+def make_window(parent):
     global window
     window = MosaicWindow(parent, title="Mosaic view")
     window.centerCanvas()

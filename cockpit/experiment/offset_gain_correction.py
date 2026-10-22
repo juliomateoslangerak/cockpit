@@ -252,7 +252,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         )
 
         # Construct a header for the image data.
-        pixel_size = wx.GetApp().Objectives.get_pixel_size()
+        pixel_size = wx.GetApp().objectives.get_pixel_size()
         wavelengths = [c.wavelength for c in self.cameras]
         header = cockpit.util.datadoc.make_header_for(
             results, xy_size=pixel_size, z_size=0, wavelengths=wavelengths

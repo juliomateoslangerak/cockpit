@@ -167,7 +167,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
 
         # Non-zero objective offsets require expansion of area covered
         # by megatiles.
-        offsets = [h.offset for h in wx.GetApp().Objectives.get_handlers()]
+        offsets = [h.offset for h in wx.GetApp().objectives.get_handlers()]
         minmax = lambda l: (min(l), max(l))
         xOffLim = minmax([-offset[0] for offset in offsets])
         yOffLim = minmax([offset[1] for offset in offsets])
@@ -589,7 +589,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         header.NumIntegers = numIntegers
         header.NumFloats = numFloats
         # we can only have one lens ID so just grab the current one.
-        header.LensNum = wx.GetApp().Objectives.get_current().lens_ID
+        header.LensNum = wx.GetApp().objectives.get_current().lens_ID
         extendedBytes = 4 * (numIntegers + numFloats) * len(self.tiles)
         header.next = extendedBytes
 

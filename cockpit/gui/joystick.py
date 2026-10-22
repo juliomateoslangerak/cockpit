@@ -114,7 +114,7 @@ class Joystick:
         self._buttonDownTimes[event.ButtonChange] = ts
         if buttonTest(event.ButtonChange, 2):
             wx.CallLater(
-                _CLICKMS, self._longPress, 2, wx.GetApp().Imager.video_mode
+                _CLICKMS, self._longPress, 2, wx.GetApp().imager.video_mode
             )
 
     def _onButtonUp(self, event):
@@ -130,7 +130,7 @@ class Joystick:
 
             change_mover()
         elif buttonTest(event.ButtonChange, 2):
-            wx.GetApp().Imager.take_image()
+            wx.GetApp().imager.take_image()
         elif buttonTest(event.ButtonChange, 3):
             mosaic.window.toggleMosaic()
 

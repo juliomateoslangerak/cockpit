@@ -1099,7 +1099,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         if self:
             self.Refresh(False)
 
-    def resetPixelScale(self):
+    def reset_pixel_scale(self):
         self.image.autoscale()
         (
             self.histogram.lthresh,

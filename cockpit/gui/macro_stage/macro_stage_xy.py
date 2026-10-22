@@ -69,7 +69,7 @@ _logger = logging.getLogger(__name__)
 
 class _StagePositionEntryDialog(wx.Dialog):
     def __init__(self, parent: wx.Window) -> None:
-        super().__init__(parent, title="Move Stage")
+        super().__init__(parent, title="Move stage")
 
         self._spins = []
         position = cockpit.interfaces.stage_mover.get_position()
@@ -123,7 +123,7 @@ def GoToXYZDialog(parent: wx.Window) -> None:
         newPos[1] - position[1],
         newPos[2] - position[2],
     ]
-    originalHandlerIndex = wx.GetApp().Stage.cur_handler_index
+    originalHandlerIndex = wx.GetApp().stage.cur_handler_index
     currentHandlerIndex = originalHandlerIndex
     allPositions = cockpit.interfaces.stage_mover.get_all_positions()
     for axis in range(3):
@@ -144,9 +144,9 @@ def GoToXYZDialog(parent: wx.Window) -> None:
                 currentHandlerIndex -= 1  # go to a bigger handler index
             if currentHandlerIndex < 0:
                 return
-    wx.GetApp().Stage.cur_handler_index = currentHandlerIndex
+    wx.GetApp().stage.cur_handler_index = currentHandlerIndex
     cockpit.interfaces.stage_mover.go_to(newPos)
-    wx.GetApp().Stage.cur_handler_index = originalHandlerIndex
+    wx.GetApp().stage.cur_handler_index = originalHandlerIndex
 
 
 class MacroStageXY(macro_stage_base.MacroStageBase):
@@ -164,7 +164,7 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
         """
         super().__init__(*args, **kwargs)
         ## Objective offset info to get correct position and limits
-        self.offset = wx.GetApp().Objectives.get_offset()
+        self.offset = wx.GetApp().objectives.get_offset()
         ## Whether or not to draw the mosaic tiles
         self.shouldDrawMosaic = True
         ## True if we're in the processing of changing the soft motion limits.
@@ -176,7 +176,7 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
         self.lastMousePos = [0, 0]
 
         primitive_specs = (
-            wx.GetApp().Config["stage"].getlines("primitives", [])
+            wx.GetApp().config["stage"].getlines("primitives", [])
         )
         self._primitives = [
             Primitive.factory(spec) for spec in primitive_specs
@@ -229,7 +229,7 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             )
         )
 
-        wx.GetApp().Objectives.Bind(
+        wx.GetApp().objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
             self._OnObjectiveChanged,
         )
@@ -309,11 +309,11 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             glOrtho(self.maxX, self.minX, self.minY, self.maxY, -1.0, 1.0)
 
             # Loop over objective offsets to draw limist in multiple colours.
-            for obj in wx.GetApp().Objectives.get_handlers():
+            for obj in wx.GetApp().objectives.get_handlers():
                 offset = obj.offset
                 colour = obj.colour
                 glLineWidth(4)
-                if obj is not wx.GetApp().Objectives.get_current():
+                if obj is not wx.GetApp().objectives.get_current():
                     colour = (
                         min(1, colour[0] + 0.7),
                         min(1, colour[1] + 0.7),
@@ -401,8 +401,8 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             glDisable(GL_LINE_STIPPLE)
 
             # Draw possible stage positions for current objective
-            offset = wx.GetApp().Objectives.get_offset()
-            colour = wx.GetApp().Objectives.get_colour()
+            offset = wx.GetApp().objectives.get_offset()
+            colour = wx.GetApp().objectives.get_colour()
             glLineWidth(2)
             # Draw stage position
             motorPos = self.curStagePosition[:2]
@@ -582,6 +582,6 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
 
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
         """Refresh display on objective change."""
-        self.offset = wx.GetApp().Objectives.get_offset()
+        self.offset = wx.GetApp().objectives.get_offset()
         self.Refresh()
         event.Skip()

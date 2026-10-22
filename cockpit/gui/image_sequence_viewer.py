@@ -148,7 +148,7 @@ class ImageSequenceViewer(wx.Frame):
 
     def onRescale(self, event=None):
         """Rescale the view."""
-        self.canvas.resetPixelScale()
+        self.canvas.reset_pixel_scale()
 
     def shiftView(self, delta):
         """Given a (time, Z) delta, adjust the current view index by that

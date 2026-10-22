@@ -356,7 +356,7 @@ class PhysikInstrumenteM687(Device):
         self.send_xy_command(b"HLT")
 
     def on_macro_stage_paint(self, stage):
-        """The XY Macro Stage view is painting itself; draw the banned
+        """The XY Macro stage view is painting itself; draw the banned
         rectangles as pink excluded zones."""
         glColor3f(1, 0.6, 0.6)
         glBegin(GL_QUADS)

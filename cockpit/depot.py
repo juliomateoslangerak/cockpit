@@ -93,7 +93,7 @@ SKIP_CONFIG = ["server"]
 
 class DeviceDepot:
     def __init__(self):
-        """Initialize the Depot."""
+        """Initialize the depot."""
         ## Maps config section names to device
         self.name_to_device = {}
         ## Maps devices to their handlers.

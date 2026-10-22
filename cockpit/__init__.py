@@ -111,31 +111,31 @@ class CockpitApp(wx.App):
         super().__init__(redirect=False)
 
     @property
-    def Depot(self):
+    def depot(self):
         return self._depot
 
     @property
-    def Config(self):
+    def config(self):
         return self._config
 
     @property
-    def Channels(self):
+    def channels(self):
         return self._channels
 
     @property
-    def Imager(self):
+    def imager(self):
         return self._imager
 
     @property
-    def Objectives(self):
+    def objectives(self):
         return self._objectives
 
     @property
-    def Stage(self):
+    def stage(self):
         return self._stage
 
     @property
-    def MainWindow(self):
+    def main_window(self):
         return self._main_window
 
     def OnInit(self):
@@ -143,61 +143,61 @@ class CockpitApp(wx.App):
             # Ideally we would set this per device but Pyro4 config is
             # a singleton so our changes affects *all* devices we use
             # (as well as anything else on the process using Pyro).
-            Pyro4.config.PICKLE_PROTOCOL_VERSION = self.Config[
+            Pyro4.config.PICKLE_PROTOCOL_VERSION = self.config[
                 "global"
             ].getint("pyro-pickle-protocol")
 
-            depot_config = self.Config.depot_config
+            depot_config = self.config.depot_config
 
-            self.Depot.initialize(depot_config)
+            self.depot.initialize(depot_config)
 
-            numDevices = (
+            num_devices = (
                 len(depot_config.sections()) + 1
             )  # +1 for dummy devices
-            numNonDevices = 10
+            num_non_devices = 10
             status = wx.ProgressDialog(
                 parent=None,
                 title="Initializing Cockpit",
                 message="Importing modules...",
-                maximum=numDevices + numNonDevices,
+                maximum=num_devices + num_non_devices,
             )
             status.Show()
 
             # Do this early so we can see output while initializing.
-            logging_window = cockpit.gui.logging_window.makeWindow(None)
+            logging_window = cockpit.gui.logging_window.make_window(None)
 
-            updateNum = 1
-            status.Update(updateNum, "Initializing config...")
-            updateNum += 1
-            cockpit.util.user_config.initialize(self.Config)
+            update_num = 1
+            status.Update(update_num, "Initializing config...")
+            update_num += 1
+            cockpit.util.user_config.initialize(self.config)
 
-            status.Update(updateNum, "Initializing devices...")
-            updateNum += 1
-            for device in self.Depot.initialize(depot_config):
+            status.Update(update_num, "Initializing devices...")
+            update_num += 1
+            for device in self.depot.initialize(depot_config):
                 status.Update(
-                    updateNum, "Initializing devices...\n%s" % device
+                    update_num, "Initializing devices...\n%s" % device
                 )
-                updateNum += 1
-            status.Update(updateNum, "Initializing device interfaces...")
-            updateNum += 1
+                update_num += 1
+            status.Update(update_num, "Initializing device interfaces...")
+            update_num += 1
 
             self._imager = cockpit.interfaces.imager.Imager(
-                self.Depot.get_handlers_of_type(cockpit.depot.IMAGER)
+                self.depot.get_handlers_of_type(cockpit.depot.IMAGER)
             )
             cockpit.interfaces.stage_mover.initialize()
             self._objectives = cockpit.interfaces.Objectives(
-                self.Depot.get_handlers_of_type(cockpit.depot.OBJECTIVE)
+                self.depot.get_handlers_of_type(cockpit.depot.OBJECTIVE)
             )
             self._stage = cockpit.interfaces.stage_mover.mover
             self._channels = cockpit.interfaces.channels.Channels()
-            for fpath in self.Config["global"].getpaths("channel-files", []):
+            for fpath in self.config["global"].getpaths("channel-files", []):
                 new_channels = cockpit.interfaces.channels.load_from_file(fpath)
                 self._channels.update(new_channels)
 
-            status.Update(updateNum, "Initializing user interface...")
-            updateNum += 1
+            status.Update(update_num, "Initializing user interface...")
+            update_num += 1
 
-            self._main_window = cockpit.gui.main_window.makeWindow()
+            self._main_window = cockpit.gui.main_window.make_window()
             self.SetTopWindow(self._main_window)
 
             # Now that the main window exists, we can reparent the
@@ -217,11 +217,11 @@ class CockpitApp(wx.App):
                 "cockpit.gui.touch_screen",
             ]:
                 module = importlib.import_module(module_name)
-                status.Update(updateNum, " ... " + module_name)
-                updateNum += 1
-                module.makeWindow(self._main_window)
+                status.Update(update_num, " ... " + module_name)
+                update_num += 1
+                module.make_window(self._main_window)
 
-            self.SetWindowPositions()
+            self.set_window_positions()
 
             self._main_window.Show()
             for window in wx.GetTopLevelWindows():
@@ -245,11 +245,11 @@ class CockpitApp(wx.App):
             # Sometimes, status doesn't make it into the list, so test.
             status.Destroy()
 
-            self.Depot.make_initial_publications()
+            self.depot.make_initial_publications()
             cockpit.interfaces.stage_mover.make_initial_publications()
 
             cockpit.events.publish(cockpit.events.COCKPIT_INIT_COMPLETE)
-            self.Bind(wx.EVT_ACTIVATE_APP, self.onActivateApp)
+            self.Bind(wx.EVT_ACTIVATE_APP, self.on_activate_app)
             return True
         except Exception as e:
             cockpit.gui.ExceptionBox(caption="Failed to initialise cockpit")
@@ -257,8 +257,8 @@ class CockpitApp(wx.App):
             _logger.error(traceback.format_exc())
             return False
 
-    def onActivateApp(self, event):
-        # If we move to another app then back to cockpit, only MainWindow is
+    def on_activate_app(self, event):
+        # If we move to another app then back to cockpit, only main_window is
         # raised - our other windows can remain hidden by the other app, so
         # we need to raise all our top-level windows.
         if not event.Active:
@@ -297,7 +297,7 @@ class CockpitApp(wx.App):
         except:
             _logger.error("Error on USER_ABORT during exit")
             _logger.error(traceback.format_exc())
-        for dev in self.Depot.get_all_devices():
+        for dev in self.depot.get_all_devices():
             try:
                 dev.on_exit()
             except:
@@ -307,7 +307,7 @@ class CockpitApp(wx.App):
         # as the base class.
         return super().OnExit()
 
-    def SetWindowPositions(self):
+    def set_window_positions(self):
         """Place the windows in the position defined in userConfig.
 
         This should probably be a private method, or at least a method
@@ -327,7 +327,7 @@ class CockpitApp(wx.App):
             if wx.Display.GetFromPoint(position) != wx.NOT_FOUND:
                 window.SetPosition(position)
 
-    def _SaveWindowPositions(self):
+    def _save_window_positions(self):
         positions = {
             w.Title: tuple(w.Position) for w in wx.GetTopLevelWindows()
         }
@@ -507,15 +507,15 @@ def main(argv: List[str]) -> int:
     #
     # All this assumes that cockpit is the only program running and this
     # prevents `cockpit.main()` from being called in other programs.
-    badThreads = []
+    bad_threads = []
     for thread in threading.enumerate():
         if not thread.daemon and thread is not threading.main_thread():
-            badThreads.append(thread)
-    if badThreads:
+            bad_threads.append(thread)
+    if bad_threads:
         _logger.error(
-            "Found %d non-daemon threads at exit.  These are:", len(badThreads)
+            "Found %d non-daemon threads at exit.  These are:", len(bad_threads)
         )
-        for thread in badThreads:
+        for thread in bad_threads:
             _logger.error("Thread '%s': %s", thread.name, thread.__dict__)
         os._exit(1)
     return 0

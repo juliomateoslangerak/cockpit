@@ -95,41 +95,41 @@ class MainWindowPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Find out what devices we have to work with.
-        lightToggles = wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+        light_toggles = wx.GetApp().depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
 
         ## Maps LightSource handlers to their associated panels of controls.
-        self.lightToPanel = dict()
+        self.lightToPanel = {}
 
         root_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # A row of buttons for various actions we know we can take.
-        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # Abort button
-        abortButton = wx.Button(self, wx.ID_ANY, label="ABORT")
-        abortButton.SetForegroundColour(wx.RED)
-        abortButton.SetFont(abortButton.GetFont().Bold().Larger())
-        abortButton.Bind(
+        abort_button = wx.Button(self, wx.ID_ANY, label="ABORT")
+        abort_button.SetForegroundColour(wx.RED)
+        abort_button.SetFont(abort_button.GetFont().Bold().Larger())
+        abort_button.Bind(
             wx.EVT_BUTTON, lambda event: events.publish(events.USER_ABORT)
         )
-        buttonSizer.Add(abortButton, 1, wx.EXPAND)
+        button_sizer.Add(abort_button, 1, wx.EXPAND)
 
         # Snap image button
-        snapButton = wx.Button(self, wx.ID_ANY, "Snap\nimage")
-        snapButton.Bind(
-            wx.EVT_BUTTON, lambda evt: wx.GetApp().Imager.take_image()
+        snap_button = wx.Button(self, wx.ID_ANY, "Snap\nimage")
+        snap_button.Bind(
+            wx.EVT_BUTTON, lambda evt: wx.GetApp().imager.take_image()
         )
-        buttonSizer.Add(snapButton, 1, wx.EXPAND)
+        button_sizer.Add(snap_button, 1, wx.EXPAND)
 
         # Video mode button
-        videoButton = wx.ToggleButton(self, wx.ID_ANY, "Live")
-        videoButton.Bind(
-            wx.EVT_TOGGLEBUTTON, lambda evt: wx.GetApp().Imager.video_mode()
+        video_button = wx.ToggleButton(self, wx.ID_ANY, "Live")
+        video_button.Bind(
+            wx.EVT_TOGGLEBUTTON, lambda evt: wx.GetApp().imager.video_mode()
         )
         events.subscribe(
             cockpit.events.VIDEO_MODE_TOGGLE,
-            lambda state: videoButton.SetValue(state),
+            lambda state: video_button.SetValue(state),
         )
-        buttonSizer.Add(videoButton, 1, wx.EXPAND)
+        button_sizer.Add(video_button, 1, wx.EXPAND)
 
         # Experiment & review buttons
         for lbl, fn in (
@@ -141,80 +141,80 @@ class MainWindowPanel(wx.Panel):
                 "Multi-site\nexperiment",
                 lambda evt: multiSiteExperiment.showDialog(self),
             ),
-            ("View last\nfile", self.onViewLastFile),
+            ("View last\nfile", self.on_view_last_file),
         ):
             btn = wx.Button(self, wx.ID_ANY, lbl)
             btn.Bind(wx.EVT_BUTTON, fn)
-            buttonSizer.Add(btn, 1, wx.EXPAND)
+            button_sizer.Add(btn, 1, wx.EXPAND)
 
         # Increase font size in top row buttons.
-        for w in [child.GetWindow() for child in buttonSizer.Children]:
+        for w in [child.GetWindow() for child in button_sizer.Children]:
             w.SetFont(w.GetFont().Larger())
-        root_sizer.Add(buttonSizer)
+        root_sizer.Add(button_sizer)
         root_sizer.AddSpacer(ROW_SPACER)
 
         # Make UIs for any other handlers / devices and insert them into
         # our window, if possible.
         # Light power things will be handled later.
-        lightPowerThings = wx.GetApp().Depot.get_handlers_of_type(
+        light_power_things = wx.GetApp().depot.get_handlers_of_type(
             depot.LIGHT_POWER
         )
-        lightPowerThings.sort(key=lambda l: l.wavelength)
+        light_power_things.sort(key=lambda l: l.wavelength)
         # Camera UIs are drawn separately. Currently, they are drawn first,
         # but this separation may make it easier to implement cameras in
         # ordered slots, giving the user control over exposure order.
-        cameraThings = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+        camera_things = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
         # Ignore anything that is handled specially.
-        ignoreThings = lightToggles + lightPowerThings
-        ignoreThings += cameraThings
-        # Remove ignoreThings from the full list of devices.
-        otherThings = list(wx.GetApp().Depot.get_all_devices())
-        otherThings.sort(key=lambda d: d.__class__.__name__)
-        otherThings.extend(wx.GetApp().Depot.get_all_handlers())
-        rowSizer = wx.WrapSizer(wx.HORIZONTAL)
+        ignore_things = light_toggles + light_power_things
+        ignore_things += camera_things
+        # Remove ignore_things from the full list of devices.
+        other_things = list(wx.GetApp().depot.get_all_devices())
+        other_things.sort(key=lambda d: d.__class__.__name__)
+        other_things.extend(wx.GetApp().depot.get_all_handlers())
+        row_sizer = wx.WrapSizer(wx.HORIZONTAL)
 
         # Add objective control
-        buttonSizer.Add(
-            main_panels.ObjectiveControls(self, wx.GetApp().Objectives),
+        button_sizer.Add(
+            main_panels.ObjectiveControls(self, wx.GetApp().objectives),
             flag=wx.LEFT,
             border=2,
         )
-        ignoreThings.extend(wx.GetApp().Objectives.get_handlers())
+        ignore_things.extend(wx.GetApp().objectives.get_handlers())
 
         # Make the UI elements for the cameras.
-        rowSizer.Add(main_panels.CameraControlsPanel(self))
-        rowSizer.AddSpacer(COL_SPACER)
+        row_sizer.Add(main_panels.CameraControlsPanel(self))
+        row_sizer.AddSpacer(COL_SPACER)
 
         # Add light controls.
-        lightfilters = sorted(
-            wx.GetApp().Depot.get_handlers_of_type(depot.LIGHT_FILTER)
+        light_filters = sorted(
+            wx.GetApp().depot.get_handlers_of_type(depot.LIGHT_FILTER)
         )
-        ignoreThings.extend(lightfilters)
+        ignore_things.extend(light_filters)
 
         # Add filterwheel controls.
-        rowSizer.Add(main_panels.FilterControls(self))
+        row_sizer.Add(main_panels.FilterControls(self))
 
         # Make the UI elements for everything else.
-        for thing in ignoreThings:
-            if thing in otherThings:
-                otherThings.remove(thing)
-        for thing in sorted(otherThings):
-            if wx.GetApp().Depot.get_handler(thing, depot.CAMERA):
+        for thing in ignore_things:
+            if thing in other_things:
+                other_things.remove(thing)
+        for thing in sorted(other_things):
+            if wx.GetApp().depot.get_handler(thing, depot.CAMERA):
                 # Camera UIs already drawn.
                 continue
             item = thing.make_ui(self)
             if item is not None:
-                itemsizer = wx.BoxSizer(wx.VERTICAL)
-                itemsizer.Add(
+                item_sizer = wx.BoxSizer(wx.VERTICAL)
+                item_sizer.Add(
                     cockpit.gui.main_panels.PanelLabel(self, thing.name)
                 )
-                itemsizer.Add(item, 0, wx.EXPAND)
-                if rowSizer.GetChildren():
+                item_sizer.Add(item, 0, wx.EXPAND)
+                if row_sizer.GetChildren():
                     # Add a spacer.
-                    rowSizer.AddSpacer(COL_SPACER)
-                rowSizer.Add(itemsizer, 1, flag=wx.EXPAND)
+                    row_sizer.AddSpacer(COL_SPACER)
+                row_sizer.Add(item_sizer, 1, flag=wx.EXPAND)
 
-        root_sizer.Add(rowSizer, 1, flag=wx.EXPAND)
+        root_sizer.Add(row_sizer, 1, flag=wx.EXPAND)
         root_sizer.AddSpacer(ROW_SPACER)
 
         lights_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -226,42 +226,42 @@ class MainWindowPanel(wx.Panel):
         self.SetSizer(root_sizer)
         self.Layout()
 
-        keyboard.setKeyboardHandlers(self)
+        keyboard.set_keyboard_handlers(self)
         self.joystick = joystick.Joystick(self)
 
         self.SetDropTarget(view_file_drop_target.ViewFileDropTarget(self))
 
         # subscribe to camera UPDATE_ROI events so we can ask to apply it to all
         # cameras or not.
-        self.updateROI = False
-        events.subscribe(events.UPDATE_ROI, self.updateCamROI)
+        self.update_roi = False
+        events.subscribe(events.UPDATE_ROI, self.update_cam_roi)
 
-    def updateCamROI(self, camName):
+    def update_cam_roi(self, cam_name):
         """function fired on camera ROI update.
 
         It looks to see if there are other active cameras and asks if you want
         to set all cameras to that ROI or not.
         """
         # track if already updating cameras, only need to ask once
-        if self.updateROI:
+        if self.update_roi:
             return
-        self.updateROI = True
+        self.update_roi = True
         asked = False
         update = False
-        active = wx.GetApp().Depot.get_handler_with_name(camName)
+        active = wx.GetApp().depot.get_handler_with_name(cam_name)
         cameras = sorted(
-            wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA),
+            wx.GetApp().depot.get_handlers_of_type(depot.CAMERA),
             key=lambda c: c.name,
         )
         roi = active.get_roi()
         for camera in cameras:
-            if camera.is_enabled and (camera.name is not camName):
+            if camera.is_enabled and (camera.name is not cam_name):
                 # another active camera camera so ask.
                 title = "Apply to other Cameras?"
                 msg = (
                     " You have added a new ROI to camera  '%s'."
                     " Do you wish to apply the same ROI to all "
-                    " other cameras?" % (camName)
+                    " other cameras?" % (cam_name)
                 )
                 if not asked:
                     asked = True
@@ -270,9 +270,9 @@ class MainWindowPanel(wx.Panel):
                         update = True
                 if update:
                     camera.set_roi(roi)
-        self.updateROI = False
+        self.update_roi = False
 
-    def onViewLastFile(self, event=None):
+    def on_view_last_file(self, event=None):
         """User clicked the "view last file" button; open the last experiment's
         file in an image viewer.
 
@@ -315,9 +315,9 @@ class EditMenu(wx.Menu):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         menu_item = self.Append(wx.ID_ANY, item="Reset User Configuration")
-        self.Bind(wx.EVT_MENU, self.OnResetUserConfig, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_reset_user_config, menu_item)
 
-    def OnResetUserConfig(self, evt: wx.CommandEvent) -> None:
+    def on_reset_user_config(self, evt: wx.CommandEvent) -> None:
         cockpit.util.user_config.clear_all_values()
 
 
@@ -325,29 +325,29 @@ class ChannelsMenu(wx.Menu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         control_items = [
-            ("Add channel…", self.OnAddChannel),
-            ("Remove channel…", self.OnRemoveChannel),
-            ("Export channels…", self.OnExportChannels),
-            ("Import channels…", self.OnImportChannels),
+            ("Add channel…", self.on_add_channel),
+            ("Remove channel…", self.on_remove_channel),
+            ("Export channels…", self.on_export_channels),
+            ("Import channels…", self.on_import_channels),
         ]
         for label, method in control_items:
             menu_item = self.Append(wx.ID_ANY, item=label)
             self.Bind(wx.EVT_MENU, method, menu_item)
         self.AppendSeparator()
         self._n_control_items = len(control_items) + 1  # +1 for the separator
-        for name in wx.GetApp().Channels.names:
-            self.AddChannelItem(name)
+        for name in wx.GetApp().channels.names:
+            self.add_channel_item(name)
 
-        wx.GetApp().Channels.Bind(
-            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.OnChannelAdded
+        wx.GetApp().channels.Bind(
+            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.on_channel_added
         )
-        wx.GetApp().Channels.Bind(
+        wx.GetApp().channels.Bind(
             cockpit.interfaces.channels.EVT_CHANNEL_REMOVED,
-            self.OnChannelRemoved,
+            self.on_channel_removed,
         )
 
     @property
-    def ChannelItems(self) -> typing.List[wx.MenuItem]:
+    def channel_items(self) -> typing.List[wx.MenuItem]:
         """List of channel items in the menu."""
         channel_items = []
         for i, menu_item in enumerate(self.MenuItems):
@@ -356,35 +356,35 @@ class ChannelsMenu(wx.Menu):
             channel_items.append(menu_item)
         return channel_items
 
-    def AddChannelItem(self, name: str) -> None:
+    def add_channel_item(self, name: str) -> None:
         menu_item = self.Append(wx.ID_ANY, item=name)
-        self.Bind(wx.EVT_MENU, self.OnChannel, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_channel, menu_item)
 
-    def FindChannelItem(self, channel_name: str) -> wx.MenuItem:
+    def find_channel_item(self, channel_name: str) -> wx.MenuItem:
         """Find the channel menu item with the given channel name."""
         # wx.Menu.FindItem works perfectly to find the channel by name
         # but we deploy our own logic to cover the case of channels
         # named like one of our control menu items.  Sure, the only
         # reason to name a channel like that is to piss us off, but we
         # still need to handle it.
-        for menu_item in self.ChannelItems:
+        for menu_item in self.channel_items:
             if menu_item.ItemLabelText == channel_name:
                 return menu_item
         else:
             raise ValueError("There is no menu item named '%s'" % channel_name)
 
-    def OnChannelAdded(self, event: wx.CommandEvent) -> None:
+    def on_channel_added(self, event: wx.CommandEvent) -> None:
         channel_name = event.GetString()
-        self.AddChannelItem(channel_name)
+        self.add_channel_item(channel_name)
         event.Skip()
 
-    def OnChannelRemoved(self, event: wx.CommandEvent) -> None:
+    def on_channel_removed(self, event: wx.CommandEvent) -> None:
         channel_name = event.GetString()
-        menu_item = self.FindChannelItem(channel_name)
+        menu_item = self.find_channel_item(channel_name)
         self.Delete(menu_item)
         event.Skip()
 
-    def OnAddChannel(self, event: wx.CommandEvent) -> None:
+    def on_add_channel(self, event: wx.CommandEvent) -> None:
         """Add current channel configuration."""
         name = wx.GetTextFromUser(
             "Enter name for new channel:", caption="Add new channel"
@@ -392,7 +392,7 @@ class ChannelsMenu(wx.Menu):
         if not name:
             return
 
-        if name in wx.GetApp().Channels.names:
+        if name in wx.GetApp().channels.names:
             answer = wx.MessageBox(
                 'There is already a channel named "%s".' " Replace it?" % name,
                 caption="Channel already exists",
@@ -400,14 +400,14 @@ class ChannelsMenu(wx.Menu):
             )
             if answer == wx.YES:
                 channel = cockpit.interfaces.channels.current_channel()
-                wx.GetApp().Channels.change(name, channel)
+                wx.GetApp().channels.change(name, channel)
         else:
             channel = cockpit.interfaces.channels.current_channel()
-            wx.GetApp().Channels.add(name, channel)
+            wx.GetApp().channels.add(name, channel)
 
-    def OnRemoveChannel(self, event: wx.CommandEvent) -> None:
+    def on_remove_channel(self, event: wx.CommandEvent) -> None:
         """Remove one channel."""
-        if not wx.GetApp().Channels.names:
+        if not wx.GetApp().channels.names:
             wx.MessageBox(
                 "There are no channels to be removed.",
                 caption="Failed to remove channel",
@@ -418,25 +418,25 @@ class ChannelsMenu(wx.Menu):
         name = wx.GetSingleChoice(
             "Choose channel to be removed:",
             caption="Remove a channel",
-            aChoices=wx.GetApp().Channels.names,
+            aChoices=wx.GetApp().channels.names,
         )
         if not name:
             return
-        wx.GetApp().Channels.remove(name)
+        wx.GetApp().channels.remove(name)
 
-    def OnExportChannels(self, event: wx.CommandEvent) -> None:
+    def on_export_channels(self, event: wx.CommandEvent) -> None:
         """Save all channels to a file."""
         filepath = wx.SaveFileSelector("Select file to export", "")
         if not filepath:
             return
         try:
             cockpit.interfaces.channels.save_to_file(
-                filepath, wx.GetApp().Channels
+                filepath, wx.GetApp().channels
             )
         except:
             cockpit.gui.ExceptionBox("Failed to write to '%s'" % filepath)
 
-    def OnImportChannels(self, event: wx.CommandEvent) -> None:
+    def on_import_channels(self, event: wx.CommandEvent) -> None:
         """Add all channels in a file."""
         filepath = wx.LoadFileSelector("Select file to import", "")
         if not filepath:
@@ -445,7 +445,7 @@ class ChannelsMenu(wx.Menu):
             new_channels = cockpit.interfaces.channels.load_from_file(filepath)
         except:
             cockpit.gui.ExceptionBox("Failed to read to '%s'" % filepath)
-        current_names = wx.GetApp().Channels.names
+        current_names = wx.GetApp().channels.names
         duplicated = [n for n in new_channels.names if n in current_names]
         if duplicated:
             answer = wx.MessageBox(
@@ -457,12 +457,12 @@ class ChannelsMenu(wx.Menu):
             )
             if answer != wx.YES:
                 return
-        wx.GetApp().Channels.update(new_channels)
+        wx.GetApp().channels.update(new_channels)
 
-    def OnChannel(self, event: wx.CommandEvent) -> None:
+    def on_channel(self, event: wx.CommandEvent) -> None:
         """Apply channel with same name as the menu item."""
         name = self.FindItemById(event.GetId()).ItemLabelText
-        channel = wx.GetApp().Channels.get(name)
+        channel = wx.GetApp().channels.get(name)
         cockpit.interfaces.channels.apply_channel(channel)
 
 
@@ -472,7 +472,7 @@ class WindowsMenu(wx.Menu):
         self._id_to_window = {}  # type: typing.Dict[int, wx.Frame]
 
         menu_item = self.Append(wx.ID_ANY, item="Reset window positions")
-        self.Bind(wx.EVT_MENU, self.OnResetWindowPositions, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_reset_window_positions, menu_item)
 
         # A separator between "Reset window positions" and the Cockpit
         # window menu items.
@@ -487,14 +487,14 @@ class WindowsMenu(wx.Menu):
         # Add item to launch valueLogViewer (XXX: this should be
         # handled by some sort of plugin system and not hardcoded).
         menu_item = self.Append(wx.ID_ANY, "Launch ValueLogViewer")
-        self.Bind(wx.EVT_MENU, self.OnLaunchValueLogViewer, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_launch_value_log_viewer, menu_item)
         if not ValueLogger.get_log_files():
             menu_item.Enable(False)
 
         # Add item to launch SIM Intensity profile (XXX: this should
         # be handled by some sort of plugin system and not hardcoded).
         menu_item = self.Append(wx.ID_ANY, "Launch SIM Intensity Profile")
-        self.Bind(wx.EVT_MENU, self.OnLaunchSIMIntensityProfile, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_launch_sim_intensity_profile, menu_item)
 
         # This is only for the piDIO and executor, both of which are a
         # window to set lines high/low.  We should probably have a
@@ -502,8 +502,8 @@ class WindowsMenu(wx.Menu):
         # handlers (probably piDIO device should provide an executor
         # handler).
         for obj in chain(
-            wx.GetApp().Depot.get_all_handlers(),
-            wx.GetApp().Depot.get_all_devices(),
+            wx.GetApp().depot.get_all_handlers(),
+            wx.GetApp().depot.get_all_devices(),
         ):
             if hasattr(obj, "show_debug_window"):
                 label = "debug %s (%s)" % (obj.name, obj.__class__.__name__)
@@ -516,9 +516,9 @@ class WindowsMenu(wx.Menu):
 
         # When the menu is created the windows don't exist yet so we
         # will update it each time the menu is open.
-        self.Bind(wx.EVT_MENU_OPEN, self.OnMenuOpen)
+        self.Bind(wx.EVT_MENU_OPEN, self.on_menu_open)
 
-    def OnMenuOpen(self, event: wx.MenuEvent) -> None:
+    def on_menu_open(self, event: wx.MenuEvent) -> None:
         if event.GetMenu() is not self:
             # We may be just opening one of the submenus but we only
             # want to do this when opening the main menu.
@@ -538,7 +538,7 @@ class WindowsMenu(wx.Menu):
             if not should_be_listed:
                 continue
             menu_item = wx.MenuItem(self, wx.ID_ANY, window.Title)
-            self.Bind(wx.EVT_MENU, self.OnWindowTitle, menu_item)
+            self.Bind(wx.EVT_MENU, self.on_window_title, menu_item)
             self._id_to_window[menu_item.Id] = window
 
             # Place this menu item between the separators that group
@@ -548,9 +548,9 @@ class WindowsMenu(wx.Menu):
             new_menu_items = True
 
         if new_menu_items:
-            self._SortCockpitWindowMenuItems()
+            self._sort_cockpit_window_menu_items()
 
-    def _SortCockpitWindowMenuItems(self) -> None:
+    def _sort_cockpit_window_menu_items(self) -> None:
         # Remove menu items from the menu, pair them with the window,
         # sort the menu items based on the window name, and then
         # re-insert the menu items by order.
@@ -564,11 +564,11 @@ class WindowsMenu(wx.Menu):
         for i, (menu_item, _) in enumerate(menu_item_and_window_pairs):
             self.Insert(self._first_cockpit_window_pos + i, menu_item)
 
-    def OnResetWindowPositions(self, event: wx.CommandEvent) -> None:
+    def on_reset_window_positions(self, event: wx.CommandEvent) -> None:
         del event
         wx.GetApp().SetWindowPositions()
 
-    def OnWindowTitle(self, event: wx.CommandEvent) -> None:
+    def on_window_title(self, event: wx.CommandEvent) -> None:
         """Action when user selects the menu item with the window title."""
         window = self._id_to_window[event.GetId()]
         # Don't just call Restore() without checking if the window is
@@ -590,13 +590,13 @@ class WindowsMenu(wx.Menu):
         if wx.Display.GetFromWindow(window) == wx.NOT_FOUND:
             window.SetPosition(wx.GetMousePosition())
 
-    def OnLaunchValueLogViewer(self, event: wx.CommandEvent) -> None:
+    def on_launch_value_log_viewer(self, event: wx.CommandEvent) -> None:
         log_files = ValueLogger.get_log_files()
         window = CSVPlotter(None)
         window.add_data_sources(log_files, defer_open=True)
         window.Show()
 
-    def OnLaunchSIMIntensityProfile(self, event: wx.CommandEvent) -> None:
+    def on_launch_sim_intensity_profile(self, event: wx.CommandEvent) -> None:
         window = IntensityProfilerFrame(wx.GetApp().MainWindow)
         window.Show()
 
@@ -610,20 +610,20 @@ class MainWindow(wx.Frame):
 
         file_menu = wx.Menu()
         menu_item = file_menu.Append(wx.ID_OPEN)
-        self.Bind(wx.EVT_MENU, self.OnOpen, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_open, menu_item)
         menu_item = file_menu.Append(wx.ID_ANY, item="View Cockpit config")
-        self.Bind(wx.EVT_MENU, self.OnViewConfig, menu_item)
-        menu_item = file_menu.Append(wx.ID_ANY, item="View Depot config")
-        self.Bind(wx.EVT_MENU, self.OnViewDepot, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_view_config, menu_item)
+        menu_item = file_menu.Append(wx.ID_ANY, item="View depot config")
+        self.Bind(wx.EVT_MENU, self.on_view_depot, menu_item)
         menu_item = file_menu.Append(wx.ID_EXIT)
-        self.Bind(wx.EVT_MENU, self.OnQuit, menu_item)
+        self.Bind(wx.EVT_MENU, self.on_quit, menu_item)
         menu_bar.Append(file_menu, "&File")
 
         edit_menu = EditMenu()
         menu_bar.Append(edit_menu, "&Edit")
 
         channels_menu = ChannelsMenu()
-        menu_bar.Append(channels_menu, "&Channels")
+        menu_bar.Append(channels_menu, "&channels")
 
         menu_bar.Append(WindowsMenu(), "&Windows")
 
@@ -637,7 +637,7 @@ class MainWindow(wx.Frame):
             menu_item,
         )
         menu_item = help_menu.Append(wx.ID_ABOUT)
-        self.Bind(wx.EVT_MENU, self._OnAbout, menu_item)
+        self.Bind(wx.EVT_MENU, self._on_about, menu_item)
         menu_bar.Append(help_menu, "&Help")
 
         self.SetMenuBar(menu_bar)
@@ -650,27 +650,27 @@ class MainWindow(wx.Frame):
         sizer.SetSizeHints(self)
         self.SetSizer(sizer)
 
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
         # Because mainPanels.PanelLabel uses a font larger than the
         # default, we need to recompute the Frame size at show time.
         # Workaround for https://trac.wxwidgets.org/ticket/16088
         if "gtk3" in wx.PlatformInfo:
-            self.Bind(wx.EVT_SHOW, self.OnShow)
+            self.Bind(wx.EVT_SHOW, self.on_show)
 
-        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_SIZE, self.on_size)
 
-    def OnSize(self, event: wx.SizeEvent) -> None:
+    def on_size(self, event: wx.SizeEvent) -> None:
         self.Layout()
         self.SetMinSize(self.GetSizer().GetMinSize())
         self.Update()
         event.Skip()
 
-    def OnShow(self, event: wx.ShowEvent) -> None:
+    def on_show(self, event: wx.ShowEvent) -> None:
         self.Layout()
         event.Skip()
 
-    def OnOpen(self, event: wx.CommandEvent) -> None:
+    def on_open(self, event: wx.CommandEvent) -> None:
         filepath = wx.LoadFileSelector("Select file to open", "", parent=self)
         if not filepath:
             return
@@ -681,21 +681,21 @@ class MainWindow(wx.Frame):
                 "Failed to open '%s'" % filepath, parent=self
             )
 
-    def OnViewConfig(self, event: wx.CommandEvent) -> None:
+    def on_view_config(self, event: wx.CommandEvent) -> None:
         _show_configparser_frame(
-            wx.GetApp().Config, frame_title="Cockpit configuration (parsed)"
+            wx.GetApp().config, frame_title="Cockpit configuration (parsed)"
         )
 
-    def OnViewDepot(self, event: wx.CommandEvent) -> None:
+    def on_view_depot(self, event: wx.CommandEvent) -> None:
         _show_configparser_frame(
-            wx.GetApp().Config.depot_config,
-            frame_title="Depot configuration (parsed)",
+            wx.GetApp().config.depot_config,
+            frame_title="depot configuration (parsed)",
         )
 
-    def OnQuit(self, event: wx.CommandEvent) -> None:
+    def on_quit(self, event: wx.CommandEvent) -> None:
         self.Close()
 
-    def OnClose(self, event):
+    def on_close(self, event):
         """Close the main window, leads to close cockpit program.
 
         Do any necessary GUI pre-shutdown events here instead of
@@ -703,19 +703,19 @@ class MainWindow(wx.Frame):
         objects have been destroyed already.
         """
         if not event.CanVeto():
-            MainWindow.destroyAllWindows()
+            MainWindow.destroy_all_windows()
         else:
             wx.GetApp()._SaveWindowPositions()
-            MainWindow.destroyAllWindows()
+            MainWindow.destroy_all_windows()
             # Let the default event handler handle the frame
             # destruction.
             event.Skip()
 
-    def _OnAbout(self, event):
+    def _on_about(self, event):
         wx.adv.AboutBox(CockpitAboutInfo(), parent=self)
 
     @staticmethod
-    def destroyAllWindows():
+    def destroy_all_windows():
         for w in wx.GetTopLevelWindows():
             wx.CallAfter(w.Destroy)
 
@@ -732,21 +732,21 @@ class StatusLights(wx.StatusBar):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # Maps status light names to the light field/pane index.
-        self._nameToField = {}  # type: typing.Dict[str, int]
+        self._name_to_field = {}  # type: typing.Dict[str, int]
         self._defaultBackgroundColour = self.GetBackgroundColour()
         self._notificationColour = wx.YELLOW
 
         listener = cockpit.gui.EvtEmitter(self, events.UPDATE_STATUS_LIGHT)
-        listener.Bind(cockpit.gui.EVT_COCKPIT, self._OnNewStatus)
+        listener.Bind(cockpit.gui.EVT_COCKPIT, self._on_new_status)
 
         # Some lights that we know we need.
         events.publish(events.UPDATE_STATUS_LIGHT, "image count", "")
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
 
-    def _AddNewLight(self, lightName: str) -> None:
+    def _add_new_light(self, light_name: str) -> None:
         """Append new status light to the status bar."""
         new_field_index = self.GetFieldsCount()  # type: int
-        if not self._nameToField:
+        if not self._name_to_field:
             # If the map is empty, this is the first light.  However,
             # a status bar always has at least one field, so use the
             # existing field if this is the first light.
@@ -755,16 +755,16 @@ class StatusLights(wx.StatusBar):
         else:
             self.SetFieldsCount(new_field_index + 1)
         self.SetStatusStyles([wx.SB_SUNKEN] * (new_field_index + 1))
-        self._nameToField[lightName] = new_field_index
+        self._name_to_field[light_name] = new_field_index
 
-    def _OnNewStatus(self, event: cockpit.gui.CockpitEvent) -> None:
+    def _on_new_status(self, event: cockpit.gui.CockpitEvent) -> None:
         """Update text of specified status light."""
         assert len(event.EventData) == 2
-        lightName = event.EventData[0]  # type: str
+        light_name = event.EventData[0]  # type: str
         text = event.EventData[1]  # type: str
-        if lightName not in self._nameToField:
-            self._AddNewLight(lightName)
-        self.SetStatusText(text, self._nameToField[lightName])
+        if light_name not in self._name_to_field:
+            self._add_new_light(light_name)
+        self.SetStatusText(text, self._name_to_field[light_name])
 
         # This changes the colour of the whole bar, not only the
         # status (see issue #565).
@@ -844,7 +844,7 @@ def CockpitAboutInfo() -> wx.adv.AboutDialogInfo:
     return info
 
 
-def makeWindow():
+def make_window():
     """Create the window."""
     window = MainWindow()
     return window

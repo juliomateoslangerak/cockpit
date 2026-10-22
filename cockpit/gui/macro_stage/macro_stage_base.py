@@ -108,7 +108,7 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         ## Don't bother showing a movement arrow for movements smaller
         ## than this.
         self._min_delta_to_display = (
-            wx.GetApp().Config["stage"].getfloat("min-delta-to-display", 0.01)
+            wx.GetApp().config["stage"].getfloat("min-delta-to-display", 0.01)
         )
 
         ## (X, Y, Z) vector describing the stage position as of the last

@@ -69,7 +69,7 @@ class GridSitesDialog(wx.Dialog):
         """Create the dialog, and lay out its UI widgets."""
         super().__init__(parent, -1, "Place a Grid of Sites")
 
-        ## Config-loaded settings for the form.
+        ## config-loaded settings for the form.
         self.settings = cockpit.util.user_config.get_value(
             "gridSitesDialog",
             default={
@@ -148,7 +148,7 @@ class GridSitesDialog(wx.Dialog):
         imageWidth = float(self.imageWidth.GetValue())
         imageHeight = float(self.imageHeight.GetValue())
         markerSize = float(self.markerSize.GetValue())
-        pixelSize = wx.GetApp().Objectives.get_pixel_size()
+        pixelSize = wx.GetApp().objectives.get_pixel_size()
 
         for xOffset in range(int(self.numColumns.GetValue())):
             xLoc = curLoc[0] - xOffset * pixelSize * imageWidth

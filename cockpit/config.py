@@ -113,7 +113,7 @@ class CockpitConfig(configparser.ConfigParser):
 
 
 class DepotConfig(configparser.ConfigParser):
-    """Config for a :class:`DeviceDepot`.
+    """config for a :class:`DeviceDepot`.
 
     Unlike Python's ``ConfigParser``, it will raise an exception if
     there's multiple devices (sections with same name), even if they

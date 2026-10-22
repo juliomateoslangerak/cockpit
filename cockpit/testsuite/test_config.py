@@ -401,7 +401,7 @@ class TestConfigReading(unittest.TestCase):
     def test_depot_files_ignored_in_config_file(self, depot_read_mock):
         """depot-files in --config-file is ignored if --depot-file is set
 
-        Depot conf files specified via command line don't just have
+        depot conf files specified via command line don't just have
         their values overload those on the cockpit files.  If they are
         specified on command line then no other gets read, not even
         those mentioned on cockpit config files specified via command
@@ -567,7 +567,7 @@ class TestDepotConfig(unittest.TestCase):
             )
 
     def test_read(self):
-        """Depot files are read and merged."""
+        """depot files are read and merged."""
         file1 = TempConfigFile("[dev1]\n" "type: bar\n" "foo: qux\n")
         file2 = TempConfigFile("[dev2]\n" "type: foo\n" "bar: grob\n")
         config = call_cockpit(

@@ -56,7 +56,7 @@ import cockpit.gui.mosaic.window
 import cockpit.interfaces.stage_mover
 
 
-def onChar(evt):
+def on_char(evt):
     if isinstance(evt.EventObject, wx.TextCtrl) or evt.KeyCode in [
         wx.WXK_TAB,
         wx.WXK_ESCAPE,
@@ -69,7 +69,7 @@ def onChar(evt):
         evt.Skip()
         return
     if evt.KeyCode == wx.WXK_NUMPAD_MULTIPLY:
-        cockpit.gui.camera.window.rescaleViews()
+        cockpit.gui.camera.window.rescale_views()
     elif evt.KeyCode == wx.WXK_NUMPAD_DIVIDE:
         cockpit.interfaces.stage_mover.change_mover()
     elif evt.KeyCode == wx.WXK_NUMPAD_DECIMAL:
@@ -106,14 +106,14 @@ def onChar(evt):
         cockpit.interfaces.stage_mover.change_step_size(1)
     elif evt.KeyCode in [wx.WXK_NUMPAD_ADD, wx.WXK_NUMPAD0]:
         # Take image
-        wx.GetApp().Imager.take_image()
+        wx.GetApp().imager.take_image()
     else:
         evt.Skip()
 
 
-def setKeyboardHandlers(window):
+def set_keyboard_handlers(window):
     """Given a wx.Window instance, set up keyboard controls for that instance."""
-    accelTable = wx.AcceleratorTable(
+    accel_table = wx.AcceleratorTable(
         [
             # Pop up a menu to help the user find hidden windows.
             (wx.ACCEL_CTRL, ord("M"), 6321),
@@ -121,12 +121,12 @@ def setKeyboardHandlers(window):
             (wx.ACCEL_CTRL, ord("P"), 6322),
         ]
     )
-    window.SetAcceleratorTable(accelTable)
-    window.Bind(wx.EVT_MENU, lambda e: showHideShell(window), id=6322)
-    window.Bind(wx.EVT_CHAR_HOOK, onChar)
+    window.SetAcceleratorTable(accel_table)
+    window.Bind(wx.EVT_MENU, lambda e: show_hide_shell(window), id=6322)
+    window.Bind(wx.EVT_CHAR_HOOK, on_char)
 
 
-def showHideShell(parent):
+def show_hide_shell(parent):
     """Function to show/hide the pythion shell window."""
     for window in wx.GetTopLevelWindows():
         if window.GetTitle() == "PyShell":

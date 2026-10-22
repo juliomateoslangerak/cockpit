@@ -217,7 +217,7 @@ wavelength, e.g.:
               561: 0.500, 0.60, 0.75
   idleVoltage: 1.0
 
-Objectives
+objectives
 ``````````
 
 The specification of the objectives are also defined in the depot

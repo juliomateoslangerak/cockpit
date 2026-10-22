@@ -312,7 +312,7 @@ class Experiment:
                     camera_to_ignored_image_indices=self.camera_to_ignored_image_indices,
                     run_thread=self.run_thread,
                     save_path=self.save_path,
-                    pixel_size_xy=wx.GetApp().Objectives.get_pixel_size(),
+                    pixel_size_xy=wx.GetApp().objectives.get_pixel_size(),
                     slice_height=self.slice_height,
                 )
             else:

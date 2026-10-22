@@ -39,7 +39,7 @@ Some of subpackages are:
   arrays to the screen.  It includes a histogram for black/white
   scaling, zoom and drag, etc.
 
-- :mod:`cockpit.gui.macro_stage`: the Macro Stage window gives the user
+- :mod:`cockpit.gui.macro_stage`: the Macro stage window gives the user
   a high-level overview of where they are with respect to the motion
   limits of their stage.
 

@@ -132,14 +132,14 @@ class ExperimentConfigPanel(wx.Panel):
         # debugging, so we can examine the state of the experiment.
         self.runner = None
 
-        self.allLights = wx.GetApp().Depot.get_handlers_of_type(
+        self.allLights = wx.GetApp().depot.get_handlers_of_type(
             depot.LIGHT_TOGGLE
         )
         self.allLights.sort(key=lambda l: l.wavelength)
-        self.allCameras = wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA)
+        self.allCameras = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
         self.allCameras.sort(key=lambda c: c.name)
 
-        self.channels = wx.GetApp().Channels
+        self.channels = wx.GetApp().channels
 
         ## Map of default settings as loaded from config.
         self.settings = self.loadConfig()
@@ -534,7 +534,7 @@ class ExperimentConfigPanel(wx.Panel):
             style=wx.FD_SAVE,
             wildcard="*.txt",
             message="Please select where to save the experiment.",
-            defaultDir=wx.GetApp().Config.getpath("global", "data-dir"),
+            defaultDir=wx.GetApp().config.getpath("global", "data-dir"),
         )
         if dialog.ShowModal() != wx.ID_OK:
             # User cancelled.
@@ -557,7 +557,7 @@ class ExperimentConfigPanel(wx.Panel):
             style=wx.FD_OPEN,
             wildcard="*.txt",
             message="Please select the experiment file to load.",
-            defaultDir=wx.GetApp().Config.getpath("global", "data-dir"),
+            defaultDir=wx.GetApp().config.getpath("global", "data-dir"),
         )
         if dialog.ShowModal() != wx.ID_OK:
             # User cancelled.
@@ -586,14 +586,14 @@ class ExperimentConfigPanel(wx.Panel):
         self.saveSettings()
         # Find the Z mover with the smallest range of motion, assumed
         # to be our experiment mover.
-        mover = wx.GetApp().Depot.get_sorted_stage_movers()[2][-1]
+        mover = wx.GetApp().depot.get_sorted_stage_movers()[2][-1]
         # Only use active cameras and enabled lights.
         # Must do list(filter) because we will iterate over the list
         # many times.
         cameras = list(
             filter(
                 lambda c: c.get_is_enabled(),
-                wx.GetApp().Depot.get_handlers_of_type(depot.CAMERA),
+                wx.GetApp().depot.get_handlers_of_type(depot.CAMERA),
             )
         )
         if not cameras:
@@ -781,7 +781,7 @@ class FilepathPanel(wx.Panel):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._dir_ctrl = wx.DirPickerCtrl(
-            self, path=wx.GetApp().Config.getpath("global", "data-dir")
+            self, path=wx.GetApp().config.getpath("global", "data-dir")
         )
         self._template_ctrl = wx.TextCtrl(self)
         self._template_ctrl.SetToolTip(

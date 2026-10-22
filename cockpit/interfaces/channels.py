@@ -41,7 +41,7 @@ class Channels(wx.EvtHandler):
     A channel configuration sets light sources and cameras.  It is the
     configuration to replicate the image acquisition settings.
 
-    `Channels` keep the order of channels that are added.  While
+    `channels` keep the order of channels that are added.  While
     technically not needed for a map/dict object, this is used to
     construct GUI elements where it is important to keep the order for
     usability.  It is simpler to do it here than to require each GUI
@@ -80,7 +80,7 @@ class Channels(wx.EvtHandler):
         `ProcessEvent` is synchronous.  This prevents the following
         situation:
 
-        1. `Channels` instance is created during `CockpitApp.OnInit`.
+        1. `channels` instance is created during `CockpitApp.OnInit`.
         2. New channels are then added to that instance after reading
            the channel files.  This would queue `EVT_CHANNEL_ADDED`
            events.
@@ -108,7 +108,7 @@ class Channels(wx.EvtHandler):
         self._map.pop(name)
         self._process_channel_event(EVT_CHANNEL_REMOVED, name)
 
-    def update(self, other: "Channels") -> None:
+    def update(self, other: "channels") -> None:
         """Update this instances with the channels from other."""
         # We call add/change instead of OrderedDict.update because the
         # add/remove events are meant for one channel change.  We
@@ -160,14 +160,14 @@ def apply_channel(channel: Channel) -> None:
 def save_to_file(filepath: str, channels: Channels) -> None:
     with open(filepath, "w") as fh:
         # We should not be accessing internal attributes but
-        # alternatives seems overkill since Channels is so simple.
+        # alternatives seems overkill since channels is so simple.
         json.dump(channels._map, fh, indent=2)
 
 
 def load_from_file(filepath: str) -> Channels:
     with open(filepath, "r") as fh:
         # We should not be doing this manually but alternatives seem
-        # overkill since Channels is so simple.
+        # overkill since channels is so simple.
         internal_map = json.load(fh)
     channels = Channels()
     for name, channel in internal_map.items():

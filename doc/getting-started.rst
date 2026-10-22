@@ -40,7 +40,7 @@ then a system wide configuration is better suited.  In the specific
 case of Microsoft Windows, the system-wide file to configure what
 devices to use is ``C:\ProgramData\cockpit\depot.conf``.
 
-The format of this file is defined in the :ref:`Depot configuration
+The format of this file is defined in the :ref:`depot configuration
 <depot-config>` section but it might be simpler to start with someone
 else's file as a starting point.  Some example configuration files can
 be found `here <https://github.com/MicronOxford/configs>`__.

@@ -73,54 +73,54 @@ class LoggingWindow(wx.Frame):
     def __init__(self, parent, title="Logging panels"):
         super().__init__(parent, title=title)
 
-        self.auiManager = wx.aui.AuiManager()
-        self.auiManager.SetManagedWindow(self)
+        self.aui_manager = wx.aui.AuiManager()
+        self.aui_manager.SetManagedWindow(self)
 
         ## Text control that captures standard output.
-        self.stdOut = wx.TextCtrl(
+        self.std_out = wx.TextCtrl(
             self, 6465, style=wx.TE_MULTILINE | wx.BORDER_SUNKEN
         )
         ## Text control that captures standard error.
-        self.stdErr = wx.TextCtrl(
+        self.std_err = wx.TextCtrl(
             self, 6265, style=wx.TE_MULTILINE | wx.BORDER_SUNKEN
         )
         ## Cached text, awaiting addition to the logs. If we just log everything
         # as it comes in, then we get tons of newlines we don't want.
-        self.textCache = ""
+        self.text_cache = ""
         # Need a lock on the cache to prevent segfaults due to concurrent access.
-        self.cacheLock = threading.Lock()
+        self.cache_lock = threading.Lock()
 
         # HACK: enforce that writing to these controls only happens in the
         # main thread.
-        self.stdOut.write = lambda *args: self.write(self.stdOut, *args)
-        self.stdErr.write = lambda *args: self.write(self.stdErr, *args)
+        self.std_out.write = lambda *args: self.write(self.std_out, *args)
+        self.std_err.write = lambda *args: self.write(self.std_err, *args)
 
-        sys.stdout = self.stdOut
-        sys.stderr = self.stdErr
+        sys.stdout = self.std_out
+        sys.stderr = self.std_err
 
-        self.auiManager.AddPane(
-            self.stdErr,
+        self.aui_manager.AddPane(
+            self.std_err,
             wx.aui.AuiPaneInfo()
             .Caption("Standard error")
             .CloseButton(False)
             .Top()
             .MinSize((-1, 194)),
         )
-        self.auiManager.AddPane(
-            self.stdOut,
+        self.aui_manager.AddPane(
+            self.std_out,
             wx.aui.AuiPaneInfo()
             .Caption("Standard out")
             .CloseButton(False)
             .Center()
             .MinSize((-1, 194)),
         )
-        self.stdOut.write(
+        self.std_out.write(
             "Device configuration read from: %s\n"
-            % wx.GetApp().Config.depot_config.files
+            % wx.GetApp().config.depot_config.files
         )
-        self.auiManager.Update()
+        self.aui_manager.Update()
 
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
         self.SetSize((600, 460))
 
     def write(self, target, *args):
@@ -129,29 +129,29 @@ class LoggingWindow(wx.Frame):
         # Text output reveals logging window.
         self.Show()
 
-        with self.cacheLock:
-            self.textCache += " ".join(map(str, args))
-            if "\n" in self.textCache:
+        with self.cache_lock:
+            self.text_cache += " ".join(map(str, args))
+            if "\n" in self.text_cache:
                 # Ended a line; send the text to the logs, minus any trailing
                 # whitespace (since the logs add their own trailing newline.
                 # We strip any unicode with filter to prevent a cascade of
                 # ---Logging Error--- messages.
-                if target is self.stdOut:
+                if target is self.std_out:
                     _logger.debug(
-                        "".join(filter(lambda c: ord(c) < 128, self.textCache))
+                        "".join(filter(lambda c: ord(c) < 128, self.text_cache))
                     )
                 else:
                     _logger.error(
-                        "".join(filter(lambda c: ord(c) < 128, self.textCache))
+                        "".join(filter(lambda c: ord(c) < 128, self.text_cache))
                     )
-                self.textCache = ""
+                self.text_cache = ""
 
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.auiManager.UnInit()
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        self.aui_manager.UnInit()
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         event.Skip()
 
 
-def makeWindow(parent):
+def make_window(parent):
     return LoggingWindow(parent)

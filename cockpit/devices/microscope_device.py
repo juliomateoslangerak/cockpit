@@ -579,7 +579,7 @@ class MicroscopeStage(MicroscopeBase):
 
         if self._proxy.may_move_on_enable():
             # Motors will home during enable.
-            title = "Stage needs to move"
+            title = "stage needs to move"
             msg = (
                 "The '%s' stage needs to find the home position."
                 " Homing may move it so please ensure that there are"

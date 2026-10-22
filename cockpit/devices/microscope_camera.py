@@ -337,10 +337,10 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             metadata = {
                 "timestamp": timestamp,
                 "wavelength": wavelength,
-                "pixelsize": wx.GetApp().Objectives.get_pixel_size(),
+                "pixelsize": wx.GetApp().objectives.get_pixel_size(),
                 "imagePos": cockpit.interfaces.stage_mover.get_position(),
                 "exposure time": self.get_exposure_time(),
-                "lensID": wx.GetApp().Objectives.get_current().lens_ID,
+                "lensID": wx.GetApp().objectives.get_current().lens_ID,
                 "ROI": self.get_roi(self.name),
             }
             # basic heuristic to find excitation wavelength.

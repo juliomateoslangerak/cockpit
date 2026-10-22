@@ -148,7 +148,7 @@ class AxisStepCtrl(wx.TextCtrl):
     def _OnKillFocus(self, event: wx.FocusEvent) -> None:
         try:
             new_step_size = float(self.GetValue())
-            wx.GetApp().Stage.set_step_size(self._axis, new_step_size)
+            wx.GetApp().stage.set_step_size(self._axis, new_step_size)
         except:
             self.ChangeValue(self._last_value)
         else:
@@ -330,19 +330,19 @@ class MacroStagePanel(wx.Panel):
         xy_safeties_btn = make_button(
             "Set XY safeties",
             xy_stage.setSafeties,
-            "Click twice on the XY Macro Stage view"
+            "Click twice on the XY Macro stage view"
             " to set the XY motion limits.",
         )
-        z_safeties_btn = make_button("Set Z safeties", self.OnSetZSafeties)
+        z_safeties_btn = make_button("Set Z safeties", self.on_set_z_safeties)
         switch_btn = make_button(
             "Switch control",
-            self.OnSwitchControl,
+            self.on_switch_control,
             "Change which stage motion device the keypad" " controls.",
         )
-        recenter_btn = make_button("Recenter", self.OnRecenter)
+        recenter_btn = make_button("Recenter", self.on_recenter)
         touch_down_btn = make_button(
             "Touch down",
-            self.OnTouchDown,
+            self.on_touch_down,
             "Bring the stage down to touch slide",
         )
 
@@ -373,19 +373,19 @@ class MacroStagePanel(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-        cockpit.gui.keyboard.setKeyboardHandlers(self)
+        cockpit.gui.keyboard.set_keyboard_handlers(self)
 
-    def OnSwitchControl(self, evt: wx.CommandEvent) -> None:
+    def on_switch_control(self, evt: wx.CommandEvent) -> None:
         stage_mover.change_mover()
 
-    def OnRecenter(self, evt: wx.CommandEvent) -> None:
+    def on_recenter(self, evt: wx.CommandEvent) -> None:
         stage_mover.recenter_fine_motion()
 
-    def OnSetZSafeties(self, evt: wx.CommandEvent) -> None:
+    def on_set_z_safeties(self, evt: wx.CommandEvent) -> None:
         cockpit.gui.dialogs.safety_min_dialog.showDialog(self)
 
-    def OnTouchDown(self, ect: wx.CommandEvent) -> None:
-        zpos = wx.GetApp().Config["stage"].getfloat("slideTouchdownAltitude")
+    def on_touch_down(self, ect: wx.CommandEvent) -> None:
+        zpos = wx.GetApp().config["stage"].getfloat("slideTouchdownAltitude")
         stage_mover.go_to_z(zpos)
 
 
@@ -393,7 +393,7 @@ class MacroStageWindow(wx.Frame):
     SHOW_DEFAULT = True
     LIST_AS_COCKPIT_WINDOW = True
 
-    def __init__(self, parent, title="Macro Stage"):
+    def __init__(self, parent, title="Macro stage"):
         super().__init__(parent, title=title)
         panel = MacroStagePanel(self)
         sizer = wx.BoxSizer()
@@ -401,5 +401,5 @@ class MacroStageWindow(wx.Frame):
         self.SetSizerAndFit(sizer)
 
 
-def makeWindow(parent):
+def make_window(parent):
     window = MacroStageWindow(parent)

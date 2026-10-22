@@ -53,7 +53,7 @@ def mock_not_in_video_mode():
     The camera handler uses `cockpit.interfaces.imager.pause_video`
     which looks into wx's app singleton.  This ruins the abstraction,
     the handlers should not require a wx app running.  While that is
-    not fixed, this mocks access to CockpitApp.Imager so it reports we
+    not fixed, this mocks access to CockpitApp.imager so it reports we
     are not in video mode and pause_video then does nothing.
 
     """

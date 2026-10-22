@@ -328,7 +328,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
                     zMin = motorPos - 25
                     zMax = motorPos + 25
                     if zMax < self.histograms[0].maxAltitude:
-                        # Stage has entered into the area covered by the
+                        # stage has entered into the area covered by the
                         # histogram, so show a zoomed-in version.
                         histogram = Histogram(
                             zMin - MINI_HISTOGRAM_PADDING,
@@ -429,7 +429,7 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             glLineWidth(HEIGHT_LINE_WIDTH)
 
             # Draw spikes for the histogram peaks.
-            config = wx.GetApp().Config
+            config = wx.GetApp().config
             spikeHeight = self.stageExtent * 0.02
             spikeLength = self.stageExtent * 0.2
             for altitude in (

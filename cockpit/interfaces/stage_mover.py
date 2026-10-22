@@ -67,7 +67,7 @@ AxisLimits = typing.Tuple[float, float]
 StageLimits = typing.Tuple[AxisLimits, AxisLimits, AxisLimits]
 
 
-## Stage movement threshold (previously a hard-coded value).
+## stage movement threshold (previously a hard-coded value).
 # There can be problems if this doesn't match the corresponding threshold
 # used by the stage device code.
 # TODO:  This should be defined in only one place, either here,
@@ -464,7 +464,7 @@ def wait_for_stop(timeout=5):
 def go_to_site(unique_id, should_block=False):
     """Move to the specified site."""
     site = mover.id_to_site[unique_id]
-    obj_offset = wx.GetApp().Objectives.get_offset()
+    obj_offset = wx.GetApp().objectives.get_offset()
     offset_position = list(site.position)
     for i in range(len(offset_position)):
         offset_position[i] = offset_position[i] + obj_offset[i]

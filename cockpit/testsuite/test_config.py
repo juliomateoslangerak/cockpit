@@ -60,13 +60,13 @@ class MockConfigRead:
         self.reset_mock()
 
     def reset_mock(self):
-        self.filenames = []
+        self.file_names = []
 
-    def __call__(self, filenames, encoding=None):
-        if isinstance(filenames, (str, bytes, os.PathLike)):
-            self.filenames.append(filenames)
+    def __call__(self, file_names, encoding=None):
+        if isinstance(file_names, (str, bytes, os.PathLike)):
+            self.file_names.append(file_names)
         else:
-            self.filenames.extend(filenames)
+            self.file_names.extend(file_names)
 
 
 def mock_cockpit_config_read(func):

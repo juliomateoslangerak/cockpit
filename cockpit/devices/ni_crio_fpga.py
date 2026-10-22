@@ -157,7 +157,7 @@ class NIcRIO(executor_devices.ExecutorDevice):
         """
         return self.connection.MoveAbsolute(line, target)
 
-    def takeImage(self):
+    def take_image(self):
         pass
 
     def _adapt_actions(self, actions):
@@ -220,7 +220,7 @@ class NIcRIO(executor_devices.ExecutorDevice):
         ]
 
         # Create a description dict. Will be byte-packed by server-side code.
-        maxticks = max(
+        max_ticks = max(
             chain(
                 [d[0] for d in digitals],
                 [a[0] for a in chain.from_iterable(analogs)],
@@ -228,7 +228,7 @@ class NIcRIO(executor_devices.ExecutorDevice):
         )
 
         description = {
-            "count": maxticks,
+            "count": max_ticks,
             "clock": 1000.0 / float(self.tickrate),
             "InitDio": self._last_digital,
             "nDigital": len(digitals),

@@ -87,7 +87,7 @@ class ZStackExperiment(experiment.Experiment):
                 (
                     motionTime,
                     stabilizationTime,
-                ) = self.z_positioner.getMovementTime(prevAltitude, zTarget)
+                ) = self.z_positioner.get_movement_time(prevAltitude, zTarget)
             curTime += motionTime
             table.add_action(curTime, self.z_positioner, zTarget)
             curTime += stabilizationTime
@@ -103,7 +103,7 @@ class ZStackExperiment(experiment.Experiment):
             table.add_action(curTime, self.z_positioner, zTarget)
 
         # Move back to the start so we're ready for the next rep.
-        motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+        motionTime, stabilizationTime = self.z_positioner.get_movement_time(
             self.z_height, 0
         )
         curTime += motionTime

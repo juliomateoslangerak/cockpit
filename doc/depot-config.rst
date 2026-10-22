@@ -190,8 +190,8 @@ computer providing the executor you have a section along the lines of:
   [dsp]
   type: cockpit.devices.executor_devices.ExecutorDevice
   uri: PYRO:redPitaya@192.168.0.20:8005
-  dlines: 16
-  alines: 2
+  digital_lines: 16
+  analog_lines: 2
 
 
 SI polariser

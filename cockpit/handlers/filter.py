@@ -84,7 +84,7 @@ class FilterHandler(device.DeviceHandler):
         return self.callbacks["getFilters"]()
 
     def onSaveSettings(self):
-        return self.callbacks["getPosition"]()
+        return self.callbacks["get_position"]()
 
     def onLoadSettings(self, settings):
         filters = self.callbacks["getFilters"]()
@@ -125,7 +125,7 @@ class FilterHandler(device.DeviceHandler):
         )
 
     def currentFilter(self):
-        position = self.callbacks["getPosition"]()
+        position = self.callbacks["get_position"]()
         filters = self.callbacks["getFilters"]()
         for f in filters:
             if f.position == position:

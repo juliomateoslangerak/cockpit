@@ -35,11 +35,12 @@ class SimplePiezo(Device):
 
         [zPiezo]                 # name
         type: cockpit.devices.stage.SimplePiezo        # this class
-        analogSource: asource    # an analogue source device name
-        analogLine: 0            # the line on the analogue source
+        analog_source: analog_source    # an analogue source device name
+        analog_line: 0            # the line on the analogue source
         offset: 0                # analogue units offset in experiment units, e.g. um
         gain: 262.144            # unit conversion gain, e.g. ADU per um
         min: 0                   # min axis range in experimental units
+        max: 1000                # max axis range in experimental units
         range: 250               # axis range in experimental units
 
     """
@@ -95,7 +96,7 @@ class SimplePiezo(Device):
             "%d stage motion" % axis,
             True,
             {
-                "getMovementTime": lambda x, start, delta: (
+                "get_movement_time": lambda x, start, delta: (
                     Decimal(0.05),
                     Decimal(0.05),
                 )
@@ -106,7 +107,7 @@ class SimplePiezo(Device):
         )
 
         # Connect handler to analogue source to populate movement callbacks.
-        handler.connectToAnalogSource(a_handler, aline, offset, gain)
+        handler.connect_to_analog_source(a_handler, aline, offset, gain)
 
         result.append(handler)
         return result

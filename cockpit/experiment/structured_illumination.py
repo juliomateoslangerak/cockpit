@@ -260,7 +260,7 @@ class SIExperiment(experiment.Experiment):
         # is already showing the correct pattern for the first image set.
         # Increment the time slightly after each "motion" so that actions are well-ordered.
         if self.angleHandler is not None:
-            theta = self.angleHandler.indexedPosition(0)
+            theta = self.angleHandler.indexed_position(0)
             table.add_action(curTime, self.angleHandler, theta)
             curTime += decimal.Decimal("1e-6")
         if self.phaseHandler is not None:
@@ -329,7 +329,7 @@ class SIExperiment(experiment.Experiment):
                     (
                         motionTime,
                         stabilizationTime,
-                    ) = self.z_positioner.getMovementTime(prevZ, z)
+                    ) = self.z_positioner.get_movement_time(prevZ, z)
                     # Hold flat.
                     table.add_action(curTime, self.z_positioner, prevZ)
                     # Move to the next position.
@@ -359,7 +359,7 @@ class SIExperiment(experiment.Experiment):
         # Hold Z, angle, and phase steady through to the end, then ramp down
         # to 0 to prep for the next experiment.
         table.add_action(curTime, self.z_positioner, prevZ)
-        motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+        motionTime, stabilizationTime = self.z_positioner.get_movement_time(
             self.z_height, self.z_start
         )
         table.add_action(curTime + motionTime, self.z_positioner, self.z_start)
@@ -424,7 +424,7 @@ class SIExperiment(experiment.Experiment):
         delay = decimal.Decimal(0.0)
         # Set polarizer position
         if self.polarizerHandler is not None:
-            pos = self.polarizerHandler.indexedPosition(
+            pos = self.polarizerHandler.indexed_position(
                 angle, longestWavelength
             )
             ## Need to check last position to calculate move time. This
@@ -441,7 +441,7 @@ class SIExperiment(experiment.Experiment):
                 cur_time, self.polarizerHandler, (angle, longestWavelength)
             )
             dt = decimal.Decimal(
-                sum(self.polarizerHandler.getMovementTime(lastpos, pos))
+                sum(self.polarizerHandler.get_movement_time(lastpos, pos))
             )
             delay = max(delay, dt)
         # SLM trigger
@@ -450,7 +450,7 @@ class SIExperiment(experiment.Experiment):
             table.add_action(
                 cur_time, self.slmHandler, (angle, phase, longestWavelength)
             )
-            delay = max(delay, self.slmHandler.getMovementTime())
+            delay = max(delay, self.slmHandler.get_movement_time())
         cur_time += delay
         return super().expose(cur_time, cameras, newPairs, table)
 

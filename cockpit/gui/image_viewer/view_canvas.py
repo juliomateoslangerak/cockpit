@@ -103,7 +103,7 @@ class BaseGL:
             raise RuntimeError(glGetShaderInfoLog(shader))
         return shader
 
-    def getShader(self):
+    def get_shader(self):
         """Compile and link shader."""
         if not hasattr(self, "_shader"):
             self._shader = glCreateProgram()
@@ -285,7 +285,7 @@ class Image(BaseGL):
             return
         elif self._update:
             self._createTextures()
-        shader = self.getShader()
+        shader = self.get_shader()
         glUseProgram(shader)
         # Vertical and horizontal modifiers for non-square images.
         hlim = self._data.shape[1] / max(self._data.shape)
@@ -412,7 +412,7 @@ class Histogram(BaseGL):
         self.lbound = min(self.bins.min() - binw, self.lthresh - binw)
         self.ubound = max(self.bins.max() + binw, self.uthresh + binw)
         w = self.ubound - self.lbound
-        glUseProgram(self.getShader())
+        glUseProgram(self.get_shader())
         v = []
         for x, y in zip(self.bins, self.counts):
             x0 = self.data2gl(x)

@@ -387,8 +387,8 @@ class PhysikInstrumenteM687(Device):
                     False,
                     {
                         "move_absolute": self.move_xy_absolute,
-                        "moveRelative": self.move_xy_relative,
-                        "getPosition": self.get_xy_position,
+                        "move_relative": self.move_xy_relative,
+                        "get_position": self.get_xy_position,
                     },
                     axis,
                     (min_pos, max_pos),

@@ -198,8 +198,8 @@ class Nanomover(Device):
                     False,
                     {
                         "move_absolute": self.move_absolute,
-                        "moveRelative": self.move_relative,
-                        "getPosition": self.get_position,
+                        "move_relative": self.move_relative,
+                        "get_position": self.get_position,
                     },
                     axis,
                     (soft_low_limit, soft_high_limit),

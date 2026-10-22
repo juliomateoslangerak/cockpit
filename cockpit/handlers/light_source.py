@@ -113,10 +113,10 @@ class LightHandler(device.DeviceHandler):
         self.state = device.STATES.disabled
         # Set up trigger handling.
         if trigHandler and trigLine:
-            h = trigHandler.registerDigital(self, trigLine)
-            self.triggerNow = h.triggerNow
+            h = trigHandler.register_digital(self, trigLine)
+            self.triggerNow = h.trigger_now
             if "setExposing" not in callbacks:
-                cb = lambda name, state: trigHandler.setDigital(
+                cb = lambda name, state: trigHandler.set_digital(
                     trigLine, state
                 )
                 callbacks["setExposing"] = cb
@@ -126,7 +126,7 @@ class LightHandler(device.DeviceHandler):
         # Most lasers use bulb-type triggering. Ensure they're not left on after
         # an abort event.
         if trigHandler and trigLine:
-            onAbort = lambda *args: trigHandler.setDigital(trigLine, False)
+            onAbort = lambda *args: trigHandler.set_digital(trigLine, False)
             events.subscribe(events.USER_ABORT, onAbort)
 
     def make_initial_publications(self):

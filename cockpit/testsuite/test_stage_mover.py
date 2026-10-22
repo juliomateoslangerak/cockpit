@@ -81,7 +81,7 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
 
         self.handlers = []
         for axis in range(3):
-            handler = Mock(spec=["getPosition", "move_absolute", "setSoftLimit"])
+            handler = Mock(spec=["get_position", "move_absolute", "set_soft_limit"])
             handler.name = "axis_%d" % axis
             handler.getPosition.return_value = axis + 1
             self.handlers.append(handler)
@@ -100,13 +100,13 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
     def test_get_position_uses_handler_protocol(self):
         self.assertEqual(stage_mover.get_position(), [1, 2, 3])
         for handler in self.handlers:
-            handler.getPosition.assert_called_once_with()
+            handler.get_position.assert_called_once_with()
 
     def test_go_to_uses_handler_protocol(self):
         stage_mover.go_to([4, 5, 6])
 
         for axis, handler in enumerate(self.handlers):
-            handler.getPosition.assert_called_once_with()
+            handler.get_position.assert_called_once_with()
             handler.move_absolute.assert_called_once_with(axis + 4)
 
     def test_move_relative_uses_handler_protocol(self):
@@ -122,29 +122,29 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
         site = next(iter(self.mover.id_to_site.values()))
         self.assertEqual(site.position, [1, 2, 3])
         for handler in self.handlers:
-            handler.getPosition.assert_called_once_with()
+            handler.get_position.assert_called_once_with()
 
     def test_set_soft_limit_uses_handler_protocol(self):
         handler = self.handlers[0]
         with patch.object(stage_mover.events, "publish") as publish:
             self.assertTrue(stage_mover.set_soft_limit(0, 10.0, True))
-            handler.setSoftLimit.assert_called_once_with(10.0, True)
+            handler.set_soft_limit.assert_called_once_with(10.0, True)
             publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 10.0, True)
 
             stage_mover.set_soft_min(0, 0.0)
-            handler.setSoftLimit.assert_called_with(0.0, False)
+            handler.set_soft_limit.assert_called_with(0.0, False)
             publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 0.0, False)
 
             stage_mover.set_soft_max(0, 20.0)
-            handler.setSoftLimit.assert_called_with(20.0, True)
+            handler.set_soft_limit.assert_called_with(20.0, True)
             publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 20.0, True)
 
     def test_set_soft_limit_returns_false_when_handler_fails(self):
         handler = self.handlers[0]
-        handler.setSoftLimit.side_effect = RuntimeError("device error")
+        handler.set_soft_limit.side_effect = RuntimeError("device error")
         with patch.object(stage_mover.events, "publish") as publish:
             self.assertFalse(stage_mover.set_soft_limit(0, 10.0, True))
-            handler.setSoftLimit.assert_called_once_with(10.0, True)
+            handler.set_soft_limit.assert_called_once_with(10.0, True)
             publish.assert_not_called()
 
     def test_site_serialization_round_trip(self):

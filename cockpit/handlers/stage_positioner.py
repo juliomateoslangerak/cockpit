@@ -61,19 +61,19 @@ class PositionerHandler(device.DeviceHandler):
     Callbacks should fill in the following functions:
     - move_absolute(axis, position): Move the axis to the given position,
       in microns.
-    - moveRelative(axis, delta): Move the axis by the specified delta,
+    - move_relative(axis, delta): Move the axis by the specified delta,
       in microns.
-    - getPosition(axis): Get the position for the specified axis.
+    - get_position(axis): Get the position for the specified axis.
     Additionally, if the device is to be used in experiments, it must have:
-    - getMovementTime(axis, start, end): Get the amount of time it takes to
+    - get_movement_time(axis, start, end): Get the amount of time it takes to
       move from start to end and then stabilize.
 
     Args:
         axis (int): A numerical indicator of the axis (0 = X, 1 = Y,
             2 = Z).
-        hardLimits (tuple): A (minPosition, maxPosition) tuple indicating
+        hard_limits (tuple): A (minPosition, maxPosition) tuple indicating
             the device's hard motion limits.
-        softLimits (tuple): Default soft motion limits for the device.
+        soft_limits (tuple): Default soft motion limits for the device.
             Defaults to the hard limits.
     """
 
@@ -88,8 +88,8 @@ class PositionerHandler(device.DeviceHandler):
         is_eligible_for_experiments,
         callbacks,
         axis,
-        hardLimits,
-        softLimits=None,
+        hard_limits,
+        soft_limits=None,
     ):
         super().__init__(
             name,
@@ -99,72 +99,72 @@ class PositionerHandler(device.DeviceHandler):
             depot.STAGE_POSITIONER,
         )
         self.axis = axis
-        self.hardLimits = hardLimits
-        if softLimits is None:
-            softLimits = hardLimits
-        elif min(softLimits) < min(hardLimits) or max(softLimits) > max(
-            hardLimits
+        self.hard_limits = hard_limits
+        if soft_limits is None:
+            soft_limits = hard_limits
+        elif min(soft_limits) < min(hard_limits) or max(soft_limits) > max(
+            hard_limits
         ):
             raise RuntimeError(
                 "Soft limits {} for the PositionerHandler were outside the \
                                Range of hard limits {}".format(
-                    softLimits, hardLimits
+                    soft_limits, hard_limits
                 )
             )
 
         # Cast to a list since we may need to modify these later.
-        self.softLimits = list(softLimits)
+        self.soft_limits = list(soft_limits)
 
     def move_absolute(self, pos):
         """Handle being told to move to a specific position."""
-        if self.softLimits[0] <= pos <= self.softLimits[1]:
+        if self.soft_limits[0] <= pos <= self.soft_limits[1]:
             self.callbacks["move_absolute"](self.axis, pos)
         else:
             raise RuntimeError(
                 "Tried to move %s " % (self.name)
                 + "outside soft motion limits (target %.2f, limits [%.2f, %.2f])"
-                % (pos, self.softLimits[0], self.softLimits[1])
+                % (pos, self.soft_limits[0], self.soft_limits[1])
             )
 
-    def moveRelative(self, delta):
+    def move_relative(self, delta):
         """Handle being told to move by a specific delta."""
-        target = self.callbacks["getPosition"](self.axis) + delta
-        if self.softLimits[0] <= target <= self.softLimits[1]:
-            self.callbacks["moveRelative"](self.axis, delta)
+        target = self.callbacks["get_position"](self.axis) + delta
+        if self.soft_limits[0] <= target <= self.soft_limits[1]:
+            self.callbacks["move_relative"](self.axis, delta)
         else:
             raise RuntimeError(
                 "Tried to move %s " % (self.name)
                 + "outside soft motion limits (target %.2f, limits [%.2f, %.2f])"
-                % (target, self.softLimits[0], self.softLimits[1])
+                % (target, self.soft_limits[0], self.soft_limits[1])
             )
 
-    def getPosition(self):
+    def get_position(self):
         """Retrieve the current position."""
-        return self.callbacks["getPosition"](self.axis)
+        return self.callbacks["get_position"](self.axis)
 
     def get_hard_limits(self):
         """Simple getter."""
-        return self.hardLimits
+        return self.hard_limits
 
-    def getSoftLimits(self):
+    def get_soft_limits(self):
         """Simple getter."""
-        return self.softLimits
+        return self.soft_limits
 
-    def setSoftLimit(self, value, isMax):
+    def set_soft_limit(self, value, isMax):
         """Set a soft limit, either min or max."""
-        if isMax and value > self.hardLimits[1]:
+        if isMax and value > self.hard_limits[1]:
             raise RuntimeError(
                 "Attempted to set soft motion limit of %s, exceeding our hard motion limit of %s"
-                % (value, self.hardLimits[1])
+                % (value, self.hard_limits[1])
             )
-        elif not isMax and value < self.hardLimits[0]:
+        elif not isMax and value < self.hard_limits[0]:
             raise RuntimeError(
                 "Attempted to set soft motion limit of %s, lower than our hard motion limit of %s"
-                % (value, self.hardLimits[0])
+                % (value, self.hard_limits[0])
             )
-        self.softLimits[int(isMax)] = value
+        self.soft_limits[int(isMax)] = value
 
-    def getMovementTime(self, start, end):
+    def get_movement_time(self, start, end):
         """Return the amount of time it'd take us to move the specified
         distance, and the amount of time needed to stabilize after reaching
         that point.
@@ -172,40 +172,40 @@ class PositionerHandler(device.DeviceHandler):
         Only called if this device is experiment-eligible.
         """
         if self.is_eligible_for_experiments:
-            # if (start < self.softLimits[0] or start > self.softLimits[1] or
-            #         end < self.softLimits[0] or end > self.softLimits[1]):
-            #     raise RuntimeError("Experiment tries to move [%s] from %.2f to %.2f, outside motion limits (%.2f, %.2f)" % (self.name, start, end, self.softLimits[0], self.softLimits[1]))
-            # return self.callbacks['getMovementTime'](self.axis, start, end)
-            return self.getDeltaMovementTime(end - start)
+            # if (start < self.soft_limits[0] or start > self.soft_limits[1] or
+            #         end < self.soft_limits[0] or end > self.soft_limits[1]):
+            #     raise RuntimeError("Experiment tries to move [%s] from %.2f to %.2f, outside motion limits (%.2f, %.2f)" % (self.name, start, end, self.soft_limits[0], self.soft_limits[1]))
+            # return self.callbacks['get_movement_time'](self.axis, start, end)
+            return self.get_delta_movement_time(end - start)
         raise RuntimeError(
-            "Called getMovementTime on non-experiment-eligible positioner [%s]"
+            "Called get_movement_time on non-experiment-eligible positioner [%s]"
             % self.name
         )
 
     @cached
-    def getDeltaMovementTime(self, delta):
-        return self.callbacks["getMovementTime"](self.axis, 0.0, delta)
+    def get_delta_movement_time(self, delta):
+        return self.callbacks["get_movement_time"](self.axis, 0.0, delta)
 
-    def connectToAnalogSource(self, source, line, offset, gain):
+    def connect_to_analog_source(self, source, line, offset, gain):
         """Register this handler with an analogue source."""
-        h = source.registerAnalog(self, line, offset, gain)
+        h = source.register_analog(self, line, offset, gain)
 
-        def wrapMoveFunc(f):
+        def wrap_move_func(f):
             """Movements are handled by the analogue handler, but need to wrap
             to publish position update and stage stop events."""
 
             def call(x, arg):
                 f(arg)
-                time.sleep(sum(map(float, self.getMovementTime(0, arg))))
+                time.sleep(sum(map(float, self.get_movement_time(0, arg))))
                 events.publish(events.STAGE_MOVER, x)
                 events.publish(events.STAGE_STOPPED, self.name)
 
             return call
 
-        self.callbacks["move_absolute"] = wrapMoveFunc(h.move_absolute)
-        self.callbacks["moveRelative"] = wrapMoveFunc(h.moveRelative)
+        self.callbacks["move_absolute"] = wrap_move_func(h.move_absolute)
+        self.callbacks["move_relative"] = wrap_move_func(h.move_relative)
 
         # Sensorless devices will infer position from analogue output.
         # Those with sensors should have already specified this callback.
-        if self.callbacks.get("getPosition") is None:
-            self.callbacks["getPosition"] = lambda x: h.getPosition()
+        if self.callbacks.get("get_position") is None:
+            self.callbacks["get_position"] = lambda x: h.get_position()

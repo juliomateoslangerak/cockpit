@@ -77,7 +77,7 @@ class DummyAnalogDevice(device.Device):
         offset = self.config.get("offset", 0)
         # Fetch source handler and generate line handler.
         exe = depot.get_handler(asource, depot.EXECUTOR)
-        h = exe.registerAnalog(self, aline, offset, gain, self.get_movement_time)
+        h = exe.register_analog(self, aline, offset, gain, self.get_movement_time)
         # Add indexed positions if specified in config.
         positions = self.config.get("positions", None)
         if positions:

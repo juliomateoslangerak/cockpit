@@ -142,7 +142,7 @@ class BoulderSLM(device.Device):
             # but any other trigger-device activity during this call can mean that
             # we miss the target frame by +/- 1.
             for i in range(3):
-                self.handler.triggerNow()
+                self.handler.trigger_now()
                 time.sleep(0.01)
             # Cycle to the target position.
             self.cycle_to_position(target_position)
@@ -156,7 +156,7 @@ class BoulderSLM(device.Device):
             self.last.params
         )
         for i in range(delta):
-            self.handler.triggerNow()
+            self.handler.trigger_now()
             time.sleep(0.01)
 
     def execute_table(
@@ -244,7 +244,7 @@ class BoulderSLM(device.Device):
         self.connection.run()
         # Fire several triggers to ensure that the sequence is loaded.
         for i in range(12):
-            self.handler.triggerNow()
+            self.handler.trigger_now()
             time.sleep(0.01)
         # Ensure that we're at position 0.
         self.cycle_to_position(0)
@@ -264,13 +264,13 @@ class BoulderSLM(device.Device):
             True,
             {
                 "examine_actions": self.examine_actions,
-                "getMovementTime": lambda *args: dt,
-                "executeTable": self.execute_table,
+                "get_movement_time": lambda *args: dt,
+                "execute_table": self.execute_table,
                 "set_enabled": self.set_enabled,
                 "get_is_enabled": self.get_is_enabled,
             },
         )
-        self.handler.delegateTo(trigsource, trigline, 0, dt)
+        self.handler.delegate_to(trigsource, trigline, 0, dt)
         result.append(self.handler)
         return result
 
@@ -283,7 +283,7 @@ class BoulderSLM(device.Device):
         panel.Sizer.Add(power_button, 0, wx.EXPAND)
         trigger_button = wx.Button(panel, label="step")
         trigger_button.Bind(
-            wx.EVT_BUTTON, lambda evt: self.handler.triggerNow()
+            wx.EVT_BUTTON, lambda evt: self.handler.trigger_now()
         )
         panel.Sizer.Add(trigger_button, 0, wx.EXPAND)
         # Add a position display.

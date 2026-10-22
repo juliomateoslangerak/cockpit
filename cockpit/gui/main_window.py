@@ -505,12 +505,12 @@ class WindowsMenu(wx.Menu):
             wx.GetApp().Depot.get_all_handlers(),
             wx.GetApp().Depot.get_all_devices(),
         ):
-            if hasattr(obj, "showDebugWindow"):
+            if hasattr(obj, "show_debug_window"):
                 label = "debug %s (%s)" % (obj.name, obj.__class__.__name__)
                 menu_item = self.Append(wx.ID_ANY, label)
                 self.Bind(
                     wx.EVT_MENU,
-                    lambda e, obj=obj: obj.showDebugWindow(),
+                    lambda e, obj=obj: obj.show_debug_window(),
                     menu_item,
                 )
 

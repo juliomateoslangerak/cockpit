@@ -34,7 +34,7 @@ provided by all available devices.  After initialising devices, depot
 collects all handlers via the device ``getHandlers()`` method.
 
 Each ``DeviceHandler`` has different defined functions, e.g., a
-``PositionerHandler`` has ``moveRelative()`` and ``move_absolute()``.
+``PositionerHandler`` has ``move_relative()`` and ``move_absolute()``.
 These methods in turn invoke callback functions specified by the
 Cockpit device itself which then presumably talks to the hardware.
 For information on the required and optional callbacks for each

@@ -91,14 +91,14 @@ class ExecutorDevice(device.Device):
       [redpitaya]
       type: cockpit.devices.executor_devices.ExecutorDevice
       uri: PYRO:SomeExecutor@192.168.0.2:8000
-      alines: 2  # number of analog lines
-      dlines: 16  # number of digital lines
+      analog_lines: 2  # number of analog lines
+      digital_lines: 16  # number of digital lines
 
     """
 
     _config_types = {
-        "alines": int,
-        "dlines": int,
+        "analog_lines": int,
+        "digital_lines": int,
     }
 
     def __init__(self, name, config={}):
@@ -158,24 +158,24 @@ class ExecutorDevice(device.Device):
             "executor",
             {
                 "examine_actions": lambda *args: None,
-                "executeTable": self.execute_table,
-                "readDigital": self.connection.ReadDigital,
-                "writeDigital": self.connection.WriteDigital,
-                "getAnalog": self.connection.ReadPosition,
-                "setAnalog": self.connection.MoveAbsolute,
+                "execute_table": self.execute_table,
+                "read_digital": self.connection.ReadDigital,
+                "write_digital": self.connection.WriteDigital,
+                "get_analog": self.connection.ReadPosition,
+                "set_analog": self.connection.MoveAbsolute,
             },
-            dlines=self.config.get("dlines", 16),
-            alines=self.config.get("alines", 4),
+            digital_lines=self.config.get("digital_lines", 16),
+            analog_lines=self.config.get("analog_lines", 4),
         )
 
         result.append(h)
 
-        # The takeImage behaviour is now on the handler. It might be better to
+        # The take_image behaviour is now on the handler. It might be better to
         # have hybrid handlers with multiple inheritance, but that would need
         # an overhaul of how depot determines handler types.
         result.append(
             cockpit.handlers.imager.ImagerHandler(
-                "%s imager" % (self.name), "imager", {"takeImage": h.takeImage}
+                "%s imager" % (self.name), "imager", {"take_image": h.take_image}
             )
         )
 
@@ -298,24 +298,24 @@ class LegacyDSP(ExecutorDevice):
             "executor",
             {
                 "examine_actions": lambda *args: None,
-                "executeTable": self.execute_table,
-                "readDigital": self.connection.ReadDigital,
-                "writeDigital": self.connection.WriteDigital,
-                "getAnalog": self.get_analog,
-                "setAnalog": self.set_analog,
+                "execute_table": self.execute_table,
+                "read_digital": self.connection.ReadDigital,
+                "write_digital": self.connection.WriteDigital,
+                "get_analog": self.get_analog,
+                "set_analog": self.set_analog,
             },
-            dlines=16,
-            alines=4,
+            digital_lines=16,
+            analog_lines=4,
         )
 
         result.append(h)
 
-        # The takeImage behaviour is now on the handler. It might be better to
+        # The take_image behaviour is now on the handler. It might be better to
         # have hybrid handlers with multiple inheritance, but that would need
         # an overhaul of how depot determines handler types.
         result.append(
             cockpit.handlers.imager.ImagerHandler(
-                "%s imager" % (self.name), "imager", {"takeImage": h.takeImage}
+                "%s imager" % (self.name), "imager", {"take_image": h.take_image}
             )
         )
 

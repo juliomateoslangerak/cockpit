@@ -33,20 +33,20 @@ class testStagePositioner(unittest.TestCase):
             "is_eligible_for_experiments": True,
             "callbacks": self.callbacks,
             "axis": 0,
-            "hardLimits": (-10, 10),
+            "hard_limits": (-10, 10),
         }
 
     def test_default_soft_limits(self):
         PH = cockpit.handlers.stage_positioner.PositionerHandler(**self.args)
-        self.assertEqual(PH.getSoftLimits(), list(self.args["hardLimits"]))
+        self.assertEqual(PH.get_soft_limits(), list(self.args["hard_limits"]))
 
     def test_soft_limits_present(self):
-        self.args["softLimits"] = (-5, 5)
+        self.args["soft_limits"] = (-5, 5)
         PH = cockpit.handlers.stage_positioner.PositionerHandler(**self.args)
         ## XXX: Even if the soft limits in the constructor were a
         ## tuple, internally is changed to a list.  Makes sense
         ## internally, but maybe the return should be a tuple.
-        self.assertEqual(PH.getSoftLimits(), [-5, 5])
+        self.assertEqual(PH.get_soft_limits(), [-5, 5])
 
 
 if __name__ == "__main__":

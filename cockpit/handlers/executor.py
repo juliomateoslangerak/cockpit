@@ -70,22 +70,22 @@ from cockpit.handlers.generic_positioner import GenericPositionerHandler
 class ExecutorHandler(DeviceHandler):
     """This handler is responsible for executing portions of experiments."""
 
-    def __init__(self, name, group_name, callbacks, dlines=None, alines=None):
+    def __init__(self, name, group_name, callbacks, digital_lines=None, analog_lines=None):
         """Set up the executor handler.
 
         callbacks must include the following:
 
         - examine_actions(name, table): Perform any necessary validation or
           modification of the experiment's ActionTable.
-        - executeTable(name, table, startIndex, stopIndex): Actually perform
+        - execute_table(name, table, start_index, stop_index): Actually perform
           actions through the specified lines in the ActionTable.
 
         Args:
             name (str): Handler name.
             group_name (str): Handler and device group name.
             callbacks (dict): Callbacks, as above.
-            dlines (int): Optional, number of digital lines.
-            alines (int): Optional, number of analogue lines.
+            digital_lines (int): Optional, number of digital lines.
+            analog_lines (int): Optional, number of analog lines.
         """
         # Note that even though this device is directly involved in running
         # experiments, it is never itself a part of an experiment, so
@@ -95,32 +95,32 @@ class ExecutorHandler(DeviceHandler):
         # get_num_runnable_lines can be implemented here for all mixin combos. This
         # works just great, but is probably a horrible abuse of OOP. It might be
         # cleaner to have a single list of clients.
-        self.digitalClients = {}
-        self.analogClients = {}
-        # Number of digital and analogue lines.
-        self._dlines = dlines
-        self._alines = alines
+        self.digital_clients = {}
+        self.analog_clients = {}
+        # Number of digital and analog lines.
+        self._digital_lines = digital_lines
+        self._analog_lines = analog_lines
         if not isinstance(self, DigitalMixin):
-            self.registerDigital = self._raiseNoDigitalException
-            self.getDigital = self._raiseNoDigitalException
-            self.setDigital = self._raiseNoDigitalException
-            self.readDigital = self._raiseNoDigitalException
-            self.writeDigital = self._raiseNoDigitalException
-            self.triggerDigital = self._raiseNoDigitalException
+            self.register_digital = self._raise_no_digital_exception
+            self.get_digital = self._raise_no_digital_exception
+            self.set_digital = self._raise_no_digital_exception
+            self.read_digital = self._raise_no_digital_exception
+            self.write_digital = self._raise_no_digital_exception
+            self.trigger_digital = self._raise_no_digital_exception
         if not isinstance(self, AnalogMixin):
-            self.registerAnalog = self._raiseNoAnalogException
-            self.setAnalog = self._raiseNoAnalogException
-            self.getAnalog = self._raiseNoAnalogException
-            self.setAnalogClient = self._raiseNoAnalogException
-            self.getAnalogClient = self._raiseNoAnalogException
+            self.register_analog = self._raise_no_analog_exception
+            self.set_analog = self._raise_no_analog_exception
+            self.get_analog = self._raise_no_analog_exception
+            self.set_analog_client = self._raise_no_analog_exception
+            self.get_analog_client = self._raise_no_analog_exception
         events.subscribe(
-            events.PREPARE_FOR_EXPERIMENT, self.onPrepareForExperiment
+            events.PREPARE_FOR_EXPERIMENT, self.on_prepare_for_experiment
         )
         events.subscribe(
             events.CLEANUP_AFTER_EXPERIMENT, self.cleanup_after_experiment
         )
 
-    def examineActions(self, table):
+    def examine_actions(self, table):
         return self.callbacks["examine_actions"](table)
 
     def get_num_runnable_lines(self, table, index):
@@ -130,82 +130,82 @@ class ExecutorHandler(DeviceHandler):
             # Check for analog and digital devices we control.
             if (
                 handler is not self
-                and handler not in self.digitalClients
-                and handler not in self.analogClients
+                and handler not in self.digital_clients
+                and handler not in self.analog_clients
             ):
                 # Found a device we don't control.
                 break
             count += 1
         return count
 
-    def _raiseNoDigitalException(self, *args, **kwargs):
+    def _raise_no_digital_exception(self, *args, **kwargs):
         raise Exception("Digital lines not supported.")
 
-    def _raiseNoAnalogException(self, *args, **kwargs):
+    def _raise_no_analog_exception(self, *args, **kwargs):
         raise Exception("Analog lines not supported.")
 
-    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+    def execute_table(self, table, start_index, stop_index, num_reps, rep_duration):
         """Run a portion of a table describing the actions to perform in a
         given experiment.
 
         Args:
             table (ActionTable): An ActionTable instance.
-            startIndex (int): Index of the first entry in the table to run.
-            stopIndex (int): Index of the entry before which we stop (i.e. it
+            start_index (int): Index of the first entry in the table to run.
+            stop_index (int): Index of the entry before which we stop (i.e. it
                 is not performed).
-            numReps (int): Number of times to iterate the execution.
-            repDuration (float): Amount of time to wait between reps, or None
+            num_reps (int): Number of times to iterate the execution.
+            rep_duration (float): Amount of time to wait between reps, or None
                 for no wait time.
         """
-        # The actions between startIndex and stopIndex may include actions for
+        # The actions between start_index and stop_index may include actions for
         # this handler, or for this handler's clients. All actions are
         # ultimately carried out by this handler, so we need to parse the
         # table to replace client actions, resulting in a table of
         # (time, (analogStage, digitalState)).
         if isinstance(self, DigitalMixin):
-            dstate = self.readDigital()
+            digital_state = self.read_digital()
         else:
-            dstate = None
+            digital_state = None
         if isinstance(self, AnalogMixin):
-            astate = [self.getAnalogLine(line) for line in range(self._alines)]
+            analog_state = [self.get_analog_line(line) for line in range(self._analog_lines)]
         else:
-            astate = None
+            analog_state = None
 
         actions = []
 
-        tPrev = None
-        hPrev = None
-        argsPrev = None
+        t_prev = None
+        h_prev = None
+        args_prev = None
 
-        for i in range(startIndex, stopIndex):
+        for i in range(start_index, stop_index):
             t, h, args = table[i]
-            if h in self.analogClients:
+            if h in self.analog_clients:
                 # update analog state
-                lineHandler = self.analogClients[h]
+                line_handler = self.analog_clients[h]
                 if isinstance(args, collections.abc.Iterable):
                     # Using an indexed position
-                    pos = lineHandler.indexedPosition(*args)
+                    pos = line_handler.indexed_position(*args)
                 else:
                     pos = args
-                astate[lineHandler.line] = lineHandler.posToNative(pos)
-            elif h in self.digitalClients:
+                analog_state[line_handler.line] = line_handler.pos_to_native(pos)
+            elif h in self.digital_clients:
                 # set/clear appropriate bit
-                change = 1 << self.digitalClients[h]
+                change = 1 << self.digital_clients[h]
                 # args contains new bit state
                 if args:
-                    dstate |= change
+                    digital_state |= change
                 else:
-                    dstate = dstate & (2**self._dlines - 1) - (change)
+                    digital_state = digital_state & (2 ** self._digital_lines - 1) - (change)
 
             # Check for simultaneous actions.
-            if tPrev is not None and t == tPrev:
-                if h not in hPrev:
+            if t_prev is not None and t == t_prev:
+                if h not in h_prev:
                     # Update last action to merge actions at same timepoint.
-                    actions[-1] = (t, (dstate, astate[:]))
+                    actions[-1] = (t, (digital_state, analog_state[:]))
                     # Add handler and args to list for next check.
-                    hPrev.append(h)
-                    argsPrev.append(args)
-                elif args == argsPrev[hPrev.index(h)]:
+                    h_prev.append(h)
+                    args_prev.append(args)
+                elif args == args_prev[h_prev.index(h)]:
                     # Just a duplicate entry
                     continue
                 else:
@@ -215,10 +215,10 @@ class ExecutorHandler(DeviceHandler):
                     )
             else:
                 # Append new action.
-                actions.append((t, (dstate, astate[:])))
-                # Reinitialise hPrev and argsPrev for next check.
-                hPrev, argsPrev = [h], [args]
-                tPrev = t
+                actions.append((t, (digital_state, analog_state[:])))
+                # Reinitialise h_prev and args_prev for next check.
+                h_prev, args_prev = [h], [args]
+                t_prev = t
 
         events.publish(
             events.UPDATE_STATUS_LIGHT,
@@ -226,15 +226,15 @@ class ExecutorHandler(DeviceHandler):
             "Waiting for %s to finish" % self.name,
         )
 
-        return self.callbacks["executeTable"](
-            actions, 0, len(actions), numReps, repDuration
+        return self.callbacks["execute_table"](
+            actions, 0, len(actions), num_reps, rep_duration
         )
 
-    def showDebugWindow(self):
+    def show_debug_window(self):
         """Debugging function: display ExecutorOutputWindow."""
         # Ensure only a single instance of the window.
-        global _windowInstance
-        window = globals().get("_windowInstance")
+        global _window_instance
+        window = globals().get("_window_instance")
         if window:
             try:
                 window.Raise()
@@ -242,138 +242,138 @@ class ExecutorHandler(DeviceHandler):
             except:
                 pass
         # If we get this far, we need to create a new window.
-        _windowInstance = ExecutorDebugWindow(
+        _window_instance = ExecutorDebugWindow(
             self, parent=wx.GetApp().MainWindow
         )
-        _windowInstance.Show()
+        _window_instance.Show()
 
-    def onPrepareForExperiment(self, experiment):
+    def on_prepare_for_experiment(self, experiment):
         # This smells sketchy, but does exactly what we need: run
         # the method on all mixins contributing to a hybrid class.
         # Could do achieve the same by having mixins append to a list
         # of actions to call on certain events.
         for c in self.__class__.__mro__[1:]:
-            if hasattr(c, "_onPrepareForExperiment"):
-                c._onPrepareForExperiment(self)
+            if hasattr(c, "_on_prepare_for_experiment"):
+                c._on_prepare_for_experiment(self)
 
     def cleanup_after_experiment(self, is_cleanup_final=True):
-        # See comments in onPrepareForExperiment
+        # See comments in on_prepare_for_experiment
         for c in self.__class__.__mro__[1:]:
-            if hasattr(c, "_cleanupAfterExperiment"):
-                c._cleanupAfterExperiment(self, is_cleanup_final)
+            if hasattr(c, "_cleanup_after_experiment"):
+                c._cleanup_after_experiment(self, is_cleanup_final)
 
 
 class DigitalMixin:
     """Digital handler mixin."""
 
-    def registerDigital(self, client, line):
+    def register_digital(self, client, line):
         """Register a client device that is connected to one of our lines.
         returns a virtual TriggerProxy."""
         h = TriggerProxy(client.name, self)
-        self.digitalClients[h] = int(line)
+        self.digital_clients[h] = int(line)
         # If the client not a DelegateTrigger executor, all of its actions
         # are handled here.
         if not isinstance(client, DelegateTrigger):
-            self.digitalClients[client] = int(line)
+            self.digital_clients[client] = int(line)
         return h
 
-    def setDigital(self, line, state):
+    def set_digital(self, line, state):
         """Set or clear a single line."""
         if line is None:
             return
         line = int(line)
-        if self.callbacks.get("setDigital", None):
-            self.callbacks["setDigital"](line, state)
+        if self.callbacks.get("set_digital", None):
+            self.callbacks["set_digital"](line, state)
         else:
-            oldstate = self.readDigital()
+            old_state = self.read_digital()
             if state:
-                newstate = oldstate | 1 << line
+                new_state = old_state | 1 << line
             else:
-                newstate = oldstate & (2**self._dlines - 1) - (1 << line)
-            self.writeDigital(newstate)
+                new_state = old_state & (2**self._digital_lines - 1) - (1 << line)
+            self.write_digital(new_state)
 
-    def writeDigital(self, state):
-        self.callbacks["writeDigital"](state)
+    def write_digital(self, state):
+        self.callbacks["write_digital"](state)
 
-    def readDigital(self):
-        return self.callbacks["readDigital"]()
+    def read_digital(self):
+        return self.callbacks["read_digital"]()
 
-    def triggerDigital(self, client, dt=0.01):
+    def trigger_digital(self, client, dt=0.01):
         """Trigger a client line now."""
-        line = self.digitalClients.get(client, None)
+        line = self.digital_clients.get(client, None)
         if line:
-            self.setDigital(line, True)
+            self.set_digital(line, True)
             time.sleep(dt)
-            self.setDigital(line, False)
+            self.set_digital(line, False)
 
     @property
-    def activeLights(self):
+    def active_lights(self):
         return list(
             filter(
                 lambda h: h.device_type == depot.LIGHT_TOGGLE
                           and h.get_is_enabled(),
-                self.digitalClients,
+                self.digital_clients,
             )
         )
 
     @property
-    def activeCameras(self):
+    def active_cameras(self):
         return list(
             filter(
                 lambda h: h.device_type == depot.CAMERA and h.get_is_enabled(),
-                self.digitalClients,
+                self.digital_clients,
             )
         )
 
-    def takeImage(self):
-        if not self.digitalClients:
+    def take_image(self):
+        if not self.digital_clients:
             # No triggered devices registered.
             return
-        camlines = sum(
-            [1 << self.digitalClients[cam] for cam in self.activeCameras]
+        cam_lines = sum(
+            [1 << self.digital_clients[cam] for cam in self.active_cameras]
         )
 
         # We want to know if there are cameras using rolling shutter. If so, cameras must be triggered in advance
-        exposureStartTime = [
+        exposure_start_time = [
             cam.get_time_between_exposures()
-            for cam in self.activeCameras
+            for cam in self.active_cameras
             if cam.get_shuttering_mode() == ElectronicShutteringMode.ROLLING
         ]
-        exposureStartTime = max(exposureStartTime, default=0)
+        exposure_start_time = max(exposure_start_time, default=0)
 
-        if camlines == 0:
+        if cam_lines == 0:
             # No cameras to be triggered.
             return
 
-        ltpairs = []
-        for light in self.activeLights:
-            lline = 1 << self.digitalClients[light]
-            ltime = light.get_exposure_time()
-            ltpairs.append((lline, ltime))
+        light_time_pairs = []
+        for light in self.active_lights:
+            light_line = 1 << self.digital_clients[light]
+            light_time = light.get_exposure_time()
+            light_time_pairs.append((light_line, light_time))
 
         # Sort by exposure time
-        ltpairs.sort(key=lambda item: item[1])
+        light_time_pairs.sort(key=lambda item: item[1])
 
         # Generate a sequence of (time, digital state)
         # TODO: currently uses bulb exposure; should support other modes.
-        if ltpairs:
+        if light_time_pairs:
             # Start by all active cameras and lights.
-            state = camlines | functools.reduce(
-                operator.ior, list(zip(*ltpairs))[0]
+            state = cam_lines | functools.reduce(
+                operator.ior, list(zip(*light_time_pairs))[0]
             )
-            if exposureStartTime != 0:
-                seq = [(0, camlines)]
-            seq.append((exposureStartTime, state))
+            if exposure_start_time != 0:
+                seq = [(0, cam_lines)]
+            seq.append((exposure_start_time, state))
             # Switch off each light as its exposure time expires. If exposure times are equal, keep only the last one.
-            for lline, ltime in ltpairs:
-                state -= lline
-                if (exposureStartTime + ltime) == seq[-1][0]:
-                    seq[-1] = (exposureStartTime + ltime, state)
+            for light_line, light_time in light_time_pairs:
+                state -= light_line
+                if (exposure_start_time + light_time) == seq[-1][0]:
+                    seq[-1] = (exposure_start_time + light_time, state)
                 else:
-                    seq.append((exposureStartTime + ltime, state))
+                    seq.append((exposure_start_time + light_time, state))
         else:
             # No lights. Just trigger the cameras.
-            seq = [(0, camlines)]
+            seq = [(0, cam_lines)]
 
         # If there is an ambient light enabled, extend exposure as
         # necessary (see issue #669).
@@ -388,25 +388,25 @@ class DigitalMixin:
         if self.callbacks.get("runSequence", None):
             self.callbacks["runSequence"](seq)
         else:
-            self.softSequence(seq)
+            self.soft_sequence(seq)
 
-    def writeWithMask(self, mask, state):
-        initial = self.readDigital()
+    def write_with_mask(self, mask, state):
+        initial = self.read_digital()
         final = (initial & ~mask) | state
-        self.writeDigital(final)
+        self.write_digital(final)
 
     @util.threads.call_in_new_thread
-    def softSequence(self, seq):
+    def soft_sequence(self, seq):
         # Mask of the bits that we toggle
         mask = functools.reduce(operator.ior, list(zip(*seq))[1])
-        entryState = self.readDigital()
+        entry_state = self.read_digital()
         t_last = 0
         for t, state in seq:
             if t != t_last:
                 time.sleep((t - t_last) / 1000.0)
                 t_last = t
-            self.writeWithMask(mask, state)
-        self.writeDigital(entryState)
+            self.write_with_mask(mask, state)
+        self.write_digital(entry_state)
 
 
 class AnalogMixin:
@@ -419,8 +419,8 @@ class AnalogMixin:
     offset is in experimental units.
     """
 
-    def registerAnalog(
-        self, client, line, offset=0, gain=1, movementTimeFunc=None
+    def register_analog(
+        self, client, line, offset=0, gain=1, movement_time_func=None
     ):
         """Register a client device that is connected to one of our lines.
 
@@ -433,34 +433,34 @@ class AnalogMixin:
             int(line),
             offset,
             gain,
-            movementTimeFunc,
+            movement_time_func,
         )
         # May reference the client by whatever we were passed or its new handler
-        self.analogClients[client] = h
-        self.analogClients[h] = h
+        self.analog_clients[client] = h
+        self.analog_clients[h] = h
         return h
 
-    def setAnalogLine(self, line, level):
+    def set_analog_line(self, line, level):
         """Set analog output of line to level."""
-        self.callbacks["setAnalog"](line, level)
+        self.callbacks["set_analog"](line, level)
 
-    def getAnalogLine(self, line):
+    def get_analog_line(self, line):
         """Get level of analog line."""
-        return self.callbacks["getAnalog"](line)
+        return self.callbacks["get_analog"](line)
 
-    def _onPrepareForExperiment(self):
-        for client in self.analogClients:
-            self.analogClients[client].savePosition()
+    def _on_prepare_for_experiment(self):
+        for client in self.analog_clients:
+            self.analog_clients[client].save_position()
 
-    def _cleanupAfterExperiment(self, isCleanupFinal=True):
-        if isCleanupFinal:
-            for client in self.analogClients:
-                self.analogClients[client].restorePosition()
+    def _cleanup_after_experiment(self, is_cleanup_final=True):
+        if is_cleanup_final:
+            for client in self.analog_clients:
+                self.analog_clients[client].restore_position()
 
 
 class AnalogLineHandler(GenericPositionerHandler):
     def __init__(
-        self, name, group_name, asource, line, offset, gain, movementTimeFunc
+        self, name, group_name, analog_source, line, offset, gain, movement_time_func
     ):
         """A type of GenericPositioner for analog outputs.
 
@@ -478,43 +478,43 @@ class AnalogLineHandler(GenericPositionerHandler):
         # Line, required when executing table.
         self.line = line
         # Saved position
-        self._savedPos = None
+        self._saved_pos = None
         # Set up callbacks used by GenericPositionHandler methods.
         self.callbacks = {}
-        self.callbacks["move_absolute"] = lambda pos: asource.setAnalogLine(
-            line, self.posToNative(pos)
+        self.callbacks["move_absolute"] = lambda pos: analog_source.set_analog_line(
+            line, self.pos_to_native(pos)
         )
-        self.callbacks["getPosition"] = lambda: self.nativeToPos(
-            asource.getAnalogLine(line)
+        self.callbacks["get_position"] = lambda: self.native_to_pos(
+            analog_source.get_analog_line(line)
         )
         ## TODO - consider if we want to fallback to number or zero, or raise an exception here.
-        if callable(movementTimeFunc):
-            self.callbacks["getMovementTime"] = movementTimeFunc
-        elif isinstance(movementTimeFunc, Number):
-            self.callbacks["getMovementTime"] = lambda *args: (
-                movementTimeFunc,
+        if callable(movement_time_func):
+            self.callbacks["get_movement_time"] = movement_time_func
+        elif isinstance(movement_time_func, Number):
+            self.callbacks["get_movement_time"] = lambda *args: (
+                movement_time_func,
                 0,
             )
         else:
-            self.callbacks["getMovementTime"] = lambda *args: (0, 0)
+            self.callbacks["get_movement_time"] = lambda *args: (0, 0)
         super().__init__(name, group_name, True, self.callbacks)
 
-    def savePosition(self):
-        self._savedPos = self.getPosition()
+    def save_position(self):
+        self._saved_pos = self.get_position()
 
-    def restorePosition(self):
-        self.moveAbsolute(self._savedPos)
+    def restore_position(self):
+        self.move_absolute(self._saved_pos)
 
-    def moveRelative(self, delta):
-        self.callbacks["move_absolute"](self.callbacks["getPosition"]() + delta)
+    def move_relative(self, delta):
+        self.callbacks["move_absolute"](self.callbacks["get_position"]() + delta)
 
-    def posToNative(self, pos):
+    def pos_to_native(self, pos):
         return self.gain * (self.offset + pos)
 
-    def nativeToPos(self, native):
+    def native_to_pos(self, native):
         return (native / self.gain) - self.offset
 
-    def indexedPosition(self, index, wavelength=None):
+    def indexed_position(self, index, wavelength=None):
         pos = None
         if isinstance(wavelength, Number) and isinstance(self.positions, dict):
             wls = [
@@ -568,7 +568,7 @@ def plot_action_table_profile(
         if isinstance(action, bool):
             return "digital"
         elif isinstance(action, (float, int)):
-            return "analogue"
+            return "analog"
         else:
             return None
 
@@ -592,7 +592,7 @@ def plot_action_table_profile(
     fig, axs = plt.subplots(len(table), 1, sharex=True)
     fig.subplots_adjust(hspace=0)  # Remove horizontal space between axes
     for i, (key, data) in enumerate(table.items()):
-        if data[2] == "analogue":
+        if data[2] == "analog":
             axs[i].plot(data[0], data[1])
         elif data[2] == "digital":
             axs[i].step(data[0], data[1], where="post")
@@ -608,7 +608,7 @@ def plot_action_table_profile(
 
 
 class ExecutorDebugWindow(wx.Frame):
-    """This debugging window allows manipulation of analogue and digital lines."""
+    """This debugging window allows manipulation of analog and digital lines."""
 
     def __init__(self, handler, parent, *args, **kwargs):
         title = handler.name + " Executor control lines"
@@ -617,20 +617,20 @@ class ExecutorDebugWindow(wx.Frame):
         )
         super().__init__(parent, title=title, *args, **kwargs)
         panel = wx.Panel(self)
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         ## Maps buttons to their lines.
         self.buttonToLine = {}
 
-        if handler._dlines is not None:
+        if handler._digital_lines is not None:
             # Digital controls
-            ncols = 8
-            nrows = (handler._dlines + ncols - 1) // ncols
-            buttonSizer = wx.GridSizer(nrows, ncols, 1, 1)
-            for line in range(handler._dlines):
+            nr_cols = 8
+            nr_rows = (handler._digital_lines + nr_cols - 1) // nr_cols
+            button_sizer = wx.GridSizer(nr_rows, nr_cols, 1, 1)
+            for line in range(handler._digital_lines):
                 clients = [
                     k.name
-                    for k, v in handler.digitalClients.items()
+                    for k, v in handler.digital_clients.items()
                     if v == line
                 ]
                 if clients:
@@ -640,30 +640,30 @@ class ExecutorDebugWindow(wx.Frame):
                 button = wx.ToggleButton(panel, wx.ID_ANY, label)
                 button.Bind(
                     wx.EVT_TOGGLEBUTTON,
-                    lambda evt, line=line: handler.setDigital(
+                    lambda evt, line=line: handler.set_digital(
                         line, evt.EventObject.Value
                     ),
                 )
-                buttonSizer.Add(button, 1, wx.EXPAND)
-            mainSizer.Add(buttonSizer)
+                button_sizer.Add(button, 1, wx.EXPAND)
+            main_sizer.Add(button_sizer)
 
             # Analog controls
             # These controls deal with hardware units, i.e. probably ADUs.
-            anaSizer = wx.BoxSizer(wx.HORIZONTAL)
-            for line in range(handler._alines):
-                anaSizer.Add(wx.StaticText(panel, -1, "output %d:" % line))
+            analog_sizer = wx.BoxSizer(wx.HORIZONTAL)
+            for line in range(handler._analog_lines):
+                analog_sizer.Add(wx.StaticText(panel, -1, "output %d:" % line))
                 control = wx.TextCtrl(
                     panel, -1, size=(60, -1), style=wx.TE_PROCESS_ENTER
                 )
                 control.Bind(
                     wx.EVT_TEXT_ENTER,
-                    lambda evt, line=line, ctrl=control: handler.setAnalogLine(
+                    lambda evt, line=line, ctrl=control: handler.set_analog_line(
                         line, float(ctrl.GetValue())
                     ),
                 )
                 # If dealing with ADUs, float should perhaps be int,
                 # but rely on device to set correct type.
-                anaSizer.Add(control, 0, wx.RIGHT, 20)
+                analog_sizer.Add(control, 0, wx.RIGHT, 20)
 
             btn = wx.Button(panel, label="Display last experiment")
             btn.SetToolTip(
@@ -671,14 +671,14 @@ class ExecutorDebugWindow(wx.Frame):
                     "Plot the last experiment like an oscilloscope display."
                 )
             )
-            btn.Bind(wx.EVT_BUTTON, self._OnDisplayLastExperiment)
-            anaSizer.Add(btn, 0, wx.RIGHT, 20)
-            mainSizer.Add(anaSizer)
+            btn.Bind(wx.EVT_BUTTON, self._on_display_last_experiment)
+            analog_sizer.Add(btn, 0, wx.RIGHT, 20)
+            main_sizer.Add(analog_sizer)
 
-        panel.SetSizerAndFit(mainSizer)
+        panel.SetSizerAndFit(main_sizer)
         self.SetClientSize(panel.GetSize())
 
-    def _OnDisplayLastExperiment(self, evt: wx.CommandEvent) -> None:
+    def _on_display_last_experiment(self, evt: wx.CommandEvent) -> None:
         del evt
         if experiment.last_experiment is None:
             wx.MessageBox("No experiment has been done yet.")
@@ -688,7 +688,7 @@ class ExecutorDebugWindow(wx.Frame):
 
 class SimpleExecutor(DeviceHandler):
     """A class for a handler that can perform actions in an experiment, but
-    doesn't have any analogue or digital capabilities."""
+    doesn't have any analog or digital capabilities."""
 
     def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
         super().__init__(
@@ -698,21 +698,21 @@ class SimpleExecutor(DeviceHandler):
             callbacks,
             depot.EXECUTOR,
         )
-        for cbname, cb in callbacks.items():
-            if cbname == "executeTable":
+        for cb_name, cb in callbacks.items():
+            if cb_name == "execute_table":
                 continue
             if not callable(cb):
                 cb = lambda *args, **kwargs: cb
-            self.__setattr__(cbname, cb)
+            self.__setattr__(cb_name, cb)
 
-    def executeTable(self, table, startIndex, stopIndex, numReps, repDuration):
+    def execute_table(self, table, start_index, stop_index, num_reps, rep_duration):
         """Execute whatever the device does and publish an event on completion."""
-        self.callbacks["executeTable"](
-            table, startIndex, stopIndex, numReps, repDuration
+        self.callbacks["execute_table"](
+            table, start_index, stop_index, num_reps, rep_duration
         )
         events.publish(events.EXPERIMENT_EXECUTION)
 
-    def getNumRunnableLines(self, table, index):
+    def get_num_runnable_lines(self, table, index):
         """Return number of lines this handler can run."""
         count = 0
         if not self.is_eligible_for_experiments:
@@ -728,38 +728,38 @@ class TriggerProxy(DeviceHandler):
     """A trigger handler to allow discrimination of trigger and triggered
     device in the action table."""
 
-    def __init__(self, name, trigSource):
+    def __init__(self, name, trig_source):
         super().__init__(
             name + " trigger", name + " group", False, {}, depot.GENERIC_DEVICE
         )
-        self.triggerNow = lambda: trigSource.triggerDigital(self)
+        self.triggerNow = lambda: trig_source.trigger_digital(self)
 
 
 ## This handler can examine and modify an action table, but delegates
 # running it to some other ExecutorHandler.
 # The DelegateTrigger instance should be created with any non-trigger actions
-# handled in callback named 'executeTable', and then connected to a trigger
-# source with the delegateTo method.
+# handled in callback named 'execute_table', and then connected to a trigger
+# source with the delegate_to method.
 
 
 class DelegateTrigger(SimpleExecutor):
     def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
-        """def __init__(self, name, group_name, trigSource, trig_line,
+        """def __init__(self, name, group_name, trig_source, trig_line,
         examine_actions, movementTime=0):."""
         super().__init__(name, group_name, is_eligible_for_experiments, callbacks)
         self._trigger = None
-        self._triggerTime = 0
-        self._responseTime = 0
-        self.triggerNow = lambda: None
+        self._trigger_time = 0
+        self._response_time = 0
+        self.trigger_now = lambda: None
 
-    def delegateTo(self, trigSource, trigLine, trigTime=0, responseTime=0):
-        """Delegate trigger actions to some trigSource."""
-        if isinstance(trigSource, str):
-            trigSource = depot.get_handler(trigSource, depot.EXECUTOR)
-        self._trigger = trigSource.registerDigital(self, trigLine)
-        self.triggerNow = self._trigger.triggerNow
-        self._triggerTime = trigTime
-        self._responseTime = responseTime
+    def delegate_to(self, trig_source, trig_line, trig_time=0, response_time=0):
+        """Delegate trigger actions to some trig_source."""
+        if isinstance(trig_source, str):
+            trig_source = depot.get_handler(trig_source, depot.EXECUTOR)
+        self._trigger = trig_source.register_digital(self, trig_line)
+        self.trigger_now = self._trigger.triggerNow
+        self._trigger_time = trig_time
+        self._response_time = response_time
 
     def add_toggle(self, time, table):
         """Add a toggle event to the action table.
@@ -767,7 +767,7 @@ class DelegateTrigger(SimpleExecutor):
         Return time of last action, and response time before ready after
         trigger.
         """
-        dt = max(self._triggerTime, table.toggle_time)
+        dt = max(self._trigger_time, table.toggle_time)
         table.add_action(time, self._trigger, True)
         table.add_action(time + dt, self._trigger, False)
-        return time + dt, self._responseTime
+        return time + dt, self._response_time

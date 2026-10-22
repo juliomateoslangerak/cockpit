@@ -343,11 +343,11 @@ class PicoMotorDevice(device.Device):
                     False,
                     {
                         "move_absolute": self.move_xy_absolute,
-                        "moveRelative": self.move_xy_relative,
-                        "getPosition": lambda axis=axis: self.get_xy_position(
+                        "move_relative": self.move_xy_relative,
+                        "get_position": lambda axis=axis: self.get_xy_position(
                             axis=axis
                         ),
-                        "getMovementTime": self.get_xy_movement_time,
+                        "get_movement_time": self.get_xy_movement_time,
                     },
                     axis,
                     (min_pos, max_pos),

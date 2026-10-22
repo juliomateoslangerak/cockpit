@@ -66,12 +66,12 @@ class GenericPositionerHandler(device.DeviceHandler):
     Callbacks should fill in the following functions:
     - move_absolute(name, position): Move to the given position, in whatever
       units are appropriate.
-    - moveRelative(name, delta): Move by the specified delta, again in
+    - move_relative(name, delta): Move by the specified delta, again in
       whatever units are appropriate.
-    - getPosition(name): Get the current position.
+    - get_position(name): Get the current position.
     Additionally, if the device is eligible for experiments, it needs to
     have these functions:
-    - getMovementTime(name, start, stop): return the movement time and
+    - get_movement_time(name, start, stop): return the movement time and
       stabilization time needed to go from <start> to <stop>.
 
     \todo Add motion limits.
@@ -90,30 +90,30 @@ class GenericPositionerHandler(device.DeviceHandler):
             depot.GENERIC_POSITIONER,
         )
 
-    def moveAbsolute(self, pos):
+    def move_absolute(self, pos):
         """Handle being told to move to a specific position."""
         self.callbacks["move_absolute"](pos)
 
-    def moveRelative(self, delta):
+    def move_relative(self, delta):
         """Handle being told to move by a specific delta."""
-        self.callbacks["moveRelative"](delta)
+        self.callbacks["move_relative"](delta)
 
-    def getPosition(self):
+    def get_position(self):
         """Retrieve the current position."""
-        return self.callbacks["getPosition"]()
+        return self.callbacks["get_position"]()
 
-    def getMovementTime(self, start, stop):
+    def get_movement_time(self, start, stop):
         """Get the movement and stabilization time needed to perform the
         specified motion, in milliseconds."""
-        # return self.callbacks['getMovementTime'](self.name, start, stop)
+        # return self.callbacks['get_movement_time'](self.name, start, stop)
         return [
             decimal.Decimal(t)
-            for t in self.callbacks["getMovementTime"](start, stop)
+            for t in self.callbacks["get_movement_time"](start, stop)
         ]
 
     @cached
-    def getDeltaMovementTime(self, delta):
+    def get_delta_movement_time(self, delta):
         return [
             decimal.Decimal(t)
-            for t in self.callbacks["getMovementTime"](0.0, delta)
+            for t in self.callbacks["get_movement_time"](0.0, delta)
         ]

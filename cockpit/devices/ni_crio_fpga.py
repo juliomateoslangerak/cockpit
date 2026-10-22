@@ -90,8 +90,8 @@ class NIcRIO(executor_devices.ExecutorDevice):
         "sendport": int,
         "receiveport": int,
         "tickrate": int,
-        "alines": int,
-        "dlines": int,
+        "analog_lines": int,
+        "digital_lines": int,
     }
 
     def __init__(self, name, config):
@@ -102,8 +102,8 @@ class NIcRIO(executor_devices.ExecutorDevice):
         self.send_port = config.get("sendport")
         self.receive_port = config.get("receiveport")
         self.port = [self.send_port, self.receive_port]
-        self._dlines = self.config.get("dlines")
-        self._alines = self.config.get("alines")
+        self._dlines = self.config.get("digital_lines")
+        self._alines = self.config.get("analog_lines")
         self._current_analogs = self._alines * [0]
         # Absolute positions prior to the start of the experiment.
         self._last_analogs = self._alines * [0]

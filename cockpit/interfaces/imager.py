@@ -159,7 +159,7 @@ class Imager:
         from cockpit.experiment import experiment
 
         if experiment.is_running():
-            print("Skipping takeImage because an experiment is running.")
+            print("Skipping take_image because an experiment is running.")
             return
         elif len(self.active_cameras) == 0:
             message = "There are no cameras enabled."

@@ -76,7 +76,7 @@ class PolarizationDevice(device.Device):
             raise Exception("No control source.")
         gain = self.config.get("gain", 1)
         offset = self.config.get("offset", 0)
-        h = a_handler.registerAnalog(self, a_line, offset, gain)
+        h = a_handler.register_analog(self, a_line, offset, gain)
 
         # If there are indexed positions in the config, add them to the handler.
         idlevoltage = self.config.get("idlevoltage", 0)

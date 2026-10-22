@@ -92,7 +92,7 @@ class Clarity(microscope_device.MicroscopeFilter):
             False,
             {
                 "setPosition": self.set_slide_position,
-                "getPosition": self._proxy.get_slide_position,
+                "get_position": self._proxy.get_slide_position,
                 "getFilters": self.get_slides_as_filters,
                 "get_is_enabled": self._proxy.get_is_enabled,
                 "set_enabled": self.set_enabled,

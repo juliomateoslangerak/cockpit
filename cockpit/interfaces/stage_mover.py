@@ -275,7 +275,7 @@ class StageMover:
             if sign != 0:
                 step_size = self._step_sizes[self.cur_handler_index][axis]
                 handler = self.axis_to_handlers[axis][self.cur_handler_index]
-                handler.moveRelative(step_size * sign)
+                handler.move_relative(step_size * sign)
 
     def set_step_size(self, axis: int, step_size: float) -> None:
         if step_size <= 0.0:
@@ -329,12 +329,12 @@ class StageMover:
             offset = 0
             for handler in self.axis_to_handlers[axis]:
                 if handler != self.axis_to_handlers[axis][self.cur_handler_index]:
-                    offset += handler.getPosition()
+                    offset += handler.get_position()
 
             handler = self.axis_to_handlers[axis][self.cur_handler_index]
             # Check if we need to bother moving.
             if (
-                abs(handler.getPosition() - (target - offset))
+                abs(handler.get_position() - (target - offset))
                 > STAGE_MIN_MOVEMENT
             ):
                 event = threading.Event()
@@ -408,12 +408,12 @@ def recenter_fine_motion():
         for handler in handlers[1:]:
             # Assume that the fine-motion devices want to be in the center
             # of their ranges.
-            cur_position = handler.getPosition()
+            cur_position = handler.get_position()
             safeties = handler.get_hard_limits()
             target = (safeties[1] - safeties[0]) / 2 + safeties[0]
             handler.move_absolute(target)
             total_delta += target - cur_position
-        handlers[0].moveRelative(-total_delta)
+        handlers[0].move_relative(-total_delta)
 
 
 def go_to(position, should_block=False):
@@ -544,7 +544,7 @@ def get_position():
     result = 3 * [0]
     for axis, handlers in mover.axis_to_handlers.items():
         for handler in set(handlers):
-            result[axis] += handler.getPosition()
+            result[axis] += handler.get_position()
     return result
 
 
@@ -552,7 +552,7 @@ def get_position_for_axis(axis):
     """Return the exact stage position for the given axis."""
     result = 0
     for handler in set(mover.axis_to_handlers[axis]):
-        result += handler.getPosition()
+        result += handler.get_position()
     return result
 
 
@@ -567,7 +567,7 @@ def get_all_positions():
     for i in range(mover.n_stages):
         current = [None] * len(mover.axis_to_handlers)
         for axis, handlers in mover.axis_to_handlers.items():
-            current[axis] = handlers[i].getPosition()
+            current[axis] = handlers[i].get_position()
         result.append(tuple(current))
     return result
 
@@ -603,7 +603,7 @@ def get_soft_limits_for_axis(axis):
     low_limit = 0
     high_limit = 0
     for handler in set(mover.axis_to_handlers[axis]):
-        low, high = handler.getSoftLimits()
+        low, high = handler.get_soft_limits()
         low_limit += low
         high_limit += high
     return (low_limit, high_limit)
@@ -619,7 +619,7 @@ def get_soft_limits():
 
 def get_individual_soft_limits(axis):
     """Returns a list of all soft motion limits for the given axis."""
-    return [handler.getSoftLimits() for handler in mover.axis_to_handlers[axis]]
+    return [handler.get_soft_limits() for handler in mover.axis_to_handlers[axis]]
 
 
 def set_soft_limit(axis, value, is_max):
@@ -630,7 +630,7 @@ def set_soft_limit(axis, value, is_max):
     # \todo For now we assume that only the first handler, with the greatest
     # range of motion, cares about soft limits.
     try:
-        mover.axis_to_handlers[axis][0].setSoftLimit(value, is_max)
+        mover.axis_to_handlers[axis][0].set_soft_limit(value, is_max)
         events.publish(events.SOFT_SAFETY_LIMIT, axis, value, is_max)
         return True
     except Exception as e:

@@ -434,7 +434,7 @@ class MicroscopeFilter(MicroscopeBase):
             False,
             {
                 "setPosition": self.set_position,
-                "getPosition": self.get_position,
+                "get_position": self.get_position,
                 "getFilters": self.get_filters,
             },
             self.cameras,
@@ -483,12 +483,12 @@ class _MicroscopeStageAxis:
         group_name = "%d stage motion" % index
         eligible_for_experiments = False
         # TODO: to make it eligible for experiments, we need a
-        # getMovementTime callback (see issue #614).
+        # get_movement_time callback (see issue #614).
         callbacks = {
-            "getMovementTime": self.get_movement_time,
-            "getPosition": self.get_position,
+            "get_movement_time": self.get_movement_time,
+            "get_position": self.get_position,
             "move_absolute": self.move_absolute,
-            "moveRelative": self.move_relative,
+            "move_relative": self.move_relative,
         }
 
         self._handler = PositionerHandler(

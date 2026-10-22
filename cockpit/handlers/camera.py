@@ -129,8 +129,8 @@ class CameraHandler(device.DeviceHandler):
         self.dye = None
         # Set up trigger handling.
         if trig_handler and trig_line:
-            h = trig_handler.registerDigital(self, trig_line)
-            self.triggerNow = h.triggerNow
+            h = trig_handler.register_digital(self, trig_line)
+            self.triggerNow = h.trigger_now
         else:
             soft_trigger = self.callbacks.get("soft_trigger", None)
             self.triggerNow = lambda: soft_trigger
@@ -139,7 +139,7 @@ class CameraHandler(device.DeviceHandler):
                     cockpit.handlers.imager.ImagerHandler(
                         "%s imager" % name,
                         "imager",
-                        {"takeImage": soft_trigger},
+                        {"take_image": soft_trigger},
                     )
                 )
 

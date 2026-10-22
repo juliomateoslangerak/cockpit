@@ -75,7 +75,7 @@ class OpenShutterSweepExperiment(experiment.Experiment):
             table.add_action(curTime, self.z_positioner, 0)
             # Ensure our exposure is at least as long as the time needed to
             # move through the sample.
-            motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+            motionTime, stabilizationTime = self.z_positioner.get_movement_time(
                 0, self.z_height
             )
             # Image the sample.
@@ -86,7 +86,7 @@ class OpenShutterSweepExperiment(experiment.Experiment):
             curTime += stabilizationTime
             # Move back to the start so we're ready for the next set of cameras
             # or the next rep.
-            motionTime, stabilizationTime = self.z_positioner.getMovementTime(
+            motionTime, stabilizationTime = self.z_positioner.get_movement_time(
                 self.z_height, 0
             )
             curTime += motionTime

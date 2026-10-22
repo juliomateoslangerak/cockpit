@@ -159,9 +159,9 @@ class AerotechZStage(device.Device):
             False,
             {
                 "move_absolute": self.move_absolute,
-                "moveRelative": self.move_relative,
-                "getPosition": self.get_position,
-                "getMovementTime": self.get_movement_time,
+                "move_relative": self.move_relative,
+                "get_position": self.get_position,
+                "get_movement_time": self.get_movement_time,
             },
             axis,
             (min_val, max_val),

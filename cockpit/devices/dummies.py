@@ -144,8 +144,8 @@ class DummyStage(
         handlers = super().get_handlers()
         for handler in handlers:
             # XXX: cockpit's MicroscopeStage device class does not
-            # have getMovementTime yet (issue #614) so it can't be
+            # have get_movement_time yet (issue #614) so it can't be
             # used in experiments.  So we modify the handlers.
             handler.is_eligible_for_experiments = True
-            handler.callbacks["getMovementTime"] = lambda *args: (1, 1)
+            handler.callbacks["get_movement_time"] = lambda *args: (1, 1)
         return handlers

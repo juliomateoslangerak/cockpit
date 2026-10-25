@@ -705,7 +705,7 @@ class MainWindow(wx.Frame):
         if not event.CanVeto():
             MainWindow.destroy_all_windows()
         else:
-            wx.GetApp()._SaveWindowPositions()
+            wx.GetApp()._save_window_positions()
             MainWindow.destroy_all_windows()
             # Let the default event handler handle the frame
             # destruction.

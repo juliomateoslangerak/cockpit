@@ -39,15 +39,15 @@ class DigitalIOHandler(device.DeviceHandler):
 
     @property
     def paths(self):
-        return self.callbacks["getPaths"]()
+        return self.callbacks["get_paths"]()
 
     def onSaveSettings(self):
         paths = {}
         for key in self.pathNameToButton.keys():
             paths[key] = int(self.pathNameToButton[key].GetValue())
-        outputs = list(map(int, self.callbacks["getOutputs"]()))
+        outputs = list(map(int, self.callbacks["get_outputs"]()))
         IOstate = [
-            self.callbacks["getIOstate"](i) for i in range(len(outputs))
+            self.callbacks["get_io_state"](i) for i in range(len(outputs))
         ]
         return [paths, outputs, IOstate]
 
@@ -57,7 +57,7 @@ class DigitalIOHandler(device.DeviceHandler):
             self.pathNameToButton[key].SetValue(paths[key])
         for i, state in enumerate(IOstate):
             # probably safer not to change IO state here
-            # self.callbacks['setIOstate'](i,state)
+            # self.callbacks['set_io_state'](i,state)
             if state:
                 self.callbacks["write line"](i, outputs[i])
 
@@ -106,7 +106,7 @@ class DigitalIOHandler(device.DeviceHandler):
                 line = labels.index(object)
                 # loop through settings and set each named object to that state.
                 self.callbacks["write line"](line, settings[0][object])
-            #                print(path,self.callbacks['getOutputs']())
+            #                print(path,self.callbacks['get_outputs']())
             # Need some way to define exclusive and non-exclusive paths
             # assume they are exclusive for now.
             otherbuttons = settings[1]

@@ -91,9 +91,9 @@ class Clarity(microscope_device.MicroscopeFilter):
             "clarity",
             False,
             {
-                "setPosition": self.set_slide_position,
+                "set_position": self.set_slide_position,
                 "get_position": self._proxy.get_slide_position,
-                "getFilters": self.get_slides_as_filters,
+                "get_filters": self.get_slides_as_filters,
                 "get_is_enabled": self._proxy.get_is_enabled,
                 "set_enabled": self.set_enabled,
             },
@@ -126,10 +126,10 @@ class Clarity(microscope_device.MicroscopeFilter):
         panel = wx.Panel(outer)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         # power button
-        powerhandler = next(
+        power_handler = next(
             h for h in self.handlers if isinstance(h, ClaritySlideHandler)
         )
-        enable = cockpit.gui.device.EnableButton(outer, powerhandler)
+        enable = cockpit.gui.device.EnableButton(outer, power_handler)
         enable.SetLabel("enable")
         outer.Sizer.Add(enable, flag=wx.EXPAND)
         enable.manageStateOf(panel)
@@ -138,11 +138,11 @@ class Clarity(microscope_device.MicroscopeFilter):
         # slide selector
         panel.Sizer.AddSpacer(4)
         panel.Sizer.Add(wx.StaticText(panel, label="sectioning"))
-        panel.Sizer.Add(powerhandler.make_selector(panel), flag=wx.EXPAND)
+        panel.Sizer.Add(power_handler.make_selector(panel), flag=wx.EXPAND)
         # # filter selector -- moved to filters panel
         # panel.Sizer.AddSpacer(4)
         # panel.Sizer.Add(wx.StaticText(panel, label='filter'))
-        # filterhandler = next(h for h in self.handlers if h is not powerhandler)
+        # filter_handler = next(h for h in self.handlers if h is not power_handler)
         # panel.Sizer.Add(filterhandler.makeSelector(panel), flag=wx.EXPAND)
         # Additional buttons
         panel.Sizer.AddSpacer(4)

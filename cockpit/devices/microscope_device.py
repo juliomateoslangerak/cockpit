@@ -350,12 +350,12 @@ class MicroscopeLaser(MicroscopeBase):
                 is_enabled=True,
             )
         )
-        trigsource = self.config.get("triggersource", None)
-        trigline = self.config.get("triggerline", None)
-        if trigsource:
-            trighandler = depot.get_handler(trigsource, depot.EXECUTOR)
+        trigger_source = self.config.get("triggersource", None)
+        trigger_line = self.config.get("triggerline", None)
+        if trigger_source:
+            trigger_handler = depot.get_handler(trigger_source, depot.EXECUTOR)
         else:
-            trighandler = None
+            trigger_handler = None
         self._exposure_time = 100
         self.handlers.append(
             cockpit.handlers.light_source.LightHandler(
@@ -370,8 +370,8 @@ class MicroscopeLaser(MicroscopeBase):
                 },
                 self.config.get("wavelength", None),
                 100,
-                trighandler,
-                trigline,
+                trigger_handler,
+                trigger_line,
             )
         )
 
@@ -389,7 +389,7 @@ class MicroscopeLaser(MicroscopeBase):
         # after init, the handlers should query for the current state,
         # rather than the device pushing state info to the handlers as
         # we currently do here.
-        ph = self.handlers[0]  # powerhandler
+        ph = self.handlers[0]  # power_handler
         ph.power_set_point = self._proxy.get_set_power()
         # Set lightHandler to enabled if light source is on.
         lh = self.handlers[-1]
@@ -433,9 +433,9 @@ class MicroscopeFilter(MicroscopeBase):
             "filters",
             False,
             {
-                "setPosition": self.set_position,
+                "set_position": self.set_position,
                 "get_position": self.get_position,
-                "getFilters": self.get_filters,
+                "get_filters": self.get_filters,
             },
             self.cameras,
             self.lights,
@@ -683,12 +683,12 @@ class MicroscopeDIO(MicroscopeBase):
         self.io_map = [None] * self.num_lines
 
         # read config entries if they exist to
-        iomap_config = self.config.get("iomap", [None] * self.num_lines)
-        if iomap_config[0] is not None:
+        io_map_config = self.config.get("io_map", [None] * self.num_lines)
+        if io_map_config[0] is not None:
             # config is defined so read it into a bool variable,
             # else it is all [Nones]
-            iomap = iomap_config.split(",")
-            for i, state in enumerate(iomap):
+            io_map = io_map_config.split(",")
+            for i, state in enumerate(io_map):
                 self.io_map[i] = bool(int(state))
         labels = self.config.get("labels", None)
         paths = self.config.get("paths", None)
@@ -755,14 +755,14 @@ class MicroscopeDIO(MicroscopeBase):
         for i in range(len(array)):
             events.publish(events.DIO_OUTPUT, i, array[i])
 
-    def get_IO_state(self, line, cache=False):
+    def get_io_state(self, line, cache=False):
         if cache:
             return self.io_map[line]
         state = self._proxy.get_IO_state(line)
         self.io_map[line] = state
         return state
 
-    def set_IO_state(self, line, state):
+    def set_io_state(self, line, state):
         self.io_map[line] = state
         self._proxy.set_IO_state(line, state)
 
@@ -783,7 +783,7 @@ class MicroscopeDIO(MicroscopeBase):
         # need to map bool's to ints for valuelogviewer
         self.logger.log(list(map(int, self._cache)))
 
-    def showDebugWindow(self):
+    def show_debug_window(self):
         """Debugging function: display a debug window."""
         self.dio_debug_window = DIOOutputWindow(
             self, parent=wx.GetApp().MainWindow
@@ -798,13 +798,13 @@ class MicroscopeDIO(MicroscopeBase):
             "DIO",
             False,
             {
-                "setOutputs": self.write_all_lines,
-                "setIOstate": self.set_IO_state,
-                "getOutputs": self.read_all_lines,
-                "getIOstate": self.get_IO_state,
-                "getPaths": self.get_paths,
-                "write line": self.write_line,
-                "get labels": self.get_labels,
+                "set_outputs": self.write_all_lines,
+                "set_io_state": self.set_io_state,
+                "get_outputs": self.read_all_lines,
+                "get_io_state": self.get_io_state,
+                "get_paths": self.get_paths,
+                "write_line": self.write_line,
+                "get_labels": self.get_labels,
                 "enable": self.enable,
             },
         )
@@ -853,7 +853,7 @@ class DIOOutputWindow(wx.Frame):
             toggle = wx.ToggleButton(panel, wx.ID_ANY)
             toggle.Bind(wx.EVT_TOGGLEBUTTON, lambda evt: self.update_state())
             toggle_sizer.Add(toggle, 1, wx.EXPAND)
-            io_state = self.dio.get_IO_state(i)
+            io_state = self.dio.get_io_state(i)
             toggle.SetValue(io_state)
             if io_state:
                 toggle.SetLabel("Output")
@@ -897,7 +897,7 @@ class DIOOutputWindow(wx.Frame):
     def toggle(self):
         """One of our buttons was clicked; update the debug output."""
         for line, (toggle, button) in self.line_to_button.items():
-            if self.dio.get_IO_state(line):
+            if self.dio.get_io_state(line):
                 self.dio.write_line(line, button.GetValue())
             else:
                 # read input state.
@@ -910,7 +910,7 @@ class DIOOutputWindow(wx.Frame):
         """One of our buttons was clicked; update the debug output."""
         if (line is not None) and (state is not None):
             _logger.debug("Line %d returned %s", line, str(state))
-            if self.dio.get_IO_state(line):
+            if self.dio.get_io_state(line):
                 # output button have names
                 self.line_to_button[line][1].SetLabel(self.dio.labels[line])
             else:
@@ -918,7 +918,7 @@ class DIOOutputWindow(wx.Frame):
             return ()
         for line, (toggle, button) in self.line_to_button.items():
             state = toggle.GetValue()
-            self.dio.set_IO_state(line, state)
+            self.dio.set_io_state(line, state)
             if state:
                 button.Enable()
                 toggle.SetLabel("Output")
@@ -957,12 +957,12 @@ class MicroscopeValueLogger(MicroscopeBase):
         self.poll_interval = int(self.config.get("pollinterval", 20))
         ##extract names of lines from file, too many are ignored,
         ## too few are padded with str(line number)
-        templabels = []
+        temp_labels = []
         if labels:
-            templabels = eval(labels)
+            temp_labels = eval(labels)
         for i in range(self.num_sensors):
-            if i < len(templabels):
-                self.labels[i] = templabels[i]
+            if i < len(temp_labels):
+                self.labels[i] = temp_labels[i]
             else:
                 self.labels[i] = "Sensor %d" % i
         # Lister to receive data back from hardware

@@ -59,7 +59,7 @@ class DigitalIOHandler(device.DeviceHandler):
             # probably safer not to change IO state here
             # self.callbacks['set_io_state'](i,state)
             if state:
-                self.callbacks["write line"](i, outputs[i])
+                self.callbacks["write_line"](i, outputs[i])
 
     def set_enabled(self, shouldEnable=True):
         try:
@@ -102,10 +102,10 @@ class DigitalIOHandler(device.DeviceHandler):
             settings = self.paths[path]
             # loop through DIO settings.
             for object in settings[0].keys():
-                labels = self.callbacks["get labels"]()
+                labels = self.callbacks["get_labels"]()
                 line = labels.index(object)
                 # loop through settings and set each named object to that state.
-                self.callbacks["write line"](line, settings[0][object])
+                self.callbacks["write_line"](line, settings[0][object])
             #                print(path,self.callbacks['get_outputs']())
             # Need some way to define exclusive and non-exclusive paths
             # assume they are exclusive for now.

@@ -342,12 +342,12 @@ class MicroscopeLaser(MicroscopeBase):
                 self.name + " power",  # name
                 self.name + " light source",  # group_name
                 {
-                    "setPower": self._set_power,
-                    "getPower": self._get_power,
+                    "set_power": self._set_power,
+                    "get_power": self._get_power,
                 },
                 self.config.get("wavelength", None),
-                curPower=0.2,
-                isEnabled=True,
+                current_power=0.2,
+                is_enabled=True,
             )
         )
         trigsource = self.config.get("triggersource", None)
@@ -390,7 +390,7 @@ class MicroscopeLaser(MicroscopeBase):
         # rather than the device pushing state info to the handlers as
         # we currently do here.
         ph = self.handlers[0]  # powerhandler
-        ph.powerSetPoint = self._proxy.get_set_power()
+        ph.power_set_point = self._proxy.get_set_power()
         # Set lightHandler to enabled if light source is on.
         lh = self.handlers[-1]
         lh.state = int(self._proxy.get_is_on())

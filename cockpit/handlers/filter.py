@@ -83,48 +83,48 @@ class FilterHandler(device.DeviceHandler):
     def filters(self):
         return self.callbacks["getFilters"]()
 
-    def onSaveSettings(self):
+    def on_save_settings(self):
         return self.callbacks["get_position"]()
 
-    def onLoadSettings(self, settings):
-        filters = self.callbacks["getFilters"]()
+    def on_load_settings(self, settings):
+        filters = self.callbacks["make_selector"]()
         for f in filters:
             if f.position == settings:
-                self.setFilter(f)
+                self.set_filter(f)
 
-    def makeSelector(self, parent):
+    def make_selector(self, parent):
         """UI functions"""
         self.ctrl = wx.Choice(parent)
         self.ctrl.Set(list(map(str, self.filters)))
         self.ctrl.Bind(
             wx.EVT_CHOICE,
-            lambda evt: self.setFilter(self.filters[evt.Selection]),
+            lambda evt: self.set_filter(self.filters[evt.Selection]),
         )
-        self.add_watch("lastFilter", self.setFromName)
-        self.ctrl.Bind(wx.EVT_WINDOW_DESTROY, self.OnSelectorDestroy)
+        self.add_watch("lastFilter", self.set_from_name)
+        self.ctrl.Bind(wx.EVT_WINDOW_DESTROY, self.on_selector_destroy)
         self.ctrl.SetSelection(self.ctrl.FindString(str(self.lastFilter)))
         return self.ctrl
 
-    def setFromName(self, name):
+    def set_from_name(self, name):
         self.ctrl.SetSelection(self.ctrl.FindString(str(name)))
 
-    def OnSelectorDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.remove_watch("lastFilter", self.setFromName)
+    def on_selector_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        self.remove_watch("lastFilter", self.set_from_name)
         event.Skip()
 
     def make_ui(self, parent):
         panel = wx.Panel(parent)
         panel.Sizer = wx.BoxSizer(wx.VERTICAL)
         panel.Sizer.Add(wx.StaticText(panel, label=self.name))
-        panel.Sizer.Add(self.makeSelector(panel), flag=wx.EXPAND)
+        panel.Sizer.Add(self.make_selector(panel), flag=wx.EXPAND)
         return panel
 
-    def setFilter(self, filter):
+    def set_filter(self, filter):
         self.callbacks["setPosition"](
-            filter.position, callback=self.updateAfterMove
+            filter.position, callback=self.update_after_move
         )
 
-    def currentFilter(self):
+    def current_filter(self):
         position = self.callbacks["get_position"]()
         filters = self.callbacks["getFilters"]()
         for f in filters:
@@ -132,10 +132,10 @@ class FilterHandler(device.DeviceHandler):
                 return f
 
     @cockpit.util.threads.call_in_main_thread
-    def updateAfterMove(self, *args):
+    def update_after_move(self, *args):
         # Accept *args so that can be called directly as a Pyro callback
         # or an event handler.
-        self.lastFilter = self.currentFilter()
+        self.lastFilter = self.current_filter()
         # Emission filters
         for camera in self.cameras:
             h = depot.get_handler(camera, depot.CAMERA)
@@ -146,4 +146,4 @@ class FilterHandler(device.DeviceHandler):
             pass
 
     def finalize_initialization(self):
-        self.updateAfterMove()
+        self.update_after_move()

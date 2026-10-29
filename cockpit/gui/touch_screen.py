@@ -636,7 +636,7 @@ class LightsPanelEntry(wx.Panel):
             )
             self.power_ctrl = VariableControlContinuous(
                 self,
-                init_val=self.power.powerSetPoint * 100,
+                init_val=self.power.power_set_point * 100,
                 step_offset=1,
                 units="% ",
                 limit_low=0,
@@ -644,9 +644,9 @@ class LightsPanelEntry(wx.Panel):
             )
             self.power_ctrl.Bind(
                 EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-                lambda e: self.power.setPower(e.GetClientData()[1] / 100),
+                lambda e: self.power.set_power(e.GetClientData()[1] / 100),
             )
-            self.power.add_watch("powerSetPoint", self._set_power_ctrl_percent)
+            self.power.add_watch("power_set_point", self._set_power_ctrl_percent)
             sizer_row2_row0.Add(
                 wx.StaticBitmap(self, bitmap=power_img.ConvertToBitmap()),
                 0,
@@ -662,17 +662,17 @@ class LightsPanelEntry(wx.Panel):
                 self,
                 minValue=0,
                 maxValue=100,
-                fetch_current=lambda: self.power.getPower() * 100,
+                fetch_current=lambda: self.power.get_power() * 100,
                 margins=wx.Size(3, 3),
                 style=wx.BORDER_SIMPLE,
             )
             self.slider.Bind(
                 EVT_SAFE_CONTROL_COMMIT,
-                lambda e: self.power.setPower(e.Value / 100),
+                lambda e: self.power.set_power(e.Value / 100),
             )
-            self.slider.SetValue(self.power.powerSetPoint * 100)
+            self.slider.SetValue(self.power.power_set_point * 100)
             self.power.add_watch(
-                "powerSetPoint", self._set_slider_power_percent
+                "power_set_point", self._set_slider_power_percent
             )
             sizer_row2_row1.Add(24, 24, 0)
             sizer_row2_row1.Add(self.slider, 1, wx.ALIGN_CENTER | wx.LEFT, 24)
@@ -688,8 +688,8 @@ class LightsPanelEntry(wx.Panel):
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
         self.light.remove_watch("exposure_time", self.exposure_ctrl.set_value)
-        self.power.remove_watch("powerSetPoint", self._set_power_ctrl_percent)
-        self.power.remove_watch("powerSetPoint", self._set_slider_power_percent)
+        self.power.remove_watch("power_set_point", self._set_power_ctrl_percent)
+        self.power.remove_watch("power_set_point", self._set_slider_power_percent)
         event.Skip()
 
     def _set_power_ctrl_percent(self, power):

@@ -609,7 +609,7 @@ class Experiment:
 
                     for hand in depot.get_handlers_in_group(handler.group_name):
                         if hand.device_type == depot.LIGHT_POWER:
-                            text += " %3.3f mW" % hand.lastPower
+                            text += " %3.3f mW" % hand.last_power
                 if text:
                     entries.append(text)
             if entries:

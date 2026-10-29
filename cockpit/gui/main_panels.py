@@ -53,7 +53,7 @@ class LightPanel(wx.Panel):
             lambda evt: self.light.set_exposure_time(evt.Value),
         )
         lightToggle.add_watch("exposure_time", self.expCtrl.SetValue)
-        self.expCtrl.SetValue(lightToggle.exposureTime)
+        self.expCtrl.SetValue(lightToggle.exposure_time)
 
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
@@ -78,13 +78,13 @@ class LightPanel(wx.Panel):
                 self,
                 minValue=0.0,
                 maxValue=100.0,
-                fetch_current=lambda: lightPower.getPower() * 100.0,
+                fetch_current=lambda: lightPower.get_power() * 100.0,
             )
-            self.powCtrl.SetValue(lightPower.powerSetPoint * 100.0)
-            lightPower.add_watch("powerSetPoint", self._SetPowerPercent)
+            self.powCtrl.SetValue(lightPower.power_set_point * 100.0)
+            lightPower.add_watch("power_set_point", self._SetPowerPercent)
             self.powCtrl.Bind(
                 safe_controls.EVT_SAFE_CONTROL_COMMIT,
-                lambda evt: lightPower.setPower(evt.Value / 100.0),
+                lambda evt: lightPower.set_power(evt.Value / 100.0),
             )
             self.Sizer.Add(self.powCtrl, 1, flag=wx.EXPAND)
             self._timer = wx.Timer(self)
@@ -99,7 +99,7 @@ class LightPanel(wx.Panel):
                 flag=wx.ALIGN_CENTER_HORIZONTAL,
             )
             for f in lightFilters:
-                self.Sizer.Add(f.makeSelector(self), flag=wx.EXPAND)
+                self.Sizer.Add(f.make_selector(self), flag=wx.EXPAND)
 
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
@@ -108,12 +108,12 @@ class LightPanel(wx.Panel):
 
     def onTimer(self, evt):
         """function that wx.timer calls to check remote power."""
-        self.lightPower.lastPower = self.lightPower.callbacks["getPower"]()
+        self.lightPower.last_power = self.lightPower.callbacks["get_power"]()
 
     def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
         self.light.remove_watch("exposure_time", self.expCtrl.SetValue)
         if self.lightPower is not None:
-            self.lightPower.remove_watch("powerSetPoint", self._SetPowerPercent)
+            self.lightPower.remove_watch("power_set_point", self._SetPowerPercent)
             self._timer.Stop()
         event.Skip()
 

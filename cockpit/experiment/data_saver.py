@@ -230,7 +230,7 @@ class MrcDataSaver:
         self.file_locks = [threading.Lock() for handle in self.file_handles]
 
         pixel_size_xy = wx.GetApp().objectives.get_pixel_size()
-        lens_id = wx.GetApp().objectives.get_current().lens_ID
+        lens_id = wx.GetApp().objectives.get_current().lens_id
         # wavelength should always be on camera even if "0"
         wavelengths = [c.wavelength for c in self.cameras]
 

@@ -75,7 +75,7 @@ class Clarity(microscope_device.MicroscopeFilter):
         for h in self.handlers:
             events.publish(events.DEVICE_STATUS, h, state)
             if state not in [STATES.error, STATES.busy]:
-                h.updateAfterMove()
+                h.update_after_move()
 
     def set_enabled(self, state):
         if state:
@@ -138,7 +138,7 @@ class Clarity(microscope_device.MicroscopeFilter):
         # slide selector
         panel.Sizer.AddSpacer(4)
         panel.Sizer.Add(wx.StaticText(panel, label="sectioning"))
-        panel.Sizer.Add(powerhandler.makeSelector(panel), flag=wx.EXPAND)
+        panel.Sizer.Add(powerhandler.make_selector(panel), flag=wx.EXPAND)
         # # filter selector -- moved to filters panel
         # panel.Sizer.AddSpacer(4)
         # panel.Sizer.Add(wx.StaticText(panel, label='filter'))

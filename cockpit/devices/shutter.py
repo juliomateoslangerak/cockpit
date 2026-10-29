@@ -45,7 +45,7 @@ class ShutterDevice(device.Device):
                 handlers.append(h)
         self.lights = handlers
         # Register this shutter with the LightHandler class.
-        LightHandler.addShutter(self, self.lights)
+        LightHandler.add_shutter(self, self.lights)
 
     def initialize(self):
         pass

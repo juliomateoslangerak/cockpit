@@ -125,16 +125,16 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         led650power = depot.get_handler_with_name("650 LED power")
 
         # Set the output power to use for this light source, when it is active.
-        led650power.setPower(2.5)
+        led650power.set_power(2.5)
 
         # Set this light source to be continually exposing.
-        led650.setExposing(True)
+        led650.set_exposing(True)
 
         # Wait for some time (1.5 seconds in this case).
         time.sleep(1.5)
 
         # Set this light source to stop continually exposing.
-        led650.setExposing(False)
+        led650.set_exposing(False)
 
         # Get another light source. The "\n" in the name is a newline, which
         # was inserted (when this light source handler was created) to make
@@ -189,9 +189,9 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Get the device responsible for the dichroics and light sources
         lightsDevice = depot.getDevice(cockpit.devices.lights)
         # Set a new filter/dichroic for the lower turret.
-        lightsDevice.setFilter(isFirstFilter=True, label="2-488 L")
+        lightsDevice.set_filter(isFirstFilter=True, label="2-488 L")
         # Set a new filter/dichroic for the upper turret.
-        lightsDevice.setFilter(isFirstFilter=False, label="6-600bp")
+        lightsDevice.set_filter(isFirstFilter=False, label="6-600bp")
         # Note: you may want to try setting the filter multiple times in a
         # row as the turret doesn't always actually move to the desired
         # position...

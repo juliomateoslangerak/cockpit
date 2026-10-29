@@ -589,7 +589,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         header.NumIntegers = numIntegers
         header.NumFloats = numFloats
         # we can only have one lens ID so just grab the current one.
-        header.LensNum = wx.GetApp().objectives.get_current().lens_ID
+        header.LensNum = wx.GetApp().objectives.get_current().lens_id
         extendedBytes = 4 * (numIntegers + numFloats) * len(self.tiles)
         header.next = extendedBytes
 

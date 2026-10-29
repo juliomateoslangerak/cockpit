@@ -63,12 +63,12 @@ class LightPowerHandler(device.DeviceHandler):
     """Handler for light sources whose power can be controlled in software.
 
     Callbacks should fill in the following functions:
-    - setPower(value): Set power level.
-    - getPower(): Get current output power level.
+    - set_power(value): Set power level.
+    - get_power(): Get current output power level.
 
     Args:
-        curPower (float): Initial output power.
-        isEnabled (bool): True iff the handler can be interacted with.
+        current_power (float): Initial output power.
+        is_enabled (bool): True iff the handler can be interacted with.
     """
 
     def __init__(
@@ -77,11 +77,11 @@ class LightPowerHandler(device.DeviceHandler):
         group_name,
         callbacks,
         wavelength,
-        curPower: float,
-        isEnabled=True,
+        current_power: float,
+        is_enabled=True,
     ) -> None:
         # Validation:
-        required = set(["getPower", "setPower"])
+        required = set(["get_power", "set_power"])
         missing = required.difference(callbacks)
         if missing:
             e = Exception(
@@ -92,65 +92,65 @@ class LightPowerHandler(device.DeviceHandler):
 
         super().__init__(name, group_name, False, callbacks, depot.LIGHT_POWER)
         self.wavelength = wavelength
-        self.lastPower = curPower
-        self.powerSetPoint = None
-        self.isEnabled = isEnabled
+        self.last_power = current_power
+        self.power_set_point = None
+        self.is_enabled = is_enabled
 
     def finalize_initialization(self):
         super().finalize_initialization()
-        self._applyUserConfig()
+        self._apply_user_config()
 
-    def _applyUserConfig(self):
-        targetPower = cockpit.util.user_config.get_value(
+    def _apply_user_config(self):
+        target_power = cockpit.util.user_config.get_value(
             self.name + "-lightPower", default=0.01
         )
         try:
-            self.setPower(targetPower)
+            self.set_power(target_power)
         except Exception as e:
             _logger.warning(
                 "Failed to set prior power level %s for %s: %s",
-                targetPower,
+                target_power,
                 self.name,
                 e,
             )
 
-    def onSaveSettings(self):
-        return self.powerSetPoint
+    def on_save_settings(self):
+        return self.power_set_point
 
-    def onLoadSettings(self, settings):
+    def on_load_settings(self, settings):
         try:
-            self.setPower(settings)
+            self.set_power(settings)
         except Exception as e:
             # Invalid power; just ignore it.
             print("Invalid power for %s: %s" % (self.name, settings))
 
-    def set_enabled(self, isEnabled):
+    def set_enabled(self, is_enabled):
         """Toggle accessibility of the handler."""
-        self.isEnabled = isEnabled
+        self.is_enabled = is_enabled
 
     def get_is_enabled(self):
         """Return True iff we're currently enabled (i.e. GUI is active)."""
-        return self.isEnabled
+        return self.is_enabled
 
-    def getPower(self):
+    def get_power(self):
         """Fetch the current laser power."""
-        return self.callbacks["getPower"]()
+        return self.callbacks["get_power"]()
 
-    def setPower(self, power):
+    def set_power(self, power):
         """Handle the user selecting a new power level."""
         if power < 0.0 or power > 1.0:
             raise RuntimeError(
                 "Tried to set invalid power %f for light %s"
                 % (power, self.name)
             )
-        self.callbacks["setPower"](power)
-        self.powerSetPoint = power
+        self.callbacks["set_power"](power)
+        self.power_set_point = power
         cockpit.util.user_config.set_value(self.name + "-lightPower", power)
 
-    def getWavelength(self):
+    def get_wavelength(self):
         """Simple getter."""
         return self.wavelength
 
     def get_savefile_info(self):
         """Experiments should include the laser power."""
-        return "%s: %.1f" % (self.name, self.lastPower)
+        return "%s: %.1f" % (self.name, self.last_power)

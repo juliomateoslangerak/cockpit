@@ -69,7 +69,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         # ROI: (left, top, width, height)
         ROI: (512, 512, 128, 128)
 
-    Guessing the correct transform can be tricky and it's often easier
+    Guessing the correct transform can be tricky, and it's often easier
     to do it by trial and error.  Since this is a fairly specific
     thing that is typically only done once, there isn't a UI on
     Cockpit to do it.  To experiment and find the right transform
@@ -126,8 +126,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
         self.settings.update(self._proxy.get_all_settings())
         events.publish(events.SETTINGS_CHANGED % str(self))
 
-    def _set_transform(self, tr):
-        self._proxy.set_transform(tr)
+    def _set_transform(self, transform):
+        self._proxy.set_transform(transform)
         self.update_settings()
 
     def cleanup_after_experiment(self):
@@ -165,8 +165,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             self.defaults = DEFAULTS_SENT
 
     def _read_user_config(self):
-        idstr = self.handler.get_identifier() + "_SETTINGS"
-        defaults = cockpit.util.user_config.get_value(idstr)
+        id_str = self.handler.get_identifier() + "_SETTINGS"
+        defaults = cockpit.util.user_config.get_value(id_str)
         if defaults is None:
             self.defaults = DEFAULTS_NONE
             return
@@ -201,12 +201,12 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def get_handlers(self):
         """Return camera handlers."""
-        trigsource = self.config.get("triggersource", None)
-        trigline = self.config.get("triggerline", None)
-        if trigsource:
-            trighandler = depot.get_handler(trigsource, depot.EXECUTOR)
+        trigger_source = self.config.get("triggersource", None)
+        trigger_line = self.config.get("triggerline", None)
+        if trigger_source:
+            trigger_handler = depot.get_handler(trigger_source, depot.EXECUTOR)
         else:
-            trighandler = None
+            trigger_handler = None
 
         self.handler = cockpit.handlers.camera.CameraHandler(
             "%s" % self.name,
@@ -227,8 +227,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                 "soft_trigger": self.soft_trigger,
             },
             cockpit.handlers.camera.TRIGGER_SOFT,
-            trighandler,
-            trigline,
+            trigger_handler,
+            trigger_line,
         )
 
         return [self.handler]
@@ -261,7 +261,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             self.handler.exposure_mode = self._get_cockpit_exposure_mode()
             self.listener.connect()
         self.update_settings()
-        # a hack as the event expects a light handler, but doesnt use it so
+        # a hack as the event expects a light handler, but doesn't use it so
         # call with the camera handler.
         events.publish(events.LIGHT_EXPOSURE_UPDATE, self.handler)
         return self.enabled
@@ -340,7 +340,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                 "pixelsize": wx.GetApp().objectives.get_pixel_size(),
                 "imagePos": cockpit.interfaces.stage_mover.get_position(),
                 "exposure time": self.get_exposure_time(),
-                "lensID": wx.GetApp().objectives.get_current().lens_ID,
+                "lensID": wx.GetApp().objectives.get_current().lens_id,
                 "ROI": self.get_roi(self.name),
             }
             # basic heuristic to find excitation wavelength.

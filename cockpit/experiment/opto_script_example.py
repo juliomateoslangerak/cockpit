@@ -138,13 +138,13 @@ class OptoExperiment(z_stack.ZStackExperiment):
             activatedLights = []
             for light, shouldBeOn in self.lightToIsOnDuringAcquisition.items():
                 if shouldBeOn:
-                    light.setExposing(True)
+                    light.set_exposing(True)
                     activatedLights.append(light)
             # Invoke our base class' execute() function to collect data.
             result = super().execute()
             # Turn off the triggering lights.
             for light in activatedLights:
-                light.setExposing(False)
+                light.set_exposing(False)
         return result
 
     def shineLight(self, light, sequence):
@@ -156,11 +156,11 @@ class OptoExperiment(z_stack.ZStackExperiment):
             # Sleep until we should start illumination.
             time.sleep(start - curTime)
             # Turn the light on.
-            light.setExposing(True)
+            light.set_exposing(True)
             # Sleep until we should turn the light off.
             time.sleep(stop - start)
             # Turn the light off.
-            light.setExposing(False)
+            light.set_exposing(False)
             curTime = stop
 
 

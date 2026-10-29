@@ -98,7 +98,7 @@ class AmbientLight(cockpit.devices.device.Device):
                 "ambient",
                 callbacks,
                 wavelength=0,
-                exposureTime=100.0,
+                exposure_time=100.0,
             )
         ]
 

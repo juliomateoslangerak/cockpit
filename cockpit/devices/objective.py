@@ -119,6 +119,6 @@ class ObjectiveDevice(cockpit.devices.device.Device):
             transform=self._transform,
             offset=self._offset,
             colour=self._colour,
-            lens_ID=self._lens_ID,
+            lens_id=self._lens_ID,
         )
         return [handler]

@@ -62,7 +62,7 @@ class TestObjective(unittest.TestCase):
             ("transform", (1, 0, 0)),
             ("offset", (-100, 50, 0)),
             ("colour", (1.0, 0.5, 0.5)),
-            ("lens_ID", 10611),
+            ("lens_id", 10611),
         ]:
             self.assertEqual(getattr(handlers[0], attr), expected)
 

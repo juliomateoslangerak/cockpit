@@ -515,7 +515,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             ),
             (
                 "Make grid of sites",
-                lambda *args: cockpit.gui.dialogs.grid_sites_dialog.showDialog(
+                lambda *args: cockpit.gui.dialogs.grid_sites_dialog.show_dialog(
                     self
                 ),
                 None,

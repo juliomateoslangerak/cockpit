@@ -73,11 +73,11 @@ class GridSitesDialog(wx.Dialog):
         self.settings = cockpit.util.user_config.get_value(
             "gridSitesDialog",
             default={
-                "numRows": "10",
-                "numColumns": "10",
-                "imageWidth": "512",
-                "imageHeight": "512",
-                "markerSize": "25",
+                "num_rows": "10",
+                "num_columns": "10",
+                "image_width": "512",
+                "image_height": "512",
+                "marker_size": "25",
             },
         )
 
@@ -91,91 +91,91 @@ class GridSitesDialog(wx.Dialog):
         )
         sizer.Add(label, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        self.numRows = cockpit.gui.gui_utils.add_labeled_input(
+        self.num_rows = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Number of rows:",
-            default_value=self.settings["numRows"],
+            default_value=self.settings["num_rows"],
         )
-        self.numColumns = cockpit.gui.gui_utils.add_labeled_input(
+        self.num_columns = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Number of columns:",
-            default_value=self.settings["numColumns"],
+            default_value=self.settings["num_columns"],
         )
-        self.imageWidth = cockpit.gui.gui_utils.add_labeled_input(
+        self.image_width = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Horizontal spacing (pixels):",
-            default_value=self.settings["imageWidth"],
+            default_value=self.settings["image_width"],
         )
-        self.imageHeight = cockpit.gui.gui_utils.add_labeled_input(
+        self.image_height = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Vertical spacing (pixels):",
-            default_value=self.settings["imageHeight"],
+            default_value=self.settings["image_height"],
         )
-        self.markerSize = cockpit.gui.gui_utils.add_labeled_input(
+        self.marker_size = cockpit.gui.gui_utils.add_labeled_input(
             self,
             sizer,
             label="Marker size (default 25):",
-            default_value=self.settings["markerSize"],
+            default_value=self.settings["marker_size"],
         )
 
-        buttonBox = wx.BoxSizer(wx.HORIZONTAL)
+        button_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        cancelButton.SetToolTipString("Close this window")
-        buttonBox.Add(cancelButton, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        cancel_button = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        cancel_button.SetToolTip("Close this window")
+        button_box.Add(cancel_button, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        startButton = wx.Button(self, wx.ID_OK, "Mark sites")
-        buttonBox.Add(startButton, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        start_button = wx.Button(self, wx.ID_OK, "Mark sites")
+        button_box.Add(start_button, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        buttonBox.Add((20, -1), 1, wx.ALL, 5)
-        sizer.Add(buttonBox, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        button_box.Add((20, -1), 1, wx.ALL, 5)
+        sizer.Add(button_box, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
         self.SetSizer(sizer)
         self.SetAutoLayout(True)
         sizer.Fit(self)
 
-        self.Bind(wx.EVT_BUTTON, self.OnStart, startButton)
+        self.Bind(wx.EVT_BUTTON, self.on_start, start_button)
 
-    def OnStart(self, evt):
+    def on_start(self, evt):
         """Create the grid of sites."""
-        self.saveSettings()
+        self.save_settings()
 
-        curLoc = cockpit.interfaces.stage_mover.get_position()
-        imageWidth = float(self.imageWidth.GetValue())
-        imageHeight = float(self.imageHeight.GetValue())
-        markerSize = float(self.markerSize.GetValue())
-        pixelSize = wx.GetApp().objectives.get_pixel_size()
+        cur_location = cockpit.interfaces.stage_mover.get_position()
+        image_width = float(self.image_width.GetValue())
+        image_height = float(self.image_height.GetValue())
+        marker_size = float(self.marker_size.GetValue())
+        pixel_size = wx.GetApp().objectives.get_pixel_size()
 
-        for xOffset in range(int(self.numColumns.GetValue())):
-            xLoc = curLoc[0] - xOffset * pixelSize * imageWidth
-            for yOffset in range(int(self.numRows.GetValue())):
-                yLoc = curLoc[1] - yOffset * pixelSize * imageHeight
-                target = numpy.array([xLoc, yLoc, curLoc[2]])
-                newSite = cockpit.interfaces.stage_mover.Site(
-                    target, size=markerSize
+        for x_offset in range(int(self.num_columns.GetValue())):
+            x_location = cur_location[0] - x_offset * pixel_size * image_width
+            for y_offset in range(int(self.num_rows.GetValue())):
+                y_location = cur_location[1] - y_offset * pixel_size * image_height
+                target = numpy.array([x_location, y_location, cur_location[2]])
+                new_site = cockpit.interfaces.stage_mover.Site(
+                    target, size=marker_size
                 )
-                cockpit.interfaces.stage_mover.save_site(newSite)
+                cockpit.interfaces.stage_mover.save_site(new_site)
         self.Destroy()
 
-    def saveSettings(self):
+    def save_settings(self):
         """Save the user's settings to the configuration file."""
         cockpit.util.user_config.set_value(
             "gridSitesDialog",
             {
-                "numRows": self.numRows.GetValue(),
-                "numColumns": self.numColumns.GetValue(),
-                "imageWidth": self.imageWidth.GetValue(),
-                "imageHeight": self.imageHeight.GetValue(),
-                "markerSize": self.markerSize.GetValue(),
+                "num_rows": self.num_rows.GetValue(),
+                "num_columns": self.num_columns.GetValue(),
+                "image_width": self.image_width.GetValue(),
+                "image_height": self.image_height.GetValue(),
+                "marker_size": self.marker_size.GetValue(),
             },
         )
 
 
-def showDialog(parent):
+def show_dialog(parent):
     """Show the dialog."""
     dialog = GridSitesDialog(parent)
     dialog.Show()

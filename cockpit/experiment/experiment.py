@@ -390,7 +390,7 @@ class Experiment:
         """
         return True
 
-    def generate_actions(self):
+    def generate_actions(self, *args, **kwargs):
         """Generate an ActionTable of events to perform during the experiment.
 
         Return the ActionTable instance.

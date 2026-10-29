@@ -455,9 +455,9 @@ class Experiment:
                     t, h, action = self.table[cur_index]
                     if (
                         h.device_type == depot.CAMERA
-                        and "softTrigger" in h.callbacks
+                        and "soft_trigger" in h.callbacks
                     ):
-                        fn = lambda: h.callbacks["softTrigger"]()
+                        fn = lambda: h.callbacks["soft_trigger"]()
                     elif h.device_type == depot.STAGE_POSITIONER:
                         fn = lambda: h.move_absolute(action)
 

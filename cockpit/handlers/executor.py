@@ -385,8 +385,8 @@ class DigitalMixin:
 
         # Switch all lights and cameras off.
         seq.append((seq[-1][0] + 1, 0))
-        if self.callbacks.get("runSequence", None):
-            self.callbacks["runSequence"](seq)
+        if self.callbacks.get("run_sequence", None):
+            self.callbacks["run_sequence"](seq)
         else:
             self.soft_sequence(seq)
 

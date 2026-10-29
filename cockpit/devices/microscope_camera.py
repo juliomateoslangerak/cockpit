@@ -224,7 +224,7 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                 "get_roi": self.get_roi,
                 "get_sensor_shape": self.get_sensor_shape,
                 "make_ui": self.make_ui,
-                "softTrigger": self.soft_trigger,
+                "soft_trigger": self.soft_trigger,
             },
             cockpit.handlers.camera.TRIGGER_SOFT,
             trighandler,

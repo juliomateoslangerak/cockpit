@@ -160,7 +160,7 @@ class Image(BaseGL):
 
     def __init__(self):
         # Maximum texture edge size
-        self._maxTexEdge = 0
+        self._max_tex_edge = 0
         # Textures used to display this image.
         self._textures = []
         # New data flag
@@ -168,23 +168,23 @@ class Image(BaseGL):
         # Geometry as number of textures along each axis.
         self.shape = (0, 0)
         ## Should we use colour to indicate range clipping?
-        self.clipHighlight = False
+        self.clip_highlight = False
         # Data
         self._data = None
         # Minimum and maximum data value - used for setting greyscale range.
-        self.dptp = 1
-        self.dmin = 0
+        self.data_peak_to_peak = 1
+        self.data_min = 0
         # Grayscale clipping points
-        self.vmax = 1
-        self.vmin = 0
+        self.v_max = 1
+        self.v_min = 0
 
     @property
     def scale(self):
-        return (self.vmax - self.vmin) / (self.dptp)
+        return (self.v_max - self.v_min) / (self.data_peak_to_peak)
 
     @property
     def offset(self):
-        return -(self.vmin - self.dmin) / ((self.dptp * self.scale) or 1)
+        return -(self.v_min - self.data_min) / ((self.data_peak_to_peak * self.scale) or 1)
 
     def __del__(self):
         """Clean up textures."""
@@ -196,75 +196,75 @@ class Image(BaseGL):
 
     def autoscale(self):
         """Fit grayscale to range covered by data."""
-        self.vmin = float(self._data.min())
-        self.vmax = float(self._data.max())
+        self.v_min = float(self._data.min())
+        self.v_max = float(self._data.max())
 
-    def getDisplayRange(self):
-        return (self.vmin, self.vmax)
+    def get_display_range(self):
+        return (self.v_min, self.v_max)
 
-    def setDisplayRange(self, vmin, vmax):
+    def set_display_range(self, vmin, vmax):
         """Set offset and scaling given clip points."""
-        self.vmin = float(vmin)
-        self.vmax = float(vmax)
+        self.v_min = float(vmin)
+        self.v_max = float(vmax)
 
-    def setData(self, data):
+    def set_data(self, data):
         self._data = data
         self._update = True
 
-    def toggleClipHighlight(self, event=None):
-        self.clipHighlight = not self.clipHighlight
+    def toggle_clip_highlight(self, event=None):
+        self.clip_highlight = not self.clip_highlight
 
-    def _createTextures(self):
+    def _create_textures(self):
         """Convert data to textures.
 
         Needs GL context to be set prior to call, and should only
         be called in the main thread."""
         if self._data is None:
             return
-        self._maxTexEdge = glGetInteger(GL_MAX_TEXTURE_SIZE)
+        self._max_tex_edge = glGetInteger(GL_MAX_TEXTURE_SIZE)
         data = self._data
         glPixelStorei(GL_UNPACK_SWAP_BYTES, False)
         # Ensure the right number of textures available.
-        nx = int(np.ceil(data.shape[1] / self._maxTexEdge))
-        ny = int(np.ceil(data.shape[0] / self._maxTexEdge))
-        self.shape = (nx, ny)
-        ntex = nx * ny
-        if ntex > len(self._textures):
-            textures = glGenTextures(ntex - len(self._textures))
+        n_x = int(np.ceil(data.shape[1] / self._max_tex_edge))
+        n_y = int(np.ceil(data.shape[0] / self._max_tex_edge))
+        self.shape = (n_x, n_y)
+        n_tex = n_x * n_y
+        if n_tex > len(self._textures):
+            textures = glGenTextures(n_tex - len(self._textures))
             if isinstance(textures, Iterable):
                 self._textures.extend(textures)
             else:
                 self._textures.append(textures)
-        elif ntex < len(self._textures):
-            glDeleteTextures(len(self._textures) - ntex)
-        if ntex == 1:
+        elif n_tex < len(self._textures):
+            glDeleteTextures(len(self._textures) - n_tex)
+        if n_tex == 1:
             # Data will fit into a single texture.
             # Do we need to round these up to a power of 2?
-            ty, tx = data.shape
+            t_y, t_x = data.shape
         else:
             # Need to use multiple textures to store data.
-            tx = ty = self._maxTexEdge
-        self.dptp = np.ptp(data)
-        self.dmin = data.min()
-        if self.dptp < 1e-6:
-            self.dptp = 1
+            t_x = t_y = self._max_tex_edge
+        self.data_peak_to_peak = np.ptp(data)
+        self.data_min = data.min()
+        if self.data_peak_to_peak < 1e-6:
+            self.data_peak_to_peak = 1
         for i, tex in enumerate(self._textures):
-            xoff = tx * (i % nx)
-            yoff = ty * (i // nx)
+            x_off = t_x * (i % n_x)
+            y_off = t_y * (i // n_x)
             subdata = (
                 data[
-                    yoff : min(data.shape[0], yoff + ty),
-                    xoff : min(data.shape[1], xoff + tx),
+                    y_off : min(data.shape[0], y_off + t_y),
+                    x_off : min(data.shape[1], x_off + t_x),
                 ].astype(np.float32)
-                - self.dmin
-            ) / self.dptp
+                - self.data_min
+            ) / self.data_peak_to_peak
             glBindTexture(GL_TEXTURE_2D, tex)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
             glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RED, tx, ty, 0, GL_RED, GL_FLOAT, None
+                GL_TEXTURE_2D, 0, GL_RED, t_x, t_y, 0, GL_RED, GL_FLOAT, None
             )
             glTexSubImage2D(
                 GL_TEXTURE_2D,
@@ -284,26 +284,26 @@ class Image(BaseGL):
         if self._data is None:
             return
         elif self._update:
-            self._createTextures()
+            self._create_textures()
         shader = self.get_shader()
         glUseProgram(shader)
         # Vertical and horizontal modifiers for non-square images.
-        hlim = self._data.shape[1] / max(self._data.shape)
-        vlim = self._data.shape[0] / max(self._data.shape)
+        h_lim = self._data.shape[1] / max(self._data.shape)
+        v_lim = self._data.shape[0] / max(self._data.shape)
         # Number of x and y textures.
-        nx, ny = self.shape
+        n_x, n_y = self.shape
         # Quad dimensions for one texture.
-        dx = 2 * hlim / nx
-        dy = 2 * vlim / ny
+        d_x = 2 * h_lim / n_x
+        d_y = 2 * v_lim / n_y
         if len(self._textures) > 1:
-            tx = ty = self._maxTexEdge
+            t_x = t_y = self._max_tex_edge
             # xy & zoom correction for incompletely-filled textures at upper & right edges.
-            xcorr = ((tx - self._data.shape[1]) % tx) / (nx * tx)
-            ycorr = ((ty - self._data.shape[0]) % ty) / (ny * ty)
-            zoomcorr = self._data.shape[1] / (nx * tx)
-            zoomcorr = max(zoomcorr, self._data.shape[0] / (ny * ty))
-            zoom = zoom / zoomcorr
-            pan = (zoomcorr * pan[0] + xcorr, zoomcorr * pan[1] + ycorr)
+            x_corr = ((t_x - self._data.shape[1]) % t_x) / (n_x * t_x)
+            y_corr = ((t_y - self._data.shape[0]) % t_y) / (n_y * t_y)
+            zoom_corr = self._data.shape[1] / (n_x * t_x)
+            zoom_corr = max(zoom_corr, self._data.shape[0] / (n_y * t_y))
+            zoom = zoom / zoom_corr
+            pan = (zoom_corr * pan[0] + x_corr, zoom_corr * pan[1] + y_corr)
         # Update shader parameters
         glUniform2f(glGetUniformLocation(shader, "pan"), pan[0], pan[1])
         glUniform1i(glGetUniformLocation(shader, "tex"), 0)
@@ -311,24 +311,24 @@ class Image(BaseGL):
         glUniform1f(glGetUniformLocation(shader, "offset"), self.offset)
         glUniform1f(glGetUniformLocation(shader, "zoom"), zoom)
         glUniform1i(
-            glGetUniformLocation(shader, "show_clip"), self.clipHighlight
+            glGetUniformLocation(shader, "show_clip"), self.clip_highlight
         )
         # Render
         glEnable(GL_TEXTURE_2D)
         glEnableClientState(GL_VERTEX_ARRAY)
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         # nested loops are still quicker than itertools.product
-        for j in range(ny):
+        for j in range(n_y):
             # i and j are indices that determine left and bottom quad co-ords.
             # ii and jj determine upper quad co-ords, and may be fractional for
             # quads at the top or right of the image.
-            if j > 0 and j == ny - 1:
-                jj = self._data.shape[0] / self._maxTexEdge
+            if j > 0 and j == n_y - 1:
+                jj = self._data.shape[0] / self._max_tex_edge
             else:
                 jj = j + 1
-            for i in range(nx):
-                if i > 0 and i == nx - 1:
-                    ii = self._data.shape[1] / self._maxTexEdge
+            for i in range(n_x):
+                if i > 0 and i == n_x - 1:
+                    ii = self._data.shape[1] / self._max_tex_edge
                 else:
                     ii = i + 1
                 # Arrays used to create textures have top left at [0,0].
@@ -336,10 +336,10 @@ class Image(BaseGL):
                 # vertical co-ords.
                 glVertexPointerf(
                     [
-                        (-hlim + i * dx, -vlim + jj * dy),
-                        (-hlim + ii * dx, -vlim + jj * dy),
-                        (-hlim + ii * dx, -vlim + j * dy),
-                        (-hlim + i * dx, -vlim + j * dy),
+                        (-h_lim + i * d_x, -v_lim + jj * d_y),
+                        (-h_lim + ii * d_x, -v_lim + jj * d_y),
+                        (-h_lim + ii * d_x, -v_lim + j * d_y),
+                        (-h_lim + i * d_x, -v_lim + j * d_y),
                     ]
                 )
                 glTexCoordPointer(
@@ -353,7 +353,7 @@ class Image(BaseGL):
                         (0, jj % 1 or 1),
                     ],
                 )
-                glBindTexture(GL_TEXTURE_2D, self._textures[j * nx + i])
+                glBindTexture(GL_TEXTURE_2D, self._textures[j * n_x + i])
                 glDrawArrays(GL_QUADS, 0, 4)
         glDisable(GL_TEXTURE_2D)
         glDisableClientState(GL_TEXTURE_COORD_ARRAY)
@@ -364,20 +364,20 @@ class Histogram(BaseGL):
     def __init__(self):
         self.bins = None
         self.counts = None
-        self.lbound = None
-        self.ubound = None
-        self.lthresh = None
-        self.uthresh = None
+        self.lower_bound = None
+        self.upper_bound = None
+        self.lower_threshold = None
+        self.upper_threshold = None
 
-    def data2gl(self, val):
-        return -1 + 2 * (val - self.lbound) / (
-            (self.ubound - self.lbound) or 1
+    def data_to_gl(self, val):
+        return -1 + 2 * (val - self.lower_bound) / (
+                (self.upper_bound - self.lower_bound) or 1
         )
 
-    def gl2data(self, x):
-        return self.lbound + ((self.ubound - self.lbound) or 1) * (x + 1) / 2
+    def gl_to_data(self, x):
+        return self.lower_bound + ((self.upper_bound - self.lower_bound) or 1) * (x + 1) / 2
 
-    def setData(self, data):
+    def set_data(self, data):
         # Calculate histogram.
         # Use shifted average histogram to avoid binning artefacts.
         # generate set of m histograms
@@ -385,38 +385,38 @@ class Histogram(BaseGL):
         #   start points 0, h/m, 2h/m, ..., (m-1)h/m
         # 1 < m < 64
         # sum to average
-        if self.lbound is None:
-            self.lbound = data.min()
-        if self.ubound is None:
-            self.ubound = data.max()
-        if self.lthresh is None:
-            self.lthresh = self.lbound
-        if self.uthresh is None:
-            self.uthresh = self.ubound
-        nbins = 64
+        if self.lower_bound is None:
+            self.lower_bound = data.min()
+        if self.upper_bound is None:
+            self.upper_bound = data.max()
+        if self.lower_threshold is None:
+            self.lower_threshold = self.lower_bound
+        if self.upper_threshold is None:
+            self.upper_threshold = self.upper_bound
+        nb_bins = 64
         m = 4
-        self.bins = np.linspace(data.min(), data.max(), nbins)
-        self.counts = np.zeros(nbins)
+        self.bins = np.linspace(data.min(), data.max(), nb_bins)
+        self.counts = np.zeros(nb_bins)
         h = self.bins[1] - self.bins[0]
         for i in range(m):
             these = np.bincount(
                 np.digitize(data.flat, self.bins + i * h / m, right=True),
-                minlength=nbins,
+                minlength=nb_bins,
             )
-            self.counts += these[0:nbins]
+            self.counts += these[0:nb_bins]
 
     def draw(self):
         if self.counts is None:
             return
         binw = self.bins[1] - self.bins[0]
-        self.lbound = min(self.bins.min() - binw, self.lthresh - binw)
-        self.ubound = max(self.bins.max() + binw, self.uthresh + binw)
-        w = self.ubound - self.lbound
+        self.lower_bound = min(self.bins.min() - binw, self.lower_threshold - binw)
+        self.upper_bound = max(self.bins.max() + binw, self.upper_threshold + binw)
+        w = self.upper_bound - self.lower_bound
         glUseProgram(self.get_shader())
         v = []
         for x, y in zip(self.bins, self.counts):
-            x0 = self.data2gl(x)
-            x1 = self.data2gl(x + binw)
+            x0 = self.data_to_gl(x)
+            x1 = self.data_to_gl(x + binw)
             h = -1 + 2 * y / (self.counts.max() or 1)
             v.extend([(x0, -1), (x0, h), (x1, h), (x1, -1)])
         glEnableClientState(GL_VERTEX_ARRAY)
@@ -424,8 +424,8 @@ class Histogram(BaseGL):
         glColor(0.8, 0.8, 0.8, 1)
         glDrawArrays(GL_QUADS, 0, len(v))
         glColor(1, 0, 0, 1)
-        xl = self.data2gl(self.lthresh)
-        xu = self.data2gl(self.uthresh)
+        xl = self.data_to_gl(self.lower_threshold)
+        xu = self.data_to_gl(self.upper_threshold)
         dx = 0.05
         glLineWidth(2)
         glVertexPointerf([(xl + dx, -1), (xl, -1), (xl, 1), (xl + dx, 1)])
@@ -453,7 +453,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         ## Menu - keep reference to store state of toggle buttons.
         # Must be created after self.image.
         self._menu = wx.Menu()
-        for label, action in self.getMenuActions():
+        for label, action in self.get_menu_actions():
             if not label:
                 self._menu.AppendSeparator()
                 continue
@@ -471,54 +471,54 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
         ## We set this to false if there's an error, to prevent OpenGL
         # error spew.
-        self.shouldDraw = True
+        self.should_draw = True
 
         ## Should we show a crosshair (used for alignment)?
-        self.showCrosshair = False
+        self.show_crosshair = False
         ##default to enabled synced view, set to flase then toggle it to
         ##do the correct subscriptions.
-        self.syncViews = False
-        self.toggleSyncViews()
+        self.sync_views = False
+        self.toggle_sync_views()
 
         ## Queue of incoming images that we need to either display or discard.
-        self.imageQueue = queue.Queue()
+        self.image_queue = queue.Queue()
         ## Current image we're working with.
-        self.imageData = None
+        self.image_data = None
         ## Event that signals that we've finished drawing the current image.
-        self.drawEvent = threading.Event()
+        self.draw_event = threading.Event()
         # This spawns a new thread.
-        self.processImages()
+        self.process_images()
         ## Percentile scaling of min/max based on our histogram.
-        self.blackPoint, self.whitePoint = 0.0, 1.0
+        self.black_point, self.white_point = 0.0, 1.0
 
         ## Size of image we've received, which we use for determining
         # scale.
-        self.imageShape = None
+        self.image_shape = None
 
         ## Overall scaling factor, separate from the above.
         self.zoom = 1.0
         ## Current mouse position
-        self.curMouseX = self.curMouseY = None
+        self.cur_mouse_x = self.cur_mouse_y = None
 
         ## Mouse position as of most recent frame, when dragging.
-        self.mouseDragX = self.mouseDragY = None
+        self.mouse_drag_x = self.mouse_drag_y = None
 
         ## Pan translation factor
-        self.panX = 0
-        self.panY = 0
+        self.pan_x = 0
+        self.pan_y = 0
 
         ## ROI
         self.roi = None  # Current roi
         self.roi_drag = None  # ROI currently being defined
-        self.definingROI = False  # Are we defining the ROI
-        self.definedROI = False  # New ROI defined but not grabbed.
+        self.defining_roi = False  # Are we defining the ROI
+        self.defined_roi = False  # New ROI defined but not grabbed.
         self.shift_down = False  # shift key drags a square ROI
 
         ## What kind of dragging we're doing.
-        self.dragMode = DRAG_NONE
+        self.drag_mode = DRAG_NONE
 
         ## Whether or not we've done some one-time initialization work.
-        self.haveInitedGL = False
+        self.have_inited_gl = False
 
         ## WX context that we set when we need to do GL operations.
         self.context = wx.glcanvas.GLContext(self)
@@ -526,12 +526,12 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         ## Font for text rendering
         self.face = cockpit.gui.freetype.Face(self, 18)
 
-        self.Bind(wx.EVT_PAINT, self.onPaint)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
         # Do nothing, to prevent flickering
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: 0)
-        self.Bind(wx.EVT_MOUSE_EVENTS, self.onMouse)
-        self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel)
-        self.Bind(wx.EVT_DPI_CHANGED, self.onDPIchange)
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.on_mouse)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.on_mouse_wheel)
+        self.Bind(wx.EVT_DPI_CHANGED, self.on_dpi_change)
 
         # Right click also creates context menu event, which will pass up
         # if unhandled. Bind it to None to prevent the main window
@@ -540,17 +540,17 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         self.painting = False
 
         # shift key to make ROI square requirse knowing if the key is down
-        self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown)
-        self.Bind(wx.EVT_KEY_UP, self.onKeyUp)
+        self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
+        self.Bind(wx.EVT_KEY_UP, self.on_key_up)
 
         # Initialise FFT variables
-        self.showFFT = False
+        self.show_fft = False
 
-    def onDPIchange(self, event):
+    def on_dpi_change(self, event):
         # rescale the glcanvas object if needed
         self.w, self.h = self.GetClientSize() * self.GetContentScaleFactor()
 
-    def onMouseWheel(self, event):
+    def on_mouse_wheel(self, event):
         # Only respond if event originated within window.
         p = event.GetPosition()
         s = self.GetSize() * self.GetContentScaleFactor()
@@ -569,27 +569,27 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         x, y = event.GetLogicalPosition(wx.ClientDC(self))
         w, h = self.GetClientSize() * self.GetContentScaleFactor()
         h -= HISTOGRAM_HEIGHT * self.GetContentScaleFactor()
-        glx = -(2 * (x / w) - 1) / self.zoom
-        gly = (2 * (y / h) - 1) / self.zoom
-        newZoom = self.zoom * (1 + factor)
-        if newZoom < 0.001:
+        gl_x = -(2 * (x / w) - 1) / self.zoom
+        gl_y = (2 * (y / h) - 1) / self.zoom
+        new_zoom = self.zoom * (1 + factor)
+        if new_zoom < 0.001:
             factor = -1 + 0.001 / self.zoom
-            newZoom = 0.001
-        self.zoom = newZoom
-        self.panX += factor * glx
-        self.panY += factor * gly
-        events.publish(events.SYNCED_VIEW, self.panX, self.panY, self.zoom)
+            new_zoom = 0.001
+        self.zoom = new_zoom
+        self.pan_x += factor * gl_x
+        self.pan_y += factor * gl_y
+        events.publish(events.SYNCED_VIEW, self.pan_x, self.pan_y, self.zoom)
         self.Refresh()
 
-    def InitGL(self):
+    def init_gl(self):
         self.w, self.h = self.GetClientSize() * self.GetContentScaleFactor()
         self.SetCurrent(self.context)
         glClearColor(0.3, 0.3, 0.3, 0.0)  ## background color
 
-        self.haveInitedGL = True
+        self.have_inited_gl = True
 
     @cockpit.util.threads.call_in_main_thread
-    def clear(self, shouldDestroy=False):
+    def clear(self, should_destroy=False):
         """Stop displaying anything.
 
         Optionally destroy the canvas at the end.
@@ -597,28 +597,28 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # Clear out the queue of images.
         while True:
             try:
-                self.imageQueue.get_nowait()
+                self.image_queue.get_nowait()
             except queue.Empty:
                 break
-        self.imageData = None
-        self.imageShape = None
-        if shouldDestroy:
-            self.shouldDraw = False
+        self.image_data = None
+        self.image_shape = None
+        if should_destroy:
+            self.should_draw = False
             self.Destroy()
         else:
             self.Refresh()
 
-    def setImage(self, newImage):
+    def set_image(self, new_image):
         """Receive a new image.
 
         This will trigger process_images(), below, to actually display the
         image.
         """
-        self.imageQueue.put_nowait(newImage)
-        self.definedROI = False  # new image will have new ROI.
+        self.image_queue.put_nowait(new_image)
+        self.defined_roi = False  # new image will have new ROI.
 
     @cockpit.util.threads.call_in_new_thread
-    def processImages(self):
+    def process_images(self):
         """Consume images out of self.image_queue and either display them or
         discard them.
 
@@ -626,57 +626,57 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         we don't jam up -- if several images arrive while we process one image,
         then the extras get discarded.
         """
-        while self.shouldDraw:
+        while self.should_draw:
             # Grab all images out of the queue; we'll use the most recent one.
-            newImage = self.imageQueue.get()
-            while not self.imageQueue.empty():
-                newImage = self.imageQueue.get_nowait()
+            new_image = self.image_queue.get()
+            while not self.image_queue.empty():
+                new_image = self.image_queue.get_nowait()
             # We want to autoscale to the image if it's our first one.
-            isFirstImage = self.imageData is None
-            self.imageData = newImage
+            is_first_image = self.image_data is None
+            self.image_data = new_image
             # When the image shape changes, we reset back to filling the
             # display with the image.
-            shouldResetView = self.imageShape != newImage.shape
-            self.imageShape = newImage.shape
-            self.histogram.setData(newImage)
-            if self.showFFT:
-                self.image.setData(
+            should_reset_view = self.image_shape != new_image.shape
+            self.image_shape = new_image.shape
+            self.histogram.set_data(new_image)
+            if self.show_fft:
+                self.image.set_data(
                     np.log(
-                        np.abs(np.fft.fftshift(np.fft.fft2(self.imageData)))
+                        np.abs(np.fft.fftshift(np.fft.fft2(self.image_data)))
                         + 1e-16
                     )
                 )
             else:
-                self.image.setData(newImage)
-            if shouldResetView:
-                self.resetView()
-            if isFirstImage:
+                self.image.set_data(new_image)
+            if should_reset_view:
+                self.reset_view()
+            if is_first_image:
                 self.image.autoscale()
             wx.CallAfter(self.Refresh)
             # Wait for the image to be drawn before we do anything more.
-            self.drawEvent.wait(timeout=1)
-            self.drawEvent.clear()
+            self.draw_event.wait(timeout=1)
+            self.draw_event.clear()
 
-    def getScaling(self):
+    def get_scaling(self):
         """Return the blackpoint and whitepoint (i.e. the pixel values which
         are displayed as black and white, respectively)."""
-        if self.imageData is None:
+        if self.image_data is None:
             # No image to operate on yet.
             return (None, None)
         else:
-            return self.image.getDisplayRange()
+            return self.image.get_display_range()
 
-    def getRelativeScaling(self):
+    def get_relative_scaling(self):
         """As above, but the values used to calculate them instead of the
         absolute pixel values (e.g.
 
         (.1, .9) instead of (100, 400).
         """
-        return (self.blackPoint, self.whitePoint)
+        return (self.black_point, self.white_point)
 
-    def onPaint(self, event):
+    def on_paint(self, event):
         """@cockpit.util.threads.call_in_main_thread."""
-        if not self.shouldDraw:
+        if not self.should_draw:
             return
 
         try:
@@ -685,27 +685,27 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         except:
             return
 
-        if not self.haveInitedGL:
-            self.InitGL()
+        if not self.have_inited_gl:
+            self.init_gl()
 
         if self.painting:
             print("Concurrent - returning")
             return
 
         try:
-            Hist_Height = int(HISTOGRAM_HEIGHT * self.GetContentScaleFactor())
+            hist_height = int(HISTOGRAM_HEIGHT * self.GetContentScaleFactor())
             self.painting = True
             self.SetCurrent(self.context)
             glClear(GL_COLOR_BUFFER_BIT)
-            glViewport(0, Hist_Height, self.w, self.h - Hist_Height)
-            self.image.draw(pan=(self.panX, self.panY), zoom=self.zoom)
-            if self.showCrosshair:
-                self.drawCrosshair()
-            if self.definingROI:
-                self.drawROI()
-            if self.definedROI:
-                self.drawROI()
-            glViewport(0, 0, self.w, Hist_Height // 2)
+            glViewport(0, hist_height, self.w, self.h - hist_height)
+            self.image.draw(pan=(self.pan_x, self.pan_y), zoom=self.zoom)
+            if self.show_crosshair:
+                self.draw_crosshair()
+            if self.defining_roi:
+                self.draw_roi()
+            if self.defined_roi:
+                self.draw_roi()
+            glViewport(0, 0, self.w, hist_height // 2)
             self.histogram.draw()
             glColor(0, 1, 0, 1)
 
@@ -714,15 +714,15 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             glPushMatrix()
             glLoadIdentity()
             glOrtho(0, self.w, 0, self.h, 1.0, -1.0)
-            glTranslatef(0, (Hist_Height) / 2 + 2, 0)
+            glTranslatef(0, (hist_height) / 2 + 2, 0)
             try:
                 self.face.render(
                     "%d [%-10d %10d] %d"
                     % (
-                        self.image.dmin,
-                        self.histogram.lthresh,
-                        self.histogram.uthresh,
-                        self.image.dmin + self.image.dptp,
+                        self.image.data_min,
+                        self.histogram.lower_threshold,
+                        self.histogram.upper_threshold,
+                        self.image.data_min + self.image.data_peak_to_peak,
                     )
                 )
             except:
@@ -733,43 +733,43 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
             # glFlush()
             self.SwapBuffers()
-            self.drawEvent.set()
+            self.draw_event.set()
         except Exception as e:
             print("Error drawing view canvas:", e)
             traceback.print_exc()
-            # self.shouldDraw = False
+            # self.should_draw = False
         finally:
             self.painting = False
 
     @cockpit.util.threads.call_in_main_thread
-    def drawCrosshair(self):
+    def draw_crosshair(self):
         glColor3f(0, 255, 255)
         glVertexPointerf(
             [
-                (-1, self.zoom * self.panY),
-                (1, self.zoom * self.panY),
-                (self.zoom * self.panX, -1),
-                (self.zoom * self.panX, 1),
+                (-1, self.zoom * self.pan_y),
+                (1, self.zoom * self.pan_y),
+                (self.zoom * self.pan_x, -1),
+                (self.zoom * self.pan_x, 1),
             ]
         )
         glDrawArrays(GL_LINES, 0, 4)
 
     @cockpit.util.threads.call_in_main_thread
-    def drawROI(self):
+    def draw_roi(self):
         if self.roi_drag:
             glColor3f(255, 0, 0)
 
             # Get raw gl co-ordinates
             v = [
-                self.indicesToGl(self.roi_drag[1], self.roi_drag[0]),
-                self.indicesToGl(
+                self.indices_to_gl(self.roi_drag[1], self.roi_drag[0]),
+                self.indices_to_gl(
                     self.roi_drag[1] + self.roi_drag[3], self.roi_drag[0]
                 ),
-                self.indicesToGl(
+                self.indices_to_gl(
                     self.roi_drag[1] + self.roi_drag[3],
                     self.roi_drag[0] + self.roi_drag[2],
                 ),
-                self.indicesToGl(
+                self.indices_to_gl(
                     self.roi_drag[1], self.roi_drag[0] + self.roi_drag[2]
                 ),
             ]
@@ -777,8 +777,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             # Correct co-ordinates for zoom and pan
             v_zoompan = [
                 (
-                    (p[0] + self.panX) * self.zoom,
-                    (p[1] + self.panY) * self.zoom,
+                    (p[0] + self.pan_x) * self.zoom,
+                    (p[1] + self.pan_y) * self.zoom,
                 )
                 for p in v
             ]
@@ -787,90 +787,90 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             glVertexPointerf(v_zoompan)
             glDrawArrays(GL_LINE_LOOP, 0, 4)
 
-    def setSize(self, size):
+    def set_size(self, size):
         """Update the size of the canvas by scaling it."""
-        if self.imageData is not None:
+        if self.image_data is not None:
             self.w, self.h = size * self.GetContentScaleFactor()
         self.Refresh(False)
 
-    def onMouse(self, event):
-        if self.imageShape is None:
+    def on_mouse(self, event):
+        if self.image_shape is None:
             return
-        self.curMouseX, self.curMouseY = (
+        self.cur_mouse_x, self.cur_mouse_y = (
             event.GetPosition() * self.GetContentScaleFactor()
         )
-        self.updateMouseInfo(self.curMouseX, self.curMouseY)
+        self.update_mouse_info(self.cur_mouse_x, self.cur_mouse_y)
         if event.LeftDClick():
             # Explicitly skip EVT_LEFT_DCLICK for parent to handle.
             event.ResumePropagation(2)
             event.Skip()
         elif event.LeftDown():
             # Started dragging
-            self.mouseDragX, self.mouseDragY = self.curMouseX, self.curMouseY
-            self.mouseLdownX, self.mouseLdownY = self.curMouseX, self.curMouseY
-            blackPointX = (
+            self.mouse_drag_x, self.mouse_drag_y = self.cur_mouse_x, self.cur_mouse_y
+            self.mouse_left_down_x, self.mouse_left_down_y = self.cur_mouse_x, self.cur_mouse_y
+            black_point_x = (
                 0.5
-                * (1 + self.histogram.data2gl(self.histogram.lthresh))
+                * (1 + self.histogram.data_to_gl(self.histogram.lower_threshold))
                 * self.w
             )
-            whitePointX = (
+            white_point_x = (
                 0.5
-                * (1 + self.histogram.data2gl(self.histogram.uthresh))
+                * (1 + self.histogram.data_to_gl(self.histogram.upper_threshold))
                 * self.w
             )
             # Set drag mode based on current window position
-            if self.h - self.curMouseY >= (
+            if self.h - self.cur_mouse_y >= (
                 HISTOGRAM_HEIGHT * self.GetContentScaleFactor() * 2
             ):
-                if self.definingROI:
-                    self.dragMode = DRAG_ROI
+                if self.defining_roi:
+                    self.drag_mode = DRAG_ROI
                 else:
-                    self.dragMode = DRAG_CANVAS
-            elif abs(self.curMouseX - blackPointX) < abs(
-                self.curMouseX - whitePointX
+                    self.drag_mode = DRAG_CANVAS
+            elif abs(self.cur_mouse_x - black_point_x) < abs(
+                    self.cur_mouse_x - white_point_x
             ):
-                self.dragMode = DRAG_BLACKPOINT
+                self.drag_mode = DRAG_BLACKPOINT
             else:
-                self.dragMode = DRAG_WHITEPOINT
+                self.drag_mode = DRAG_WHITEPOINT
         elif event.LeftIsDown():
             # Drag mouse. Different behaviors depending on drag mode.
-            if self.dragMode == DRAG_CANVAS:
+            if self.drag_mode == DRAG_CANVAS:
                 # Pan view about.
                 # Window coordinates are upside-down compared to what the
                 # user expects.
-                self.modPan(
-                    self.curMouseX - self.mouseDragX,
-                    self.mouseDragY - self.curMouseY,
+                self.mod_pan(
+                    self.cur_mouse_x - self.mouse_drag_x,
+                    self.mouse_drag_y - self.cur_mouse_y,
                 )
-            elif self.dragMode in [DRAG_BLACKPOINT, DRAG_WHITEPOINT]:
-                glx = -1 + 2 * self.curMouseX / self.w
-                threshold = self.histogram.gl2data(glx)
-                if self.dragMode == DRAG_BLACKPOINT:
-                    self.histogram.lthresh = threshold
-                    self.image.vmin = threshold
+            elif self.drag_mode in [DRAG_BLACKPOINT, DRAG_WHITEPOINT]:
+                gl_x = -1 + 2 * self.cur_mouse_x / self.w
+                threshold = self.histogram.gl_to_data(gl_x)
+                if self.drag_mode == DRAG_BLACKPOINT:
+                    self.histogram.lower_threshold = threshold
+                    self.image.v_min = threshold
                 else:
-                    self.histogram.uthresh = threshold
-                    self.image.vmax = threshold
-            elif self.dragMode == DRAG_ROI:
+                    self.histogram.upper_threshold = threshold
+                    self.image.v_max = threshold
+            elif self.drag_mode == DRAG_ROI:
                 # Get co-ordinates in canvas units
-                coords_x = [self.mouseDragX, self.mouseLdownX]
-                coords_y = [self.mouseDragY, self.mouseLdownY]
-                roi_xmin, roi_ymin = min(coords_x), min(coords_y)
-                roi_xmax, roi_ymax = max(coords_x), max(coords_y)
+                coords_x = [self.mouse_drag_x, self.mouse_left_down_x]
+                coords_y = [self.mouse_drag_y, self.mouse_left_down_y]
+                roi_x_min, roi_y_min = min(coords_x), min(coords_y)
+                roi_x_max, roi_y_max = max(coords_x), max(coords_y)
                 # Convert to data indices
-                roi_min_ind = self.canvasToIndices(roi_xmin, roi_ymin)
-                roi_max_ind = self.canvasToIndices(roi_xmax, roi_ymax)
+                roi_min_ind = self.canvas_to_indices(roi_x_min, roi_y_min)
+                roi_max_ind = self.canvas_to_indices(roi_x_max, roi_y_max)
 
                 if self.shift_down:
                     # shift is down so force square ROI
                     # Get size of roi
-                    roi_maxsize = max(
+                    roi_max_size = max(
                         (
                             roi_max_ind[0] - roi_min_ind[0],
                             roi_max_ind[1] - roi_min_ind[1],
                         )
                     )
-                    roi_size = (roi_maxsize, roi_maxsize)
+                    roi_size = (roi_max_size, roi_max_size)
                 else:
                     roi_size = (
                         roi_max_ind[0] - roi_min_ind[0],
@@ -885,13 +885,13 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                     roi_size[0],
                 )
 
-            self.mouseDragX = self.curMouseX
-            self.mouseDragY = self.curMouseY
+            self.mouse_drag_x = self.cur_mouse_x
+            self.mouse_drag_y = self.cur_mouse_y
         elif event.RightDown():
             cockpit.gui.gui_utils.place_menu_at_mouse(self, self._menu)
         elif event.LeftUp():
-            if self.definingROI:
-                camera = self.Parent.Parent.curCamera
+            if self.defining_roi:
+                camera = self.Parent.Parent.cur_camera
 
                 # Set ROI in camera, correcting for current roi
                 if self.roi:
@@ -908,8 +908,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 events.publish(events.UPDATE_ROI, camera.name)
 
                 self.roi = roi
-                self.definingROI = False
-                self.definedROI = True
+                self.defining_roi = False
+                self.defined_roi = True
         elif event.Entering() and self.TopLevelParent.IsActive():
             self.SetFocus()
         else:
@@ -919,144 +919,144 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # redrawing the histogram. A bit wasteful of resources, this.
         wx.CallAfter(self.Refresh)
 
-    def getMenuActions(self):
+    def get_menu_actions(self):
         """Generate a list of (label, action) tuples to use for generating
         menus."""
         return [
-            ("Reset view", self.resetView),
-            ("Set histogram parameters", self.onSetHistogram),
-            ("Toggle clip highlighting", self.image.toggleClipHighlight),
+            ("Reset view", self.reset_view),
+            ("Set histogram parameters", self.on_set_histogram),
+            ("Toggle clip highlighting", self.image.toggle_clip_highlight),
             ("", None),
-            ("Set ROI", self.onDefineROI),
-            ("Clear ROI", self.onClearROI),
+            ("Set ROI", self.on_define_roi),
+            ("Clear ROI", self.on_clear_roi),
             ("", None),
-            ("Toggle alignment crosshair", self.toggleCrosshair),
-            ("Toggle sync view", self.toggleSyncViews),
-            ("Toggle FFT mode", self.toggleFFT),
+            ("Toggle alignment crosshair", self.toggle_crosshair),
+            ("Toggle sync view", self.toggle_sync_views),
+            ("Toggle FFT mode", self.toggle_fft),
             ("", None),
             (
                 "Send image to mosaic",
                 cockpit.gui.mosaic.window.transferCameraImage,
             ),
-            ("Save image", self.saveData),
+            ("Save image", self.save_data),
         ]
 
-    def onSetHistogram(self, event=None):
+    def on_set_histogram(self, event=None):
         """Let the user specify the blackpoint and whitepoint for image scaling."""
-        values = cockpit.gui.dialogs.get_number_dialog.getManyNumbersFromUser(
+        values = cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
             parent=self,
             title="Set histogram scale parameters",
             prompts=["Blackpoint", "Whitepoint"],
-            defaultValues=[self.histogram.lthresh, self.histogram.uthresh],
+            defaultValues=[self.histogram.lower_threshold, self.histogram.upper_threshold],
         )
         values = [float(v) for v in values]
-        self.image.vmin = self.histogram.lthresh = values[0]
-        self.image.vmax = self.histogram.uthresh = values[1]
+        self.image.v_min = self.histogram.lower_threshold = values[0]
+        self.image.v_max = self.histogram.upper_threshold = values[1]
         self.Refresh()
 
-    def toggleSyncViews(self, event=None):
-        self.syncViews = not self.syncViews
-        if self.syncViews:
+    def toggle_sync_views(self, event=None):
+        self.sync_views = not self.sync_views
+        if self.sync_views:
             events.subscribe(
                 events.SYNCED_VIEW,
-                self.setView,
+                self.set_view,
             )
         else:
             events.unsubscribe(
                 events.SYNCED_VIEW,
-                self.setView,
+                self.set_view,
             )
 
-    def onDefineROI(self, event=None):
+    def on_define_roi(self, event=None):
         self.roi_drag = None
-        self.definingROI = True
+        self.defining_roi = True
 
-    def onClearROI(self, event=None):
-        camera = self.Parent.Parent.curCamera
+    def on_clear_roi(self, event=None):
+        camera = self.Parent.Parent.cur_camera
         sensor_shape = camera.get_sensor_shape()
         roi = (0, 0, sensor_shape[0], sensor_shape[1])
         camera.set_roi(roi)
         self.roi = roi
-        self.definedROI = False
+        self.defined_roi = False
         events.publish(events.UPDATE_ROI, camera.name)
         self.Refresh()
 
-    def onKeyDown(self, event):
+    def on_key_down(self, event):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_SHIFT:
             self.shift_down = True
         event.Skip()
         self.Refresh()
 
-    def onKeyUp(self, event):
+    def on_key_up(self, event):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_SHIFT:
             self.shift_down = False
         event.Skip()
         self.Refresh()
 
-    def toggleCrosshair(self, event=None):
-        self.showCrosshair = not (self.showCrosshair)
+    def toggle_crosshair(self, event=None):
+        self.show_crosshair = not (self.show_crosshair)
 
-    def toggleFFT(self, event=None):
-        if self.showFFT:
-            self.showFFT = False
-            self.image.setData(self.imageData)
+    def toggle_fft(self, event=None):
+        if self.show_fft:
+            self.show_fft = False
+            self.image.set_data(self.image_data)
         else:
-            self.showFFT = True
-            self.image.setData(
+            self.show_fft = True
+            self.image.set_data(
                 np.log(
-                    np.abs(np.fft.fftshift(np.fft.fft2(self.imageData)))
+                    np.abs(np.fft.fftshift(np.fft.fft2(self.image_data)))
                     + 1e-16
                 )
             )
 
-    def canvasToGl(self, x, y):
+    def canvas_to_gl(self, x, y):
         """Convert window co-ordinates to gl co-ordinates."""
-        glx = (-1 + 2 * x / self.w - self.panX * self.zoom) / self.zoom
-        gly = (
+        gl_x = (-1 + 2 * x / self.w - self.pan_x * self.zoom) / self.zoom
+        gl_y = (
             -(
-                -1
-                + 2
-                * y
-                / (self.h - (HISTOGRAM_HEIGHT * self.GetContentScaleFactor()))
-                + self.panY * self.zoom
+                    -1
+                    + 2
+                    * y
+                    / (self.h - (HISTOGRAM_HEIGHT * self.GetContentScaleFactor()))
+                    + self.pan_y * self.zoom
             )
             / self.zoom
         )
-        return (glx, gly)
+        return (gl_x, gl_y)
 
-    def glToIndices(self, glx, gly):
+    def gl_to_indices(self, gl_x, gl_y):
         """Convert gl co-ordinates to indices into the data.
 
-        Note: pass in x,y, but returns row-major datay, datax
+        Note: pass in x,y, but returns row-major data_y, data_x
         """
         # Vertical and horizontal modifiers for non-square images.
-        hlim = self.imageShape[1] / max(self.imageShape)
-        vlim = self.imageShape[0] / max(self.imageShape)
-        datax = int((1 + glx / hlim) * self.imageShape[1] // 2)
-        datay = int(
-            self.imageShape[0] - ((1 + gly / vlim) * self.imageShape[0] // 2)
+        h_lim = self.image_shape[1] / max(self.image_shape)
+        v_lim = self.image_shape[0] / max(self.image_shape)
+        data_x = int((1 + gl_x / h_lim) * self.image_shape[1] // 2)
+        data_y = int(
+            self.image_shape[0] - ((1 + gl_y / v_lim) * self.image_shape[0] // 2)
         )
-        datax_clamped = max(0, min(datax, self.imageShape[1]))
-        datay_clamped = max(0, min(datay, self.imageShape[0]))
-        return (datay_clamped, datax_clamped)
+        data_x_clamped = max(0, min(data_x, self.image_shape[1]))
+        data_y_clamped = max(0, min(data_y, self.image_shape[0]))
+        return (data_y_clamped, data_x_clamped)
 
-    def indicesToGl(self, datay, datax):
+    def indices_to_gl(self, data_y, data_x):
         """Convert data indices to gl co-ordinates.
 
-        Note: pass in row-major datay, datax, but returns x,y
+        Note: pass in row-major data_y, data_x, but returns x,y
         """
-        glx = 2 / self.imageShape[1] * datax - 1
-        gly = 2 / self.imageShape[0] * (self.imageShape[0] - datay) - 1
+        gl_x = 2 / self.image_shape[1] * data_x - 1
+        gl_y = 2 / self.image_shape[0] * (self.image_shape[0] - data_y) - 1
 
-        return (glx, gly)
+        return (gl_x, gl_y)
 
-    def canvasToIndices(self, x, y):
+    def canvas_to_indices(self, x, y):
         """Convert window co-ordinates to indices into the data."""
-        return self.glToIndices(*self.canvasToGl(x, y))
+        return self.gl_to_indices(*self.canvas_to_gl(x, y))
 
-    def updateMouseInfo(self, x, y):
+    def update_mouse_info(self, x, y):
         """Display information on the pixel under the mouse at the given
         position."""
         # Test that all required values have been populated. Use any(...),
@@ -1064,36 +1064,36 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         # element in the list is an array with more than one element.
         if any(
             req is None
-            for req in [self.imageData, self.imageShape, self.w, self.h]
+            for req in [self.image_data, self.image_shape, self.w, self.h]
         ):
             return
         # First we have to convert from screen- to data-coordinates.
-        coords = np.array(self.canvasToIndices(x, y), dtype=np.uint)
-        shape = np.array(self.imageShape, dtype=np.uint)
+        coords = np.array(self.canvas_to_indices(x, y), dtype=np.uint)
+        shape = np.array(self.image_shape, dtype=np.uint)
         if (coords < shape).all() and (coords >= 0).all():
-            value = self.imageData[coords[0], coords[1]]
+            value = self.image_data[coords[0], coords[1]]
             events.publish(events.IMAGE_PIXEL_INFO, coords[::-1], value)
 
-    def modPan(self, dx, dy):
+    def mod_pan(self, dx, dy):
         """Modify our panning amount by the provided factor."""
-        self.panX += 2 * dx / (self.w * self.zoom)
-        self.panY += 2 * dy / (self.h * self.zoom)
-        events.publish(events.SYNCED_VIEW, self.panX, self.panY, self.zoom)
+        self.pan_x += 2 * dx / (self.w * self.zoom)
+        self.pan_y += 2 * dy / (self.h * self.zoom)
+        events.publish(events.SYNCED_VIEW, self.pan_x, self.pan_y, self.zoom)
         self.Refresh(False)
 
-    def resetView(self):
+    def reset_view(self):
         """Reset our view mods."""
-        if self.imageShape is None:
+        if self.image_shape is None:
             # No image to work with.
             return
-        self.panX = 0
-        self.panY = 0
+        self.pan_x = 0
+        self.pan_y = 0
         self.zoom = 1.0
         self.Refresh(False)
 
-    def setView(self, panX, panY, zoom):
-        self.panX = panX
-        self.panY = panY
+    def set_view(self, pan_x, pan_y, zoom):
+        self.pan_x = pan_x
+        self.pan_y = pan_y
         self.zoom = zoom
         # setView may be called by the eventloop though the ViewCanvas (self) has been already destroyed
         if self:
@@ -1102,51 +1102,51 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
     def reset_pixel_scale(self):
         self.image.autoscale()
         (
-            self.histogram.lthresh,
-            self.histogram.uthresh,
-        ) = self.image.getDisplayRange()
+            self.histogram.lower_threshold,
+            self.histogram.upper_threshold,
+        ) = self.image.get_display_range()
         self.Refresh()
 
-    def saveData(self, evt=None):
+    def save_data(self, evt=None):
         with wx.FileDialog(
             self,
             "Save image",
             wildcard="DV files (*.dv)|*.dv",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
-        ) as fileDialog:
-            if fileDialog.ShowModal() != wx.ID_OK:
+        ) as file_dialog:
+            if file_dialog.ShowModal() != wx.ID_OK:
                 return
-            path = fileDialog.GetPath()
+            path = file_dialog.GetPath()
         # TODO: add XYsize and wavelength to saved data. These can be passed as
         # kwargs, but the way per-camera pixel sizes are handled needs to be
         # addressed first. See issue #538.
-        if self.Parent.Parent.curCamera is not None:
+        if self.Parent.Parent.cur_camera is not None:
             metadata = self.Parent.Parent.metadata
-            wls = [
+            wavelengths = [
                 metadata["wavelength"],
             ]
-            xysize = metadata["pixelsize"]
-            xyzpos = metadata["imagePos"]
-            exposureTime = metadata["exposure time"]
-            emwavelength = metadata["wavelength"]
-            exwavelength = metadata["exwavelength"]
-            lensID = metadata["lensID"]
+            xy_size = metadata["pixel_size"]
+            xyz_pos = metadata["image_position"]
+            exposure_time = metadata["exposure_time"]
+            em_wavelength = metadata["wavelength"]
+            ex_wavelength = metadata["ex_wavelength"]
+            lens_id = metadata["lens_id"]
 
             # setup a single plane of extended header metadata
             ## Size of one plane's worth of metadata in the extended header.
-            numIntegers = 8
-            numFloats = 32
+            num_integers = 8
+            num_floats = 32
 
-            intMetadataBuffers = np.zeros(numIntegers, dtype=np.int32)
-            floatMetadataBuffers = np.zeros(numFloats, dtype=np.float32)
-            floatMetadataBuffers[12] = 1.0  # intensity scaling
-            floatMetadataBuffers[2:5] = xyzpos[0:3]
-            floatMetadataBuffers[5] = np.min(self.imageData)
-            floatMetadataBuffers[6] = np.max(self.imageData)
-            floatMetadataBuffers[7] = np.mean(self.imageData)
-            floatMetadataBuffers[8] = exposureTime
-            floatMetadataBuffers[10] = exwavelength
-            floatMetadataBuffers[11] = emwavelength
+            int_metadata_buffers = np.zeros(num_integers, dtype=np.int32)
+            float_metadata_buffers = np.zeros(num_floats, dtype=np.float32)
+            float_metadata_buffers[12] = 1.0  # intensity scaling
+            float_metadata_buffers[2:5] = xyz_pos[0:3]
+            float_metadata_buffers[5] = np.min(self.image_data)
+            float_metadata_buffers[6] = np.max(self.image_data)
+            float_metadata_buffers[7] = np.mean(self.image_data)
+            float_metadata_buffers[8] = exposure_time
+            float_metadata_buffers[10] = ex_wavelength
+            float_metadata_buffers[11] = em_wavelength
 
             # spec for extended header
             # 8 32bit signed integers, often are all set to zero.
@@ -1167,12 +1167,12 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             # 13 energy conversion factor (usually 1)
 
         cockpit.util.datadoc.write_data_as_mrc_with_exthdr(
-            self.imageData,
+            self.image_data,
             path,
-            xy_size=xysize,
-            wavelengths=wls,
-            zxy0=xyzpos,
-            lens_id=lensID,
-            int_metadata_buffers=intMetadataBuffers,
-            float_metadata_buffers=floatMetadataBuffers,
+            xy_size=xy_size,
+            wavelengths=wavelengths,
+            zxy0=xyz_pos,
+            lens_id=lens_id,
+            int_metadata_buffers=int_metadata_buffers,
+            float_metadata_buffers=float_metadata_buffers,
         )

@@ -337,11 +337,11 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
             metadata = {
                 "timestamp": timestamp,
                 "wavelength": wavelength,
-                "pixelsize": wx.GetApp().objectives.get_pixel_size(),
-                "imagePos": cockpit.interfaces.stage_mover.get_position(),
-                "exposure time": self.get_exposure_time(),
-                "lensID": wx.GetApp().objectives.get_current().lens_id,
-                "ROI": self.get_roi(self.name),
+                "pixel_size": wx.GetApp().objectives.get_pixel_size(),
+                "image_position": cockpit.interfaces.stage_mover.get_position(),
+                "exposure_time": self.get_exposure_time(),
+                "lens_id": wx.GetApp().objectives.get_current().lens_id,
+                "roi": self.get_roi(self.name),
             }
             # basic heuristic to find excitation wavelength.
             # Finds active lights, sorts in reverse order and then finds the
@@ -352,10 +352,10 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
                     lights.append(float(light.wavelength))
                     lights.sort()
                     lights.reverse()
-            metadata["exwavelength"] = None
-            for exwavelength in lights:
-                if wavelength and wavelength > exwavelength:
-                    metadata["exwavelength"] = exwavelength
+            metadata["ex_wavelength"] = None
+            for ex_wavelength in lights:
+                if wavelength and wavelength > ex_wavelength:
+                    metadata["ex_wavelength"] = ex_wavelength
                     break
         else:
             # experiment running so populate minimum of metadata

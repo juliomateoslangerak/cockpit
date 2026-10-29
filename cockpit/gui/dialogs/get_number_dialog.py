@@ -160,7 +160,7 @@ def getNumberFromUser(parent, title, prompt, default, atMouse=True):
     return value
 
 
-def getManyNumbersFromUser(
+def get_many_numbers_from_user(
     parent, title, prompts, defaultValues, atMouse=True
 ):
     dialog = GetManyNumbersDialog(

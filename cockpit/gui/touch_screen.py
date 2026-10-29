@@ -1580,7 +1580,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
         # for camera in wx.GetApp().depot.getHandlersOfType(depot.CAMERA):
         #    # Subscribe to new image events only after canvas is prepared.
         #    events.subscribe("new image %s" % camera.name, self._on_new_image)
-        events.subscribe(events.CAMERA_ENABLE, self.onCameraEnableEvent)
+        events.subscribe(events.CAMERA_ENABLE, self.on_camera_enable_event)
 
     def _do_layout(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1592,7 +1592,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
         self.SetSizer(sizer)
         self.SetupScrolling(scroll_x=False)
         self.Layout()
-        self.resetGrid()
+        self.reset_grid()
 
     def _on_new_image(self, *args, **kwargs):
         print(
@@ -1602,26 +1602,26 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
         )
 
     @cockpit.util.threads.call_in_main_thread
-    def onCameraEnableEvent(self, camera, enabled):
+    def on_camera_enable_event(self, camera, enabled):
         views = [
             child
             for child in self.GetChildren()
             if isinstance(child, ViewPanel)
         ]
-        activeViews = [view for view in views if view.get_is_enabled()]
-        if enabled and camera not in [view.curCamera for view in activeViews]:
-            inactiveViews = set(views).difference(activeViews)
+        active_views = [view for view in views if view.get_is_enabled()]
+        if enabled and camera not in [view.cur_camera for view in active_views]:
+            inactiveViews = set(views).difference(active_views)
             inactiveView = inactiveViews.pop()
             inactiveView.enable(camera)
             inactiveView.change_size(_VIEWPANEL_SIZE)
         elif not enabled:
-            for view in activeViews:
-                if view.curCamera is camera:
+            for view in active_views:
+                if view.cur_camera is camera:
                     view.disable()
-        self.resetGrid()
+        self.reset_grid()
 
-    def resetGrid(self):
-        viewsToShow = []
+    def reset_grid(self):
+        views_to_show = []
         views = [
             child
             for child in self.GetChildren()
@@ -1630,13 +1630,13 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
         for view in views:
             view.Hide()
             if view.get_is_enabled():
-                viewsToShow.append(view)
+                views_to_show.append(view)
         # If there are no active views then display one empty panel.
-        if not viewsToShow:
-            viewsToShow.append(views[0])
+        if not views_to_show:
+            views_to_show.append(views[0])
 
         self.GetSizer().Clear()
-        for view in viewsToShow:
+        for view in views_to_show:
             self.GetSizer().Add(view)
         self.GetSizer().ShowItems(True)
 
@@ -1655,7 +1655,7 @@ class ImagePreviewPanel(wx.lib.scrolledpanel.ScrolledPanel):
             new_width = self.GetClientSize()[0]
             vp_aspect_ratio = _VIEWPANEL_SIZE[0] / _VIEWPANEL_SIZE[1]
             new_height = int(new_width / vp_aspect_ratio)
-            for view in viewsToShow:
+            for view in views_to_show:
                 view.change_size(wx.Size(new_width, new_height))
 
 
@@ -1663,7 +1663,7 @@ class DialogSafeties(wx.Dialog):
     def __init__(self, parent, **kwargs):
         kwargs["title"] = "Set stages' soft limits"
         self._scrollbars = []
-        self._textctrls = []
+        self._text_controls = []
         super().__init__(parent, **kwargs)
         self._set_properties()
         self._do_layout()
@@ -1687,28 +1687,28 @@ class DialogSafeties(wx.Dialog):
                     limits_hard[1] - limits_hard[0],
                     100,
                 )
-                textctrl = wx.TextCtrl(
+                text_control = wx.TextCtrl(
                     self,
                     size=wx.Size(64, -1),
                     value="{:g}".format(limits_soft[limit_index]),
                     style=wx.TE_CENTRE | wx.TE_PROCESS_ENTER,
                 )
                 self._scrollbars.append(scrollbar)
-                self._textctrls.append(textctrl)
+                self._text_controls.append(text_control)
                 # Event handling
                 scrollbar.Bind(
                     wx.EVT_SCROLL,
-                    lambda e, tc=textctrl: tc.SetValue(
+                    lambda e, tc=text_control: tc.SetValue(
                         "{:g}".format(e.GetPosition())
                     ),
                 )
-                textctrl.Bind(
+                text_control.Bind(
                     wx.EVT_TEXT_ENTER,
                     lambda e, sb=scrollbar: self._update_scrollbar(
                         sb, int(e.GetString())
                     ),
                 )
-                textctrl.Bind(
+                text_control.Bind(
                     wx.EVT_KILL_FOCUS,
                     lambda e, sb=scrollbar: self._on_focus_kill(
                         sb, int(e.GetString())
@@ -1724,7 +1724,7 @@ class DialogSafeties(wx.Dialog):
                     wx.ALIGN_CENTRE,
                 )
                 sizer_row.Add(scrollbar, 1, wx.ALIGN_CENTRE | wx.LEFT, 5)
-                sizer_row.Add(textctrl, 0, wx.ALIGN_CENTRE | wx.LEFT, 5)
+                sizer_row.Add(text_control, 0, wx.ALIGN_CENTRE | wx.LEFT, 5)
                 sizer_row.Add(
                     wx.StaticText(self, label="um"),
                     0,
@@ -1767,19 +1767,19 @@ class DialogSafeties(wx.Dialog):
 
     def _on_apply(self, e):
         # Verify that the ranges make sense
-        makeSense = True
+        make_sense = True
         values = [sb.GetThumbPosition() for sb in self._scrollbars]
         for axis_index, (min, max) in enumerate(
             zip(values[::2], values[1::2])
         ):
             if min > max:
-                makeSense = False
+                make_sense = False
                 print(
                     "Mismatch between minimum and maximum limits for axis",
                     ("X", "Y", "Z")[axis_index],
                 )
                 break
-        if makeSense:
+        if make_sense:
             # Set the limits all at once
             for axis_index, (min, max) in enumerate(
                 zip(values[::2], values[1::2])
@@ -1789,13 +1789,13 @@ class DialogSafeties(wx.Dialog):
             # Close the dialog
             self.Close()
 
-    def _on_limit_soft_change(self, e):
+    def _on_limit_soft_change(self, event):
         # Unpack event data
-        axis, value, isMax = e.EventData[:3]
+        axis, value, isMax = event.EventData[:3]
         # Update both respective scrollbar and textctrl
         index = axis * 2 + int(isMax)
         self._scrollbars[index].SetThumbPosition(value)
-        self._textctrls[index].SetValue("{:g}".format(value))
+        self._text_controls[index].SetValue("{:g}".format(value))
 
 
 class TouchScreenWindow(wx.Frame):

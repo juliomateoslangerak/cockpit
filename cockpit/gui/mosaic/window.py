@@ -983,11 +983,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # This data should be grabbed from the metadata as the system
         # settings, stage pos etc may have changed
         data, metadata = cockpit.gui.camera.window.get_image_for_camera(camera)
-        pixel_size = metadata["pixelsize"]
+        pixel_size = metadata["pixel_size"]
         width, height = camera.get_image_size()
         width *= pixel_size
         height *= pixel_size
-        x, y, z = metadata["imagePos"]
+        x, y, z = metadata["image_position"]
 
         self.canvas.addImage(
             data,
@@ -1342,7 +1342,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             "Delete confirmation",
         ):
             return
-        self.canvas.deleteAll()
+        self.canvas.delete_all()
         self.shouldRestart = True
 
     @_pauseMosaicLoop
@@ -1404,7 +1404,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         """
         # Cancel selecting beads now that we have what we need.
         self.setSelectFunc(None)
-        tiles = self.canvas.getTilesIntersecting(start, end)
+        tiles = self.canvas.get_tiles_intersecting(start, end)
         statusDialog = wx.ProgressDialog(
             parent=self,
             title="Finding bead centers",
@@ -1424,7 +1424,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 # User cancelled.
                 break
             try:
-                data = self.canvas.getCompositeTileData(tile, tiles)
+                data = self.canvas.get_composite_tile_data(tile, tiles)
             except Exception as e:
                 print("Failed to get tile data at %s: %s" % (tile.pos, e))
                 break

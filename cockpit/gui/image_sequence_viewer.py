@@ -49,7 +49,7 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-import numpy
+import numpy as np
 import wx
 
 import cockpit.gui.image_viewer.view_canvas
@@ -66,7 +66,7 @@ class ImageSequenceViewer(wx.Frame):
         the display.
 
         Args:
-            images (numpy.ndarray): WTZYX array of image data to display.
+            images (np.ndarray): WTZYX array of image data to display.
             title (str): Title string for the window.
         """
         super().__init__(*args, **kwargs)
@@ -74,7 +74,7 @@ class ImageSequenceViewer(wx.Frame):
         self.images = images
         self.title = title
         ## Current image/pixel under examination.
-        self.curViewIndex = numpy.zeros(5, dtype=int)
+        self.cur_view_index = np.zeros(5, dtype=int)
 
         ## Panel for holding UI widgets.
         self.panel = wx.Panel(self)
@@ -83,14 +83,14 @@ class ImageSequenceViewer(wx.Frame):
         # Set up our UI -- just a collection of sliders to change the
         # image we show, plus some keyboard shortcuts.
         ## Maps axes to the Sliders for those axes.
-        self.axisToSlider = dict()
+        self.axis_to_slider = {}
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sliderSizer = wx.BoxSizer(wx.HORIZONTAL)
+        slider_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for i, label in enumerate(["Wavelength", "Time", "Z"]):
             if self.images.shape[i] > 1:
                 # We need a slider for this dimension.
-                sliderSizer.Add(self.makeSlider(i, label))
-        sizer.Add(sliderSizer)
+                slider_sizer.Add(self.make_slider(i, label))
+        sizer.Add(slider_sizer)
 
         self.canvas = cockpit.gui.image_viewer.view_canvas.ViewCanvas(
             self.panel,
@@ -106,12 +106,12 @@ class ImageSequenceViewer(wx.Frame):
         self.SetSizerAndFit(temp)
         self.Show()
         # For some reason, if we don't do this, then the first time we try
-        # to access curViewIndex in self.setCurImage we get strange values.
-        self.setCurImage()
+        # to access cur_view_index in self.setCurImage we get strange values.
+        self.set_cur_image()
 
-        events.subscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
-        self.Bind(wx.EVT_CLOSE, self.onClose)
-        accelTable = wx.AcceleratorTable(
+        events.subscribe(events.IMAGE_PIXEL_INFO, self.on_image_pixel_info)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+        acceleration_table = wx.AcceleratorTable(
             [
                 (wx.ACCEL_NORMAL, wx.WXK_NUMPAD_MULTIPLY, 1),
                 (wx.ACCEL_NORMAL, wx.WXK_LEFT, 2),
@@ -120,8 +120,8 @@ class ImageSequenceViewer(wx.Frame):
                 (wx.ACCEL_NORMAL, wx.WXK_DOWN, 5),
             ]
         )
-        self.SetAcceleratorTable(accelTable)
-        self.Bind(wx.EVT_MENU, self.onRescale, id=1)
+        self.SetAcceleratorTable(acceleration_table)
+        self.Bind(wx.EVT_MENU, self.on_rescale, id=1)
         for id, delta in [
             (2, (0, -1)),
             (3, (0, 1)),
@@ -130,40 +130,40 @@ class ImageSequenceViewer(wx.Frame):
         ]:
             self.Bind(
                 wx.EVT_MENU,
-                lambda event, delta=delta: self.shiftView(delta),
+                lambda event, delta=delta: self.shift_view(delta),
                 id=id,
             )
 
-    def onClose(self, event):
+    def on_close(self, event):
         """Unsubscribe from the pixel info event so we don't leave stale
         functions lying around."""
-        events.unsubscribe(events.IMAGE_PIXEL_INFO, self.onImagePixelInfo)
+        events.unsubscribe(events.IMAGE_PIXEL_INFO, self.on_image_pixel_info)
         event.Skip()
 
-    def onImagePixelInfo(self, coords, value):
+    def on_image_pixel_info(self, coords, value):
         """Update our title bar with the pixel brightness info."""
         self.SetTitle(
             "%s: (%d, %d): %.2f" % (self.title, coords[0], coords[1], value)
         )
 
-    def onRescale(self, event=None):
+    def on_rescale(self, event=None):
         """Rescale the view."""
         self.canvas.reset_pixel_scale()
 
-    def shiftView(self, delta):
+    def shift_view(self, delta):
         """Given a (time, Z) delta, adjust the current view index by that
         delta."""
         for i, val in enumerate(delta):
             axis = i + 1
-            target = self.curViewIndex[axis] + delta[i]
-            self.curViewIndex[axis] = max(
+            target = self.cur_view_index[axis] + delta[i]
+            self.cur_view_index[axis] = max(
                 0, min(self.images.shape[axis] - 1, target)
             )
-            if axis in self.axisToSlider:
-                self.axisToSlider[axis].SetValue(self.curViewIndex[axis])
-        self.setCurImage()
+            if axis in self.axis_to_slider:
+                self.axis_to_slider[axis].SetValue(self.cur_view_index[axis])
+        self.set_cur_image()
 
-    def makeSlider(self, axis, label):
+    def make_slider(self, axis, label):
         """Generate a slider for changing the view along the specified axis."""
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(
@@ -177,18 +177,18 @@ class ImageSequenceViewer(wx.Frame):
             maxValue=self.images.shape[axis] - 1,
             style=wx.SL_AUTOTICKS | wx.SL_LABELS,
         )
-        slider.Bind(wx.EVT_SCROLL, lambda event: self.onSlider(axis, event))
-        self.axisToSlider[axis] = slider
+        slider.Bind(wx.EVT_SCROLL, lambda event: self.on_slider(axis, event))
+        self.axis_to_slider[axis] = slider
         sizer.Add(slider)
         return sizer
 
-    def onSlider(self, axis, event):
+    def on_slider(self, axis, event):
         """Handle a slider moving."""
         position = event.GetPosition()
-        self.curViewIndex[axis] = position
-        self.setCurImage()
+        self.cur_view_index[axis] = position
+        self.set_cur_image()
 
-    def setCurImage(self):
+    def set_cur_image(self):
         """Set the current image, per our current view index."""
-        curImage = self.images[tuple(self.curViewIndex[:3])]
-        self.canvas.setImage(curImage)
+        cur_image = self.images[tuple(self.cur_view_index[:3])]
+        self.canvas.set_image(cur_image)

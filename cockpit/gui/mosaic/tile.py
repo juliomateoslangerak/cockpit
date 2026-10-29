@@ -285,14 +285,14 @@ class Tile:
         """Free up memory we were using."""
         glDeleteTextures([self.texture])
 
-    def recreateTexture(self):
+    def recreate_texture(self):
         """Wipe our texture and recreate it, presumably because it has changed
         somehow."""
         self.wipe()
         self.texture = glGenTextures(1)
         self.bindTexture()
 
-    def intersectsBox(self, viewBox):
+    def intersects_box(self, viewBox):
         """Return true iff our area intersects the given (bottomLeft, topRight)
         tuple."""
         bottomLeft, topRight = viewBox
@@ -309,7 +309,7 @@ class Tile:
 
     def render(self, viewBox):
         """Draw the tile, if it intersects the given view box."""
-        if not self.intersectsBox(viewBox):
+        if not self.intersects_box(viewBox):
             return
         if self.shouldRefresh:
             self.refresh()
@@ -376,7 +376,7 @@ class MegaTile(Tile):
     ## Length in pixels of one edge of a MegaTile's texture.
     pixelSize = None
     ## Length in microns of one edge of a MegaTile's texture.
-    micronSize = None
+    micron_size = None
     ## An array of ones, used to initialize the MegaTile textures.
     _emptyTileData = None
 
@@ -393,7 +393,7 @@ class MegaTile(Tile):
         super().__init__(
             self._emptyTileData,
             pos,
-            (self.micronSize, self.micronSize),
+            (self.micron_size, self.micron_size),
             (0, 1),
             "megatiles",
             metadata=None,
@@ -409,7 +409,7 @@ class MegaTile(Tile):
             megaTileFramebuffer = glGenFramebuffers(1)
 
     @classmethod
-    def setPixelSize(cls, edge):
+    def set_pixel_size(cls, edge):
         if cls.pixelSize is not None:
             # Class is already initialized - nothing to do.
             # Used to raise an exception here, but both MacroStage and
@@ -418,22 +418,22 @@ class MegaTile(Tile):
             # initialisation of any but the first instance.
             return
         cls.pixelSize = edge
-        cls.micronSize = edge * 1
+        cls.micron_size = edge * 1
         cls._emptyTileData = numpy.ones((edge, edge), dtype=numpy.float32)
 
-    def prerenderTiles(self, tiles):
+    def prerender_tiles(self, tiles):
         """Go through the provided list of Tiles, find the ones that overlap
         our area, and prerender them to our texture."""
         if not tiles:
             return
         minX = self.pos[0]
         minY = self.pos[1]
-        maxX = self.pos[0] + self.micronSize
-        maxY = self.pos[1] + self.micronSize
+        maxX = self.pos[0] + self.micron_size
+        maxY = self.pos[1] + self.micron_size
         viewBox = ((minX, minY), (maxX, maxY))
         newTiles = []
         for tile in tiles:
-            if tile.intersectsBox(viewBox):
+            if tile.intersects_box(viewBox):
                 newTiles.append(tile)
         if newTiles:
             # Allocate memory for our texture, if needed.
@@ -456,7 +456,7 @@ class MegaTile(Tile):
             glViewport(0, 0, self.pixelSize, self.pixelSize)
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
-            glOrtho(0, self.micronSize, self.micronSize, 0, 1, 0)
+            glOrtho(0, self.micron_size, self.micron_size, 0, 1, 0)
             glTranslatef(-self.pos[0], -self.pos[1], 0)
             glMatrixMode(GL_MODELVIEW)
 
@@ -474,10 +474,10 @@ class MegaTile(Tile):
             self.haveAllocatedMemory = False
             self.numRenderedTiles = 0
 
-    def recreateTexture(self):
+    def recreate_texture(self):
         """Prevent allocating a new texture if we haven't drawn anything yet."""
         if self.haveAllocatedMemory:
-            super().recreateTexture()
+            super().recreate_texture()
             self.refresh()
 
     def render(self, viewBox):

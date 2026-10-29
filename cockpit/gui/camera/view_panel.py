@@ -78,11 +78,11 @@ class ViewPanel(wx.Panel):
         super().__init__(*args, **kwargs)
 
         ## Handle of the current camera we're controlling.
-        self.curCamera = None
+        self.cur_camera = None
         ## Position of the currently displayed image - only updated on dbl-click.
-        self.imagePos = None
+        self.image_position = None
 
-        columnSizer = wx.BoxSizer(wx.VERTICAL)
+        column_sizer = wx.BoxSizer(wx.VERTICAL)
         ## Clickable text box showing the name of the currently-selected
         # camera.
         self.selector = wx.StaticText(
@@ -90,17 +90,17 @@ class ViewPanel(wx.Panel):
             style=wx.RAISED_BORDER | wx.ALIGN_CENTRE | wx.ST_NO_AUTORESIZE,
             size=(VIEW_WIDTH, 30),
         )
-        self.selector.Bind(wx.EVT_LEFT_DOWN, self.onSelector)
+        self.selector.Bind(wx.EVT_LEFT_DOWN, self.on_selector)
         self.selector.SetDoubleBuffered(True)
 
-        columnSizer.Add(self.selector, 0)
+        column_sizer.Add(self.selector, 0)
 
         ## Panel for holding our canvas.
-        self.canvasPanel = wx.Panel(self)
-        self.canvasPanel.SetMinSize((VIEW_WIDTH, VIEW_HEIGHT))
-        columnSizer.Add(self.canvasPanel)
+        self.canvas_panel = wx.Panel(self)
+        self.canvas_panel.SetMinSize((VIEW_WIDTH, VIEW_HEIGHT))
+        column_sizer.Add(self.canvas_panel)
 
-        self.SetSizerAndFit(columnSizer)
+        self.SetSizerAndFit(column_sizer)
 
         ## Canvas we paint the camera's view onto. Created when we connect a
         # camera, and destroyed after.
@@ -108,32 +108,32 @@ class ViewPanel(wx.Panel):
 
         self.disable()
 
-        events.subscribe(events.FILTER_CHANGE, self.onFilterChange)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.onMouse)
+        events.subscribe(events.FILTER_CHANGE, self.on_filter_change)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.on_mouse)
 
-    def onMouse(self, event):
+    def on_mouse(self, event):
         """User interacted with our current image.
 
         On double-click, we move the stage to centre the feature under the
         mouse.
         """
         if event.LeftDClick():
-            if self.imagePos is None:
-                self.imagePos = cockpit.interfaces.stage_mover.get_position()
+            if self.image_position is None:
+                self.image_position = cockpit.interfaces.stage_mover.get_position()
             x, y = event.GetPosition() * self.GetContentScaleFactor()
-            pixelSize = wx.GetApp().objectives.get_pixel_size()
+            pixel_size = wx.GetApp().objectives.get_pixel_size()
             x0, y0 = self.canvas.glToIndices(0, 0)
             dy, dx = self.canvas.canvasToIndices(x, y)
             dx -= x0
             dy -= y0
-            dx *= pixelSize
-            dy *= pixelSize
-            target = (self.imagePos[0] - dx, self.imagePos[1] - dy)
+            dx *= pixel_size
+            dy *= pixel_size
+            target = (self.image_position[0] - dx, self.image_position[1] - dy)
             cockpit.interfaces.stage_mover.go_to_xy(target)
         else:
             event.Skip()
 
-    def onSelector(self, event):
+    def on_selector(self, event):
         """User clicked on the selector.
 
         Pop up a menu to let them either activate a camera or, if we're already
@@ -143,12 +143,12 @@ class ViewPanel(wx.Panel):
         # TODO: fix focus issue so that key bindings work immediately after camera enable.
         # Currently, have to mouse-over the bitmap area, or click in another window.
         menu = wx.Menu()
-        if self.curCamera is not None:
+        if self.cur_camera is not None:
             item = menu.Append(
-                -1, "Disable %s" % self.curCamera.descriptiveName
+                -1, "Disable %s" % self.cur_camera.descriptive_name
             )
             self.Bind(
-                wx.EVT_MENU, lambda event: self.curCamera.toggleState(), item
+                wx.EVT_MENU, lambda event: self.cur_camera.toggle_state(), item
             )
         else:
             # Get all inactive cameras.
@@ -171,16 +171,16 @@ class ViewPanel(wx.Panel):
         self.selector.SetLabel("No camera")
         self.selector.SetBackgroundColour((180, 180, 180))
         self.selector.Refresh()
-        if self.curCamera is not None:
+        if self.cur_camera is not None:
             # Wrap this in a try/catch since it will fail if the initial
             # camera enabling failed.
             events.unsubscribe(
-                events.NEW_IMAGE % self.curCamera.name, self.onImage
+                events.NEW_IMAGE % self.cur_camera.name, self.on_image
             )
-            self.curCamera = None
+            self.cur_camera = None
         if self.canvas is not None:
             # Destroy the canvas.
-            self.canvas.clear(shouldDestroy=True)
+            self.canvas.clear(should_destroy=True)
             self.canvas = None
 
     def enable(self, camera):
@@ -188,18 +188,18 @@ class ViewPanel(wx.Panel):
         self.selector.SetLabel(camera.descriptive_name)
         self.selector.SetBackgroundColour(camera.color)
         self.selector.Refresh()
-        self.curCamera = camera
+        self.cur_camera = camera
 
         # NB the 512 here is the largest texture size our graphics card can
         # gracefully handle.
         self.canvas = cockpit.gui.image_viewer.view_canvas.ViewCanvas(
-            self.canvasPanel, size=(VIEW_WIDTH, VIEW_HEIGHT)
+            self.canvas_panel, size=(VIEW_WIDTH, VIEW_HEIGHT)
         )
         self.canvas.SetSize((VIEW_WIDTH, VIEW_HEIGHT))
-        self.canvas.resetView()
+        self.canvas.reset_view()
 
         # Subscribe to new image events only after canvas is prepared.
-        events.subscribe(events.NEW_IMAGE % self.curCamera.name, self.onImage)
+        events.subscribe(events.NEW_IMAGE % self.cur_camera.name, self.on_image)
 
     def change_size(self, size=wx.Size(VIEW_WIDTH, VIEW_HEIGHT - 40)):
         """TODO: This needs revision, too many sizes are being set."""
@@ -210,47 +210,47 @@ class ViewPanel(wx.Panel):
             self.canvas.SetSize(size)
             self.canvas.SetMinSize(size)
             self.canvas.clear()
-            self.canvas.resetView()
-            self.canvas.setSize(size)
-        self.canvasPanel.SetSize(size)
-        self.canvasPanel.SetMinSize(size)
+            self.canvas.reset_view()
+            # self.canvas.setSize(size)
+        self.canvas_panel.SetSize(size)
+        self.canvas_panel.SetMinSize(size)
         self.selector.SetSize(wx.Size(size[0], 30))
         self.selector.SetMinSize(wx.Size(size[0], 30))
 
     @cockpit.util.threads.call_in_main_thread
-    def onFilterChange(self):
+    def on_filter_change(self):
         """React to the drawer changing, by updating our labels and colors."""
         if self.get_is_enabled():
-            self.selector.SetLabel(self.curCamera.descriptiveName)
-            self.selector.SetBackgroundColour(self.curCamera.color)
+            self.selector.SetLabel(self.cur_camera.descriptive_name)
+            self.selector.SetBackgroundColour(self.cur_camera.color)
             self.Refresh()
 
-    def onImage(self, data, metadata, *args):
+    def on_image(self, data, metadata, *args):
         """Receive a new image and send it to our canvas."""
-        self.canvas.setImage(data)
+        self.canvas.set_image(data)
         if not experiment.is_running():
             self.metadata = metadata
-            self.imagePos = self.metadata["imagePos"]
+            self.image_position = self.metadata["image_position"]
 
     def get_is_enabled(self):
         """Return True if we currently display a camera."""
-        return self.curCamera is not None
+        return self.cur_camera is not None
 
-    def getScaling(self):
+    def get_scaling(self):
         """Get the black- and white-point for the view."""
-        return self.canvas.getScaling()
+        return self.canvas.get_scaling()
 
-    def getRelativeScaling(self):
+    def get_relative_scaling(self):
         """As above, but the relative values used to generate them instead."""
-        return self.canvas.getRelativeScaling()
+        return self.canvas.get_relative_scaling()
 
-    def getPixelData(self):
+    def get_pixel_data(self):
         """Get the current pixel data for the view."""
-        return (self.canvas.imageData, self.metadata)
+        return (self.canvas.image_data, self.metadata)
 
     def __repr__(self):
         """Debugging: convert to string."""
-        descString = ", disabled"
-        if self.curCamera is not None:
-            descString = "for %s" % self.curCamera.name
-        return "<Camera ViewPanel %s>" % descString
+        desc_string = ", disabled"
+        if self.cur_camera is not None:
+            desc_string = "for %s" % self.cur_camera.name
+        return "<Camera ViewPanel %s>" % desc_string

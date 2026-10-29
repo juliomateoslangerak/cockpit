@@ -53,7 +53,7 @@ class SafeControl:
     Clients should bind actions to SafeControlCommit events.
     """
 
-    def PostEvent(self, cancel=False):
+    def post_event(self, cancel=False):
         """Post an event to signal pending or committed value change.
 
         Args:
@@ -70,7 +70,7 @@ class SafeControl:
         evt.SetEventObject(self)
         wx.PostEvent(self, evt)
 
-    def SetPending(self, pending=None):
+    def set_pending(self, pending=None):
         """Set the pending value.
 
         Args:
@@ -94,18 +94,18 @@ class SafeControl:
                 wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)
             )
 
-    def Cancel(self):
+    def cancel(self):
         """Cancel - resets to last committed value."""
         if self._pending is not None:
             self.SetValue(self._committed)
-            self.PostEvent(cancel=True)
+            self.post_event(cancel=True)
 
-    def Commit(self):
+    def commit(self):
         """Commit the pending value."""
         if self._pending is None:
             return
         self.SetValue(self._pending)
-        self.PostEvent()
+        self.post_event()
 
     def SetValue(self, value):
         """Commits a value and updates the displayed value.
@@ -115,7 +115,7 @@ class SafeControl:
         """
         self.Value = value
         self._committed = value
-        self.SetPending(None)
+        self.set_pending(None)
         self.Refresh()
 
     def ReleaseFocus(self):
@@ -204,7 +204,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         self.Bind(wx.EVT_TIMER, self.CheckFocus)
         self.Bind(wx.EVT_SET_FOCUS, self.GetParent().SetFocus)
         self.Bind(wx.EVT_CHILD_FOCUS, self.OnFocus)
-        self.Bind(wx.EVT_KILL_FOCUS, lambda evt: self.Cancel())
+        self.Bind(wx.EVT_KILL_FOCUS, lambda evt: self.cancel())
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
         self.AcceptsFocusRecursively = lambda: True
@@ -232,7 +232,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         if self._pending is not None and not (
             self.HasFocus() or self.te.HasFocus()
         ):
-            self.Cancel()
+            self.cancel()
         else:
             self._checkTimer.StartOnce(500)
 
@@ -250,8 +250,8 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
             return
         self.te.SetFocus()
         new_val = max(min(new_val, self._max), self._min)
-        self.SetPending(new_val)
-        self.PostEvent()
+        self.set_pending(new_val)
+        self.post_event()
 
     def OnSpin(self, evt):
         """Update value and appearance on spin button event.
@@ -267,9 +267,9 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         else:
             return
         new_val = max(min(new_val, self._max), self._min)
-        self.SetPending(new_val)
+        self.set_pending(new_val)
         evt.EventObject.Value = 1
-        self.PostEvent()
+        self.post_event()
 
     def OnText(self, evt):
         """Update value and appearance on validated text input
@@ -283,8 +283,8 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         if evt.String in ["", ".", "-"]:
             return
         text = self.GetValue()
-        self.SetPending(text)
-        self.PostEvent()
+        self.set_pending(text)
+        self.post_event()
 
     def OnChar(self, evt):
         """Handle character events.
@@ -298,7 +298,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         self._laststr = self.te.GetValue()
         if evt.KeyCode == wx.WXK_ESCAPE:
             # Cancel on escape
-            self.Cancel()
+            self.cancel()
             wx.CallAfter(self.ReleaseFocus)
         elif evt.KeyCode in [
             wx.WXK_NUMPAD_ENTER,
@@ -310,18 +310,18 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
             if self._laststr != "":
                 # Commit on return, enter, space or tab
                 self._pending = min(max(self.Value, self._min), self._max)
-                self.Commit()
+                self.commit()
             if evt.KeyCode != wx.WXK_TAB:
                 wx.CallAfter(self.ReleaseFocus)
             evt.Skip()
         elif evt.KeyCode in [wx.WXK_UP, wx.WXK_NUMPAD_UP]:
             # Up arrows increment value
-            self.SetPending(self.Value + [1, 10][evt.shiftDown] * self._inc)
-            self.PostEvent()
+            self.set_pending(self.Value + [1, 10][evt.shiftDown] * self._inc)
+            self.post_event()
         elif evt.KeyCode in [wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN]:
             # Down arrows decrement value
-            self.SetPending(self.Value - [1, 10][evt.shiftDown] * self._inc)
-            self.PostEvent()
+            self.set_pending(self.Value - [1, 10][evt.shiftDown] * self._inc)
+            self.post_event()
         else:
             evt.Skip()
 
@@ -355,7 +355,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
                 s = s[: s.find(".") + self._places + 1]
             self.te.ChangeValue(s)
 
-    def SetPending(self, pending):
+    def set_pending(self, pending):
         """Handle updates to the pending value.
 
         Args:
@@ -363,7 +363,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         """
         # Reset the focus-check timer.
         self._checkTimer.StartOnce(500)
-        super().SetPending(pending)
+        super().set_pending(pending)
         if self._pending is not None and not self.HasFocus():
             self.Value = self._pending
         if pending is None:
@@ -595,12 +595,12 @@ class SetPointGauge(SafeControl, wx.Window):
             and evt.LeftIsDown()
             and self.GetClientRect().Contains(pos)
         ):
-            self.SetPending(self.PosToValue(pos))
-            self.PostEvent()
+            self.set_pending(self.PosToValue(pos))
+            self.post_event()
         elif evt.LeftUp():
-            self.Commit()
+            self.commit()
         elif evt.Leaving() and self.HasFocus():
-            self.Cancel()
+            self.cancel()
         evt.Skip()
 
     def OnLDClick(self, evt):
@@ -610,8 +610,8 @@ class SetPointGauge(SafeControl, wx.Window):
           evt (wx.MouseEvent): The double-click event.
         """
         pos = evt.GetPosition()
-        self.SetPending(self.PosToValue(pos))
-        self.Commit()
+        self.set_pending(self.PosToValue(pos))
+        self.commit()
 
     @property
     def range(self):
@@ -906,7 +906,7 @@ class SpinGauge(wx.Panel):
             if isCommit:
                 other.SetValue(evt.Value)
             else:
-                other.SetPending(evt.Value)
+                other.set_pending(evt.Value)
         if isCommit:
             evt.Skip()  # Propogate up so self can handle commit events.
 
@@ -943,6 +943,6 @@ class SpinGauge(wx.Panel):
           value: The new value as a float, int or float-parsable string.
         """
         self._value = value
-        self.slider.SetPending(None)
+        self.slider.set_pending(None)
         for obj in self.controls:
             obj.SetValue(value)

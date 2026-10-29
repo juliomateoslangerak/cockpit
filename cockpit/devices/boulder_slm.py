@@ -379,7 +379,7 @@ class BoulderSLM(device.Device):
         cockpit.gui.gui_utils.place_menu_at_mouse(event.GetEventObject(), menu)
 
     def test_sim_sequence(self):
-        inputs = cockpit.gui.dialogs.get_number_dialog.getManyNumbersFromUser(
+        inputs = cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
             None,
             "Generate a SIM sequence",
             [

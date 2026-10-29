@@ -100,12 +100,12 @@ class CamerasWindow(wx.Frame):
     @cockpit.util.threads.call_in_main_thread
     def on_camera_enable_event(self, camera, enabled):
         active_views = [view for view in self.views if view.get_is_enabled()]
-        if enabled and camera not in [view.curCamera for view in active_views]:
+        if enabled and camera not in [view.cur_camera for view in active_views]:
             inactive_views = set(self.views).difference(active_views)
             inactive_views.pop().enable(camera)
         elif not (enabled):
             for view in active_views:
-                if view.curCamera is camera:
+                if view.cur_camera is camera:
                     view.disable()
         self.reset_grid()
 
@@ -165,8 +165,8 @@ def rescale_views():
 def get_camera_scaling(camera):
     """Retrieve the black- and white-points for a given camera's display."""
     for view in window.views:
-        if view.curCamera is camera:
-            return view.getScaling()
+        if view.cur_camera is camera:
+            return view.get_scaling()
     raise RuntimeError(
         "Tried to get camera scalings for non-active camera [%s]" % camera.name
     )
@@ -175,5 +175,5 @@ def get_camera_scaling(camera):
 def get_image_for_camera(camera):
     """Retrieve the image currently displayed by the specified camera."""
     for view in window.views:
-        if view.curCamera is camera:
-            return view.getPixelData()
+        if view.cur_camera is camera:
+            return view.get_pixel_data()

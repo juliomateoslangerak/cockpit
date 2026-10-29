@@ -93,71 +93,71 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
     # offer views of the same data.
     # The first instance creates the context.
     ## List of MegaTiles. These will be created in self.initGL.
-    megaTiles = []
+    mega_tiles = []
     ## List of Tiles. These are created as we receive new images from
     # our parent.
     tiles = []
     ## Set of tiles that need to be rerendered in the next onPaint call.
-    tilesToRefresh = set()
+    tiles_to_refresh = set()
     ## WX rendering context
     context = None
 
     def __init__(
         self,
         parent,
-        stageHardLimits,
-        overlayCallback,
-        mouseCallback,
+        stage_hard_limits,
+        overlay_callback,
+        mouse_callback,
         *args,
         **kwargs,
     ):
         """Set up the mosaic canvas.
 
         Args:
-            stageHardLimits (tuple): An ((xMin, xMax), (yMin, yMax)) tuple
+            stage_hard_limits (tuple): An ((xMin, xMax), (yMin, yMax)) tuple
                 describing the limits of motion, in microns, of the stage.
-            overlayCallback (callable): Function to call, during rendering, to
+            overlay_callback (callable): Function to call, during rendering, to
                 draw the overlay on top of the mosaic.
-            mouseCallback (callable): Function to propagate mouse events to.
+            mouse_callback (callable): Function to propagate mouse events to.
         """
         super().__init__(parent, *args, **kwargs)
 
-        self.stageHardLimits = stageHardLimits
-        self.overlayCallback = overlayCallback
+        self.stage_hard_limits = stage_hard_limits
+        self.overlay_callback = overlay_callback
 
         ## X and Y translation when rendering.
         self.dx, self.dy = 0.0, 0.0
         ## Scaling factor.
         self.scale = 1.0
         ## Set to True once we've done some initialization.
-        self.haveInitedGL = False
+        self.have_inited_gl = False
         ## WX rendering context
         if MosaicCanvas.context is None:
             # This is the first (and master) instance.
             MosaicCanvas.context = wx.glcanvas.GLContext(self)
             # Hook up onIdle - only one instance needs to process new tiles.
-            self.Bind(wx.EVT_IDLE, self.onIdle)
+            self.Bind(wx.EVT_IDLE, self.on_idle)
 
         ## Error that occurred when rendering. If this happens, we prevent
         # further rendering to avoid error spew.
-        self.renderError = None
+        self.render_error = None
 
         ## A buffer of images waiting to be added to the mosaic.
         self.pendingImages = queue.Queue(BUFFER_LENGTH)
 
-        self.Bind(wx.EVT_PAINT, self.onPaint)
-        self.Bind(wx.EVT_MOUSE_EVENTS, mouseCallback)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_MOUSE_EVENTS, mouse_callback)
         # Do nothing on this event, to avoid flickering.
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: event)
         # event on DPI change on high DPI screens, needed for Mac retina
         # displays.
-        self.Bind(wx.EVT_DPI_CHANGED, self.onDPIchange)
-        self.Bind(EVT_PROGRESS_START, self.createProgressDialog)
-        self.Bind(EVT_PROGRESS_UPDATE, self.updateProgressDialog)
-        self.Bind(EVT_PROGRESS_END, self.destroyProgressDialog)
-        self.oldScaleFactor = self.GetContentScaleFactor()
+        self.Bind(wx.EVT_DPI_CHANGED, self.on_dpi_change)
+        self.Bind(EVT_PROGRESS_START, self.create_progress_dialog)
+        self.Bind(EVT_PROGRESS_UPDATE, self.update_progress_dialog)
+        self.Bind(EVT_PROGRESS_END, self.destroy_progress_dialog)
+        self.old_scale_factor = self.GetContentScaleFactor()
 
-    def initGL(self):
+    def init_gl(self):
         """Now that OpenGL's ready to go, perform any necessary initialization.
 
         We can now create textures, for example, so it's time to create our
@@ -168,10 +168,10 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # Non-zero objective offsets require expansion of area covered
         # by megatiles.
         offsets = [h.offset for h in wx.GetApp().objectives.get_handlers()]
-        minmax = lambda l: (min(l), max(l))
-        xOffLim = minmax([-offset[0] for offset in offsets])
-        yOffLim = minmax([offset[1] for offset in offsets])
-        (xMin, xMax), (yMin, yMax) = self.stageHardLimits
+        min_max = lambda l: (min(l), max(l))
+        x_off_lim = min_max([-offset[0] for offset in offsets])
+        y_off_lim = min_max([offset[1] for offset in offsets])
+        (x_min, x_max), (y_min, y_max) = self.stage_hard_limits
         # Bounds checks ensure we only increase the megatile area, not
         # decrease it.
         #
@@ -187,7 +187,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # Arrays run [0,0] .. [ncols, nrows]; GL runs (-1,-1) .. (1,1). Since
         # making adjustments to render [0,0] at (-1,1), we now add two megatiles
         # at each y limit, rather than 4 at one edge.
-        tsize = glGetInteger(GL_MAX_TEXTURE_SIZE)
+        texture_size = glGetInteger(GL_MAX_TEXTURE_SIZE)
         # If we use the full texture size, it seems it's too large for manipul-
         # ation in a framebuffer:
         #   * on Macs with Intel chipsets;
@@ -197,18 +197,18 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # so we just use a quarter of the max texture size or a reasonable
         # upper bound which has been found to work in tests on 2017-ish
         # Macbook Pro.
-        tsize = min(tsize // 4, 16384)
-        MegaTile.setPixelSize(tsize)
-        xMin += min(0, xOffLim[0]) - MegaTile.micronSize
-        xMax += max(0, xOffLim[1]) + MegaTile.micronSize
-        yMin += min(0, yOffLim[0]) - 2 * MegaTile.micronSize
-        yMax += max(0, yOffLim[1]) + 2 * MegaTile.micronSize
-        for x in np.arange(xMin, xMax, MegaTile.micronSize):
-            for y in np.arange(yMin, yMax, MegaTile.micronSize):
-                self.megaTiles.append(MegaTile((-x, y)))
-        self.haveInitedGL = True
+        texture_size = min(texture_size // 4, 16384)
+        MegaTile.set_pixel_size(texture_size)
+        x_min += min(0, x_off_lim[0]) - MegaTile.micron_size
+        x_max += max(0, x_off_lim[1]) + MegaTile.micron_size
+        y_min += min(0, y_off_lim[0]) - 2 * MegaTile.micron_size
+        y_max += max(0, y_off_lim[1]) + 2 * MegaTile.micron_size
+        for x in np.arange(x_min, x_max, MegaTile.micron_size):
+            for y in np.arange(y_min, y_max, MegaTile.micron_size):
+                self.mega_tiles.append(MegaTile((-x, y)))
+        self.have_inited_gl = True
 
-    def rerenderMegatiles(self, tiles=None):
+    def rerender_megatiles(self, tiles=None):
         """Because tiles have been changed, we must now rerender all of our
         megatiles.
 
@@ -220,21 +220,21 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         """
         self.SetCurrent(self.context)
         if tiles is None:
-            tiles = self.megaTiles
+            tiles = self.mega_tiles
         for tile in tiles:
-            tile.recreateTexture()
-            tile.prerenderTiles(self.tiles)
+            tile.recreate_texture()
+            tile.prerender_tiles(self.tiles)
 
-    def deleteAll(self):
+    def delete_all(self):
         """Delete all tiles and textures, including the megatiles."""
-        self.deleteTilesList(list(self.tiles))
+        self.delete_tiles_list(list(self.tiles))
         events.publish(events.MOSAIC_UPDATE)
 
-    def getTilesIntersecting(self, start, end, allowedTiles=None):
+    def get_tiles_intersecting(self, start, end, allowed_tiles=None):
         """Get all tiles that intersect the specified box, pulling from the
         provided list, or from all tiles if no list is provided."""
-        if allowedTiles is None:
-            allowedTiles = self.tiles
+        if allowed_tiles is None:
+            allowed_tiles = self.tiles
         x1 = min(start[0], end[0])
         x2 = max(start[0], end[0])
         y1 = min(start[1], end[1])
@@ -242,22 +242,22 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         start = (x1, y1)
         end = (x2, y2)
         tiles = []
-        for tile in allowedTiles:
-            if tile.intersectsBox((start, end)):
+        for tile in allowed_tiles:
+            if tile.intersects_box((start, end)):
                 tiles.append(tile)
         return tiles
 
-    def getCompositeTileData(self, tile, allowedTiles=None):
+    def get_composite_tile_data(self, tile, allowed_tiles=None):
         """Generate a composite array of tile data surrounding the provided
         tile, pulling only from the provided list of allowed tiles (or all
         tiles, if no list is provided)."""
-        if allowedTiles is None:
-            allowedTiles = self.tiles
-        tileShape = tile.textureData.shape
+        if allowed_tiles is None:
+            allowed_tiles = self.tiles
+        tile_shape = tile.textureData.shape
         # Start with a neutral background based on the tile's mean value.
         result = (
             numpy.ones(
-                (tileShape[0] * 3, tileShape[1] * 3),
+                (tile_shape[0] * 3, tile_shape[1] * 3),
                 dtype=tile.textureData.dtype,
             )
             * tile.textureData.mean()
@@ -270,7 +270,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         start = (tileX - width, tileY - height)
         end = (tileX + width * 2, tileY + height * 2)
         pixelSize = tile.getPixelSize()
-        for altTile in self.getTilesIntersecting(start, end, allowedTiles):
+        for altTile in self.get_tiles_intersecting(start, end, allowed_tiles):
             if altTile.getPixelSize() != pixelSize:
                 # Don't try to deal with tiles with differing pixel sizes.
                 continue
@@ -297,8 +297,8 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             # HACK: for some reason that I don't understand, the above gives
             # me swapped-and-offset X and Y axes. I need to swap them back
             # while accounting for the difference in aspect ratio.
-            tX = rY * (float(tileShape[0]) / tileShape[1])
-            tY = rX * (float(tileShape[1]) / tileShape[0])
+            tX = rY * (float(tile_shape[0]) / tile_shape[1])
+            tY = rX * (float(tile_shape[1]) / tile_shape[0])
             rX, rY = tX, tY
             target = result[rX : rX + xPixels, rY : rY + yPixels]
             target[:] = subRegion
@@ -307,11 +307,11 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
 
     def deleteTilesIntersecting(self, start, end):
         """Delete all tiles that intersect the specified box."""
-        self.deleteTilesList(self.getTilesIntersecting(start, end))
+        self.delete_tiles_list(self.get_tiles_intersecting(start, end))
         events.publish(events.MOSAIC_UPDATE)
 
     @cockpit.util.threads.call_in_main_thread
-    def deleteTilesList(self, tilesToDelete):
+    def delete_tiles_list(self, tilesToDelete):
         """Delete a list of tiles."""
         for tile in tilesToDelete:
             tile.wipe()
@@ -320,16 +320,16 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
 
         # Rerender all megatiles that are now invalid.
         dirtied = []
-        for megaTile in self.megaTiles:
+        for megaTile in self.mega_tiles:
             for tile in tilesToDelete:
-                if megaTile.intersectsBox(tile.box):
+                if megaTile.intersects_box(tile.box):
                     dirtied.append(megaTile)
                     break
-        self.rerenderMegatiles(dirtied)
+        self.rerender_megatiles(dirtied)
         self.Refresh()
         events.publish(events.MOSAIC_UPDATE)
 
-    def onIdle(self, event):
+    def on_idle(self, event):
         if self.pendingImages.empty():  # or not self.IsShownOnScreen():
             return
         # Draw as many images as possible in 50ms.
@@ -347,10 +347,10 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             ) = self.pendingImages.get()
             newTiles.append(Tile(data, pos, size, scalings, layer, metadata))
         self.tiles.extend(newTiles)
-        for megaTile in self.megaTiles:
-            megaTile.prerenderTiles(newTiles)
+        for megaTile in self.mega_tiles:
+            megaTile.prerender_tiles(newTiles)
 
-        self.tilesToRefresh.update(newTiles)
+        self.tiles_to_refresh.update(newTiles)
 
         self.Refresh()
         events.publish(events.MOSAIC_UPDATE)
@@ -377,22 +377,22 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             minMax = (None, None)
         for tile in self.tiles:
             tile.scaleHistogram(*minMax)
-        self.tilesToRefresh.update(self.tiles)
-        self.rerenderMegatiles()
+        self.tiles_to_refresh.update(self.tiles)
+        self.rerender_megatiles()
         self.Refresh()
 
-    def onPaint(self, event):
+    def on_paint(self, event):
         """Paint the canvas -- in other words, paint all tiles, plus whatever
         overlays we need."""
-        if self.renderError is not None:
+        if self.render_error is not None:
             return
 
         try:
             dc = wx.PaintDC(self)
             self.SetCurrent(self.context)
 
-            if not self.haveInitedGL:
-                self.initGL()
+            if not self.have_inited_gl:
+                self.init_gl()
 
             width, height = self.GetClientSize() * self.GetContentScaleFactor()
 
@@ -402,9 +402,9 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             glOrtho(-0.375, width - 0.375, -0.375, height - 0.375, 1, -1)
             glMatrixMode(GL_MODELVIEW)
 
-            for tile in self.tilesToRefresh:
+            for tile in self.tiles_to_refresh:
                 tile.refresh()
-            self.tilesToRefresh = set()
+            self.tiles_to_refresh = set()
 
             glMatrixMode(GL_MODELVIEW)
             glLoadIdentity()
@@ -417,22 +417,22 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             glEnable(GL_TEXTURE_2D)
             viewBox = self.getViewBox()
             if self.scale < ZOOM_SWITCHOVER:
-                for megaTile in self.megaTiles:
+                for megaTile in self.mega_tiles:
                     megaTile.render(viewBox)
             else:
                 for tile in self.tiles:
                     tile.render(viewBox)
             glDisable(GL_TEXTURE_2D)
 
-            if self.overlayCallback is not None:
-                self.overlayCallback()
+            if self.overlay_callback is not None:
+                self.overlay_callback()
 
             glFlush()
             self.SwapBuffers()
         except Exception as e:
             print("Error rendering the canvas:", e)
             traceback.print_exc()
-            self.renderError = e
+            self.render_error = e
 
     def zoomTo(self, x, y, scale):
         """Change our view transform."""
@@ -476,12 +476,12 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         viewport_centre_point = wx.RealPoint(width, height) / 2
         self.ZoomAtPoint(multiplier, viewport_centre_point)
 
-    def onDPIchange(self, event):
+    def on_dpi_change(self, event):
         # get new scale and work out change.
         contentScale = self.GetContentScaleFactor()
-        multiplier = contentScale / self.oldScaleFactor
+        multiplier = contentScale / self.old_scale_factor
         # work out old canvas size to shift back to origin
-        oldwidth, oldheight = self.GetClientSize() * self.oldScaleFactor
+        oldwidth, oldheight = self.GetClientSize() * self.old_scale_factor
         oldhalfWidth = oldwidth / 2
         oldhalfHeight = oldheight / 2
         # apply shift to give new position of center of image
@@ -491,7 +491,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # move to this new view, which is same as old but at different DPI
         self.zoomTo(x, y, self.scale)
         # store scale factor so we can use for next rescale
-        self.oldScaleFactor = contentScale
+        self.old_scale_factor = contentScale
 
     def dragView(self, offset):
         """Change our translation by the specified number of pixels."""
@@ -602,11 +602,11 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         for i in range(len(self.tiles)):
             metadata = self.tiles[i].metadata
             floatMetadataBuffer[1] = metadata["timestamp"]
-            floatMetadataBuffer[2:5] = metadata["imagePos"]
+            floatMetadataBuffer[2:5] = metadata["image_position"]
             floatMetadataBuffer[5] = self.tiles[i].textureData.min()
             floatMetadataBuffer[6] = self.tiles[i].textureData.min()
-            floatMetadataBuffer[8] = metadata["exposure time"]
-            floatMetadataBuffer[10] = metadata["exwavelength"]
+            floatMetadataBuffer[8] = metadata["exposure_time"]
+            floatMetadataBuffer[10] = metadata["ex_wavelength"]
             floatMetadataBuffer[11] = metadata["wavelength"]
             handle.write(intMetadataBuffer)
             handle.write(floatMetadataBuffer)
@@ -718,7 +718,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         wx.PostEvent(self.GetEventHandler(), ProgressEndEvent())
         events.publish(events.MOSAIC_UPDATE)
 
-    def createProgressDialog(self, event):
+    def create_progress_dialog(self, event):
         if hasattr(self, "progressDialog"):
             return
         self.progressDialog = wx.ProgressDialog(
@@ -729,12 +729,12 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         )
         self.progressDialog.Show()
 
-    def updateProgressDialog(self, event):
+    def update_progress_dialog(self, event):
         if hasattr(self, "progressDialog"):
             self.progressDialog.Update(event.value)
             self.progressDialog.Show()
 
-    def destroyProgressDialog(self, event):
+    def destroy_progress_dialog(self, event):
         if hasattr(self, "progressDialog"):
             self.progressDialog.Destroy()
             del self.progressDialog

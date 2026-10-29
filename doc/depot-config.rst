@@ -227,7 +227,7 @@ transform.  The colour parameter is used to display possibly different
 accessible regions from different objectives in the stage and mosaic
 views.  Additionally, there is an offset parameter which enables
 difference between objective fields of view to be accounted for in
-stage position.  The ``lensID`` parameter is stored in image file
+stage position.  The ``lens_id`` parameter is stored in image file
 metadata fields so can be used to tag specific objectives, or
 objective types.
 

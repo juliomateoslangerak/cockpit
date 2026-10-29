@@ -213,7 +213,7 @@ class ExecutorDevice(device.Device):
             "Waiting for DSP to finish",
         )
         self.connection.PrepareActions(actions, num_reps)
-        events.executeAndWaitFor(
+        events.execute_and_wait_for(
             events.EXECUTOR_DONE % self.name, self.connection.RunActions
         )
         events.publish(events.EXPERIMENT_EXECUTION)
@@ -441,7 +441,7 @@ class LegacyDSP(ExecutorDevice):
         self.connection.profileSet(description, digitals_arr, *analogs_arr)
         self.connection.DownloadProfile()
         self.connection.InitProfile(num_reps)
-        events.executeAndWaitFor(
+        events.execute_and_wait_for(
             events.EXECUTOR_DONE % self.name, self.connection.trigCollect
         )
         events.publish(events.EXPERIMENT_EXECUTION)

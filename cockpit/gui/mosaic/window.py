@@ -884,7 +884,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             curZ = pos[2] - self.offset[2]
             # Take an image. Use timeout to prevent getting stuck here.
             try:
-                data, metadata = events.executeAndWaitForOrTimeout(
+                data, metadata = events.execute_and_wait_for_or_timeout(
                     events.NEW_IMAGE % camera.name,
                     wx.GetApp().imager.take_image,
                     camera.get_exposure_time() / 1000
@@ -1560,7 +1560,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 cockpit.interfaces.stage_mover.go_to(
                     (x, y, z + offset), should_block=True
                 )
-                image, metadata = events.executeAndWaitFor(
+                image, metadata = events.execute_and_wait_for(
                     events.NEW_IMAGE % camera.name,
                     wx.GetApp().imager.take_image,
                     should_block=True,

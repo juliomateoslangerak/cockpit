@@ -168,7 +168,7 @@ class LightHandler(device.DeviceHandler):
                 # it being switched off by an exposure, but this event is
                 # used to update controls, so we need to chain it with a
                 # manual update.
-                events.oneShotSubscribe(
+                events.one_shot_subscribe(
                     events.LIGHT_SOURCE_ENABLE,
                     # FIXME: notifyListeners does not exist
                     lambda *args: self.notifyListeners(self, set_state),

@@ -215,7 +215,7 @@ class Imager:
                 / 1000
             )
             try:
-                events.executeAndWaitForOrTimeout(
+                events.execute_and_wait_for_or_timeout(
                     events.NEW_IMAGE % (camera.name),
                     self.take_image,
                     timeout,

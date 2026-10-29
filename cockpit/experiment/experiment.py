@@ -491,7 +491,7 @@ class Experiment:
                         )
                         time.sleep(max(0, time_to_next))
 
-                    events.executeAndWaitFor(
+                    events.execute_and_wait_for(
                         events.EXPERIMENT_EXECUTION,
                         best.execute_table,
                         self.table,

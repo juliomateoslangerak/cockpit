@@ -384,7 +384,7 @@ class ActionsPanel(wx.Panel):
         # Find the name of the active (first) camera
         camera_name = cams[0].name
         # Take the image
-        events.executeAndWaitFor(
+        events.execute_and_wait_for(
             events.NEW_IMAGE % camera_name,
             wx.GetApp().imager.take_image,
             should_stop_video=False,

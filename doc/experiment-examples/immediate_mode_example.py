@@ -160,7 +160,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # that will never arrive (e.g. for the wrong camera name) then your
         # script will get stuck at this point.
         eventName = "new image %s" % activeCams[0].name
-        image, timestamp = events.executeAndWaitFor(
+        image, timestamp = events.execute_and_wait_for(
             eventName, cockpit.interfaces.imager.take_image, should_block=True
         )
 

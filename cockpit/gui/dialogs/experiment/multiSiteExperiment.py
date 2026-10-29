@@ -538,7 +538,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
             }
         )
         start = time.time()
-        events.executeAndWaitFor(
+        events.execute_and_wait_for(
             events.EXPERIMENT_COMPLETE, self.experimentPanel.runExperiment
         )
         print(f"Imaging took {(time.time() - start):.2f} seconds")

@@ -127,7 +127,7 @@ class DrawerHandler(device.DeviceHandler):
 
         # Last thing to do is update UI to show default selections.
         initial_settings = self.settings[self.settingIndex]
-        events.oneShotSubscribe(
+        events.one_shot_subscribe(
             events.COCKPIT_INIT_COMPLETE,
             lambda: self.changeDrawer(initial_settings),
         )

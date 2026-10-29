@@ -34,12 +34,12 @@ import cockpit.config
 
 
 # Strings used for IP address and port in config. files.
-IPSTR = "ipaddress"  # ConfigParser makes keys lower case
-PORTSTR = "port"
+IP_STR = "ipaddress"  # ConfigParser makes keys lower case
+PORT_STR = "port"
 # String used to format output.
-FORMATSTR = "{:<20}  {:>16}  {:<8}  {:<6}"
+FORMAT_STR = "{:<20}  {:>16}  {:<8}  {:<6}"
 # A list of special device types.
-IGNORELIST = ["server"]
+IGNORE_LIST = ["server"]
 
 
 def ping(host):
@@ -50,7 +50,7 @@ def ping(host):
     return os.system("ping " + ping_str + " " + host) == 0
 
 
-def testPort(host, port):
+def test_port(host, port):
     """
     Returns True if a port is open.
     """
@@ -67,11 +67,11 @@ def testPort(host, port):
 
 
 # Mappings of device to hosts and ports.
-deviceToHost = {}
-deviceToPort = {}
+device_to_host = {}
+device_to_port = {}
 # Mappings of device to host and port statuses.
-hostsUp = {}
-devicesUp = {}
+hosts_up = {}
+devices_up = {}
 
 skipped = []
 
@@ -80,10 +80,10 @@ config = cockpit.config.CockpitConfig(sys.argv).depot_config
 # Iterate over config sections.
 for s in config.sections():
     # Skip special devices.
-    if s.lower() in IGNORELIST:
+    if s.lower() in IGNORE_LIST:
         skipped.append("skipped %s:  in ignore list" % s)
     # Skip devices that don't have remotes.
-    if not any(map(lambda x: x in config.options(s), [IPSTR, "uri"])):
+    if not any(map(lambda x: x in config.options(s), [IP_STR, "uri"])):
         skipped.append("skipped %s:  no host or uri" % s)
         continue
     if "uri" in config.options(s):
@@ -94,32 +94,32 @@ for s in config.sections():
             continue
         prefix, host, port = match.groups()
     else:
-        host = config.get(s, IPSTR)
+        host = config.get(s, IP_STR)
         try:
-            port = config.get(s, PORTSTR)
+            port = config.get(s, PORT_STR)
         except:
             skipped.append("skipped %s:  IP with no port" % s)
             continue
     # Extract remote details from config and store in dicts.
-    deviceToHost[s] = host
-    deviceToPort[s] = port
+    device_to_host[s] = host
+    device_to_port[s] = port
 
 
 # Iterate over the mappings to query host and port status.
-for device, host in deviceToHost.items():
-    port = deviceToPort[device]
-    if host not in hostsUp.keys():
-        hostsUp[host] = "up" if ping(host) else "down"
-    devicesUp[device] = "open" if testPort(host, port) else "closed"
+for device, host in device_to_host.items():
+    port = device_to_port[device]
+    if host not in hosts_up.keys():
+        hosts_up[host] = "up" if ping(host) else "down"
+    devices_up[device] = "open" if test_port(host, port) else "closed"
 
 # Report.
 print("\n\n")
-print(FORMATSTR.format("DEVICE", "HOSTNAME", "STATUS", "PORT"))
-print(FORMATSTR.format("======", "========", "======", "======"))
-for device in sorted(deviceToHost.keys()):
-    host = deviceToHost[device]
-    port = deviceToPort[device]
-    print(FORMATSTR.format(device, host, hostsUp[host], devicesUp[device]))
+print(FORMAT_STR.format("DEVICE", "HOSTNAME", "STATUS", "PORT"))
+print(FORMAT_STR.format("======", "========", "======", "======"))
+for device in sorted(device_to_host.keys()):
+    host = device_to_host[device]
+    port = device_to_port[device]
+    print(FORMAT_STR.format(device, host, hosts_up[host], devices_up[device]))
 print("\n")
 for s in skipped:
     print(s)

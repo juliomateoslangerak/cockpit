@@ -24,10 +24,6 @@ mosaic_window = next(
 if mosaic_window is None:
     raise ValueError("No mosaic window open. Please open a mosaic window.")
 
-# Nucleus crop size (maximum nucleus diameter in pixels) and model input resolution
-DATA_SET_SIZE = 280
-INPUT_SIZE = 128
-
 CYCLE_PHASES = ["G1", "S", "G2/M"]
 CYCLE_PHASES_TO_COLOR = [
     (0, 1, 0),

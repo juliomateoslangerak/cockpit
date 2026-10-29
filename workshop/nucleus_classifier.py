@@ -24,6 +24,7 @@ CYCLE_PHASES_TO_COLOR = [
     (1, 0, 0),
     (0, 0, 1),
 ]
+# Nucleus crop size (maximum nucleus diameter in pixels) and model input resolution
 DATA_SET_SIZE = 280
 INPUT_SIZE = 128
 

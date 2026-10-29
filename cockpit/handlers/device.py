@@ -256,7 +256,7 @@ class DeviceHandler:
         )
         if not all([get_is_enabled, set_enabled]):
             raise Exception(
-                "toggleState dependencies not implemented for %s." % self.name
+                "toggle_state dependencies not implemented for %s." % self.name
             )
 
         # Do nothing if lock locked as en/disable already in progress.

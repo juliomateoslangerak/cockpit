@@ -84,7 +84,7 @@ class NucleiFinder:
                         size=self.site_size
                     )
                 )
-        # print(f"Found {len(stageMover.sitesInGroup(self.stage_class))} sites")
+
         if (len(stageMover.sitesInGroup(self.stage_class)) >= self.max_sites or
                 self.scan_start_time + self.timeout_seconds < datetime.datetime.now()):
             self.unsubscribe()

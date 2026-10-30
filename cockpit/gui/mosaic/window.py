@@ -301,7 +301,7 @@ class MosaicCommon:
         """Draw a crosshairs at the specified position with the specified color.
 
         By default make the size of the crosshairs be really big. Refactor:
-        this could move to Canvas by eliminating self.crosshairBoxSize, which
+        this could move to Canvas by eliminating self.crosshair_box_size, which
         is only set and used here, and in centerCanvas.
         """
         xSize = ySize = size
@@ -332,13 +332,13 @@ class MosaicCommon:
         if len(cams) > 0:
             pixel_size = wx.GetApp().objectives.get_pixel_size()
             width, height = cams[0].get_image_size()
-            self.crosshairBoxSize = width * pixel_size
-            width = self.crosshairBoxSize
+            self.crosshair_box_size = width * pixel_size
+            width = self.crosshair_box_size
             height = height * pixel_size
         else:
             # else use the default which is 512Xpixel size from objective
-            width = self.crosshairBoxSize
-            height = self.crosshairBoxSize
+            width = self.crosshair_box_size
+            height = self.crosshair_box_size
 
         for i, j in [(-1, -1), (-1, 1), (1, 1), (1, -1)]:
             glVertex2d(-x + i * width / 2, y + j * height / 2)
@@ -627,7 +627,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         events.publish(events.STAGE_POSITION, 1, curPosition[1])
         # Calculate the size of the box at the center of the crosshairs.
         # \todo Should we necessarily assume a 512x512 area here?
-        # if we haven't previously set crosshairBoxSize (maybe no camera active)
+        # if we haven't previously set crosshair_box_size (maybe no camera active)
         if self.crosshairBoxSize == 0:
             self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
         self.offset = wx.GetApp().objectives.get_offset()

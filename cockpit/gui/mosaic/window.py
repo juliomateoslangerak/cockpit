@@ -386,7 +386,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         )
 
         ## Size of the box to draw at the center of the crosshairs.
-        self.crosshairBoxSize = 0
+        self.crosshair_box_size = 0
         ## Color to use when making new Site instances.
         self.siteColor = SITE_COLORS[0][1]
         ## Current selected sites for highlighting with crosshairs.
@@ -628,10 +628,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # Calculate the size of the box at the center of the crosshairs.
         # \todo Should we necessarily assume a 512x512 area here?
         # if we haven't previously set crosshair_box_size (maybe no camera active)
-        if self.crosshairBoxSize == 0:
-            self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
+        if self.crosshair_box_size == 0:
+            self.crosshair_box_size = 512 * wx.GetApp().objectives.get_pixel_size()
         self.offset = wx.GetApp().objectives.get_offset()
-        scale = 150.0 / self.crosshairBoxSize
+        scale = 150.0 / self.crosshair_box_size
         self.canvas.zoomTo(
             -curPosition[0] + self.offset[0],
             curPosition[1] - self.offset[1],
@@ -651,7 +651,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
         """User changed the objective in use; resize our crosshair box to suit."""
-        self.crosshairBoxSize = 512 * wx.GetApp().objectives.get_pixel_size()
+        self.crosshair_box_size = 512 * wx.GetApp().objectives.get_pixel_size()
         self.offset = wx.GetApp().objectives.get_offset()
         # force a redraw so that the crosshairs are properly sized
         # Refresh this and other mosaic views.
@@ -1051,7 +1051,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         position[2] = position[2] - self.offset[2]
         cockpit.interfaces.stage_mover.save_site(
             cockpit.interfaces.stage_mover.Site(
-                position, None, color, size=self.crosshairBoxSize
+                position, None, color, size=self.crosshair_box_size
             )
         )
         # Publish mosaic update event to update this and other views (e.g. touch_screen).

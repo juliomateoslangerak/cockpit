@@ -329,7 +329,7 @@ class MacroStagePanel(wx.Panel):
 
         xy_safeties_btn = make_button(
             "Set XY safeties",
-            xy_stage.setSafeties,
+            xy_stage.set_safeties,
             "Click twice on the XY Macro stage view"
             " to set the XY motion limits.",
         )

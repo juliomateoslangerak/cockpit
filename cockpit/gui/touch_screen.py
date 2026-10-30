@@ -37,7 +37,7 @@ from cockpit import depot, events
 from cockpit.gui.camera.view_panel import ViewPanel
 from cockpit.gui.device import EnableButton
 from cockpit.gui.dialogs.experiment import singleSiteExperiment
-from cockpit.gui.macro_stage.macro_stage_xy import GoToXYZDialog, MacroStageXY
+from cockpit.gui.macro_stage.macro_stage_xy import go_to_xyz_dialog, MacroStageXY
 from cockpit.gui.macro_stage.macro_stage_z import MacroStageZ
 from cockpit.gui.safe_controls import EVT_SAFE_CONTROL_COMMIT, SetPointGauge
 from cockpit.interfaces import stage_mover
@@ -1276,7 +1276,7 @@ class StageControlXY(wx.Panel):
 
     def _on_tiles(self, event):
         mosaic = self.GetPrevSibling()
-        mosaic.shouldDrawMosaic = not mosaic.shouldDrawMosaic
+        mosaic.should_draw_mosaic = not mosaic.should_draw_mosaic
 
 
 class StageControlZ(wx.Panel):
@@ -1515,7 +1515,7 @@ class StageControlCommon(wx.Panel):
         self.dialog_safeties.Show()
 
     def _on_move(self, e):
-        GoToXYZDialog(self.GetParent())
+        go_to_xyz_dialog(self.GetParent())
 
 
 class MacroStagesPanel(wx.Panel):

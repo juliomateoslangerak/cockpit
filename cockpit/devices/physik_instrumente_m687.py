@@ -361,10 +361,10 @@ class PhysikInstrumenteM687(Device):
         glColor3f(1, 0.6, 0.6)
         glBegin(GL_QUADS)
         for (x1, y1), (x2, y2) in BANNED_RECTANGLES:
-            stage.scaledVertex(x1, y1)
-            stage.scaledVertex(x1, y2)
-            stage.scaledVertex(x2, y2)
-            stage.scaledVertex(x2, y1)
+            stage.scaled_vertex(x1, y1)
+            stage.scaled_vertex(x1, y2)
+            stage.scaled_vertex(x2, y2)
+            stage.scaled_vertex(x2, y1)
         glEnd()
 
     def get_handlers(self):

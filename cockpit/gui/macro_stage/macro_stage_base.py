@@ -89,21 +89,21 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         ## WX context for drawing.
         self.context = wx.glcanvas.GLContext(self)
         ## Whether or not we have done some one-time-only logic.
-        self.haveInitedGL = False
+        self.have_inited_gl = False
         ## Whether or not we should try to draw
-        self.shouldDraw = True
+        self.should_draw = True
         ## Font for drawing text
         self.face = cockpit.gui.freetype.Face(self, 18)
 
         ## X values below this are off the canvas. We leave it up to children
         # to fill in proper values for these.
-        self.minX = 0
+        self.min_x = 0
         ## X values above this are off the canvas
-        self.maxX = 1000
+        self.max_x = 1000
         ## Y values below this are off the canvas
-        self.minY = 0
+        self.min_y = 0
         ## Y values above this are off the canvas
-        self.maxY = 1000
+        self.max_y = 1000
 
         ## Don't bother showing a movement arrow for movements smaller
         ## than this.
@@ -113,50 +113,50 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
 
         ## (X, Y, Z) vector describing the stage position as of the last
         # time we drew ourselves. We need this to display motion deltas.
-        self.prevStagePosition = np.zeros(3)
+        self.prev_stage_position = np.zeros(3)
         ## As above, but for the current position.
-        self.curStagePosition = np.zeros(3)
+        self.cur_stage_position = np.zeros(3)
         ## Event used to indicate when drawing is done, so we can update
         # the above.
-        self.drawEvent = threading.Event()
+        self.draw_event = threading.Event()
 
         ## Boolean to just force a redraw.
-        self.shouldForceRedraw = False
+        self.should_force_redraw = False
 
         ## Thread that ensures we don't spam redisplaying ourselves.
-        self.redrawTimerThread = threading.Thread(
-            target=self.refreshWaiter, name="macrostage-refresh", daemon=True
+        self.redraw_timer_thread = threading.Thread(
+            target=self.refresh_waiter, name="macrostage-refresh", daemon=True
         )
-        self.redrawTimerThread.start()
+        self.redraw_timer_thread.start()
 
-        self.Bind(wx.EVT_PAINT, self.onPaint)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_SIZE, lambda event: event)
         self.Bind(
             wx.EVT_ERASE_BACKGROUND, lambda event: event
         )  # Do nothing, to avoid flashing
-        events.subscribe(events.STAGE_POSITION, self.onMotion)
-        events.subscribe(events.STAGE_STEP_INDEX, self.onStepIndexChange)
+        events.subscribe(events.STAGE_POSITION, self.on_motion)
+        events.subscribe(events.STAGE_STEP_INDEX, self.on_step_index_change)
 
-    def initGL(self):
+    def init_gl(self):
         """Set up some set-once things for OpenGL."""
         self.SetCurrent(self.context)
         glClearColor(1.0, 1.0, 1.0, 0.0)
 
-    def onMotion(self, axis, position):
+    def on_motion(self, axis, position):
         """Update our marker of where the stage currently is.
 
         This will indirectly cause us to redisplay ourselves in a bit, thanks
         to self.refreshWaiter.
         """
-        self.curStagePosition[axis] = position
+        self.cur_stage_position[axis] = position
 
-    def onStepIndexChange(self, index):
+    def on_step_index_change(self, index):
         r"""Step index has changed, so the highlighting on our step displays is
         different.
         \todo Redrawing *everything* at this stage seems a trifle excessive."""
-        self.shouldForceRedraw = True
+        self.should_force_redraw = True
 
-    def refreshWaiter(self):
+    def refresh_waiter(self):
         """Wait until a minimum amount of time has passed since our last redraw
         before we redraw again.
 
@@ -168,90 +168,90 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
                 # Our window has been deleted; we're done here.
                 return
             if (
-                np.any(self.curStagePosition != self.prevStagePosition)
-                or self.shouldForceRedraw
+                np.any(self.cur_stage_position != self.prev_stage_position)
+                or self.should_force_redraw
             ):
-                self.drawEvent.clear()
+                self.draw_event.clear()
                 wx.CallAfter(self.Refresh)
-                self.drawEvent.wait()
-                self.prevStagePosition[:] = self.curStagePosition
+                self.draw_event.wait()
+                self.prev_stage_position[:] = self.cur_stage_position
                 # Draw again after a delay, so that motion arrows get
                 # cleared.
                 time.sleep(0.25)
-                self.drawEvent.clear()
+                self.draw_event.clear()
                 wx.CallAfter(self.Refresh)
-                self.drawEvent.wait()
-                self.shouldForceRedraw = False
+                self.draw_event.wait()
+                self.should_force_redraw = False
             time.sleep(0.1)
 
-    def scaledVertex(self, x, y, shouldReturn=False):
+    def scaled_vertex(self, x, y, should_return=False):
         """Rescale the input value to be in the range (self.min[X|Y],
         self.max[X|Y]), flip the X axis, and call glVertex2f on the result.
 
-        Or return the value instead if shouldReturn is true. The basic idea
+        Or return the value instead if should_return is true. The basic idea
         here is to go from stage coordinates to view coordinates.
         """
-        newX = -1 * ((x - self.minX) / float(self.maxX - self.minX) * 2 - 1)
-        newY = (y - self.minY) / float(self.maxY - self.minY) * 2 - 1
-        if shouldReturn:
-            return (newX, newY)
+        new_x = -1 * ((x - self.min_x) / float(self.max_x - self.min_x) * 2 - 1)
+        new_y = (y - self.min_y) / float(self.max_y - self.min_y) * 2 - 1
+        if should_return:
+            return (new_x, new_y)
         else:
-            glVertex2f(newX, newY)
+            glVertex2f(new_x, new_y)
 
-    def drawArrow(self, baseLoc, vector, color, arrowSize, arrowHeadSize):
+    def draw_arrow(self, base_location, vector, color, arrow_size, arrow_head_size):
         """Draw an arrow from the first point along the specified vector."""
         # Normalize.
-        delta = vector / np.sqrt(np.vdot(vector, vector)) * arrowSize
+        delta = vector / np.sqrt(np.vdot(vector, vector)) * arrow_size
         # Calculate angle, for the head of the arrow
         angle = np.arctan2(delta[1], delta[0])
 
-        pointLoc = baseLoc + delta
-        headLoc1 = (
-            pointLoc
-            - np.array(
+        point_location = base_location + delta
+        head_location_1 = (
+                point_location
+                - np.array(
                 [
                     np.cos(angle + ARROWHEAD_ANGLE),
                     np.sin(angle + ARROWHEAD_ANGLE),
                 ]
             )
-            * arrowHeadSize
+                * arrow_head_size
         )
-        headLoc2 = (
-            pointLoc
-            - np.array(
+        head_location_2 = (
+                point_location
+                - np.array(
                 [
                     np.cos(angle - ARROWHEAD_ANGLE),
                     np.sin(angle - ARROWHEAD_ANGLE),
                 ]
             )
-            * arrowHeadSize
+                * arrow_head_size
         )
 
         # Draw
         glColor3f(color[0], color[1], color[2])
         glLineWidth(ARROW_LINE_THICKNESS)
         glBegin(GL_LINES)
-        glVertex2f(baseLoc[0], baseLoc[1])
-        glVertex2f(pointLoc[0], pointLoc[1])
+        glVertex2f(base_location[0], base_location[1])
+        glVertex2f(point_location[0], point_location[1])
         glEnd()
         # Prevent the end of the line from showing through the
         # arrowhead by moving the arrowhead further along.
-        pointLoc += delta * 0.1
+        point_location += delta * 0.1
         glBegin(GL_POLYGON)
-        glVertex2f(headLoc1[0], headLoc1[1])
-        glVertex2f(headLoc2[0], headLoc2[1])
-        glVertex2f(pointLoc[0], pointLoc[1])
+        glVertex2f(head_location_1[0], head_location_1[1])
+        glVertex2f(head_location_2[0], head_location_2[1])
+        glVertex2f(point_location[0], point_location[1])
         glEnd()
 
-    def drawTextAt(self, loc, text, size, color=(0, 0, 0)):
+    def draw_text_at(self, location, text, size, color=(0, 0, 0)):
         """Draw some text at the specified location."""
         width, height = self.GetClientSize() * self.GetContentScaleFactor()
         aspect = float(height) / width
-        loc = self.scaledVertex(loc[0], loc[1], True)
+        location = self.scaled_vertex(location[0], location[1], True)
 
         glPushMatrix()
         glLoadIdentity()
-        glTranslatef(loc[0], loc[1], 0)
+        glTranslatef(location[0], location[1], 0)
         glScalef(size * aspect, size, size)
         glColor3fv(color)
         self.face.render(text)

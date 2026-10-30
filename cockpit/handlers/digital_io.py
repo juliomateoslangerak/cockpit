@@ -79,7 +79,7 @@ class DigitalIOHandler(device.DeviceHandler):
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         enablebutton = cockpit.gui.device.EnableButton(
-            self.panel, deviceHandler=self
+            self.panel, device_handler=self
         )
         sizer.Add(enablebutton, 1, wx.EXPAND)
         self.pathNameToButton = {}

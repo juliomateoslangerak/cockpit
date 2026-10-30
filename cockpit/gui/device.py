@@ -55,10 +55,10 @@ class Button(wx.StaticText):
     def __init__(
         self,
         tooltip="",
-        textSize=12,
-        isBold=True,
-        leftAction=None,
-        rightAction=None,
+        text_size=12,
+        is_bold=True,
+        left_action=None,
+        right_action=None,
         **kwargs,
     ):
         # Default size:
@@ -68,16 +68,16 @@ class Button(wx.StaticText):
             style=wx.RAISED_BORDER | wx.ALIGN_CENTRE | wx.ST_NO_AUTORESIZE,
             **kwargs,
         )
-        if isBold:
+        if is_bold:
             self.SetFont(self.GetFont().Bold())
         self.SetToolTip(wx.ToolTip(tooltip))
         self.SetBackgroundColour(BACKGROUND)
         # Realign the label using our custom version of the function
         self.SetLabel(self.GetLabel())
-        if leftAction:
-            self.Bind(wx.EVT_LEFT_UP, lambda event: leftAction(event))
-        if rightAction:
-            self.Bind(wx.EVT_RIGHT_UP, lambda event: rightAction(event))
+        if left_action:
+            self.Bind(wx.EVT_LEFT_UP, lambda event: left_action(event))
+        if right_action:
+            self.Bind(wx.EVT_RIGHT_UP, lambda event: right_action(event))
             # This control has a special right-click behaviour, so don't pass
             # up EVT_CONTEXT_MENU CommandEvents.
             self.Bind(wx.EVT_CONTEXT_MENU, lambda event: None)
@@ -98,12 +98,12 @@ class Button(wx.StaticText):
         the text."""
         height = self.GetSize()[1]
         font = self.GetFont()
-        fontHeight = font.GetPointSize()
-        maxLines = height // fontHeight
-        numLinesUsed = len(text.split("\n"))
-        lineBuffer = (maxLines - numLinesUsed) // 2 - 1
-        newText = ("\n" * lineBuffer) + text + ("\n" * lineBuffer)
-        super().SetLabel(newText, *args, **kwargs)
+        font_height = font.GetPointSize()
+        max_lines = height // font_height
+        num_lines_used = len(text.split("\n"))
+        line_buffer = (max_lines - num_lines_used) // 2 - 1
+        new_text = ("\n" * line_buffer) + text + ("\n" * line_buffer)
+        super().SetLabel(new_text, *args, **kwargs)
 
 
 class Label(wx.StaticText):
@@ -125,7 +125,7 @@ class Label(wx.StaticText):
 class ValueDisplay(wx.BoxSizer):
     """A simple value display for devices."""
 
-    def __init__(self, parent, label, value="", formatStr=None, unitStr=None):
+    def __init__(self, parent, label, value="", format_str=None, unit_str=None):
         super().__init__(wx.HORIZONTAL)
         self.value = value
         label = Label(
@@ -137,25 +137,25 @@ class ValueDisplay(wx.BoxSizer):
         label.SetFont(label.GetFont().Smaller())
         self.label = label
         self.Add(label)
-        self.valDisplay = Label(
+        self.val_display = Label(
             parent=parent,
             label=str(value),
             size=SMALL_SIZE,
             style=(wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE),
         )
-        self.valDisplay.SetFont(self.valDisplay.GetFont().Smaller())
-        self.Add(self.valDisplay)
-        self.formatStr = (formatStr or r"%.6s") + (unitStr or "") + " "
+        self.val_display.SetFont(self.val_display.GetFont().Smaller())
+        self.Add(self.val_display)
+        self.format_str = (format_str or r"%.6s") + (unit_str or "") + " "
 
     def Bind(self, *args, **kwargs):
         self.label.Bind(*args, **kwargs)
-        self.valDisplay.Bind(*args, **kwargs)
+        self.val_display.Bind(*args, **kwargs)
 
     def Disable(self):
-        return self.valDisplay.Disable()
+        return self.val_display.Disable()
 
     def Enable(self):
-        return self.valDisplay.Enable()
+        return self.val_display.Enable()
 
     def update(self, value=None):
         """Update the displayed value.
@@ -164,9 +164,9 @@ class ValueDisplay(wx.BoxSizer):
         if value is not None:
             self.value = value
         if callable(self.value):
-            self.valDisplay.SetLabel(self.formatStr % self.value())
+            self.val_display.SetLabel(self.format_str % self.value())
         else:
-            self.valDisplay.SetLabel(self.formatStr % self.value)
+            self.val_display.SetLabel(self.format_str % self.value)
 
 
 class MultilineDisplay(wx.StaticText):
@@ -186,21 +186,21 @@ class EnumChoice(wx.Choice):
     """A wx.Choice which coverts between it's own 0-based indexes and enum values."""
 
     def __init__(self, *args, **kwargs):
-        self._enumitems = []
+        self._enum_items = []
         self._action = None
         super().__init__(*args, **kwargs)
 
     def Set(self, items):
         """Store the enum values in a 0-indexed list for recall later."""
-        self._enumitems = [value for value, desc in items]
+        self._enum_items = [value for value, desc in items]
         super().Set([desc for value, desc in items])
 
-    def _onChoice(self, evt):
-        self._action(self._enumitems[evt.Selection])
+    def _on_choice(self, evt):
+        self._action(self._enum_items[evt.Selection])
 
-    def setOnChoice(self, action):
+    def set_on_choice(self, action):
         self._action = action
-        self.Bind(wx.EVT_CHOICE, self._onChoice)
+        self.Bind(wx.EVT_CHOICE, self._on_choice)
 
 
 _BMP_SIZE = (16, 16)
@@ -229,21 +229,21 @@ _BMPS = {
 
 
 class EnableButton(wx.ToggleButton):
-    def __init__(self, parent, deviceHandler):
-        super().__init__(parent, wx.ID_ANY, deviceHandler.name)
-        self.device = deviceHandler
+    def __init__(self, parent, device_handler):
+        super().__init__(parent, wx.ID_ANY, device_handler.name)
+        self.device = device_handler
         # Devices should update bitmap on startup, but reserve bitmap
         # space for those that do not yet do so.
         self.SetBitmap(_BMP_OFF, wx.RIGHT)
         listener = EvtEmitter(self, DEVICE_STATUS)
-        listener.Bind(EVT_COCKPIT, self.onStatusEvent)
-        self.Bind(wx.EVT_TOGGLEBUTTON, deviceHandler.toggle_state)
+        listener.Bind(EVT_COCKPIT, self.on_status_event)
+        self.Bind(wx.EVT_TOGGLEBUTTON, device_handler.toggle_state)
         self.state = None
         self.others = (
             []
         )  # A list of controls that should be en/disabled accordingly.
 
-    def manageStateOf(self, others):
+    def manage_state_of(self, others):
         try:
             self.others.extend(others)
         except:
@@ -251,7 +251,7 @@ class EnableButton(wx.ToggleButton):
             self.others.append(others)
 
     @cockpit.util.threads.call_in_main_thread
-    def setState(self, state):
+    def set_state(self, state):
         if self.state == state:
             return
         # GTK only needs SetBitmap, but MSW needs *all* bitmaps updating.
@@ -277,11 +277,11 @@ class EnableButton(wx.ToggleButton):
         # Enabling/disabling control sets focus to None. Set it to parent so keypresses still handled.
         wx.CallAfter(self.Parent.SetFocus)
 
-    def onStatusEvent(self, evt):
-        device, state = evt.EventData
+    def on_status_event(self, event):
+        device, state = event.EventData
         if device != self.device:
             return
-        self.setState(state)
+        self.set_state(state)
 
 
 class TupleOfIntsProperty(wx.propgrid.StringProperty):
@@ -331,56 +331,56 @@ class SettingsEditor(wx.Frame):
         )
         self.grid.SetColumnProportion(0, 2)
         self.grid.SetColumnProportion(1, 1)
-        self.populateGrid()
-        self.Bind(wx.propgrid.EVT_PG_CHANGED, self.onPropertyChange)
+        self.populate_grid()
+        self.Bind(wx.propgrid.EVT_PG_CHANGED, self.on_property_change)
         sizer.Add(self.grid, 1, wx.EXPAND | wx.ALIGN_TOP, 0, 0)
 
         sizer.AddSpacer(2)
-        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # saveButton = wx.Button(self, id=wx.ID_SAVE)
         # saveButton.SetToolTip(wx.ToolTip("Save current settings as defaults."))
         # saveButton.Bind(wx.EVT_BUTTON, self.onSave)
-        # buttonSizer.Add(saveButton, 0, wx.ALIGN_RIGHT, 0, 0)
+        # button_sizer.Add(saveButton, 0, wx.ALIGN_RIGHT, 0, 0)
 
-        okButton = wx.Button(self, id=wx.ID_OK)
-        okButton.Bind(wx.EVT_BUTTON, self.onClose)
-        okButton.SetToolTip(
+        ok_button = wx.Button(self, id=wx.ID_OK)
+        ok_button.Bind(wx.EVT_BUTTON, self.on_close)
+        ok_button.SetToolTip(
             wx.ToolTip("Apply settings and close this window.")
         )
-        buttonSizer.Add(okButton, 1, flag=wx.EXPAND)
+        button_sizer.Add(ok_button, 1, flag=wx.EXPAND)
 
-        cancelButton = wx.Button(self, id=wx.ID_CANCEL)
-        cancelButton.Bind(wx.EVT_BUTTON, self.onClose)
-        cancelButton.SetToolTip(
+        cancel_button = wx.Button(self, id=wx.ID_CANCEL)
+        cancel_button.Bind(wx.EVT_BUTTON, self.on_close)
+        cancel_button.SetToolTip(
             wx.ToolTip("Close this window without applying settings.")
         )
-        buttonSizer.Add(cancelButton, 1, flag=wx.EXPAND)
+        button_sizer.Add(cancel_button, 1, flag=wx.EXPAND)
 
-        applyButton = wx.Button(self, id=wx.ID_APPLY)
-        applyButton.SetToolTip(wx.ToolTip("Apply these settings."))
-        applyButton.Bind(
+        apply_button = wx.Button(self, id=wx.ID_APPLY)
+        apply_button.SetToolTip(wx.ToolTip("Apply these settings."))
+        apply_button.Bind(
             wx.EVT_BUTTON, lambda evt: self.device.update_settings(self.current)
         )
-        buttonSizer.Add(applyButton, 1, flag=wx.EXPAND)
+        button_sizer.Add(apply_button, 1, flag=wx.EXPAND)
 
-        sizer.Add(buttonSizer, 0, wx.EXPAND, 0, 0)
+        sizer.Add(button_sizer, 0, wx.EXPAND, 0, 0)
         self.SetSizerAndFit(sizer)
         self.SetMinSize((256, -1))
         events.subscribe(
-            events.SETTINGS_CHANGED % self.device, self.updateGrid
+            events.SETTINGS_CHANGED % self.device, self.update_grid
         )
-        self.Bind(wx.EVT_SHOW, lambda evt: self.updateGrid())
+        self.Bind(wx.EVT_SHOW, lambda evt: self.update_grid())
 
-    def onClose(self, evt):
+    def on_close(self, evt):
         events.unsubscribe(
-            events.SETTINGS_CHANGED % self.device, self.updateGrid
+            events.SETTINGS_CHANGED % self.device, self.update_grid
         )
         if evt.GetId() == wx.ID_OK:
             self.device.update_settings(self.current)
         self.Close()
         # Do stuff to update local device state.
 
-    def onPropertyChange(self, event):
+    def on_property_change(self, event):
         prop = event.GetProperty()
         name = event.GetPropertyName()
         setting = self.settings[name]
@@ -402,7 +402,7 @@ class SettingsEditor(wx.Frame):
             prop.SetTextColour(wx.Colour(0, 0, 0))
         self.grid.SelectProperty(prop)
 
-    def onSave(self, event):
+    def on_save(self, event):
         if self.handler is None:
             return
         settings = self.grid.GetPropertyValues()
@@ -413,7 +413,7 @@ class SettingsEditor(wx.Frame):
             self.handler.get_identifier() + "_SETTINGS", settings
         )
 
-    def updateGrid(self):
+    def update_grid(self):
         """Update property state and values.
 
         Note: grid.SetValues does not work for custom property classes -
@@ -455,7 +455,7 @@ class SettingsEditor(wx.Frame):
         self.Fit()
         self.Thaw()
 
-    def populateGrid(self):
+    def populate_grid(self):
         """Create the propertgrid controls.
 
         We just create the controls here - their values will be updated
@@ -463,8 +463,8 @@ class SettingsEditor(wx.Frame):
         grid = self.grid
         self.settings = OrderedDict(self.device.describe_settings())
         for key, desc in self.settings.items():
-            propType = SettingsEditor._SETTINGS_TO_PROPTYPES.get(desc["type"])
-            if propType is wx.propgrid.IntProperty:
+            prop_type = SettingsEditor._SETTINGS_TO_PROPTYPES.get(desc["type"])
+            if prop_type is wx.propgrid.IntProperty:
                 # Use a float if integer may exceed IntProperty representation.
                 # The representation is dependent on whether or not  wx was compiled
                 # with wxUSE_LONG_LONG defined. I can't find a way to easily figure
@@ -475,8 +475,8 @@ class SettingsEditor(wx.Frame):
                     None in desc["values"]
                     or max(desc["values"]) > wx.INT32_MAX
                 ):
-                    propType = wx.propgrid.FloatProperty
-            prop = propType(label=key, name=key)
+                    prop_type = wx.propgrid.FloatProperty
+            prop = prop_type(label=key, name=key)
             if desc["readonly"]:
                 prop.Enable(False)
             grid.Append(prop)

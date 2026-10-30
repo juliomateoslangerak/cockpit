@@ -45,7 +45,7 @@ class LightPanel(wx.Panel):
         self.lightPower = lightPower
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.button = EnableButton(self, self.light)
-        self.button.setState(self.light.state)
+        self.button.set_state(self.light.state)
 
         self.expCtrl = safe_controls.SafeSpinCtrlDouble(self, inc=5)
         self.expCtrl.Bind(
@@ -129,7 +129,7 @@ class LightPanel(wx.Panel):
         light, state = evt.EventData
         if light != self.light:
             return
-        self.button.setState(state)
+        self.button.set_state(state)
 
 
 class LightControlsPanel(wx.Panel):
@@ -177,7 +177,7 @@ class CameraPanel(wx.Panel):
         self.camera = camera
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
         self.button = EnableButton(self, self.camera)
-        self.button.setState(self.camera.state)
+        self.button.set_state(self.camera.state)
         self.Sizer.Add(self.button, flag=wx.EXPAND)
         self.Sizer.AddSpacer(2)
 
@@ -222,7 +222,7 @@ class CameraPanel(wx.Panel):
         camera, state = evt.EventData
         if camera != self.camera:
             return
-        self.button.setState(state)
+        self.button.set_state(state)
 
 
 class CameraControlsPanel(wx.Panel):

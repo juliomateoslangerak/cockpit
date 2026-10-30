@@ -278,7 +278,7 @@ class MicroscopeGenericDevice(MicroscopeBase):
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
-            parent=self.panel, label=self.name, leftAction=self.show_settings
+            parent=self.panel, label=self.name, left_action=self.show_settings
         )
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)
@@ -303,7 +303,7 @@ class MicroscopeSwitchableDevice(MicroscopeBase):
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
         adv_button = cockpit.gui.device.Button(
-            parent=self.panel, label=self.name, leftAction=self.show_settings
+            parent=self.panel, label=self.name, left_action=self.show_settings
         )
         sizer.Add(adv_button)
         self.panel.SetSizerAndFit(sizer)

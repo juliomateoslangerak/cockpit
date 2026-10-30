@@ -132,7 +132,7 @@ class AxisStepCtrl(wx.TextCtrl):
     def _SetStepSizeValue(self, step_size: float) -> None:
         self.SetValue("%4.2f" % step_size)
 
-    def _OnStepSizeChange(self, event: cockpit.gui.CockpitEvent) -> None:
+    def _OnStepSizeChange(self, event: cockpit.gui.cockpit_event) -> None:
         axis, step_size = event.EventData
         if axis != self._axis:
             event.Skip()

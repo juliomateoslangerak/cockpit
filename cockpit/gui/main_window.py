@@ -757,7 +757,7 @@ class StatusLights(wx.StatusBar):
         self.SetStatusStyles([wx.SB_SUNKEN] * (new_field_index + 1))
         self._name_to_field[light_name] = new_field_index
 
-    def _on_new_status(self, event: cockpit.gui.CockpitEvent) -> None:
+    def _on_new_status(self, event: cockpit.gui.cockpit_event) -> None:
         """Update text of specified status light."""
         assert len(event.EventData) == 2
         light_name = event.EventData[0]  # type: str

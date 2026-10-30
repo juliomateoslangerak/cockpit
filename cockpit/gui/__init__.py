@@ -84,8 +84,8 @@ IMAGES_PATH = str(
 
 
 ## A single event type for all cockpit.events. The original cockpit
-## event data is passed back as CockpitEvent.EventData.
-CockpitEvent, EVT_COCKPIT = wx.lib.newevent.NewEvent()
+## event data is passed back as cockpit_event.EventData.
+cockpit_event, EVT_COCKPIT = wx.lib.newevent.NewEvent()
 
 
 class EvtEmitter(wx.EvtHandler):
@@ -117,28 +117,28 @@ class EvtEmitter(wx.EvtHandler):
         super().__init__()
         self._cockpit_event_type = cockpit_event_type
         cockpit.events.subscribe(
-            self._cockpit_event_type, self._EmitCockpitEvent
+            self._cockpit_event_type, self._emit_cockpit_event
         )
 
         ## Destroy() is not called when the parent is destroyed, see
         ## https://github.com/wxWidgets/Phoenix/issues/630 so we need
         ## to handle this ourselves.
-        parent.Bind(wx.EVT_WINDOW_DESTROY, self._OnParentDestroy)
+        parent.Bind(wx.EVT_WINDOW_DESTROY, self._on_parent_destroy)
 
-    def _EmitCockpitEvent(self, *args, **kwargs):
-        self.AddPendingEvent(CockpitEvent(EventData=args))
+    def _emit_cockpit_event(self, *args, **kwargs):
+        self.AddPendingEvent(cockpit_event(EventData=args))
 
-    def _Unsubscribe(self):
+    def _unsubscribe(self):
         cockpit.events.unsubscribe(
-            self._cockpit_event_type, self._EmitCockpitEvent
+            self._cockpit_event_type, self._emit_cockpit_event
         )
 
-    def _OnParentDestroy(self, event):
-        self._Unsubscribe()
+    def _on_parent_destroy(self, event):
+        self._unsubscribe()
         event.Skip()
 
     def Destroy(self):
-        self._Unsubscribe()
+        self._unsubscribe()
         return super().Destroy()
 
 

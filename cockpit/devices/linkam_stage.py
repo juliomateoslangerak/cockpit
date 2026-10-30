@@ -290,8 +290,8 @@ class LinkamStage(MicroscopeBase, Device):
                 parent=panel,
                 label=d,
                 value=0.0,
-                formatStr="%.1f",
-                unitStr="°C",
+                format_str="%.1f",
+                unit_str="°C",
             )
             left_sizer.Add(self.elements[d])
         # Settings button

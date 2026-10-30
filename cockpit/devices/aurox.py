@@ -132,7 +132,7 @@ class Clarity(microscope_device.MicroscopeFilter):
         enable = cockpit.gui.device.EnableButton(outer, power_handler)
         enable.SetLabel("enable")
         outer.Sizer.Add(enable, flag=wx.EXPAND)
-        enable.manageStateOf(panel)
+        enable.manage_state_of(panel)
         # Subpanel
         outer.Sizer.Add(panel)
         # slide selector
@@ -153,7 +153,7 @@ class Clarity(microscope_device.MicroscopeFilter):
         mode_selector = cockpit.gui.device.EnumChoice(panel)
         mode_selector.Set(self.describe_setting("mode")["values"])
         self.buttons["mode"] = mode_selector
-        mode_selector.setOnChoice(partial(self.set_setting, "mode"))
+        mode_selector.set_on_choice(partial(self.set_setting, "mode"))
         panel.Sizer.Add(mode_selector)
         # door status indicator
         cb = wx.CheckBox(panel, wx.ID_ANY, "door open")

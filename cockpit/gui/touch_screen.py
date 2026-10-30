@@ -601,7 +601,7 @@ class LightsPanelEntry(wx.Panel):
             wx.ALIGN_CENTER,
         )
         button_toggle = EnableButton(self, self.light)
-        button_toggle.setState(self.light.state)
+        button_toggle.set_state(self.light.state)
         sizer_row0.Add(button_toggle, 1, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(sizer_row0, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         # Second row: exposure control
@@ -783,7 +783,7 @@ class CamerasPanelEntry(wx.Panel):
             wx.ALIGN_CENTER,
         )
         button_toggle = EnableButton(self, self.camera_handler)
-        button_toggle.setState(self.camera_handler.state)
+        button_toggle.set_state(self.camera_handler.state)
         sizer_row0.Add(button_toggle, 1, wx.EXPAND | wx.LEFT, 5)
         sizer.Add(sizer_row0, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         # Second row: the settings button

@@ -305,7 +305,7 @@ class BoulderSLM(device.Device):
         # Controls other than power_button only enabled when SLM is enabled.
         trigger_button.Disable()
         pos_display.Disable()
-        power_button.manageStateOf((trigger_button, pos_display))
+        power_button.manage_state_of((trigger_button, pos_display))
         return panel
 
     def on_destroy(self, event: wx.WindowDestroyEvent) -> None:

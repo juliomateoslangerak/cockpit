@@ -73,7 +73,7 @@ def on_char(evt):
     elif evt.KeyCode == wx.WXK_NUMPAD_DIVIDE:
         cockpit.interfaces.stage_mover.change_mover()
     elif evt.KeyCode == wx.WXK_NUMPAD_DECIMAL:
-        cockpit.gui.mosaic.window.transferCameraImage()
+        cockpit.gui.mosaic.window.transfer_camera_image()
     elif evt.KeyCode == wx.WXK_NUMPAD_SUBTRACT:
         cockpit.interfaces.stage_mover.recenter_fine_motion()
     elif evt.KeyCode == wx.WXK_DOWN:

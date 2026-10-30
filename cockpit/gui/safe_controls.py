@@ -386,8 +386,8 @@ class GaugeValue:
 
         Kwargs:
           value (float): An initial value.
-          minVal (float): The minimum allowed value.
-          maxVal (float): The maximum allowed value.
+          min_val (float): The minimum allowed value.
+          max_val (float): The maximum allowed value.
           tol (float): A tolerance used to compare current value and a set point.
           fetch (function): A function to fetch the current value from some source.
         """

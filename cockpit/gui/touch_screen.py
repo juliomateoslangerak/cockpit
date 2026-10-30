@@ -110,18 +110,18 @@ class IconButton(wx.ToggleButton):
                 os.path.join(cockpit.gui.IMAGES_PATH, self.icon_pressed)
             )
             self.SetBitmapPressed(image.ConvertToBitmap())
-        self.Bind(wx.EVT_TOGGLEBUTTON, lambda e: self._visual_feedback(e))
-        self.Bind(wx.EVT_TIMER, lambda e: self._on_timer(e))
+        self.Bind(wx.EVT_TOGGLEBUTTON, lambda event: self._visual_feedback(event))
+        self.Bind(wx.EVT_TIMER, lambda event: self._on_timer(event))
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
     def _do_layout(self):
         pass
 
-    def _visual_feedback(self, e):
+    def _visual_feedback(self, event):
         self.timer.StartOnce(500)
-        self.callback(e)
+        self.callback(event)
 
-    def _on_timer(self, e):
+    def _on_timer(self, event):
         if not self.toggleable:
             self.SetValue(False)
 
@@ -160,7 +160,7 @@ class ActionsPanel(wx.Panel):
         sizer_obj.Add(self._sel_obj, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
         self._sel_obj.Bind(
             wx.EVT_CHOICE,
-            lambda e: wx.GetApp().objectives.change_objective(e.GetString()),
+            lambda event: wx.GetApp().objectives.change_objective(event.GetString()),
         )
         wx.GetApp().objectives.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
@@ -185,7 +185,7 @@ class ActionsPanel(wx.Panel):
             ],
         )
         sizer_cam.Add(self._sel_cam, 1, wx.ALIGN_CENTER | wx.LEFT, 5)
-        self._sel_cam.Bind(wx.EVT_CHOICE, lambda e: print(e))
+        self._sel_cam.Bind(wx.EVT_CHOICE, lambda event: print(event))
         # subscription
         self._sel_cam.SetSelection(0)
         sizer.Add(sizer_cam, 0, wx.EXPAND | wx.BOTTOM, 5)
@@ -208,7 +208,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_mosaic.png",
-                        lambda e: self._on_mosaic(e),
+                        lambda event: self._on_mosaic(event),
                         toggleable=True,
                         icon_pressed="touch_screen/action_mosaic.png",
                         helptext="Start the mosaic.",
@@ -221,7 +221,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_centre.png",
-                        lambda e: self._on_centre(e),
+                        lambda event: self._on_centre(event),
                         helptext="Centre the view on the crosshair.",
                     ),
                     wx.GBPosition(0, 1),
@@ -232,7 +232,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_erase.png",
-                        lambda e: self._on_erase(e),
+                        lambda event: self._on_erase(event),
                         toggleable=True,
                         helptext="Erase the tile pointed by the crosshair.",
                     ),
@@ -244,7 +244,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_experiment.png",
-                        lambda e: self._on_experiment(e),
+                        lambda event: self._on_experiment(event),
                         helptext="Setup and perform an experiment.",
                     ),
                     wx.GBPosition(0, 3),
@@ -255,7 +255,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_marker.png",
-                        lambda e: self._on_marker(e),
+                        lambda event: self._on_marker(event),
                         helptext="Place a marker.",
                     ),
                     wx.GBPosition(0, 4),
@@ -266,7 +266,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_snap.png",
-                        lambda e: self._on_snap(e),
+                        lambda event: self._on_snap(event),
                         helptext="Take an image with all active cameras.",
                     ),
                     wx.GBPosition(1, 0),
@@ -277,7 +277,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_live.png",
-                        lambda e: self._on_live(e),
+                        lambda event: self._on_live(event),
                         toggleable=True,
                         helptext=(
                             "Start or stop continuous image capture with all"
@@ -292,7 +292,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_help.png",
-                        lambda e: self._on_help(e),
+                        lambda event: self._on_help(event),
                         toggleable=True,
                         helptext="Show help.",
                     ),
@@ -304,7 +304,7 @@ class ActionsPanel(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/action_abort.png",
-                        lambda e: self._on_abort(e),
+                        lambda event: self._on_abort(event),
                         cols=2,
                         helptext="Abort the current action.",
                     ),
@@ -333,8 +333,8 @@ class ActionsPanel(wx.Panel):
                 self._sel_cam.GetString(self._sel_cam.GetSelection())
             )
             if camera.get_is_enabled():
-                mosaic_panel.masterMosaic.camera = camera
-                mosaic_panel.masterMosaic.toggleMosaic()
+                mosaic_panel.master_mosaic.camera = camera
+                mosaic_panel.master_mosaic.toggle_mosaic()
             else:
                 button.SetValue(False)
                 wx.MessageBox(
@@ -343,32 +343,32 @@ class ActionsPanel(wx.Panel):
                 )
         else:
             # Released => stop mosaic
-            mosaic_panel.masterMosaic.shouldContinue.clear()
+            mosaic_panel.master_mosaic.should_continue.clear()
 
-    def _on_centre(self, e):
+    def _on_centre(self, event):
         mosaic_panel = self.GetTopLevelParent().GetChildren()[3]
         mosaic_panel.center_canvas()
 
-    def _on_erase(self, e):
-        button = e.GetEventObject()
+    def _on_erase(self, event):
+        button = event.GetEventObject()
         mosaic_panel = self.GetTopLevelParent().GetChildren()[3]
         if button.GetValue():
             # Pressed => enable deleting of tiles
             mosaic_panel.set_select_func(
-                mosaic_panel.canvas.deleteTilesIntersecting
+                mosaic_panel.canvas.delete_tiles_intersecting
             )
         else:
             # Released => disable deleting of tiles
             mosaic_panel.set_select_func(None)
 
-    def _on_experiment(self, e):
+    def _on_experiment(self, event):
         singleSiteExperiment.showDialog(self.GetTopLevelParent())
 
-    def _on_marker(self, e):
+    def _on_marker(self, event):
         colour = self._sel_mar.GetStringSelection()
         mosaic.window.saveSite(_SITE_COLOURS[colour])
 
-    def _on_snap(self, e):
+    def _on_snap(self, event):
         # Check that there is at least one camera and one light source active
         cams = wx.GetApp().depot.get_active_cameras()
         lights = [
@@ -389,10 +389,10 @@ class ActionsPanel(wx.Panel):
             wx.GetApp().imager.take_image,
             should_stop_video=False,
         )
-        mosaic.transferCameraImage()
+        mosaic.transfer_camera_image()
 
-    def _on_live(self, e):
-        button = e.GetEventObject()
+    def _on_live(self, event):
+        button = event.GetEventObject()
         # Check that there is at least one camera and one light source active
         cams = wx.GetApp().depot.get_active_cameras()
         lights = [
@@ -413,30 +413,30 @@ class ActionsPanel(wx.Panel):
             # Pressed => transfer new images when they arrive
             events.subscribe(
                 events.NEW_IMAGE % camera_name,
-                lambda *args, **kwargs: mosaic.transferCameraImage(),
+                lambda *args, **kwargs: mosaic.transfer_camera_image(),
             )
         else:
             # Released => stop the transfer of images
             events.unsubscribe(
                 events.NEW_IMAGE % camera_name,
-                lambda *args, **kwargs: mosaic.transferCameraImage(),
+                lambda *args, **kwargs: mosaic.transfer_camera_image(),
             )
 
-    def _on_help(self, e):
-        toggled = e.GetEventObject().GetValue()
+    def _on_help(self, event):
+        toggled = event.GetEventObject().GetValue()
         if toggled:
             self.GetTopLevelParent().SetCursor(
                 wx.Cursor(wx.CURSOR_QUESTION_ARROW)
             )
-            self._mouse_event_filter.add_exception(e.GetEventObject())
+            self._mouse_event_filter.add_exception(event.GetEventObject())
             wx.App.AddFilter(self._mouse_event_filter)
         else:
             self.GetTopLevelParent().SetCursor(wx.NullCursor)
             wx.App.RemoveFilter(self._mouse_event_filter)
 
-    def _on_help_evt(self, e):
-        if e.GetEventObject().helptext:
-            wx.TipWindow(e.GetEventObject(), e.GetEventObject().helptext)
+    def _on_help_evt(self, event):
+        if event.GetEventObject().helptext:
+            wx.TipWindow(event.GetEventObject(), event.GetEventObject().helptext)
 
     def _on_abort(self, event):
         events.publish(events.USER_ABORT)
@@ -448,10 +448,10 @@ class ActionsPanel(wx.Panel):
         if button_live.GetValue():
             button_live.SetValue(False)
 
-    def _on_objective_changed(self, e: wx.CommandEvent) -> None:
-        selection = self._sel_obj.FindString(e.GetString())
+    def _on_objective_changed(self, event: wx.CommandEvent) -> None:
+        selection = self._sel_obj.FindString(event.GetString())
         self._sel_obj.SetSelection(selection)
-        e.Skip()
+        event.Skip()
 
 
 class VariableControlContinuous(wx.Panel):
@@ -490,20 +490,20 @@ class VariableControlContinuous(wx.Panel):
         )
         self._but0 = wx.Button(self, size=wx.Size(24, 24))
         self._but0.SetBitmap(img_minus.ConvertToBitmap())
-        self._but0.Bind(wx.EVT_BUTTON, lambda e: self._step(False))
+        self._but0.Bind(wx.EVT_BUTTON, lambda event: self._step(False))
         # Plus button
         img_plus = wx.Image(
             os.path.join(cockpit.gui.IMAGES_PATH, "touch_screen/misc_plus.png")
         )
         self._but1 = wx.Button(self, size=wx.Size(24, 24))
         self._but1.SetBitmap(img_plus.ConvertToBitmap())
-        self._but1.Bind(wx.EVT_BUTTON, lambda e: self._step(True))
+        self._but1.Bind(wx.EVT_BUTTON, lambda event: self._step(True))
         # Text controls
         self._text_ctrl = wx.TextCtrl(
             self, style=wx.TE_CENTRE | wx.TE_PROCESS_ENTER
         )
         self._text_ctrl.Bind(
-            wx.EVT_TEXT_ENTER, lambda e: self.set_value(float(e.GetString()))
+            wx.EVT_TEXT_ENTER, lambda event: self.set_value(float(event.GetString()))
         )
         self._text_ctrl.Bind(wx.EVT_KILL_FOCUS, self._on_focus_kill)
         self._txt = wx.StaticText(self, label=self._units)
@@ -554,9 +554,9 @@ class VariableControlContinuous(wx.Panel):
         self._text_ctrl.SetValue("{:.05G}".format(self._value))
         self.Refresh()
 
-    def _on_focus_kill(self, e):
+    def _on_focus_kill(self, event):
         self._update_label()
-        e.Skip()
+        event.Skip()
 
     def set_value(self, new_value):
         # Update value and label
@@ -668,7 +668,7 @@ class LightsPanelEntry(wx.Panel):
             )
             self.slider.Bind(
                 EVT_SAFE_CONTROL_COMMIT,
-                lambda e: self.power.set_power(e.Value / 100),
+                lambda event: self.power.set_power(event.Value / 100),
             )
             self.slider.SetValue(self.power.power_set_point * 100)
             self.power.add_watch(
@@ -899,7 +899,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.masterMosaic = mosaic.window
+        self.master_mosaic = mosaic.window
         # MOSAIC ATTRIBUTES
         #     Last known location of the mouse.
         self.prevMousePos = None
@@ -921,7 +921,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         sizer = wx.BoxSizer(wx.VERTICAL)
         limits = stage_mover.get_hard_limits()[:2]
         self.canvas = cockpit.gui.mosaic.canvas.MosaicCanvas(
-            self, limits, self.drawOverlay, self.on_mouse
+            self, limits, self.draw_overlay, self.on_mouse
         )
         sizer.Add(self.canvas, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -978,7 +978,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
             self.crosshair_box_size = 512 * wx.GetApp().objectives.get_pixel_size()
         self.offset = wx.GetApp().objectives.get_offset()
         scale = 150.0 / self.crosshair_box_size
-        self.canvas.zoomTo(
+        self.canvas.zoom_to(
             -cur_position[0] + self.offset[0],
             cur_position[1] - self.offset[1],
             scale,
@@ -1022,8 +1022,8 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
             self.lastClickPos = event.GetPosition()
         elif event.LeftUp() and self.select_tiles_func is not None:
             # Call the specified function with the given range.
-            start = self.canvas.mapScreenToCanvas(self.lastClickPos)
-            end = self.canvas.mapScreenToCanvas(self.prevMousePos)
+            start = self.canvas.map_screen_to_canvas(self.lastClickPos)
+            end = self.canvas.map_screen_to_canvas(self.prevMousePos)
             self.select_tiles_func((-start[0], start[1]), (-end[0], end[1]))
             self.lastClickPos = None
             self.Refresh()
@@ -1031,15 +1031,15 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         if self.select_tiles_func is None:
             if event.LeftDClick():
                 # Double left-click; move to the target position.
-                current_target = self.canvas.mapScreenToCanvas(mouse_pos)
+                current_target = self.canvas.map_screen_to_canvas(mouse_pos)
                 new_target = (
                     current_target[0] + self.offset[0],
                     current_target[1] + self.offset[1],
                 )
                 # stop mosaic if we are already running one
                 if mosaic.window.amGeneratingMosaic:
-                    self.masterMosaic.onAbort(mosaic.window)
-                self.goTo(new_target)
+                    self.master_mosaic.onAbort(mosaic.window)
+                self.go_to(new_target)
             elif event.LeftIsDown() and not event.LeftDown():
                 # Dragging the mouse with the left mouse button: drag or
                 # zoom, as appropriate.
@@ -1050,9 +1050,9 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
                 if event.ShiftDown():
                     # Use the vertical component of mouse motion to zoom.
                     zoom_factor = 1 - delta[1] / 100.0
-                    self.canvas.multiplyZoom(zoom_factor)
+                    self.canvas.multiply_zoom(zoom_factor)
                 else:
-                    self.canvas.dragView(delta)
+                    self.canvas.drag_view(delta)
             elif event.GetWheelRotation():
                 # Adjust zoom, based on the zoom rate.
                 delta = event.GetWheelRotation()
@@ -1061,7 +1061,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
                     # Invert the scaling direction.
                     multiplier = 2 - multiplier
                     delta *= -1
-                self.canvas.ZoomAtPoint(multiplier**delta, mouse_pos)
+                self.canvas.zoom_at_point(multiplier ** delta, mouse_pos)
 
         self.prevMousePos = mouse_pos
 
@@ -1133,7 +1133,7 @@ class StageControlXY(wx.Panel):
         pose_stxt = wx.StaticText(self, label="(99999, 99999)")
         cockpit.gui.EvtEmitter(self, cockpit.events.STAGE_POSITION).Bind(
             cockpit.gui.EVT_COCKPIT,
-            lambda e: pose_stxt.SetLabel(
+            lambda event: pose_stxt.SetLabel(
                 "({:5.2f}, {:5.2f})".format(*stage_mover.get_position()[:2])
             ),
         )
@@ -1156,7 +1156,7 @@ class StageControlXY(wx.Panel):
         # same time
         variable_ctrl_step_x.Bind(
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-            lambda e: wx.GetApp().stage.set_step_size(0, e.GetClientData()[1]),
+            lambda event: wx.GetApp().stage.set_step_size(0, event.GetClientData()[1]),
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
@@ -1180,7 +1180,7 @@ class StageControlXY(wx.Panel):
         )
         variable_ctrl_step_y.Bind(
             EVT_VAR_CTRL_CONT_COMMAND_EVENT,
-            lambda e: wx.GetApp().stage.set_step_size(1, e.GetClientData()[1]),
+            lambda event: wx.GetApp().stage.set_step_size(1, event.GetClientData()[1]),
         )
         cockpit.gui.EvtEmitter(self, events.STAGE_STEP_SIZE).Bind(
             cockpit.gui.EVT_COCKPIT,
@@ -1430,43 +1430,43 @@ class StageControlZ(wx.Panel):
         self.SetSizer(sizer)
         self.Layout()
 
-    def _on_move_up(self, e):
+    def _on_move_up(self, event):
         stage_mover.go_to_z(
             stage_mover.get_position()[2] + wx.GetApp().stage.get_step_sizes()[2]
         )
 
-    def _on_save_top(self, e):
+    def _on_save_top(self, event):
         wx.GetApp().stage.saved_top = stage_mover.get_position()[2]
 
-    def _on_move_top(self, e):
+    def _on_move_top(self, event):
         stage_mover.move_z_check_mover_limits(wx.GetApp().stage.saved_top)
 
-    def _on_move_centre(self, e):
+    def _on_move_centre(self, event):
         bottom = wx.GetApp().stage.saved_bottom
         top = wx.GetApp().stage.saved_top
         centre = bottom + (top - bottom) / 2.0
         stage_mover.move_z_check_mover_limits(centre)
 
-    def _on_recentre(self, e):
+    def _on_recentre(self, event):
         stage_mover.recenter_fine_motion()
 
-    def _on_move_down(self, e):
+    def _on_move_down(self, event):
         stage_mover.go_to_z(
             stage_mover.get_position()[2] - wx.GetApp().stage.get_step_sizes()[2]
         )
 
-    def _on_save_bottom(self, e):
+    def _on_save_bottom(self, event):
         wx.GetApp().stage.saved_bottom = stage_mover.get_position()[2]
 
-    def _on_move_bottom(self, e):
+    def _on_move_bottom(self, event):
         stage_mover.move_z_check_mover_limits(wx.GetApp().stage.saved_bottom)
 
-    def _on_touchdown(self, e):
+    def _on_touchdown(self, event):
         stage_mover.go_to_z(
             wx.GetApp().config["stage"].getfloat("slideTouchdownAltitude")
         )
 
-    def _on_switch(self, e):
+    def _on_switch(self, event):
         stage_mover.change_mover()
 
 
@@ -1489,7 +1489,7 @@ class StageControlCommon(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/stage_safeties.png",
-                        lambda e: self._on_safeties(e),
+                        lambda event: self._on_safeties(event),
                         helptext="Change the XYZ soft limits.",
                     ),
                     wx.ALIGN_CENTER,
@@ -1498,7 +1498,7 @@ class StageControlCommon(wx.Panel):
                     IconButton(
                         self,
                         "touch_screen/stage_move.png",
-                        lambda e: self._on_move(e),
+                        lambda event: self._on_move(event),
                         helptext="Move to a specific XYZ location.",
                     ),
                     wx.ALIGN_CENTER,
@@ -1509,12 +1509,12 @@ class StageControlCommon(wx.Panel):
         self.SetSizer(sizer)
         self.Layout()
 
-    def _on_safeties(self, e):
+    def _on_safeties(self, event):
         if self.dialog_safeties is None:
             self.dialog_safeties = DialogSafeties(self)
         self.dialog_safeties.Show()
 
-    def _on_move(self, e):
+    def _on_move(self, event):
         go_to_xyz_dialog(self.GetParent())
 
 
@@ -1698,20 +1698,20 @@ class DialogSafeties(wx.Dialog):
                 # Event handling
                 scrollbar.Bind(
                     wx.EVT_SCROLL,
-                    lambda e, tc=text_control: tc.SetValue(
-                        "{:g}".format(e.GetPosition())
+                    lambda event, tc=text_control: tc.SetValue(
+                        "{:g}".format(event.GetPosition())
                     ),
                 )
                 text_control.Bind(
                     wx.EVT_TEXT_ENTER,
-                    lambda e, sb=scrollbar: self._update_scrollbar(
-                        sb, int(e.GetString())
+                    lambda event, sb=scrollbar: self._update_scrollbar(
+                        sb, int(event.GetString())
                     ),
                 )
                 text_control.Bind(
                     wx.EVT_KILL_FOCUS,
-                    lambda e, sb=scrollbar: self._on_focus_kill(
-                        sb, int(e.GetString())
+                    lambda event, sb=scrollbar: self._on_focus_kill(
+                        sb, int(event.GetString())
                     ),
                 )
                 # Sizing
@@ -1740,9 +1740,9 @@ class DialogSafeties(wx.Dialog):
         )
         sizer_row_buttons = wx.BoxSizer(wx.HORIZONTAL)
         button_close = wx.Button(self, label="Close")
-        button_close.Bind(wx.EVT_BUTTON, lambda e: self._on_close(e))
+        button_close.Bind(wx.EVT_BUTTON, lambda event: self._on_close(event))
         button_apply = wx.Button(self, label="Apply")
-        button_apply.Bind(wx.EVT_BUTTON, lambda e: self._on_apply(e))
+        button_apply.Bind(wx.EVT_BUTTON, lambda event: self._on_apply(event))
         sizer_row_buttons.Add(button_close, 0, wx.ALIGN_CENTRE)
         sizer_row_buttons.Add(button_apply, 0, wx.ALIGN_CENTRE | wx.LEFT, 5)
         sizer.Add(
@@ -1750,7 +1750,7 @@ class DialogSafeties(wx.Dialog):
         )
         # Further event handling
         cockpit.gui.EvtEmitter(self, events.SOFT_SAFETY_LIMIT).Bind(
-            cockpit.gui.EVT_COCKPIT, lambda e: self._on_limit_soft_change(e)
+            cockpit.gui.EVT_COCKPIT, lambda event: self._on_limit_soft_change(event)
         )
         # Finalise layout
         self.SetSizer(sizer)
@@ -1762,10 +1762,10 @@ class DialogSafeties(wx.Dialog):
     def _on_focus_kill(self, scrollbar, value):
         self._update_scrollbar(scrollbar, value)
 
-    def _on_close(self, e):
+    def _on_close(self, event):
         self.Close()
 
-    def _on_apply(self, e):
+    def _on_apply(self, event):
         # Verify that the ranges make sense
         make_sense = True
         values = [sb.GetThumbPosition() for sb in self._scrollbars]

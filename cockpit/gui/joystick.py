@@ -141,15 +141,15 @@ class Joystick:
         absdelta = map(abs, delta)
         if all([d < _THRESHOLD for d in absdelta]):
             if event.ZPosition > _THRESHOLD:
-                mosaic.window.canvas.multiplyZoom(0.99)
+                mosaic.window.canvas.multiply_zoom(0.99)
             elif event.ZPosition < -_THRESHOLD:
-                mosaic.window.canvas.multiplyZoom(1.01)
+                mosaic.window.canvas.multiply_zoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
             move_relative([-0.01 * d * self._speed for d in delta] + [0], False)
         elif buttonTest(event.ButtonState, 1):
             move_relative([0, 0, -0.01 * delta[1] * self._speed], False)
         else:
-            mosaic.window.canvas.dragView(
+            mosaic.window.canvas.drag_view(
                 tuple(0.01 * d * self._speed for d in delta)
             )

@@ -142,7 +142,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.render_error = None
 
         ## A buffer of images waiting to be added to the mosaic.
-        self.pendingImages = queue.Queue(BUFFER_LENGTH)
+        self.pending_images = queue.Queue(BUFFER_LENGTH)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_MOUSE_EVENTS, mouse_callback)
@@ -252,130 +252,130 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         tiles, if no list is provided)."""
         if allowed_tiles is None:
             allowed_tiles = self.tiles
-        tile_shape = tile.textureData.shape
+        tile_shape = tile.texture_data.shape
         # Start with a neutral background based on the tile's mean value.
         result = (
             np.ones(
                 (tile_shape[0] * 3, tile_shape[1] * 3),
-                dtype=tile.textureData.dtype,
+                dtype=tile.texture_data.dtype,
             )
-            * tile.textureData.mean()
+            * tile.texture_data.mean()
         )
 
         # Get the bounding box 3x bigger than the tile with the tile at the
         # center.
         width, height = tile.size
-        tileX, tileY, tileZ = tile.pos
-        start = (tileX - width, tileY - height)
-        end = (tileX + width * 2, tileY + height * 2)
-        pixelSize = tile.getPixelSize()
-        for altTile in self.get_tiles_intersecting(start, end, allowed_tiles):
-            if altTile.getPixelSize() != pixelSize:
+        tile_x, tile_y, tile_z = tile.position
+        start = (tile_x - width, tile_y - height)
+        end = (tile_x + width * 2, tile_y + height * 2)
+        pixel_size = tile.get_pixel_size()
+        for alt_tile in self.get_tiles_intersecting(start, end, allowed_tiles):
+            if alt_tile.get_pixel_size() != pixel_size:
                 # Don't try to deal with tiles with differing pixel sizes.
                 continue
-            # Figure out the portion of altTile that intersects our region.
-            xMin = max(start[0], altTile.pos[0])
-            xMax = min(end[0], altTile.pos[0] + altTile.size[0])
-            yMin = max(start[1], altTile.pos[1])
-            yMax = min(end[1], altTile.pos[1] + altTile.size[1])
-            xPixels = (xMax - xMin) // pixelSize[0]
-            yPixels = (yMax - yMin) // pixelSize[1]
-            # Get the offset into altTile, and thus the relevant pixel data.
-            altX = (xMin - altTile.pos[0]) / pixelSize[0]
-            altY = (yMin - altTile.pos[1]) / pixelSize[1]
-            subRegion = altTile.textureData[
-                altX : altX + xPixels, altY : altY + yPixels
+            # Figure out the portion of alt_tile that intersects our region.
+            x_min = max(start[0], alt_tile.position[0])
+            x_max = min(end[0], alt_tile.position[0] + alt_tile.size[0])
+            y_min = max(start[1], alt_tile.position[1])
+            y_max = min(end[1], alt_tile.position[1] + alt_tile.size[1])
+            x_pixels = (x_max - x_min) // pixel_size[0]
+            y_pixels = (y_max - y_min) // pixel_size[1]
+            # Get the offset into alt_tile, and thus the relevant pixel data.
+            alt_x = (x_min - alt_tile.position[0]) / pixel_size[0]
+            alt_y = (y_min - alt_tile.position[1]) / pixel_size[1]
+            sub_region = alt_tile.texture_data[
+                alt_x : alt_x + x_pixels, alt_y : alt_y + y_pixels
             ]
-            if 0 in subRegion.shape:
+            if 0 in sub_region.shape:
                 # The intersection is tangential; unlikely but can happen.
                 # Skip this tile as it doesn't provide useful intersection.
                 continue
             # Get the offset into result.
-            rX = max(0, (altTile.pos[0] - start[0]) / pixelSize[0])
-            rY = max(0, (altTile.pos[1] - start[1]) / pixelSize[1])
+            r_x = max(0, (alt_tile.position[0] - start[0]) / pixel_size[0])
+            r_y = max(0, (alt_tile.position[1] - start[1]) / pixel_size[1])
             # HACK: for some reason that I don't understand, the above gives
             # me swapped-and-offset X and Y axes. I need to swap them back
             # while accounting for the difference in aspect ratio.
-            tX = rY * (float(tile_shape[0]) / tile_shape[1])
-            tY = rX * (float(tile_shape[1]) / tile_shape[0])
-            rX, rY = tX, tY
-            target = result[rX : rX + xPixels, rY : rY + yPixels]
-            target[:] = subRegion
+            t_x = r_y * (float(tile_shape[0]) / tile_shape[1])
+            t_y = r_x * (float(tile_shape[1]) / tile_shape[0])
+            r_x, r_y = t_x, t_y
+            target = result[r_x : r_x + x_pixels, r_y : r_y + y_pixels]
+            target[:] = sub_region
 
         return result
 
-    def deleteTilesIntersecting(self, start, end):
+    def delete_tiles_intersecting(self, start, end):
         """Delete all tiles that intersect the specified box."""
         self.delete_tiles_list(self.get_tiles_intersecting(start, end))
         events.publish(events.MOSAIC_UPDATE)
 
     @cockpit.util.threads.call_in_main_thread
-    def delete_tiles_list(self, tilesToDelete):
+    def delete_tiles_list(self, tiles_to_delete):
         """Delete a list of tiles."""
-        for tile in tilesToDelete:
+        for tile in tiles_to_delete:
             tile.wipe()
             del self.tiles[self.tiles.index(tile)]
         self.SetCurrent(self.context)
 
         # Rerender all megatiles that are now invalid.
         dirtied = []
-        for megaTile in self.mega_tiles:
-            for tile in tilesToDelete:
-                if megaTile.intersects_box(tile.box):
-                    dirtied.append(megaTile)
+        for mega_tile in self.mega_tiles:
+            for tile in tiles_to_delete:
+                if mega_tile.intersects_box(tile.box):
+                    dirtied.append(mega_tile)
                     break
         self.rerender_megatiles(dirtied)
         self.Refresh()
         events.publish(events.MOSAIC_UPDATE)
 
     def on_idle(self, event):
-        if self.pendingImages.empty():  # or not self.IsShownOnScreen():
+        if self.pending_images.empty():  # or not self.IsShownOnScreen():
             return
         # Draw as many images as possible in 50ms.
         t = time.time()
-        newTiles = []
+        new_tiles = []
         self.SetCurrent(self.context)
-        while not self.pendingImages.empty() and (time.time() - t < 0.05):
+        while not self.pending_images.empty() and (time.time() - t < 0.05):
             (
                 data,
-                pos,
+                position,
                 size,
                 scalings,
                 layer,
                 metadata,
-            ) = self.pendingImages.get()
-            newTiles.append(Tile(data, pos, size, scalings, layer, metadata))
-        self.tiles.extend(newTiles)
-        for megaTile in self.mega_tiles:
-            megaTile.prerender_tiles(newTiles)
+            ) = self.pending_images.get()
+            new_tiles.append(Tile(data, position, size, scalings, layer, metadata))
+        self.tiles.extend(new_tiles)
+        for mega_tile in self.mega_tiles:
+            mega_tile.prerender_tiles(new_tiles)
 
-        self.tiles_to_refresh.update(newTiles)
+        self.tiles_to_refresh.update(new_tiles)
 
         self.Refresh()
         events.publish(events.MOSAIC_UPDATE)
-        if not self.pendingImages.empty():
+        if not self.pending_images.empty():
             event.RequestMore()
 
-    def addImage(
-        self, data, pos, size, scalings=(None, None), layer=0, metadata=None
+    def add_image(
+        self, data, position, size, scalings=(None, None), layer=0, metadata=None
     ):
         """Add a new image to the mosaic.
         @cockpit.util.threads.call_in_main_thread."""
-        self.pendingImages.put((data, pos, size, scalings, layer, metadata))
+        self.pending_images.put((data, position, size, scalings, layer, metadata))
 
     @cockpit.util.threads.call_in_main_thread
-    def rescale(self, minMax=None):
+    def rescale(self, min_max=None):
         """Rescale the tiles.
 
         Args:
-            minMax (tuple): A (blackpoint, whitepoint) tuple, or None to
+            min_max (tuple): A (blackpoint, whitepoint) tuple, or None to
                 rescale each tile individually.
         """
-        if minMax is None:
+        if min_max is None:
             # Tiles will treat this as "use our own data".
-            minMax = (None, None)
+            min_max = (None, None)
         for tile in self.tiles:
-            tile.scaleHistogram(*minMax)
+            tile.scale_histogram(*min_max)
         self.tiles_to_refresh.update(self.tiles)
         self.rerender_megatiles()
         self.Refresh()
@@ -414,13 +414,13 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             ## Paint the megatiles if we're zoomed out, or the
             # normal tiles if we're zoomed in.
             glEnable(GL_TEXTURE_2D)
-            viewBox = self.getViewBox()
+            view_box = self.get_view_box()
             if self.scale < ZOOM_SWITCHOVER:
-                for megaTile in self.mega_tiles:
-                    megaTile.render(viewBox)
+                for mega_tile in self.mega_tiles:
+                    mega_tile.render(view_box)
             else:
                 for tile in self.tiles:
-                    tile.render(viewBox)
+                    tile.render(view_box)
             glDisable(GL_TEXTURE_2D)
 
             if self.overlay_callback is not None:
@@ -433,7 +433,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             traceback.print_exc()
             self.render_error = e
 
-    def zoomTo(self, x, y, scale):
+    def zoom_to(self, x, y, scale):
         """Change our view transform."""
         # Paranoia
         if not scale:
@@ -444,7 +444,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.scale = scale
         self.Refresh()
 
-    def ZoomAtPoint(self, multiplier: float, wx_point: wx.RealPoint) -> None:
+    def zoom_at_point(self, multiplier: float, wx_point: wx.RealPoint) -> None:
         """Zoom in/out while keeping point in place.
 
         When using the mouse scroll to zoom in/out we want to keep the
@@ -463,7 +463,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         self.scale *= multiplier
         self.Refresh()
 
-    def multiplyZoom(self, multiplier: float) -> None:
+    def multiply_zoom(self, multiplier: float) -> None:
         """Change zoom by the specified multiplier.
 
         This will change the translational offset too to keep the view
@@ -473,56 +473,56 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         """
         width, height = self.GetClientSize()
         viewport_centre_point = wx.RealPoint(width, height) / 2
-        self.ZoomAtPoint(multiplier, viewport_centre_point)
+        self.zoom_at_point(multiplier, viewport_centre_point)
 
     def on_dpi_change(self, event):
         # get new scale and work out change.
-        contentScale = self.GetContentScaleFactor()
-        multiplier = contentScale / self.old_scale_factor
+        content_scale = self.GetContentScaleFactor()
+        multiplier = content_scale / self.old_scale_factor
         # work out old canvas size to shift back to origin
-        oldwidth, oldheight = self.GetClientSize() * self.old_scale_factor
-        oldhalfWidth = oldwidth / 2
-        oldhalfHeight = oldheight / 2
+        old_width, old_height = self.GetClientSize() * self.old_scale_factor
+        old_half_width = old_width / 2
+        old_half_height = old_height / 2
         # apply shift to give new position of center of image
-        x = (-self.dx + oldhalfWidth) / (self.scale)
-        y = (-self.dy + oldhalfHeight) / (self.scale)
+        x = (-self.dx + old_half_width) / (self.scale)
+        y = (-self.dy + old_half_height) / (self.scale)
         self.scale *= multiplier
         # move to this new view, which is same as old but at different DPI
-        self.zoomTo(x, y, self.scale)
+        self.zoom_to(x, y, self.scale)
         # store scale factor so we can use for next rescale
-        self.old_scale_factor = contentScale
+        self.old_scale_factor = content_scale
 
-    def dragView(self, offset):
+    def drag_view(self, offset):
         """Change our translation by the specified number of pixels."""
         self.dx += offset[0]
         self.dy -= offset[1]
         self.Refresh()
 
-    def mapScreenToCanvas(self, pos):
+    def map_screen_to_canvas(self, position):
         """Remap an (X, Y) tuple of screen coordinates to a location on the
         stage."""
-        scaleFactor = self.GetContentScaleFactor()
-        pos = (pos[0] * scaleFactor, pos[1] * scaleFactor)
+        scale_factor = self.GetContentScaleFactor()
+        position = (position[0] * scale_factor, position[1] * scale_factor)
 
-        height = self.GetClientSize()[1] * scaleFactor
+        height = self.GetClientSize()[1] * scale_factor
         return (
-            (self.dx - pos[0]) / self.scale,
-            -(self.dy - height + pos[1]) / self.scale,
+            (self.dx - position[0]) / self.scale,
+            -(self.dy - height + position[1]) / self.scale,
         )
 
-    def getViewBox(self):
+    def get_view_box(self):
         """Return a (bottom left, top right) tuple showing what part of the
         stage is currently visible."""
         width, height = self.GetClientSize() * self.GetContentScaleFactor()
-        bottomLeft = (-self.dx / self.scale, -self.dy / self.scale)
-        topRight = (
+        bottom_left = (-self.dx / self.scale, -self.dy / self.scale)
+        top_right = (
             -(self.dx - width) / self.scale,
             -(self.dy - height) / self.scale,
         )
-        return (bottomLeft, topRight)
+        return (bottom_left, top_right)
 
     @cockpit.util.threads.call_in_new_thread
-    def saveTiles(self, savePath):
+    def save_tiles(self, save_path):
         """Given a path to a file, save the mosaic to that file and an adjacent
         file.
 
@@ -537,24 +537,24 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 maximum=len(self.tiles),
             ),
         )
-        handle = open(savePath, "w")
-        mrcPath = savePath + ".mrc"
-        if ".txt" in savePath:
-            mrcPath = savePath.replace(".txt", ".dv")
+        handle = open(save_path, "w")
+        mrcPath = save_path + ".mrc"
+        if ".txt" in save_path:
+            mrcPath = save_path.replace(".txt", ".dv")
         handle.write("%s\n" % mrcPath)
         width = 0
         height = 0
         for tile in self.tiles:
-            width = max(width, tile.textureData.shape[0])
-            height = max(height, tile.textureData.shape[1])
+            width = max(width, tile.texture_data.shape[0])
+            height = max(height, tile.texture_data.shape[1])
             # We do this by a series of extensions since some of these lists
             # may be Numpy arrays, which don't do array extension when you
             # "add" them.
             values = []
-            values.extend(tile.pos)
+            values.extend(tile.position)
             values.extend(tile.size)
-            values.extend(tile.textureData.shape)
-            values.extend(tile.histogramScale)
+            values.extend(tile.texture_data.shape)
+            values.extend(tile.histogram_scale)
             values.append(tile.layer)
             values = map(str, values)
             handle.write(",".join(values) + "\n")
@@ -563,63 +563,63 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # Now we have the max image extent in X and Y, we can pile everything
         # into a single array for saving as an MRC file. Images smaller than
         # the max will be padded with zeros.
-        imageData = np.zeros(
+        image_data = np.zeros(
             (1, 1, len(self.tiles), width, height), dtype=np.uint16
         )
         for i, tile in enumerate(self.tiles):
-            imageData[
+            image_data[
                 0,
                 0,
                 i,
-                : tile.textureData.shape[0],
-                : tile.textureData.shape[1],
-            ] = tile.textureData
-        header = cockpit.util.datadoc.make_header_for(imageData)
+                : tile.texture_data.shape[0],
+                : tile.texture_data.shape[1],
+            ] = tile.texture_data
+        header = cockpit.util.datadoc.make_header_for(image_data)
         # meta data for mosaic image header
         #
-        numIntegers = 8
-        numFloats = 32
-        intMetadataBuffer = np.array([0] * numIntegers, dtype=np.int32)
-        floatMetadataBuffer = np.array(
-            [0.0] * numFloats, dtype=np.float32
+        nb_integers = 8
+        nb_floats = 32
+        int_metadata_buffer = np.array([0] * nb_integers, dtype=np.int32)
+        float_metadata_buffer = np.array(
+            [0.0] * nb_floats, dtype=np.float32
         )
-        floatMetadataBuffer[12] = 1.0  # intensity scaling
+        float_metadata_buffer[12] = 1.0  # intensity scaling
 
-        header.NumIntegers = numIntegers
-        header.NumFloats = numFloats
+        header.NumIntegers = nb_integers
+        header.NumFloats = nb_floats
         # we can only have one lens ID so just grab the current one.
         header.LensNum = wx.GetApp().objectives.get_current().lens_id
-        extendedBytes = 4 * (numIntegers + numFloats) * len(self.tiles)
-        header.next = extendedBytes
+        extended_bytes = 4 * (nb_integers + nb_floats) * len(self.tiles)
+        header.next = extended_bytes
 
-        metadataOffset = 1024
-        dataOffset = 1024 + extendedBytes
+        metadata_offset = 1024
+        data_offset = 1024 + extended_bytes
 
         handle = open(mrcPath, "wb")
         cockpit.util.datadoc.write_mrc_header(header, handle)
-        handle.seek(metadataOffset)
+        handle.seek(metadata_offset)
         for i in range(len(self.tiles)):
             metadata = self.tiles[i].metadata
-            floatMetadataBuffer[1] = metadata["timestamp"]
-            floatMetadataBuffer[2:5] = metadata["image_position"]
-            floatMetadataBuffer[5] = self.tiles[i].textureData.min()
-            floatMetadataBuffer[6] = self.tiles[i].textureData.min()
-            floatMetadataBuffer[8] = metadata["exposure_time"]
-            floatMetadataBuffer[10] = metadata["ex_wavelength"]
-            floatMetadataBuffer[11] = metadata["wavelength"]
-            handle.write(intMetadataBuffer)
-            handle.write(floatMetadataBuffer)
+            float_metadata_buffer[1] = metadata["timestamp"]
+            float_metadata_buffer[2:5] = metadata["image_position"]
+            float_metadata_buffer[5] = self.tiles[i].texture_data.min()
+            float_metadata_buffer[6] = self.tiles[i].texture_data.min()
+            float_metadata_buffer[8] = metadata["exposure_time"]
+            float_metadata_buffer[10] = metadata["ex_wavelength"]
+            float_metadata_buffer[11] = metadata["wavelength"]
+            handle.write(int_metadata_buffer)
+            handle.write(float_metadata_buffer)
 
         # we should be here already but just to be sure
-        handle.seek(dataOffset)
-        for i, image in enumerate(imageData[:, :]):
+        handle.seek(data_offset)
+        for i, image in enumerate(image_data[:, :]):
             handle.write(image)
             wx.PostEvent(self.GetEventHandler(), ProgressUpdateEvent(value=i))
         handle.close()
         wx.PostEvent(self.GetEventHandler(), ProgressEndEvent())
 
     @cockpit.util.threads.call_in_new_thread
-    def loadTiles(self, filePath):
+    def load_tiles(self, file_path):
         """Load a text file describing a set of tiles, as well as the tile
         image data.
 
@@ -629,18 +629,18 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         although maybe not since MAP added a queue and a thread to process new
         tiles.
         """
-        with open(filePath, "r") as handle:
-            mrcPath = handle.readline().strip()
-            tileStats = []
+        with open(file_path, "r") as handle:
+            mrc_path = handle.readline().strip()
+            tile_stats = []
             for line in handle:
                 # X position, Y position, Z position,
                 # X micron size, Y micron size,
                 # X pixel size, Y pixel size, blackpoint, whitepoint, layer.
                 # We'll have to convert the pixel sizes and layer to
                 # ints later.
-                tileStats.append(list(map(float, line.strip().split(","))))
+                tile_stats.append(list(map(float, line.strip().split(","))))
         try:
-            doc = cockpit.util.datadoc.DataDoc(mrcPath)
+            doc = cockpit.util.datadoc.DataDoc(mrc_path)
         except Exception as e:
             wx.MessageBox(
                 (
@@ -651,7 +651,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                     "%s\n"
                     "\n"
                     "Please verify that the file path is correct and the file is valid."
-                    % (mrcPath, e)
+                    % (mrc_path, e)
                 ),
                 style=(wx.ICON_INFORMATION | wx.OK),
                 parent=self.GetParent(),
@@ -671,20 +671,20 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 maximum=100,
             ),
         )
-        if doc.image_array.shape[2] > len(tileStats):
+        if doc.image_array.shape[2] > len(tile_stats):
             # More images in the file than we have stats for.
             _logger.warning(
                 "Loading mosaic with %d images; only have positioning information for %d.",
                 doc.image_array.shape[2],
-                len(tileStats),
+                len(tile_stats),
             )
-        maxImages = min(doc.image_array.shape[2], len(tileStats))
-        for i in range(maxImages):
+        max_images = min(doc.image_array.shape[2], len(tile_stats))
+        for i in range(max_images):
             image = doc.image_array[0, 0, i]
-            stats = tileStats[i]
+            stats = tile_stats[i]
             try:
                 data = image[: int(stats[5]), : int(stats[6])]
-                self.addImage(
+                self.add_image(
                     data, stats[:3], stats[3:5], stats[7:9], int(stats[9])
                 )
             except Exception as e:
@@ -693,7 +693,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                         "Failed to load line %d of file %s: %s.\n"
                         "\n"
                         "Please see the logs for more details."
-                        % (i, filePath, e)
+                        % (i, file_path, e)
                     ),
                     style=(wx.ICON_INFORMATION | wx.OK),
                     parent=self.GetParent(),
@@ -703,37 +703,37 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 return
         # Wait until we've loaded all tiles or we go a full second without
         # any new tiles arriving.
-        numExpectedTiles = len(self.tiles) + len(tileStats)
-        lastUpdatedTime = time.time()
-        curCount = len(self.tiles)
-        while len(self.tiles) != numExpectedTiles:
+        nb_expected_tiles = len(self.tiles) + len(tile_stats)
+        last_updated_time = time.time()
+        cur_count = len(self.tiles)
+        while len(self.tiles) != nb_expected_tiles:
             count = len(self.tiles)
-            if count != curCount:
-                lastUpdatedTime = time.time()
-                curCount = count
-            if time.time() - lastUpdatedTime > 1:
+            if count != cur_count:
+                last_updated_time = time.time()
+                cur_count = count
+            if time.time() - last_updated_time > 1:
                 break
             time.sleep(0.1)
         wx.PostEvent(self.GetEventHandler(), ProgressEndEvent())
         events.publish(events.MOSAIC_UPDATE)
 
     def create_progress_dialog(self, event):
-        if hasattr(self, "progressDialog"):
+        if hasattr(self, "progress_dialog"):
             return
-        self.progressDialog = wx.ProgressDialog(
+        self.progress_dialog = wx.ProgressDialog(
             parent=self.GetParent(),
             title=event.title,
             message=event.message,
             maximum=event.maximum,
         )
-        self.progressDialog.Show()
+        self.progress_dialog.Show()
 
     def update_progress_dialog(self, event):
-        if hasattr(self, "progressDialog"):
-            self.progressDialog.Update(event.value)
-            self.progressDialog.Show()
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.Update(event.value)
+            self.progress_dialog.Show()
 
     def destroy_progress_dialog(self, event):
-        if hasattr(self, "progressDialog"):
-            self.progressDialog.Destroy()
-            del self.progressDialog
+        if hasattr(self, "progress_dialog"):
+            self.progress_dialog.Destroy()
+            del self.progress_dialog

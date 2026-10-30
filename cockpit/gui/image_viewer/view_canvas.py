@@ -936,7 +936,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             ("", None),
             (
                 "Send image to mosaic",
-                cockpit.gui.mosaic.window.transferCameraImage,
+                cockpit.gui.mosaic.window.transfer_camera_image,
             ),
             ("Save image", self.save_data),
         ]

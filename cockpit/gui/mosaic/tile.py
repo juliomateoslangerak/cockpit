@@ -57,7 +57,7 @@ performance measure.
 
 """
 
-import numpy
+import numpy as np
 from OpenGL.GL import (
     GL_BLUE_BIAS,
     GL_BLUE_SCALE,
@@ -131,15 +131,15 @@ def getTexSize(width, height):
 
 ## Maps numpy datatypes to OpenGL datatypes
 dtypeToGlTypeMap = {
-    numpy.uint8: GL_UNSIGNED_BYTE,
-    numpy.uint16: GL_UNSIGNED_SHORT,
-    numpy.int16: GL_SHORT,
-    numpy.float32: GL_FLOAT,
-    numpy.float64: GL_FLOAT,
-    numpy.int32: GL_FLOAT,
-    numpy.uint32: GL_FLOAT,
-    numpy.complex64: GL_FLOAT,
-    numpy.complex128: GL_FLOAT,
+    np.uint8: GL_UNSIGNED_BYTE,
+    np.uint16: GL_UNSIGNED_SHORT,
+    np.int16: GL_SHORT,
+    np.float32: GL_FLOAT,
+    np.float64: GL_FLOAT,
+    np.int32: GL_FLOAT,
+    np.uint32: GL_FLOAT,
+    np.complex64: GL_FLOAT,
+    np.complex128: GL_FLOAT,
 }
 
 
@@ -217,20 +217,20 @@ class Tile:
         img = self.textureData
         mi, ma = self.histogramScale
         pic_ny, pic_nx = img.shape
-        if img.dtype.type in (numpy.float64, numpy.int32, numpy.uint32):
-            data = img.astype(numpy.float32)
+        if img.dtype.type in (np.float64, np.int32, np.uint32):
+            data = img.astype(np.float32)
             imgString = data.tobytes()
-            imgType = numpy.float32
+            imgType = np.float32
         else:
             imgString = img.tobytes()
             imgType = img.dtype.type
 
         # maxUShort: value that represents "maximum color" - i.e. white
-        if img.dtype.type == numpy.uint16:
+        if img.dtype.type == np.uint16:
             maxUShort = (1 << 16) - 1
-        elif img.dtype.type == numpy.int16:
+        elif img.dtype.type == np.int16:
             maxUShort = (1 << 15) - 1
-        elif img.dtype.type == numpy.uint8:
+        elif img.dtype.type == np.uint8:
             maxUShort = (1 << 8) - 1
         else:
             maxUShort = 1
@@ -251,11 +251,11 @@ class Tile:
         glPixelTransferi(GL_MAP_COLOR, False)
 
         if img.dtype.type in (
-            numpy.float64,
-            numpy.int32,
-            numpy.uint32,
-            numpy.complex64,
-            numpy.complex128,
+            np.float64,
+            np.int32,
+            np.uint32,
+            np.complex64,
+            np.complex128,
         ):
             itSize = 4
             glPixelStorei(
@@ -419,7 +419,7 @@ class MegaTile(Tile):
             return
         cls.pixelSize = edge
         cls.micron_size = edge * 1
-        cls._emptyTileData = numpy.ones((edge, edge), dtype=numpy.float32)
+        cls._emptyTileData = np.ones((edge, edge), dtype=np.float32)
 
     def prerender_tiles(self, tiles):
         """Go through the provided list of Tiles, find the ones that overlap

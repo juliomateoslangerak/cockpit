@@ -49,7 +49,7 @@
 ## ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-import numpy
+import numpy as np
 import wx
 
 import cockpit.gui.gui_utils
@@ -154,7 +154,7 @@ class GridSitesDialog(wx.Dialog):
             x_location = cur_location[0] - x_offset * pixel_size * image_width
             for y_offset in range(int(self.num_rows.GetValue())):
                 y_location = cur_location[1] - y_offset * pixel_size * image_height
-                target = numpy.array([x_location, y_location, cur_location[2]])
+                target = np.array([x_location, y_location, cur_location[2]])
                 new_site = cockpit.interfaces.stage_mover.Site(
                     target, size=marker_size
                 )

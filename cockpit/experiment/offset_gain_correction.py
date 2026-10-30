@@ -57,7 +57,7 @@ import decimal
 import threading
 import time
 
-import numpy
+import numpy as np
 import wx
 
 import cockpit.handlers.camera
@@ -199,7 +199,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
             for camera in active_cameras:
                 # Prepare a memory buffer to store images in.
                 width, height = camera.get_image_size()
-                self.cam_to_images[camera] = numpy.zeros(
+                self.cam_to_images[camera] = np.zeros(
                     (self.num_exposures, height, width)
                 )
                 self.cam_to_num_images_received[camera] = 0
@@ -242,7 +242,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         results = []
         for camera in self.cameras:
             results.append(self.make_fit(self.cam_to_averages[camera]))
-        results = numpy.array(results, dtype=numpy.float32)
+        results = np.array(results, dtype=np.float32)
         results.shape = (
             len(self.cameras),
             1,
@@ -318,12 +318,12 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
             if self.should_preserve_intermediary_files:
                 # Save the raw data.
                 cockpit.util.datadoc.write_data_as_mrc(
-                    images.astype(numpy.uint16),
+                    images.astype(np.uint16),
                     "%s-raw-%s-%d" % (self.save_path, camera.name, multiplier),
                 )
 
-            std_dev = numpy.std(images)
-            median = numpy.median(images)
+            std_dev = np.std(images)
+            median = np.median(images)
             print(
                 "For camera", camera, "have median", median, "and std", std_dev
             )
@@ -337,7 +337,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
             print(len(clean_images), "images are valid")
             if clean_images:
                 self.cam_to_averages[camera].append(
-                    numpy.mean(clean_images, axis=0)
+                    np.mean(clean_images, axis=0)
                 )
                 active_cameras.add(camera)
         return active_cameras
@@ -347,14 +347,14 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
 
         NB assumes that the first image in images is the measured dark offset.
         """
-        x_vals = map(numpy.mean, images)
-        y_vals = numpy.array(images)
+        x_vals = map(np.mean, images)
+        y_vals = np.array(images)
         image_shape = y_vals.shape[1:]
-        y_vals.shape = len(x_vals), numpy.product(image_shape)
-        slopes, intercepts = numpy.polyfit(x_vals, y_vals, 1)
+        y_vals.shape = len(x_vals), np.product(image_shape)
+        slopes, intercepts = np.polyfit(x_vals, y_vals, 1)
         slopes.shape = image_shape
 
-        return numpy.array([images[0], slopes])
+        return np.array([images[0], slopes])
 
 
 ## A consistent name to use to refer to the experiment class itself.

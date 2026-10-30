@@ -54,7 +54,6 @@ import queue
 import time
 import traceback
 
-import numpy
 import numpy as np
 import wx.glcanvas
 import wx.lib.newevent
@@ -256,7 +255,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         tile_shape = tile.textureData.shape
         # Start with a neutral background based on the tile's mean value.
         result = (
-            numpy.ones(
+            np.ones(
                 (tile_shape[0] * 3, tile_shape[1] * 3),
                 dtype=tile.textureData.dtype,
             )
@@ -564,8 +563,8 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         # Now we have the max image extent in X and Y, we can pile everything
         # into a single array for saving as an MRC file. Images smaller than
         # the max will be padded with zeros.
-        imageData = numpy.zeros(
-            (1, 1, len(self.tiles), width, height), dtype=numpy.uint16
+        imageData = np.zeros(
+            (1, 1, len(self.tiles), width, height), dtype=np.uint16
         )
         for i, tile in enumerate(self.tiles):
             imageData[
@@ -580,9 +579,9 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         #
         numIntegers = 8
         numFloats = 32
-        intMetadataBuffer = numpy.array([0] * numIntegers, dtype=numpy.int32)
-        floatMetadataBuffer = numpy.array(
-            [0.0] * numFloats, dtype=numpy.float32
+        intMetadataBuffer = np.array([0] * numIntegers, dtype=np.int32)
+        floatMetadataBuffer = np.array(
+            [0.0] * numFloats, dtype=np.float32
         )
         floatMetadataBuffer[12] = 1.0  # intensity scaling
 

@@ -75,7 +75,7 @@ import threading
 
 import matplotlib.backends.backend_wxagg
 import matplotlib.figure
-import numpy
+import numpy as np
 import wx
 
 
@@ -178,7 +178,7 @@ class ResponseMapExperiment(
             for camera in self.cameras:
                 # Prepare a memory buffer to store images in.
                 width, height = camera.get_image_size()
-                self.cam_to_images[camera] = numpy.zeros(
+                self.cam_to_images[camera] = np.zeros(
                     (self.num_exposures, height, width)
                 )
                 self.cam_to_num_images_received[camera] = 0
@@ -227,9 +227,9 @@ class ResponseMapExperiment(
         # flat).
         num_times = len(self.times_and_images)
         num_cams = len(self.times_and_images[0][1])
-        all_images = numpy.zeros(
+        all_images = np.zeros(
             (num_cams, num_times, 1, self.max_image_dims[0], self.max_image_dims[1]),
-            dtype=numpy.float32,
+            dtype=np.float32,
         )
         exposure_times = []
         for timepoint, (exposure_time, images, raw_images) in enumerate(
@@ -250,7 +250,7 @@ class ResponseMapExperiment(
         header.NumFloats = 1
         handle = open(self.save_path, "wb")
         handle.write(header._array.tobytes())
-        exposure_times = numpy.array(exposure_times, dtype=numpy.float32)
+        exposure_times = np.array(exposure_times, dtype=np.float32)
         handle.write(exposure_times)
         handle.write(all_images)
         handle.close()
@@ -259,13 +259,13 @@ class ResponseMapExperiment(
         """Demonstrate our results to the user in a number of ways."""
         # First, show plots of the linearity of some of the pixels, before
         # and after correction.
-        x_vals = numpy.array([d[0] for d in self.times_and_images])
-        averaged_images = numpy.array([d[1] for d in self.times_and_images])
-        raw_images = numpy.array([d[2] for d in self.times_and_images])
+        x_vals = np.array([d[0] for d in self.times_and_images])
+        averaged_images = np.array([d[1] for d in self.times_and_images])
+        raw_images = np.array([d[2] for d in self.times_and_images])
         self.plot_pixels(
             x_vals, raw_images, "Pre-corrected pixel linearity survey"
         )
-        corrected_images = numpy.empty(raw_images.shape)
+        corrected_images = np.empty(raw_images.shape)
         for cam in range(raw_images.shape[1]):
             corrector = cockpit.util.correct_nonlinear.Corrector(
                 x_vals, averaged_images[:, cam]
@@ -284,8 +284,8 @@ class ResponseMapExperiment(
         raw_images = raw_images.transpose(1, 0, 4, 2, 3)
         corrected_images = corrected_images.transpose(1, 0, 4, 2, 3)
         # Ensure we have valid datatypes for display.
-        raw_images = numpy.float32(raw_images)
-        corrected_images = numpy.float32(corrected_images)
+        raw_images = np.float32(raw_images)
+        corrected_images = np.float32(corrected_images)
         viewer1 = cockpit.gui.image_sequence_viewer.ImageSequenceViewer(
             raw_images, "Uncorrected sample images", parent=None
         )
@@ -322,7 +322,7 @@ class ResponseMapExperiment(
                 x = cx + x_offset * width / 4
                 lines.append(axes.plot(x_vals, cam_images[:, y, x], color))
                 labels.append("Pixel at %d, %d for cam %d" % (x, y, cam))
-            lines.append(axes.plot(x_vals, map(numpy.mean, cam_images), "k"))
+            lines.append(axes.plot(x_vals, map(np.mean, cam_images), "k"))
             labels.append("Average for cam %d" % cam)
         figure.legend(lines, labels, loc="upper left")
         frame = wx.Frame(None, title="Linearity plot")
@@ -380,14 +380,14 @@ class ResponseMapExperiment(
             if self.should_preserve_intermediary_files:
                 # Save the raw data.
                 cockpit.util.datadoc.write_data_as_mrc(
-                    images.astype(numpy.uint16),
+                    images.astype(np.uint16),
                     "%s-raw-%s-%04.5fms"
                     % (self.save_path, camera.name, exposure_time),
                 )
 
             # Calculate a threshold for cosmic ray strikes.
-            std_dev = numpy.std(images)
-            median = numpy.median(images)
+            std_dev = np.std(images)
+            median = np.median(images)
             print(
                 "For camera", camera, "have median", median, "and std", std_dev
             )
@@ -395,15 +395,15 @@ class ResponseMapExperiment(
             # To cope with the fact that some images may be improperly
             # exposed, we want to find statistics that are true for most
             # of the images, hence the per-image statistics here.
-            median_std = numpy.median([numpy.std(image) for image in images])
-            median_median = numpy.median(
-                [numpy.median(image) for image in images]
+            median_std = np.median([np.std(image) for image in images])
+            median_median = np.median(
+                [np.median(image) for image in images]
             )
-            accumulator = numpy.zeros(images[0].shape, dtype=numpy.float32)
+            accumulator = np.zeros(images[0].shape, dtype=np.float32)
             num_clean_images = 0
             for image in images:
                 image_max = image.max()
-                image_median = numpy.median(image)
+                image_median = np.median(image)
                 if (
                     image_max < threshold
                     and abs(image_median - median_median) < median_std

@@ -57,7 +57,7 @@ import threading
 import time
 from functools import wraps
 
-import numpy
+import numpy as np
 import scipy.ndimage
 import wx
 from OpenGL.GL import *
@@ -159,8 +159,8 @@ class MosaicCommon:
             glBegin(GL_LINE_LOOP)
             for i in range(8):
                 glVertex3f(
-                    x + site.size * numpy.cos(numpy.pi * i / 4.0),
-                    y + site.size * numpy.sin(numpy.pi * i / 4.0),
+                    x + site.size * np.cos(np.pi * i / 4.0),
+                    y + site.size * np.sin(np.pi * i / 4.0),
                     0,
                 )
             glEnd()
@@ -1091,7 +1091,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 parent=self,
             )
             return
-        positions = numpy.array(positions)
+        positions = np.array(positions)
         # Pick a point in the plane, as the average of all site positions.
         center = positions.mean(axis=0)
         # Try every combinations of points, and average their resulting normal
@@ -1104,14 +1104,14 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 for k in range(j + 1, len(positions)):
                     p3 = positions[k] - center
                     # Calculate normal vector, and normalize
-                    normal = numpy.cross(p2 - p1, p3 - p1)
-                    magnitude = numpy.sqrt(sum(normal * normal))
+                    normal = np.cross(p2 - p1, p3 - p1)
+                    magnitude = np.sqrt(sum(normal * normal))
                     normals.append(normal / magnitude)
 
         # Ensure all normals point in the same direction. If they oppose,
         # their sum should be ~0; if they are aligned, it should be
         # ~2.
-        normals = numpy.array(normals)
+        normals = np.array(normals)
         base = normals[0]
         for normal in normals[1:]:
             if sum(base + normal) < 0.5:
@@ -1120,15 +1120,15 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.focalPlaneParams = (center, normals.mean(axis=0))
         deltas = []
         for site in sites:
-            pos = numpy.array(site.position)
+            pos = np.array(site.position)
             z = self.getFocusZ(pos)
             deltas.append(pos[2] - z)
             print("Delta for", pos, "is", (pos[2] - z))
         print(
             "Average delta is",
-            numpy.mean(deltas),
+            np.mean(deltas),
             "with std",
-            numpy.std(deltas),
+            np.std(deltas),
         )
 
     def clearFocalPlane(self):
@@ -1139,9 +1139,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         """Calculate the Z position in focus for a given XY position, according
         to our focal plane parameters."""
         center, normal = self.focalPlaneParams
-        point = numpy.array(point)
+        point = np.array(point)
         z = (
-            -numpy.dot(normal[:2], point[:2] - center[:2]) / normal[2]
+            -np.dot(normal[:2], point[:2] - center[:2]) / normal[2]
             + center[2]
         )
         return z
@@ -1429,13 +1429,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                 print("Failed to get tile data at %s: %s" % (tile.pos, e))
                 break
             pixelSize = tile.getPixelSize()
-            median = numpy.median(data)
-            std = numpy.std(data)
+            median = np.median(data)
+            std = np.std(data)
             # Threshold the data so that background becomes 0 and signal
             # becomes 1 -- admittedly the threshold value is somewhat
             # arbitrary.
-            thresholded = numpy.zeros(data.shape, dtype=numpy.uint16)
-            thresholded[numpy.where(data > median + std * 15)] = 1
+            thresholded = np.zeros(data.shape, dtype=np.uint16)
+            thresholded[np.where(data > median + std * 15)] = 1
 
             # Slice up into overlapping regions. Only examine the center
             # portion of the composite image.
@@ -1461,8 +1461,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                         # More than one bead visible, or no beads at all.
                         continue
                     # Find the centroid of the component
-                    yVals, xVals = numpy.where(region == 1)
-                    x, y = numpy.mean(xVals), numpy.mean(yVals)
+                    yVals, xVals = np.where(region == 1)
+                    x, y = np.mean(xVals), np.mean(yVals)
                     # Ensure that the bead is not near the edge, where
                     # it might be close to a bead in a different region. Note
                     # that our region iteration overlaps, so if a bead is truly
@@ -1481,7 +1481,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     yDists = [(y - yi) ** 2 for yi in yVals]
                     maxDistSquared = max(map(sum, list(zip(xDists, yDists))))
                     # Area of a circle containing all pixels
-                    area = numpy.pi * maxDistSquared
+                    area = np.pi * maxDistSquared
                     # Reject beads whose area is less than 60% of the area of
                     # the circle.
                     if len(xVals) / area < 0.6:
@@ -1490,7 +1490,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     # Go from the subregion coordinates to full-tile coordinates
                     x += k - data.shape[1] / 3
                     y += j - data.shape[0] / 3
-                    pos = numpy.array(
+                    pos = np.array(
                         [
                             -tile.pos[0] - x * pixelSize[0],
                             tile.pos[1] + y * pixelSize[1],
@@ -1503,7 +1503,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     # expensive.
                     canKeep = True
                     for site in beadSites:
-                        distance = numpy.sqrt(sum((pos - site.pos) ** 2))
+                        distance = np.sqrt(sum((pos - site.pos) ** 2))
                         if distance < 40:
                             # Within 40 microns of another bead; skip it.
                             canKeep = False
@@ -1514,7 +1514,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     # of pixels in the component, and its intensity is the
                     # average intensity of pixels in the component.
                     newSite = BeadSite(
-                        pos, len(xVals), numpy.mean(data[(yVals, xVals)])
+                        pos, len(xVals), np.mean(data[(yVals, xVals)])
                     )
                     beadSites.append(newSite)
 
@@ -1525,12 +1525,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # - too small (Could just be autoflourescing dust or something)
         # Part of the trick here is that many beads may be slightly out of
         # focus, so these constraints can't actually be all that tight.
-        sizes = numpy.array([b.size for b in beadSites])
-        sizeMedian = numpy.median(sizes)
-        sizeStd = numpy.std(sizes)
-        intensities = numpy.array([b.intensity for b in beadSites])
-        intenMedian = numpy.median(intensities)
-        intenStd = numpy.std(intensities)
+        sizes = np.array([b.size for b in beadSites])
+        sizeMedian = np.median(sizes)
+        sizeStd = np.std(sizes)
+        intensities = np.array([b.intensity for b in beadSites])
+        intenMedian = np.median(intensities)
+        intenStd = np.std(intensities)
         siteQueue = []
         for i, site in enumerate(beadSites):
             if (
@@ -1556,7 +1556,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         for x, y, z in siteQueue:
             bestOffset = 0
             bestIntensity = None
-            for offset in numpy.arange(-1, 1.1, 0.1):
+            for offset in np.arange(-1, 1.1, 0.1):
                 cockpit.interfaces.stage_mover.go_to(
                     (x, y, z + offset), should_block=True
                 )

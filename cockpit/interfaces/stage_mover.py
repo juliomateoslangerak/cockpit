@@ -55,7 +55,7 @@ import operator
 import threading
 import typing
 
-import numpy
+import numpy as np
 import wx
 
 import cockpit.util.threads
@@ -99,7 +99,7 @@ class Site:
         """Set up a saved location on the stage.
 
         Args:
-            position (numpy.ndarray): 3D location (Numpy vector) of the Site.
+            position (np.ndarray): 3D location (numpy vector) of the Site.
             group (str): String describing the group the Site belongs to.
             color (tuple): RGB tuple used to color the Site in the UI.
             size (float): Size (in arbitrary units) to draw the site.
@@ -133,7 +133,7 @@ def deserialize_site(line):
     if group == "None":
         group = None
         # Otherwise let group remain as a string.
-    result = Site(numpy.array((x, y, z)), group, (r, g, b), size)
+    result = Site(np.array((x, y, z)), group, (r, g, b), size)
     result.unique_id = id
     return result
 

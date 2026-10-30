@@ -52,7 +52,7 @@
 import threading
 import time
 
-import numpy
+import numpy as np
 import wx
 from OpenGL.GL import *
 
@@ -69,7 +69,7 @@ from cockpit import events
 ## Line thickness for the arrow
 ARROW_LINE_THICKNESS = 3.5
 ## Bluntness of the arrowhead (pi/2 == totally blunt)
-ARROWHEAD_ANGLE = numpy.pi / 6.0
+ARROWHEAD_ANGLE = np.pi / 6.0
 
 
 class MacroStageBase(wx.glcanvas.GLCanvas):
@@ -113,9 +113,9 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
 
         ## (X, Y, Z) vector describing the stage position as of the last
         # time we drew ourselves. We need this to display motion deltas.
-        self.prevStagePosition = numpy.zeros(3)
+        self.prevStagePosition = np.zeros(3)
         ## As above, but for the current position.
-        self.curStagePosition = numpy.zeros(3)
+        self.curStagePosition = np.zeros(3)
         ## Event used to indicate when drawing is done, so we can update
         # the above.
         self.drawEvent = threading.Event()
@@ -168,7 +168,7 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
                 # Our window has been deleted; we're done here.
                 return
             if (
-                numpy.any(self.curStagePosition != self.prevStagePosition)
+                np.any(self.curStagePosition != self.prevStagePosition)
                 or self.shouldForceRedraw
             ):
                 self.drawEvent.clear()
@@ -201,27 +201,27 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
     def drawArrow(self, baseLoc, vector, color, arrowSize, arrowHeadSize):
         """Draw an arrow from the first point along the specified vector."""
         # Normalize.
-        delta = vector / numpy.sqrt(numpy.vdot(vector, vector)) * arrowSize
+        delta = vector / np.sqrt(np.vdot(vector, vector)) * arrowSize
         # Calculate angle, for the head of the arrow
-        angle = numpy.arctan2(delta[1], delta[0])
+        angle = np.arctan2(delta[1], delta[0])
 
         pointLoc = baseLoc + delta
         headLoc1 = (
             pointLoc
-            - numpy.array(
+            - np.array(
                 [
-                    numpy.cos(angle + ARROWHEAD_ANGLE),
-                    numpy.sin(angle + ARROWHEAD_ANGLE),
+                    np.cos(angle + ARROWHEAD_ANGLE),
+                    np.sin(angle + ARROWHEAD_ANGLE),
                 ]
             )
             * arrowHeadSize
         )
         headLoc2 = (
             pointLoc
-            - numpy.array(
+            - np.array(
                 [
-                    numpy.cos(angle - ARROWHEAD_ANGLE),
-                    numpy.sin(angle - ARROWHEAD_ANGLE),
+                    np.cos(angle - ARROWHEAD_ANGLE),
+                    np.sin(angle - ARROWHEAD_ANGLE),
                 ]
             )
             * arrowHeadSize

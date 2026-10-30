@@ -57,7 +57,7 @@ import os
 import shutil
 import tempfile
 
-import numpy
+import numpy as np
 import wx
 
 import cockpit.util.datadoc
@@ -103,11 +103,11 @@ def postpad_data(data, shape):
     values to obtain a specific shape.  The blank values are zero or
     NaN when supported by the datatype.  See cockpit bug #289.
     """
-    postpad_length = shape - numpy.array(data.shape)
+    postpad_length = shape - np.array(data.shape)
     pad_width = list(zip([0] * len(shape), postpad_length))
     ## Let numpy figure out what to convert NaN into for blank values
-    return numpy.pad(
-        data, pad_width, mode="constant", constant_values=[numpy.nan]
+    return np.pad(
+        data, pad_width, mode="constant", constant_values=[np.nan]
     )
 
 
@@ -119,7 +119,7 @@ def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
     necessary, and then reshape it back into the fake 5 dimensions.
 
     Args:
-        data - numpy.array
+        data - np.array
         order_packed - tuple of 1 character
         z_lengths - tuple of 3 elements with the length of each of the
             dimensions packed in z, same order as z_order
@@ -151,9 +151,9 @@ def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
 
     ## If we are dealing with truncated files we may need to add blank
     ## planes into the data.  See cockpit bug #289.
-    if numpy.prod(z_lengths) != packed_shape[z_idx]:
+    if np.prod(z_lengths) != packed_shape[z_idx]:
         packed_shape = list(packed_shape)
-        packed_shape[z_idx] = numpy.prod(z_lengths)
+        packed_shape[z_idx] = np.prod(z_lengths)
         packed_shape = tuple(packed_shape)
         data = postpad_data(data, packed_shape)
 
@@ -162,7 +162,7 @@ def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
     axes_order = [dim_map[i] for i in order_out]
 
     data = data.reshape(unpacked_shape)
-    data = numpy.transpose(data, axes_order)
+    data = np.transpose(data, axes_order)
     data = data.reshape(packed_shape)
     return data
 
@@ -480,7 +480,7 @@ class SIExperiment(experiment.Experiment):
         ## may differ from the number of Z planes in the data.  So
         ## these are checked separetely.  See cockpit bug #289.
         header_z_lengths = tuple([length_getters[d] for d in z_order])
-        nz_in_header = numpy.prod(header_z_lengths)
+        nz_in_header = np.prod(header_z_lengths)
         nz_in_data = doc.image.shape[doc.image.Mrc.axis_order_str().index("z")]
         if nz_in_data == nz_in_header:
             z_lengths = header_z_lengths
@@ -501,7 +501,7 @@ class SIExperiment(experiment.Experiment):
         ext_header_dtype = ",".join(["u1"] * ext_header_stride)
         with open(self.save_path, "rb") as fh:
             fh.seek(1024)  # skip base header
-            ext_header = numpy.fromfile(
+            ext_header = np.fromfile(
                 fh, count=doc.get_n_planes(), dtype=ext_header_dtype
             )
         assert (
@@ -539,8 +539,8 @@ class SIExperiment(experiment.Experiment):
         ## Make sure the data is actually ordered for writing,
         ## otherwise at this point the arrays might be making use of
         ## views.
-        ext_header = numpy.ascontiguousarray(ext_header)
-        img_data = numpy.ascontiguousarray(img_data)
+        ext_header = np.ascontiguousarray(ext_header)
+        img_data = np.ascontiguousarray(img_data)
         tmp_fh.write(ext_header)
         tmp_fh.write(img_data)
         tmp_fh.close()

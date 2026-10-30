@@ -21,7 +21,7 @@
 import re
 from ctypes import c_float
 
-import numpy
+import numpy as np
 from OpenGL.GL import *
 
 
@@ -54,20 +54,20 @@ class Primitive:
         by any combination of spaces, commas and semicolons.
         """
         p = re.split(r"[ |,|;]+", re.sub(r"['|\"]", "", spec))
-        pType = p[0]
-        pData = tuple(map(float, p[1:]))
+        p_type = p[0]
+        p_data = tuple(map(float, p[1:]))
         # Spec is a type and some data
-        if pType in ["c", "C"]:
-            return Circle(*pData, n=CIRCLE_SEGMENTS)
-        if pType in ["r", "R"]:
-            return Rectangle(*pData)
+        if p_type in ["c", "C"]:
+            return Circle(*p_data, n=CIRCLE_SEGMENTS)
+        if p_type in ["r", "R"]:
+            return Rectangle(*p_data)
 
     def __init__(self, *args, **kwargs):
         self._vbo = None
         self._vertices = []
-        self._numVertices = 0
+        self._num_vertices = 0
 
-    def makeVBO(self):
+    def make_vbo(self):
         vertices = self._vertices
         if self._vbo is None:
             self._vbo = glGenBuffers(1)
@@ -79,15 +79,15 @@ class Primitive:
             GL_STATIC_DRAW,
         )
         glBindBuffer(GL_ARRAY_BUFFER, 0)
-        self._numVertices = len(vertices) // 2
+        self._num_vertices = len(vertices) // 2
 
     def render(self):
         if self._vbo is None:
-            self.makeVBO()
+            self.make_vbo()
         glEnableClientState(GL_VERTEX_ARRAY)
         glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
         glVertexPointer(2, GL_FLOAT, 0, None)
-        glDrawArrays(GL_LINE_LOOP, 0, self._numVertices)
+        glDrawArrays(GL_LINE_LOOP, 0, self._num_vertices)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glDisableClientState(GL_VERTEX_ARRAY)
 
@@ -95,18 +95,18 @@ class Primitive:
 class Circle(Primitive):
     def __init__(self, x0, y0, r, n=CIRCLE_SEGMENTS):
         super().__init__()
-        dTheta = 2.0 * PI / n
-        cosTheta = numpy.cos(dTheta)
-        sinTheta = numpy.sin(dTheta)
+        d_theta = 2.0 * PI / n
+        cos_theta = np.cos(d_theta)
+        sin_theta = np.sin(d_theta)
         x = r
         y = 0.0
 
         vs = []
         for i in range(n):
             vs.extend([(x0 + x), y0 + y])
-            xOld = x
-            x = cosTheta * x - sinTheta * y
-            y = sinTheta * xOld + cosTheta * y
+            x_old = x
+            x = cos_theta * x - sin_theta * y
+            y = sin_theta * x_old + cos_theta * y
         self._vertices = vs
 
 

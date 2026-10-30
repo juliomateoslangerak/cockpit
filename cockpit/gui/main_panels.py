@@ -39,94 +39,94 @@ class PanelLabel(wx.StaticText):
 class LightPanel(wx.Panel):
     """A panel of controls for a single light source."""
 
-    def __init__(self, parent, lightToggle, lightPower=None, lightFilters=[]):
+    def __init__(self, parent, light_toggle, light_power=None, light_filters=[]):
         super().__init__(parent, style=wx.BORDER_RAISED)
-        self.light = lightToggle
-        self.lightPower = lightPower
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.light = light_toggle
+        self.light_power = light_power
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.button = EnableButton(self, self.light)
         self.button.set_state(self.light.state)
 
-        self.expCtrl = safe_controls.SafeSpinCtrlDouble(self, inc=5)
-        self.expCtrl.Bind(
+        self.exposure_ctrl = safe_controls.SafeSpinCtrlDouble(self, inc=5)
+        self.exposure_ctrl.Bind(
             safe_controls.EVT_SAFE_CONTROL_COMMIT,
-            lambda evt: self.light.set_exposure_time(evt.Value),
+            lambda event: self.light.set_exposure_time(event.Value),
         )
-        lightToggle.add_watch("exposure_time", self.expCtrl.SetValue)
-        self.expCtrl.SetValue(lightToggle.exposure_time)
+        light_toggle.add_watch("exposure_time", self.exposure_ctrl.SetValue)
+        self.exposure_ctrl.SetValue(light_toggle.exposure_time)
 
-        self.Sizer.Add(self.button, flag=wx.EXPAND)
-        self.Sizer.AddSpacer(2)
+        self.sizer.Add(self.button, flag=wx.EXPAND)
+        self.sizer.AddSpacer(2)
         line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
         line = wx.StaticText(self, label="", size=(-1, line_height))
         line.SetBackgroundColour(wavelength_to_color(self.light.wavelength))
-        self.Sizer.Add(line, flag=wx.EXPAND)
+        self.sizer.Add(line, flag=wx.EXPAND)
 
-        self.Sizer.Add(
+        self.sizer.Add(
             wx.StaticText(self, label="Exposure / ms"),
             flag=wx.ALIGN_CENTER_HORIZONTAL,
         )
-        self.Sizer.Add(self.expCtrl, flag=wx.EXPAND)
+        self.sizer.Add(self.exposure_ctrl, flag=wx.EXPAND)
 
-        if lightPower is not None:
-            self.Sizer.AddSpacer(4)
-            self.Sizer.Add(
+        if light_power is not None:
+            self.sizer.AddSpacer(4)
+            self.sizer.Add(
                 wx.StaticText(self, label="Power (%)"),
                 flag=wx.ALIGN_CENTER_HORIZONTAL,
             )
-            self.powCtrl = safe_controls.SpinGauge(
+            self.power_ctrl = safe_controls.SpinGauge(
                 self,
                 minValue=0.0,
                 maxValue=100.0,
-                fetch_current=lambda: lightPower.get_power() * 100.0,
+                fetch_current=lambda: light_power.get_power() * 100.0,
             )
-            self.powCtrl.SetValue(lightPower.power_set_point * 100.0)
-            lightPower.add_watch("power_set_point", self._SetPowerPercent)
-            self.powCtrl.Bind(
+            self.power_ctrl.SetValue(light_power.power_set_point * 100.0)
+            light_power.add_watch("power_set_point", self._set_power_percent)
+            self.power_ctrl.Bind(
                 safe_controls.EVT_SAFE_CONTROL_COMMIT,
-                lambda evt: lightPower.set_power(evt.Value / 100.0),
+                lambda event: light_power.set_power(event.Value / 100.0),
             )
-            self.Sizer.Add(self.powCtrl, 1, flag=wx.EXPAND)
+            self.sizer.Add(self.power_ctrl, 1, flag=wx.EXPAND)
             self._timer = wx.Timer(self)
             # set timer for 500 ms for each channel
             self._timer.Start(500)
-            self.Bind(wx.EVT_TIMER, self.onTimer)
+            self.Bind(wx.EVT_TIMER, self.on_timer)
 
-        if lightFilters:
-            self.Sizer.AddSpacer(4)
-            self.Sizer.Add(
+        if light_filters:
+            self.sizer.AddSpacer(4)
+            self.sizer.Add(
                 wx.StaticText(self, label="Filters"),
                 flag=wx.ALIGN_CENTER_HORIZONTAL,
             )
-            for f in lightFilters:
-                self.Sizer.Add(f.make_selector(self), flag=wx.EXPAND)
+            for f in light_filters:
+                self.sizer.Add(f.make_selector(self), flag=wx.EXPAND)
 
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
 
-        self.Sizer.Layout()
-        self.SetSizerAndFit(self.Sizer)
+        self.sizer.Layout()
+        self.SetSizerAndFit(self.sizer)
 
-    def onTimer(self, evt):
+    def on_timer(self, evt):
         """function that wx.timer calls to check remote power."""
-        self.lightPower.last_power = self.lightPower.callbacks["get_power"]()
+        self.light_power.last_power = self.light_power.callbacks["get_power"]()
 
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.light.remove_watch("exposure_time", self.expCtrl.SetValue)
-        if self.lightPower is not None:
-            self.lightPower.remove_watch("power_set_point", self._SetPowerPercent)
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        self.light.remove_watch("exposure_time", self.exposure_ctrl.SetValue)
+        if self.light_power is not None:
+            self.light_power.remove_watch("power_set_point", self._set_power_percent)
             self._timer.Stop()
         event.Skip()
 
-    def _SetPowerPercent(self, power):
-        self.powCtrl.SetValue(power * 100.0)
+    def _set_power_percent(self, power):
+        self.power_ctrl.SetValue(power * 100.0)
 
     def SetFocus(self):
         # Sets focus to the main button to avoid accidental data entry
         # in power or exposure controls.
         self.button.SetFocus()
 
-    def onStatus(self, evt):
-        light, state = evt.EventData
+    def on_status(self, event):
+        light, state = event.EventData
         if light != self.light:
             return
         self.button.set_state(state)
@@ -137,36 +137,36 @@ class LightControlsPanel(wx.Panel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(PanelLabel(self, label="Lights"))
-        sz = wx.BoxSizer(wx.HORIZONTAL)
-        self.Sizer.Add(sz)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(PanelLabel(self, label="Lights"))
+        single_light_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer.Add(single_light_sizer)
 
-        lightToggles = sorted(
+        light_toggles = sorted(
             depot.get_handlers_of_type(depot.LIGHT_TOGGLE),
             key=lambda l: l.wavelength,
         )
-        lightPowers = depot.get_handlers_of_type(depot.LIGHT_POWER)
-        lightFilters = list(
+        light_powers = depot.get_handlers_of_type(depot.LIGHT_POWER)
+        light_filters = list(
             filter(
                 lambda f: f.lights, depot.get_handlers_of_type(depot.LIGHT_FILTER)
             )
         )
         self.panels = {}
-        for light in lightToggles:
+        for light in light_toggles:
             power = next(
-                filter(lambda p: p.group_name == light.group_name, lightPowers),
+                filter(lambda p: p.group_name == light.group_name, light_powers),
                 None,
             )
             filters = list(
-                filter(lambda f: light.name in f.lights, lightFilters)
+                filter(lambda f: light.name in f.lights, light_filters)
             )
             panel = LightPanel(self, light, power, filters)
-            sz.Add(panel, flag=wx.EXPAND)
+            single_light_sizer.Add(panel, flag=wx.EXPAND)
             self.panels[light] = panel
-            sz.AddSpacer(4)
-        self.Sizer.Layout()
-        self.SetSizerAndFit(self.Sizer)
+            single_light_sizer.AddSpacer(4)
+        self.sizer.Layout()
+        self.SetSizerAndFit(self.sizer)
 
 
 class CameraPanel(wx.Panel):
@@ -175,41 +175,41 @@ class CameraPanel(wx.Panel):
     def __init__(self, parent, camera):
         super().__init__(parent, style=wx.BORDER_RAISED)
         self.camera = camera
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.button = EnableButton(self, self.camera)
         self.button.set_state(self.camera.state)
-        self.Sizer.Add(self.button, flag=wx.EXPAND)
-        self.Sizer.AddSpacer(2)
+        self.sizer.Add(self.button, flag=wx.EXPAND)
+        self.sizer.AddSpacer(2)
 
         line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
         self.line = wx.StaticText(self, label="", size=(-1, line_height))
         self.line.SetBackgroundColour(
             wavelength_to_color(self.camera.wavelength or 0)
         )
-        self.Sizer.Add(self.line, flag=wx.EXPAND)
+        self.sizer.Add(self.line, flag=wx.EXPAND)
         # If there are problems here, it's because the inline function below is
         # being called outside of the main thread and needs taking out and
         # wrapping with wx.CallAfter.
-        camera.add_watch("wavelength", self.onWavelengthChange)
-        self.Sizer.AddSpacer(2)
+        camera.add_watch("wavelength", self.on_wavelength_change)
+        self.sizer.AddSpacer(2)
 
         if camera.callbacks.get("make_ui", None):
-            self.Sizer.Add(
+            self.sizer.Add(
                 camera.callbacks["make_ui"](self), wx.SizerFlags().Expand()
             )
 
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
 
-        self.Sizer.Layout()
-        self.SetSizerAndFit(self.Sizer)
+        self.sizer.Layout()
+        self.SetSizerAndFit(self.sizer)
 
-    def OnDestroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.camera.remove_watch("wavelength", self.onWavelengthChange)
+    def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        self.camera.remove_watch("wavelength", self.on_wavelength_change)
         event.Skip()
 
-    def onWavelengthChange(self, wl):
+    def on_wavelength_change(self, wavelength):
         """Change the colour of our wavelength indicator."""
-        self.line.SetBackgroundColour(wavelength_to_color(wl or 0))
+        self.line.SetBackgroundColour(wavelength_to_color(wavelength or 0))
         # Explicit refresh required under MSW.
         wx.CallAfter(self.line.Refresh)
 
@@ -218,8 +218,8 @@ class CameraPanel(wx.Panel):
         # in power or exposure controls.
         self.button.SetFocus()
 
-    def onStatus(self, evt):
-        camera, state = evt.EventData
+    def on_status(self, event):
+        camera, state = event.EventData
         if camera != self.camera:
             return
         self.button.set_state(state)
@@ -230,11 +230,11 @@ class CameraControlsPanel(wx.Panel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        sz = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        single_camera_sizer = wx.BoxSizer(wx.HORIZONTAL)
         label = PanelLabel(self, label="Cameras")
-        self.Sizer.Add(label)
-        self.Sizer.Add(sz)
+        self.sizer.Add(label)
+        self.sizer.Add(single_camera_sizer)
 
         cameras = sorted(
             depot.get_handlers_of_type(depot.CAMERA), key=lambda c: c.name
@@ -244,11 +244,11 @@ class CameraControlsPanel(wx.Panel):
 
         for cam in cameras:
             panel = CameraPanel(self, cam)
-            sz.Add(panel, flag=wx.EXPAND)
+            single_camera_sizer.Add(panel, flag=wx.EXPAND)
             self.panels[cam] = panel
-            sz.AddSpacer(4)
-        self.Sizer.Layout()
-        self.SetSizerAndFit(self.Sizer)
+            single_camera_sizer.AddSpacer(4)
+        self.sizer.Layout()
+        self.SetSizerAndFit(self.sizer)
 
 
 class ObjectiveControls(wx.Panel):
@@ -268,10 +268,10 @@ class ObjectiveControls(wx.Panel):
                 "failed to find objective '%s'" % interface.get_name()
             )
 
-        self._choice.Bind(wx.EVT_CHOICE, self._OnObjectiveChoice)
+        self._choice.Bind(wx.EVT_CHOICE, self._on_objective_choice)
         self._interface.Bind(
             cockpit.interfaces.EVT_OBJECTIVE_CHANGED,
-            self._OnObjectiveChanged,
+            self._on_objective_changed,
         )
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -280,10 +280,10 @@ class ObjectiveControls(wx.Panel):
         sizer.Layout()
         self.SetSizerAndFit(sizer)
 
-    def _OnObjectiveChoice(self, event: wx.CommandEvent) -> None:
+    def _on_objective_choice(self, event: wx.CommandEvent) -> None:
         self._interface.change_objective(event.GetString())
 
-    def _OnObjectiveChanged(self, event: wx.CommandEvent) -> None:
+    def _on_objective_changed(self, event: wx.CommandEvent) -> None:
         if not self._choice.SetStringSelection(event.GetString()):
             raise Exception(
                 "failed to find objective '%s'" % event.GetString()
@@ -296,10 +296,10 @@ class FilterControls(wx.Panel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(PanelLabel(self, label="Filters"))
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(PanelLabel(self, label="Filters"))
         subpanel = wx.Panel(self, style=wx.BORDER_RAISED)
-        self.Sizer.Add(subpanel, 1, wx.EXPAND)
+        self.sizer.Add(subpanel, 1, wx.EXPAND)
         subpanel.Sizer = wx.WrapSizer(orient=wx.VERTICAL)
 
         filters = depot.get_handlers_of_type(depot.LIGHT_FILTER)
@@ -311,8 +311,8 @@ class FilterControls(wx.Panel):
             subpanel.Sizer.Add(
                 f.make_ui(subpanel), 0, wx.EXPAND | wx.RIGHT | wx.BOTTOM, 8
             )
-        self.Sizer.Layout()
-        self.SetSizerAndFit(self.Sizer)
+        self.sizer.Layout()
+        self.SetSizerAndFit(self.sizer)
 
 
 class ChannelsPanel(wx.Panel):
@@ -322,14 +322,14 @@ class ChannelsPanel(wx.Panel):
         self._buttons_sizer = wx.WrapSizer(wx.VERTICAL)
 
         for name in wx.GetApp().channels.names:
-            self.AddButton(name)
+            self.add_button(name)
 
         wx.GetApp().channels.Bind(
-            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.OnChannelAdded
+            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.on_channel_added
         )
         wx.GetApp().channels.Bind(
             cockpit.interfaces.channels.EVT_CHANNEL_REMOVED,
-            self.OnChannelRemoved,
+            self.on_channel_removed,
         )
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -338,7 +338,7 @@ class ChannelsPanel(wx.Panel):
         sizer.Layout()
         self.SetSizerAndFit(sizer)
 
-    def _LayoutWithFrame(self):
+    def _layout_with_frame(self):
         self.Layout()
         # When we add a new button, we may require a new column.  When
         # that happens, it's not enough to call Layout(), the parent
@@ -355,34 +355,34 @@ class ChannelsPanel(wx.Panel):
         if frame.BestSize[0] > frame.Size[0]:
             frame.SetSize(frame.BestSize[0], frame.Size[1])
 
-    def AddButton(self, name: str) -> None:
+    def add_button(self, name: str) -> None:
         button = wx.Button(self, label=name)
-        button.Bind(wx.EVT_BUTTON, self.OnButton)
+        button.Bind(wx.EVT_BUTTON, self.on_button)
         self._buttons_sizer.Add(button, wx.SizerFlags().Expand())
-        self._LayoutWithFrame()
+        self._layout_with_frame()
 
-    def RemoveButton(self, name: str) -> None:
-        button = self.GetButtonByLabel(name)
+    def remove_button(self, name: str) -> None:
+        button = self.get_button_by_label(name)
         self._buttons_sizer.Detach(button)
         button.Destroy()
-        self._LayoutWithFrame()
+        self._layout_with_frame()
 
-    def GetButtonByLabel(self, name: str) -> wx.Button:
+    def get_button_by_label(self, name: str) -> wx.Button:
         for sizer_item in self._buttons_sizer.Children:
             if sizer_item.Window.LabelText == name:
                 return sizer_item.Window
         else:
             raise ValueError("There is no button named '%s'" % name)
 
-    def OnChannelAdded(self, event: wx.CommandEvent) -> None:
+    def on_channel_added(self, event: wx.CommandEvent) -> None:
         channel_name = event.GetString()
-        self.AddButton(channel_name)
+        self.add_button(channel_name)
 
-    def OnChannelRemoved(self, event: wx.CommandEvent) -> None:
+    def on_channel_removed(self, event: wx.CommandEvent) -> None:
         channel_name = event.GetString()
-        self.RemoveButton(channel_name)
+        self.remove_button(channel_name)
 
-    def OnButton(self, event: wx.CommandEvent) -> None:
+    def on_button(self, event: wx.CommandEvent) -> None:
         """Apply channel with same name as the button."""
         name = event.EventObject.Label
         channel = wx.GetApp().channels.get(name)

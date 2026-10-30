@@ -98,7 +98,7 @@ class MainWindowPanel(wx.Panel):
         light_toggles = wx.GetApp().depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
 
         ## Maps LightSource handlers to their associated panels of controls.
-        self.lightToPanel = {}
+        self.light_to_panel = {}
 
         root_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -132,20 +132,20 @@ class MainWindowPanel(wx.Panel):
         button_sizer.Add(video_button, 1, wx.EXPAND)
 
         # Experiment & review buttons
-        for lbl, fn in (
+        for label, fn in (
             (
                 "Single-site\nexperiment",
-                lambda evt: singleSiteExperiment.showDialog(self),
+                lambda event: singleSiteExperiment.showDialog(self),
             ),
             (
                 "Multi-site\nexperiment",
-                lambda evt: multiSiteExperiment.showDialog(self),
+                lambda event: multiSiteExperiment.showDialog(self),
             ),
             ("View last\nfile", self.on_view_last_file),
         ):
-            btn = wx.Button(self, wx.ID_ANY, lbl)
-            btn.Bind(wx.EVT_BUTTON, fn)
-            button_sizer.Add(btn, 1, wx.EXPAND)
+            button = wx.Button(self, wx.ID_ANY, label)
+            button.Bind(wx.EVT_BUTTON, fn)
+            button_sizer.Add(button, 1, wx.EXPAND)
 
         # Increase font size in top row buttons.
         for w in [child.GetWindow() for child in button_sizer.Children]:

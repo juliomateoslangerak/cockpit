@@ -102,7 +102,7 @@ class LightPowerHandler(device.DeviceHandler):
 
     def _apply_user_config(self):
         target_power = cockpit.util.user_config.get_value(
-            self.name + "-lightPower", default=0.01
+            self.name + "-light_power", default=0.01
         )
         try:
             self.set_power(target_power)
@@ -145,7 +145,7 @@ class LightPowerHandler(device.DeviceHandler):
             )
         self.callbacks["set_power"](power)
         self.power_set_point = power
-        cockpit.util.user_config.set_value(self.name + "-lightPower", power)
+        cockpit.util.user_config.set_value(self.name + "-light_power", power)
 
     def get_wavelength(self):
         """Simple getter."""

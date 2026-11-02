@@ -69,8 +69,8 @@ class PolarizationDevice(device.Device):
         super().__init__(name, config)
 
     def get_handlers(self):
-        a_source = self.config.get("analogsource", None)
-        a_line = self.config.get("analogline", None)
+        a_source = self.config.get("analog_source", None)
+        a_line = self.config.get("analog_line", None)
         a_handler = depot.get_handler(a_source, depot.EXECUTOR)
         if a_handler is None:
             raise Exception("No control source.")

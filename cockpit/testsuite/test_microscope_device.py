@@ -62,7 +62,7 @@ class CockpitDeviceWithTestSetting(_MicroscopeTestDevice, MicroscopeBase):
         super().__init__(MicroscopeDeviceWithTestSetting(), *args, **kwargs)
 
     def _read_user_config(self):
-        """At the end of `MicroscopeBase.finalizeInitialization` (which is
+        """At the end of `MicroscopeBase.finalize_initialization` (which is
         where the settings section from the depot file are applied), the user
         config is read and written back.
 
@@ -93,10 +93,10 @@ class TestMicroscopeSettings(unittest.TestCase):
         cockpit.depot.device_depot = None
 
     def _do_the_whole_init_routine(self, device_name, config_dict):
-        """Settings are parsed and applied during `finalizeInitialization` so
+        """Settings are parsed and applied during `finalize_initialization` so
         we need to have DeviceDepot does the whole init routine first."""
         device = CockpitDeviceWithTestSetting(device_name, config_dict)
-        cockpit.depot.device_depot.initDevice(device)
+        cockpit.depot.device_depot.init_device(device)
         device.finalize_initialization()
         return device
 

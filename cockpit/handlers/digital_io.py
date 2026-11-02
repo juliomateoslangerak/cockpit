@@ -35,66 +35,66 @@ class DigitalIOHandler(device.DeviceHandler):
         super().__init__(
             name, group_name, is_eligible_for_experiments, callbacks, depot.DIO
         )
-        self.isEnabled = False
+        self.is_enabled = False
 
     @property
     def paths(self):
         return self.callbacks["get_paths"]()
 
-    def onSaveSettings(self):
+    def on_save_settings(self):
         paths = {}
-        for key in self.pathNameToButton.keys():
-            paths[key] = int(self.pathNameToButton[key].GetValue())
+        for key in self.path_name_to_button.keys():
+            paths[key] = int(self.path_name_to_button[key].GetValue())
         outputs = list(map(int, self.callbacks["get_outputs"]()))
-        IOstate = [
+        io_state = [
             self.callbacks["get_io_state"](i) for i in range(len(outputs))
         ]
-        return [paths, outputs, IOstate]
+        return [paths, outputs, io_state]
 
-    def onLoadSettings(self, settings):
-        paths, outputs, IOstate = settings
+    def on_load_settings(self, settings):
+        paths, outputs, io_state = settings
         for key in paths.keys():
-            self.pathNameToButton[key].SetValue(paths[key])
-        for i, state in enumerate(IOstate):
+            self.path_name_to_button[key].SetValue(paths[key])
+        for i, state in enumerate(io_state):
             # probably safer not to change IO state here
             # self.callbacks['set_io_state'](i,state)
             if state:
                 self.callbacks["write_line"](i, outputs[i])
 
-    def set_enabled(self, shouldEnable=True):
+    def set_enabled(self, should_enable=True):
         try:
-            self.isEnabled = self.callbacks["enable"](shouldEnable)
+            self.is_enabled = self.callbacks["enable"](should_enable)
         except:
-            self.isEnabled = False
+            self.is_enabled = False
             raise
-        if self.isEnabled != shouldEnable:
+        if self.is_enabled != should_enable:
             raise Exception("Problem enabling device with handler %s" % self)
 
     def get_is_enabled(self):
         """Return self.is_enabled."""
-        return self.isEnabled
+        return self.is_enabled
 
     def make_ui(self, parent):
         """UI functions"""
         self.panel = wx.Panel(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        enablebutton = cockpit.gui.device.EnableButton(
+        enable_button = cockpit.gui.device.EnableButton(
             self.panel, device_handler=self
         )
-        sizer.Add(enablebutton, 1, wx.EXPAND)
-        self.pathNameToButton = {}
+        sizer.Add(enable_button, 1, wx.EXPAND)
+        self.path_name_to_button = {}
         for key in self.paths.keys():
             button = wx.ToggleButton(self.panel, wx.ID_ANY)
             button.SetLabel(key)
             button.Bind(
-                wx.EVT_TOGGLEBUTTON, lambda evt, b=button: self.togglePaths(b)
+                wx.EVT_TOGGLEBUTTON, lambda evt, b=button: self.toggle_paths(b)
             )
             sizer.Add(button, 1, wx.EXPAND)
-            self.pathNameToButton[key] = button
+            self.path_name_to_button[key] = button
         self.panel.SetSizerAndFit(sizer)
         return self.panel
 
-    def togglePaths(self, button):
+    def toggle_paths(self, button):
         path = button.Label
         if button.GetValue():
             # button is active so set the relevant DIO lines
@@ -109,12 +109,12 @@ class DigitalIOHandler(device.DeviceHandler):
             #                print(path,self.callbacks['get_outputs']())
             # Need some way to define exclusive and non-exclusive paths
             # assume they are exclusive for now.
-            otherbuttons = settings[1]
-            for key in otherbuttons.keys():
-                self.pathNameToButton[key].SetValue(otherbuttons[key])
+            other_buttons = settings[1]
+            for key in other_buttons.keys():
+                self.path_name_to_button[key].SetValue(other_buttons[key])
 
     @cockpit.util.threads.call_in_main_thread
-    def updateAfterChange(self, *args):
+    def update_after_change(self, *args):
         #        # Accept *args so that can be called directly as a Pyro callback
         #        # or an event handler.
         pass
@@ -124,5 +124,5 @@ class DigitalIOHandler(device.DeviceHandler):
 # self.
 
 
-def finalizeInitialization(self):
-    self.updateAfterChange()
+def finalize_initialization(self):
+    self.update_after_change()

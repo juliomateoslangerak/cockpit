@@ -83,7 +83,7 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
         for axis in range(3):
             handler = Mock(spec=["get_position", "move_absolute", "set_soft_limit"])
             handler.name = "axis_%d" % axis
-            handler.getPosition.return_value = axis + 1
+            handler.get_position.return_value = axis + 1
             self.handlers.append(handler)
 
         self.mover = object.__new__(stage_mover.StageMover)

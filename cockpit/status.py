@@ -34,7 +34,7 @@ import cockpit.config
 
 
 # Strings used for IP address and port in config. files.
-IP_STR = "ipaddress"  # ConfigParser makes keys lower case
+IP_STR = "ip_address"  # ConfigParser makes keys lower case
 PORT_STR = "port"
 # String used to format output.
 FORMAT_STR = "{:<20}  {:>16}  {:<8}  {:<6}"

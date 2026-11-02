@@ -62,16 +62,16 @@ class AerotechZStage(device.Device):
 
         [aerotech]
         type: cockpit.devices.aerotech_axis.AerotechZStage
-        ipAddress: 192.168.0.5
+        ip_address: 192.168.0.5
         port: 8000
-        softlimits: -45000, 5000
+        soft_limits: -45000, 5000
 
     """
 
     def __init__(self, name, config={}):
         super().__init__(name, config)
         try:
-            limit_string = config.get("softlimits", "")
+            limit_string = config.get("soft_limits", "")
             parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
@@ -79,10 +79,10 @@ class AerotechZStage(device.Device):
                 # No transform tuple
             else:
                 lstr = parsed.groupdict()["limits"]
-                self.softlimits = eval(lstr)
+                self.soft_limits = eval(lstr)
         except:
-            print("No softlimits section setting default limits")
-            self.softlimits = (-30000, 7000)
+            print("No soft_limits section setting default limits")
+            self.soft_limits = (-30000, 7000)
 
         # Subscribe to abort events.
         events.subscribe(events.USER_ABORT, self.on_abort)
@@ -151,8 +151,8 @@ class AerotechZStage(device.Device):
         result = []
         axis = self.axis
         # IMD 2015-03-02 changed hard limits to reflect DeepSIM should go into config file
-        min_val = self.softlimits[0]
-        max_val = self.softlimits[1]
+        min_val = self.soft_limits[0]
+        max_val = self.soft_limits[1]
         handler = cockpit.handlers.stage_positioner.PositionerHandler(
             "%d %s" % (axis, NAME_STRING),
             "%d stage motion" % axis,

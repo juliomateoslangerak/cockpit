@@ -117,7 +117,7 @@ class PhysikInstrumenteM687(Device):
         port: com6
         baud: 115200
         timeout: 0.1
-        softlimits: ((-37500,-67500),(11500,59500))
+        soft_limits: ((-37500,-67500),(11500,59500))
         swapaxes: 1
         invert0: 0
         invert1: 0
@@ -165,7 +165,7 @@ class PhysikInstrumenteM687(Device):
         self.baud = config.get("baud")
         self.timeout = config.get("timeout")
         try:
-            limit_string = config.get("softlimits")
+            limit_string = config.get("soft_limits")
             parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
@@ -173,10 +173,10 @@ class PhysikInstrumenteM687(Device):
                 # No transform tuple
             else:
                 lstr = parsed.groupdict()["limits"]
-                self.softlimits = eval(lstr)
+                self.soft_limits = eval(lstr)
         except:
-            print("No softlimits section setting default limits")
-            self.softlimits = ((-67500, 67500), (-42500, 42500))
+            print("No soft_limits section setting default limits")
+            self.soft_limits = ((-67500, 67500), (-42500, 42500))
 
         events.subscribe(events.USER_ABORT, self.on_abort)
         events.subscribe(events.MACRO_STAGE_XY_DRAW, self.on_macro_stage_paint)
@@ -218,7 +218,7 @@ class PhysikInstrumenteM687(Device):
             cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block=True)
             for i in range(5):
                 print("Rep %d of 5..." % i)
-                for position in self.softlimits:
+                for position in self.soft_limits:
                     cockpit.interfaces.stage_mover.go_to_xy(
                         position, should_block=True
                     )
@@ -377,8 +377,8 @@ class PhysikInstrumenteM687(Device):
         # True range of motion is (-67500, 67500) for X, (-42500, 42500) for Y.
         # IMD 2015-03-02 hacked in full range to see if we can access the full range
         for axis, min_pos, max_pos in [
-            (0, self.softlimits[0][0], self.softlimits[1][0]),
-            (1, self.softlimits[0][1], self.softlimits[1][1]),
+            (0, self.soft_limits[0][0], self.soft_limits[1][0]),
+            (1, self.soft_limits[0][1], self.soft_limits[1][1]),
         ]:
             result.append(
                 cockpit.handlers.stage_positioner.PositionerHandler(

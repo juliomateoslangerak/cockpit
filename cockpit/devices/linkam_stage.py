@@ -172,17 +172,17 @@ class LinkamStage(MicroscopeBase, Device):
             name, keys=list(map("t_".__add__, self._temperature_names))
         )
         try:
-            xlim = self._proxy.get_value_limits("MotorSetpointX")
-            ylim = self._proxy.get_value_limits("MotorSetpointY")
+            x_lim = self._proxy.get_value_limits("MotorSetpointX")
+            y_lim = self._proxy.get_value_limits("MotorSetpointY")
         except:
-            xlim, ylim = zip(*DEFAULT_LIMITS)
+            x_lim, y_lim = zip(*DEFAULT_LIMITS)
         # _proxy may return (0,0) if it can't query the hardware.
-        if not any(xlim):
-            xlim, _ = zip(*DEFAULT_LIMITS)
-        if not any(ylim):
-            _, ylim = zip(*DEFAULT_LIMITS)
-        self.hardlimits = tuple(zip(xlim, ylim))
-        self.softlimits = self.hardlimits
+        if not any(x_lim):
+            x_lim, _ = zip(*DEFAULT_LIMITS)
+        if not any(y_lim):
+            _, y_lim = zip(*DEFAULT_LIMITS)
+        self.hard_limits = tuple(zip(x_lim, y_lim))
+        self.soft_limits = self.hard_limits
 
         events.subscribe(events.USER_ABORT, self.on_abort)
 
@@ -239,7 +239,7 @@ class LinkamStage(MicroscopeBase, Device):
         """Generate and return device handlers."""
         result = []
         # zip(*limits) transforms ((x0,y0),(x1,y1)) to ((x0,x1),(y0,y1))
-        for axis, (min_pos, max_pos) in enumerate(zip(*self.softlimits)):
+        for axis, (min_pos, max_pos) in enumerate(zip(*self.soft_limits)):
             result.append(
                 cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d linkam mover" % axis,

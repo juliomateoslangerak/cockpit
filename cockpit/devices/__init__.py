@@ -40,7 +40,7 @@ device classes.
 The primary task that Cockpit devices are responsible for is creation
 of device handlers.  Each handler represents an abstract bit of
 hardware, for example a camera or stage mover.  The
-:meth:`Device.getHandlers()` method is expected to generate and return
+:meth:`Device.get_handlers()` method is expected to generate and return
 a list of handlers; the UI then interacts with these handlers when the
 user performs actions.  See the :mod:`cockpit.handlers` package for
 details.

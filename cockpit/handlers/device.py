@@ -60,7 +60,7 @@ from cockpit import events
 # events into commands for the device. A variety of stock DeviceHandler
 # subclasses are available for representing common types of hardware. In order
 # to make your hardware accessible to the UI, you need to make a Device, and
-# implement its getHandlers() method so that it returns a list of
+# implement its get_handlers() method so that it returns a list of
 # DeviceHandlers.
 #
 # The device handler now supports multiple UI controls by allowing them

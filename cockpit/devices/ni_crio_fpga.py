@@ -86,10 +86,10 @@ MASTER_IP = "10.6.19.11"
 
 class NIcRIO(executor_devices.ExecutorDevice):
     _config_types = {
-        "ipaddress": str,
-        "sendport": int,
-        "receiveport": int,
-        "tickrate": int,
+        "ip_address": str,
+        "send_port": int,
+        "receive_port": int,
+        "tick_rate": int,
         "analog_lines": int,
         "digital_lines": int,
     }

@@ -83,7 +83,7 @@ class Device:
         for k, t in self._config_types.items():
             if k in self.config:
                 self.config[k] = t(self.config[k])
-        ip = config.get("ipaddress", False)
+        ip = config.get("ip_address", False)
         if ip:
             self.ip_address = ip
         port = config.get("port", False)

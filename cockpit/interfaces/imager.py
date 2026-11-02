@@ -71,7 +71,7 @@ def pause_video(func):
     """A wrapper to pause and resume video."""
 
     def wrapper(*args, **kwargs):
-        was_in_video_mode = wx.GetApp().imager.am_in_video_mode
+        was_in_video_mode = wx.GetApp().Imager.am_in_video_mode
         if was_in_video_mode:
             wx.GetApp().imager.should_stop_video_mode = True
             tstart = time.time()

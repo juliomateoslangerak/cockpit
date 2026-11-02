@@ -22,7 +22,6 @@ import tempfile
 import unittest
 
 import numpy as np
-import np.testing
 
 from cockpit.util import datadoc
 

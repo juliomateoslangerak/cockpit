@@ -88,7 +88,7 @@ class Nanomover(Device):
         # disable closed loop.
         self.timeout = float(config.get("timeout", 0.1))
         try:
-            limit_string = config.get("softlimits", "")
+            limit_string = config.get("soft_limits", "")
             parsed = re.search(LIMITS_PAT, limit_string)
             if not parsed:
                 # Could not parse config entry.
@@ -96,11 +96,11 @@ class Nanomover(Device):
                 # No transform tuple
             else:
                 lstr = parsed.groupdict()["limits"]
-                self.softlimits = eval(lstr)
+                self.soft_limits = eval(lstr)
                 self.safeties = eval(lstr)
         except:
-            print("No softlimits section setting default limits")
-            self.softlimits = [[0, 25000], [0, 25000], [7300, 25000]]
+            print("No soft_limits section setting default limits")
+            self.soft_limits = [[0, 25000], [0, 25000], [7300, 25000]]
             self.safeties = [[0, 25000], [0, 25000], [7300, 25000]]
 
         # a useful middle position for after a home
@@ -153,7 +153,7 @@ class Nanomover(Device):
             #            cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block = True)
             for i in range(5):
                 print("Rep %d of 5..." % i)
-                for position in self.softlimits[0:2]:
+                for position in self.soft_limits[0:2]:
                     cockpit.interfaces.stage_mover.go_to_xy(
                         position, should_block=True
                     )
@@ -190,7 +190,7 @@ class Nanomover(Device):
         result = []
         for axis in range(3):
             low_limit, high_limit = self.safeties[axis]
-            soft_low_limit, soft_high_limit = self.softlimits[axis]
+            soft_low_limit, soft_high_limit = self.soft_limits[axis]
             result.append(
                 cockpit.handlers.stage_positioner.PositionerHandler(
                     "%d nanomover" % axis,
@@ -265,9 +265,9 @@ class Nanomover(Device):
 
     def home(self):
         """function to home stage if needed."""
-        # keep a copy of the softlimits.
-        #        realSoftlimits= copy.copy(self.softlimits)
-        #        self.softlimits = [[-25000, 25000],
+        # keep a copy of the soft_limits.
+        #        realSoftlimits= copy.copy(self.soft_limits)
+        #        self.soft_limits = [[-25000, 25000],
         #                           [-25000, 25000],
         #                           [7300, 50000]]
         # home the stage which moves to lrage negative positon until it
@@ -275,7 +275,7 @@ class Nanomover(Device):
         self.connection.connection.findHome_OMX()
         self.send_xy_position_updates()
         self.position_cache = self.get_position(should_use_cache=False)
-        # reset softlimits to their original value
+        # reset soft_limits to their original value
 
 
-#        self.softlimits=realSoftlimits
+#        self.soft_limits=realSoftlimits

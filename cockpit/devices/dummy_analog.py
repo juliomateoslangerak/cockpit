@@ -71,8 +71,8 @@ class DummyAnalogDevice(device.Device):
 
     def get_handlers(self):
         # Fetch analog configuration
-        analog_source = self.config.get("analogsource", None)
-        analog_line = self.config.get("analogline", None)
+        analog_source = self.config.get("analog_source", None)
+        analog_line = self.config.get("analog_line", None)
         gain = self.config.get("gain", 1)
         offset = self.config.get("offset", 0)
         # Fetch source handler and generate line handler.

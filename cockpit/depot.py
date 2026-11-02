@@ -157,7 +157,7 @@ class DeviceDepot:
             # TODO - catch circular dependencies.
             d = devices.pop(0)
             depends = []
-            for dependency in ["triggersource", "analogsource", "controller"]:
+            for dependency in ["trigger_source", "analog_source", "controller"]:
                 other = d.config.get(dependency)
                 if other:
                     if other not in self.name_to_device:

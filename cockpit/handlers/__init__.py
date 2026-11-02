@@ -31,7 +31,7 @@ intensity.
 
 Cockpit automatically builds its user interface based on the handlers
 provided by all available devices.  After initialising devices, depot
-collects all handlers via the device ``getHandlers()`` method.
+collects all handlers via the device ``get_handlers()`` method.
 
 Each ``DeviceHandler`` has different defined functions, e.g., a
 ``PositionerHandler`` has ``move_relative()`` and ``move_absolute()``.

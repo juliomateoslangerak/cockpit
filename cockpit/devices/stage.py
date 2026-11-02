@@ -51,7 +51,7 @@ class SimplePiezo(Device):
         "range": int,
         "min": int,
         "max": int,
-        "stepmin": int,
+        "step_min": int,
         "offset": float,
         "gain": float,
     }
@@ -60,9 +60,9 @@ class SimplePiezo(Device):
         super(SimplePiezo, self).__init__(name, config)
 
     def get_handlers(self):
-        asource = self.config.get("analogsource", None)
-        aline = self.config.get("analogline", None)
-        a_handler = depot.get_handler(asource, depot.EXECUTOR)
+        a_source = self.config.get("analog_source", None)
+        a_line = self.config.get("analog_line", None)
+        a_handler = depot.get_handler(a_source, depot.EXECUTOR)
         if a_handler is None:
             raise Exception("No control source.")
         axis = AXIS_MAP[self.config.get("axis", 2)]
@@ -107,7 +107,7 @@ class SimplePiezo(Device):
         )
 
         # Connect handler to analogue source to populate movement callbacks.
-        handler.connect_to_analog_source(a_handler, aline, offset, gain)
+        handler.connect_to_analog_source(a_handler, a_line, offset, gain)
 
         result.append(handler)
         return result

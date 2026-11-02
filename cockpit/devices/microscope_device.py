@@ -655,7 +655,7 @@ class MicroscopeStage(MicroscopeBase):
                 self._position_cache = [0.0 for x in range(len(self._axes))]
 
     def get_handlers(self) -> typing.List[PositionerHandler]:
-        # Override MicroscopeBase.getHandlers.  Do not call super.
+        # Override MicroscopeBase.get_handlers.  Do not call super.
         return [x.get_handler() for x in self._axes]
 
 
@@ -676,7 +676,7 @@ class MicroscopeDIO(MicroscopeBase):
     def initialize(self) -> None:
         super().initialize()
         self.num_lines = self._proxy.get_num_lines()
-        # cache which we can read from if we dont want a roundtrip
+        # cache which we can read from if we don't want a roundtrip
         # to the remote.
         self._cache = [False] * self.num_lines
         self.labels = [""] * self.num_lines
@@ -706,12 +706,12 @@ class MicroscopeDIO(MicroscopeBase):
 
         ##extract names of lines from file, too many are ignored,
         ## too few are padded with str(line number)
-        templabels = []
+        temp_labels = []
         if labels:
-            templabels = eval(labels)
+            temp_labels = eval(labels)
         for i in range(self.num_lines):
-            if i < len(templabels):
-                self.labels[i] = templabels[i]
+            if i < len(temp_labels):
+                self.labels[i] = temp_labels[i]
             else:
                 self.labels[i] = "Line %d" % i
         # extract defined paths
@@ -777,7 +777,7 @@ class MicroscopeDIO(MicroscopeBase):
             return False
 
     def log_state_change(self, line, state):
-        # log befroe we update cache to get sharp transitions.
+        # log before we update cache to get sharp transitions.
         self.logger.log(list(map(int, self._cache)))
         self._cache[line] = state
         # need to map bool's to ints for valuelogviewer

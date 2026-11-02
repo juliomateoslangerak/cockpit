@@ -97,9 +97,9 @@ class ExperimentConfigPanel(wx.Panel):
     def __init__(
         self,
         parent,
-        resizeCallback,
-        resetCallback,
-        configKey="singleSiteExperiment",
+        resize_callback,
+        reset_callback,
+        config_key="single_site_experiment",
     ):
         """Instantiate the class.
 
@@ -108,11 +108,11 @@ class ExperimentConfigPanel(wx.Panel):
 
         Args:
             parent (wx.Window): Parent window for the panel.
-            resizeCallback (callable): Function to call when we have changed
+            resize_callback (callable): Function to call when we have changed
                 size.
-            resetCallback (callable): Function to call to force a reset of the
+            reset_callback (callable): Function to call to force a reset of the
                 panel.
-            configKey (str): String used to look up settings in the user
+            config_key (str): String used to look up settings in the user
                 config. This allows different experiment panels to have
                 different defaults.
         """
@@ -124,117 +124,117 @@ class ExperimentConfigPanel(wx.Panel):
         )
         self.parent = parent
 
-        self.configKey = configKey
-        self.resizeCallback = resizeCallback
-        self.resetCallback = resetCallback
+        self.config_key = config_key
+        self.resize_callback = resize_callback
+        self.reset_callback = reset_callback
 
         ## cockpit.experiment.Experiment subclass instance -- mostly preserved for
         # debugging, so we can examine the state of the experiment.
         self.runner = None
 
-        self.allLights = wx.GetApp().depot.get_handlers_of_type(
+        self.all_lights = wx.GetApp().depot.get_handlers_of_type(
             depot.LIGHT_TOGGLE
         )
-        self.allLights.sort(key=lambda l: l.wavelength)
-        self.allCameras = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
-        self.allCameras.sort(key=lambda c: c.name)
+        self.all_lights.sort(key=lambda l: l.wavelength)
+        self.all_cameras = wx.GetApp().depot.get_handlers_of_type(depot.CAMERA)
+        self.all_cameras.sort(key=lambda c: c.name)
 
         self.channels = wx.GetApp().channels
 
         ## Map of default settings as loaded from config.
-        self.settings = self.loadConfig()
+        self.settings = self.load_config()
 
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         self.sizer = self.GetSizer()
 
         # Section for settings that are universal to all experiment types.
-        universalSizer = wx.FlexGridSizer(2, 3, 5, 5)
+        universal_sizer = wx.FlexGridSizer(2, 3, 5, 5)
 
         ## Maps experiment description strings to experiment modules.
-        self.experimentStringToModule = collections.OrderedDict()
+        self.experiment_string_to_module = collections.OrderedDict()
         for (
             module
-        ) in cockpit.experiment.experiment_registry.getExperimentModules():
-            self.experimentStringToModule[module.EXPERIMENT_NAME] = module
+        ) in cockpit.experiment.experiment_registry.get_experiment_modules():
+            self.experiment_string_to_module[module.EXPERIMENT_NAME] = module
 
-        self.experimentType = wx.Choice(
-            self, choices=list(self.experimentStringToModule.keys())
+        self.experiment_type = wx.Choice(
+            self, choices=list(self.experiment_string_to_module.keys())
         )
-        self.experimentType.SetSelection(0)
+        self.experiment_type.SetSelection(0)
         gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Experiment type:",
-            control=self.experimentType,
+            control=self.experiment_type,
         )
 
-        self.numReps = gui_utils.add_labeled_input(
+        self.num_reps = gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Number of reps:",
             default_value=self.settings["num_reps"],
         )
-        self.numReps.SetValidator(gui_utils.INTVALIDATOR)
+        self.num_reps.SetValidator(gui_utils.INTVALIDATOR)
 
-        self.repDuration = gui_utils.add_labeled_input(
+        self.rep_duration = gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Rep duration (s):",
             default_value=self.settings["rep_duration"],
             helper_string="Amount of time that must pass between the start "
                           + "of each rep. Use 0 if you don't want any wait time.",
         )
-        self.repDuration.SetValidator(gui_utils.FLOATVALIDATOR)
+        self.rep_duration.SetValidator(gui_utils.FLOATVALIDATOR)
 
-        self.zPositionMode = wx.Choice(self, choices=Z_POSITION_MODES)
-        self.zPositionMode.SetSelection(0)
+        self.z_position_mode = wx.Choice(self, choices=Z_POSITION_MODES)
+        self.z_position_mode.SetSelection(0)
         gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Z position mode:",
-            control=self.zPositionMode,
+            control=self.z_position_mode,
         )
 
-        self.stackHeight = gui_utils.add_labeled_input(
+        self.stack_height = gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Stack height (\u03bcm):",
-            default_value=self.settings["stackHeight"],
+            default_value=self.settings["stack_height"],
         )
-        self.stackHeight.SetValidator(gui_utils.FLOATVALIDATOR)
+        self.stack_height.SetValidator(gui_utils.FLOATVALIDATOR)
 
-        self.sliceHeight = gui_utils.add_labeled_input(
+        self.slice_height = gui_utils.add_labeled_input(
             self,
-            universalSizer,
+            universal_sizer,
             label="Slice height (\u03bcm):",
             default_value=self.settings["slice_height"],
         )
-        self.sliceHeight.SetValidator(gui_utils.FLOATVALIDATOR)
+        self.slice_height.SetValidator(gui_utils.FLOATVALIDATOR)
 
-        self.sizer.Add(universalSizer, 0, wx.ALL, border=5)
+        self.sizer.Add(universal_sizer, 0, wx.ALL, border=5)
 
         ## Maps experiment modules to ExperimentUI instances holding the
         # UI for that experiment, if any.
-        self.experimentModuleToPanel = {}
-        for module in self.experimentStringToModule.values():
+        self.experiment_module_to_panel = {}
+        for module in self.experiment_string_to_module.values():
             if not hasattr(module, "ExperimentUI"):
                 # This experiment type has no special UI to set up.
                 continue
-            panel = module.ExperimentUI(self, self.configKey)
+            panel = module.ExperimentUI(self, self.config_key)
             panel.Hide()
             self.sizer.Add(panel)
-            self.experimentModuleToPanel[module] = panel
-        self.experimentType.Bind(wx.EVT_CHOICE, self.onExperimentTypeChoice)
-        self.onExperimentTypeChoice()
+            self.experiment_module_to_panel[module] = panel
+        self.experiment_type.Bind(wx.EVT_CHOICE, self.on_experiment_type_choice)
+        self.on_experiment_type_choice()
 
         # Section for exposure settings. We allow either setting per-laser
         # exposure times and activating all cameras as a group, or setting
         # them per-laser and per-camera (and activating each camera-laser
         # grouping in sequence).
-        exposureSizer = wx.BoxSizer(wx.VERTICAL)
+        exposure_sizer = wx.BoxSizer(wx.VERTICAL)
 
         ## Controls which set of exposure settings we enable.
-        self.exposureMode = wx.RadioBox(
+        self.exposure_mode = wx.RadioBox(
             self,
             label="Exposure mode",
             choices=[
@@ -244,17 +244,17 @@ class ExperimentConfigPanel(wx.Panel):
             ],
             majorDimension=1,
         )
-        exposureSizer.Add(self.exposureMode, 0, wx.ALL, border=5)
+        exposure_sizer.Add(self.exposure_mode, 0, wx.ALL, border=5)
 
         ## Panel for holding controls for when we expose every camera
         # simultaneously.
-        self.simultaneousExposurePanel = wx.Panel(
+        self.simultaneous_exposure_panel = wx.Panel(
             self, name="simultaneous exposures"
         )
-        simultaneousSizer = wx.BoxSizer(wx.VERTICAL)
-        simultaneousSizer.Add(
+        simultaneous_sizer = wx.BoxSizer(wx.VERTICAL)
+        simultaneous_sizer.Add(
             wx.StaticText(
-                self.simultaneousExposurePanel,
+                self.simultaneous_exposure_panel,
                 -1,
                 "Exposure times for light sources:",
             ),
@@ -264,187 +264,187 @@ class ExperimentConfigPanel(wx.Panel):
         )
 
         ## Ordered list of exposure times for simultaneous exposure mode.
-        self.lightExposureTimes, timeSizer = gui_utils.make_lights_controls(
-            self.simultaneousExposurePanel,
-            [str(l.name) for l in self.allLights],
-            self.settings["simultaneousExposureTimes"],
+        self.light_exposure_times, timeSizer = gui_utils.make_lights_controls(
+            self.simultaneous_exposure_panel,
+            [str(l.name) for l in self.all_lights],
+            self.settings["simultaneous_exposure_times"],
         )
-        simultaneousSizer.Add(timeSizer)
-        useCurrentButton = wx.Button(
-            self.simultaneousExposurePanel, -1, "Use current settings"
+        simultaneous_sizer.Add(timeSizer)
+        use_current_button = wx.Button(
+            self.simultaneous_exposure_panel, -1, "Use current settings"
         )
-        useCurrentButton.SetToolTip(
+        use_current_button.SetToolTip(
             wx.ToolTip(
                 "Use the same settings as are currently used to take images with the '+' button"
             )
         )
-        useCurrentButton.Bind(wx.EVT_BUTTON, self.onUseCurrentExposureSettings)
-        simultaneousSizer.Add(useCurrentButton)
+        use_current_button.Bind(wx.EVT_BUTTON, self.on_use_current_exposure_settings)
+        simultaneous_sizer.Add(use_current_button)
 
-        self.simultaneousExposurePanel.SetSizerAndFit(simultaneousSizer)
-        exposureSizer.Add(self.simultaneousExposurePanel, 0, wx.ALL, border=5)
+        self.simultaneous_exposure_panel.SetSizerAndFit(simultaneous_sizer)
+        exposure_sizer.Add(self.simultaneous_exposure_panel, 0, wx.ALL, border=5)
 
         ## Panel for when we expose each camera in sequence.
-        self.sequencedExposurePanel = wx.Panel(
+        self.sequenced_exposure_panel = wx.Panel(
             self, name="sequenced exposures"
         )
         ## Maps a camera handler to an ordered list of exposure times.
-        self.cameraToExposureTimes = {}
-        sequenceSizer = wx.FlexGridSizer(
-            len(self.settings["sequencedExposureSettings"]) + 1,
-            len(self.settings["sequencedExposureSettings"][0]) + 1,
+        self.camera_to_exposure_times = {}
+        sequence_sizer = wx.FlexGridSizer(
+            len(self.settings["sequenced_exposure_settings"]) + 1,
+            len(self.settings["sequenced_exposure_settings"][0]) + 1,
             1,
             1,
         )
-        for label in [""] + [str(l.name) for l in self.allLights]:
-            sequenceSizer.Add(
-                wx.StaticText(self.sequencedExposurePanel, -1, label),
+        for label in [""] + [str(l.name) for l in self.all_lights]:
+            sequence_sizer.Add(
+                wx.StaticText(self.sequenced_exposure_panel, -1, label),
                 0,
                 wx.ALIGN_RIGHT | wx.ALL,
                 5,
             )
-        for i, camera in enumerate(self.allCameras):
-            sequenceSizer.Add(
+        for i, camera in enumerate(self.all_cameras):
+            sequence_sizer.Add(
                 wx.StaticText(
-                    self.sequencedExposurePanel, -1, str(camera.name)
+                    self.sequenced_exposure_panel, -1, str(camera.name)
                 ),
                 0,
                 wx.TOP | wx.ALIGN_RIGHT,
                 8,
             )
             times = []
-            for label, defaultVal in zip(
-                [str(l.name) for l in self.allLights],
-                self.settings["sequencedExposureSettings"][i],
+            for label, default_val in zip(
+                [str(l.name) for l in self.all_lights],
+                self.settings["sequenced_exposure_settings"][i],
             ):
-                exposureTime = wx.TextCtrl(
-                    self.sequencedExposurePanel,
+                exposure_time = wx.TextCtrl(
+                    self.sequenced_exposure_panel,
                     size=(40, -1),
                     name="exposure: %s for %s" % (label, camera.name),
                 )
-                exposureTime.SetValue(defaultVal)
+                exposure_time.SetValue(default_val)
                 # allowEmpty=True lets validator know this control may be empty.
-                exposureTime.SetValidator(gui_utils.FLOATVALIDATOR)
-                exposureTime.allowEmpty = True
-                sequenceSizer.Add(exposureTime, 0, wx.ALL, border=5)
-                times.append(exposureTime)
-            self.cameraToExposureTimes[camera] = times
-        self.sequencedExposurePanel.SetSizerAndFit(sequenceSizer)
-        exposureSizer.Add(self.sequencedExposurePanel, 0, wx.ALL, border=5)
+                exposure_time.SetValidator(gui_utils.FLOATVALIDATOR)
+                exposure_time.allowEmpty = True
+                sequence_sizer.Add(exposure_time, 0, wx.ALL, border=5)
+                times.append(exposure_time)
+            self.camera_to_exposure_times[camera] = times
+        self.sequenced_exposure_panel.SetSizerAndFit(sequence_sizer)
+        exposure_sizer.Add(self.sequenced_exposure_panel, 0, wx.ALL, border=5)
 
         # Panel for when we expose channels.
-        self.channelExposurePanel = wx.Panel(self, name="channel sequence")
-        channelSizer = wx.FlexGridSizer(
+        self.channel_exposure_panel = wx.Panel(self, name="channel sequence")
+        channel_sizer = wx.FlexGridSizer(
             rows=len(self.channels.names), cols=3, vgap=5, hgap=10
         )
-        channelSizer.AddGrowableCol(1)
+        channel_sizer.AddGrowableCol(1)
 
         # A dictionary containing the order in which each channel is acquired
-        self.channelsChecked = {}
-        self.channelsOrder = {}
-        self.channelsOrderPossible = []
+        self.channels_checked = {}
+        self.channels_order = {}
+        self.channels_order_possible = []
 
         for channel in self.channels.names:
             # Checkboxes to activate channels
-            channelCheckBox = wx.CheckBox(self.channelExposurePanel, label="")
-            self.channelsChecked[channel] = channelCheckBox
-            channelSizer.Add(
-                channelCheckBox, flag=wx.ALL | wx.EXPAND, border=2
+            channel_check_box = wx.CheckBox(self.channel_exposure_panel, label="")
+            self.channels_checked[channel] = channel_check_box
+            channel_sizer.Add(
+                channel_check_box, flag=wx.ALL | wx.EXPAND, border=2
             )
-            channelCheckBox.Bind(wx.EVT_CHECKBOX, self.onChannelCheckBoxToggle)
+            channel_check_box.Bind(wx.EVT_CHECKBOX, self.on_channel_check_box_toggle)
 
             # Channel labels
-            channelLabel = wx.StaticText(
-                self.channelExposurePanel, label=channel
+            channel_label = wx.StaticText(
+                self.channel_exposure_panel, label=channel
             )
-            channelSizer.Add(
-                channelLabel, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=2
+            channel_sizer.Add(
+                channel_label, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL, border=2
             )
 
             # Choice of acquisition order
-            choice = wx.Choice(self.channelExposurePanel, choices=[])
+            choice = wx.Choice(self.channel_exposure_panel, choices=[])
             choice.SetSelection(-1)
             choice.Disable()
-            self.channelsOrder[channel] = choice
-            channelSizer.Add(choice, flag=wx.ALL | wx.EXPAND, border=2)
-            choice.Bind(wx.EVT_CHOICE, self.onChannelOrderChoice)
+            self.channels_order[channel] = choice
+            channel_sizer.Add(choice, flag=wx.ALL | wx.EXPAND, border=2)
+            choice.Bind(wx.EVT_CHOICE, self.on_channel_order_choice)
 
-        self.channelExposurePanel.SetSizerAndFit(channelSizer)
-        exposureSizer.Add(self.channelExposurePanel, 0, wx.ALL, border=5)
+        self.channel_exposure_panel.SetSizerAndFit(channel_sizer)
+        exposure_sizer.Add(self.channel_exposure_panel, 0, wx.ALL, border=5)
 
         # Toggle which panel is displayed based on the radio box.
-        self.exposureMode.Bind(wx.EVT_RADIOBOX, self.onExposureMode)
-        self.exposureMode.SetSelection(self.settings["exposure_mode"])
-        self.onExposureMode()
+        self.exposure_mode.Bind(wx.EVT_RADIOBOX, self.on_exposure_mode)
+        self.exposure_mode.SetSelection(self.settings["exposure_mode"])
+        self.on_exposure_mode()
 
-        self.sizer.Add(exposureSizer)
+        self.sizer.Add(exposure_sizer)
 
         self.filepath_panel = FilepathPanel(self)
-        self.filepath_panel.SetTemplate(self.settings["filenameTemplate"])
-        self.filepath_panel.UpdateFilename()
+        self.filepath_panel.set_template(self.settings["filename_template"])
+        self.filepath_panel.update_filename()
         self.Sizer.Add(self.filepath_panel, wx.SizerFlags(1).Expand().Border())
 
         # Save/load experiment settings buttons.
-        saveLoadPanel = wx.Panel(self)
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        saveButton = wx.Button(
-            saveLoadPanel, -1, "Save experiment settings..."
+        save_load_panel = wx.Panel(self)
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        save_button = wx.Button(
+            save_load_panel, -1, "Save experiment settings..."
         )
-        saveButton.Bind(wx.EVT_BUTTON, self.onSaveExperiment)
-        rowSizer.Add(saveButton, 0, wx.ALL, 5)
-        loadButton = wx.Button(
-            saveLoadPanel, -1, "Load experiment settings..."
+        save_button.Bind(wx.EVT_BUTTON, self.on_save_experiment)
+        row_sizer.Add(save_button, 0, wx.ALL, 5)
+        load_button = wx.Button(
+            save_load_panel, -1, "Load experiment settings..."
         )
-        loadButton.Bind(wx.EVT_BUTTON, self.onLoadExperiment)
-        rowSizer.Add(loadButton, 0, wx.ALL, 5)
-        saveLoadPanel.SetSizerAndFit(rowSizer)
-        self.sizer.Add(saveLoadPanel, 0, wx.LEFT, 5)
+        load_button.Bind(wx.EVT_BUTTON, self.on_load_experiment)
+        row_sizer.Add(load_button, 0, wx.ALL, 5)
+        save_load_panel.SetSizerAndFit(row_sizer)
+        self.sizer.Add(save_load_panel, 0, wx.LEFT, 5)
 
         self.SetSizerAndFit(self.sizer)
 
-    def onChannelCheckBoxToggle(self, event):
+    def on_channel_check_box_toggle(self, event):
         possibles = []
         p = 1
-        for channel, checkbox in self.channelsChecked.items():
-            self.channelsOrder[channel].SetSelection(-1)
+        for channel, checkbox in self.channels_checked.items():
+            self.channels_order[channel].SetSelection(-1)
             if checkbox.IsChecked():
-                self.channelsOrder[channel].Enable()
+                self.channels_order[channel].Enable()
                 possibles.append(p)
                 p += 1
             else:
-                self.channelsOrder[channel].Disable()
-        for choice in self.channelsOrder.values():
+                self.channels_order[channel].Disable()
+        for choice in self.channels_order.values():
             choice.SetItems([str(i) for i in possibles])
             choice.SetSelection(-1)
-        self.channelsOrderPossible = possibles
+        self.channels_order_possible = possibles
 
-    def onChannelOrderChoice(self, event):
-        selectedChoice = event.GetEventObject()
-        selectedValue = event.GetString()
-        for choice in self.channelsOrder.values():
+    def on_channel_order_choice(self, event):
+        selected_choice = event.GetEventObject()
+        selected_value = event.GetString()
+        for choice in self.channels_order.values():
             if (
-                choice is not selectedChoice
-                and choice.GetStringSelection() == selectedValue
+                choice is not selected_choice
+                and choice.GetStringSelection() == selected_value
             ):
                 choice.SetSelection(-1)
 
-    def loadConfig(self):
+    def load_config(self):
         """Load values from config, and validate them -- since devices may get
         changed out from under us, rendering some config entries (e.g. dealing
         with light sources) invalid."""
         result = cockpit.util.user_config.get_value(
-            self.configKey,
+            self.config_key,
             default={
                 "num_reps": "1",
                 "rep_duration": "0",
-                "sequencedExposureSettings": [
-                    ["" for l in self.allLights] for c in self.allCameras
+                "sequenced_exposure_settings": [
+                    ["" for l in self.all_lights] for c in self.all_cameras
                 ],
                 "exposure_mode": 0,
-                "simultaneousExposureTimes": ["" for l in self.allLights],
+                "simultaneous_exposure_times": ["" for l in self.all_lights],
                 "slice_height": ".15",
-                "stackHeight": "4",
-                "ZPositionMode": 0,
+                "stack_height": "4",
+                "z_position_mode": 0,
             },
         )
         # FIXME: cockpit.util.user_config.get_value(...default={...})
@@ -454,78 +454,78 @@ class ExperimentConfigPanel(wx.Panel):
         #   keys but we should probably handle the whole defaults in
         #   some other manner.
         result = {
-            "filenameTemplate": "{time}.dv",
+            "filename_template": "{time}.dv",
             **result,
         }
 
-        for key in ["simultaneousExposureTimes"]:
-            if len(result[key]) != len(self.allLights):
+        for key in ["simultaneous_exposure_times"]:
+            if len(result[key]) != len(self.all_lights):
                 # Number of light sources has changed; invalidate the config.
-                result[key] = ["" for light in self.allLights]
-        key = "sequencedExposureSettings"
-        if len(result[key]) != len(self.allCameras) or len(
+                result[key] = ["" for light in self.all_lights]
+        key = "sequenced_exposure_settings"
+        if len(result[key]) != len(self.all_cameras) or len(
             result[key][0]
-        ) != len(self.allLights):
+        ) != len(self.all_lights):
             # Number of lights and/or number of cameras has changed.
             result[key] = [
-                ["" for l in self.allLights] for c in self.allCameras
+                ["" for l in self.all_lights] for c in self.all_cameras
             ]
         return result
 
-    def onExperimentTypeChoice(self, event=None):
+    def on_experiment_type_choice(self, event=None):
         """User selected a different experiment type; show/hide specific
         experiment parameters as appropriate; depending on experiment type,
         some controls may be enabled/disabled."""
-        newType = self.experimentType.GetStringSelection()
-        for expString, module in self.experimentStringToModule.items():
-            if module in self.experimentModuleToPanel:
+        new_type = self.experiment_type.GetStringSelection()
+        for exp_string, module in self.experiment_string_to_module.items():
+            if module in self.experiment_module_to_panel:
                 # This experiment module has a special UI panel which needs
                 # to be shown/hidden.
-                panel = self.experimentModuleToPanel[module]
-                panel.Show(expString == newType)
-                panel.Enable(expString == newType)
+                panel = self.experiment_module_to_panel[module]
+                panel.Show(exp_string == new_type)
+                panel.Enable(exp_string == new_type)
         self.SetSizerAndFit(self.sizer)
-        self.resizeCallback(self)
+        self.resize_callback(self)
 
-    def onExposureMode(self, event=None):
+    def on_exposure_mode(self, event=None):
         """User changed the exposure mode."""
-        val = self.exposureMode.GetSelection()
+        val = self.exposure_mode.GetSelection()
         # Show the relevant light panel. Disable the unused panel to
         # prevent validation of its controls.
-        self.simultaneousExposurePanel.Show(val == 0)
-        self.simultaneousExposurePanel.Enable(val == 0)
-        self.sequencedExposurePanel.Show(val == 1)
-        self.sequencedExposurePanel.Enable(val == 1)
-        self.channelExposurePanel.Show(val == 2)
-        self.channelExposurePanel.Enable(val == 2)
+        self.simultaneous_exposure_panel.Show(val == 0)
+        self.simultaneous_exposure_panel.Enable(val == 0)
+        self.sequenced_exposure_panel.Show(val == 1)
+        self.sequenced_exposure_panel.Enable(val == 1)
+        self.channel_exposure_panel.Show(val == 2)
+        self.channel_exposure_panel.Enable(val == 2)
         self.SetSizerAndFit(self.sizer)
-        self.resizeCallback(self)
+        self.resize_callback(self)
 
-    def onUseCurrentExposureSettings(self, event=None):
+    def on_use_current_exposure_settings(self, event=None):
         """User clicked the "Use current settings" button; fill out the
         simultaneous-exposure settings text boxes with the current
         interactive-mode exposure settings."""
-        for i, light in enumerate(self.allLights):
+        for i, light in enumerate(self.all_lights):
             # Only have an exposure time if the light is enabled.
             val = ""
             if light.get_is_enabled():
                 val = str(light.get_exposure_time())
-            self.lightExposureTimes[i].SetValue(val)
+            self.light_exposure_times[i].SetValue(val)
 
-    def onSaveExperiment(self, event=None):
+    def on_save_experiment(self, event=None):
         """User clicked the "Save experiment settings..." button; save the
         parameters for later use as a JSON dict."""
-        settings = self.getSettingsDict()
+        settings = self.get_settings_dict()
         # Augment the settings with information pertinent to our current
         # experiment.
-        experimentType = self.experimentType.GetStringSelection()
-        settings["experimentType"] = experimentType
-        module = self.experimentStringToModule[experimentType]
-        if module in self.experimentModuleToPanel:
+        experiment_type = self.experiment_type.GetStringSelection()
+        settings["experiment_type"] = experiment_type
+        module = self.experiment_string_to_module[experiment_type]
+        if module in self.experiment_module_to_panel:
             # Have specific parameters for this experiment type; store them
             # too.
-            settings["experimentSpecificValues"] = (
-                self.experimentModuleToPanel[module].get_settings_dict()
+            settings["experiment_specific_values"] = (
+                self.experiment_module_to_panel[module].get_settings_dict()
             )
 
         # Get the filepath to save settings to.
@@ -549,7 +549,7 @@ class ExperimentConfigPanel(wx.Panel):
             _logger.error("Settings are:\n%s" % str(settings))
         handle.close()
 
-    def onLoadExperiment(self, event=None):
+    def on_load_experiment(self, event=None):
         """User clicked the "Load experiment settings..." button; load the
         parameters from a file."""
         dialog = wx.FileDialog(
@@ -563,27 +563,28 @@ class ExperimentConfigPanel(wx.Panel):
             # User cancelled.
             return
         filepath = dialog.GetPath()
+        # TODO: Wrap in with statement
         handle = open(filepath, "r")
         settings = json.loads(" ".join(handle.readlines()))
         handle.close()
-        experimentType = settings["experimentType"]
-        experimentIndex = self.experimentType.FindString(experimentType)
-        module = self.experimentStringToModule[experimentType]
-        if module in self.experimentModuleToPanel:
-            panel = self.experimentModuleToPanel[module]
-            panel.save_settings(settings["experimentSpecificValues"])
-            del settings["experimentSpecificValues"]
-        cockpit.util.user_config.set_value(self.configKey, settings)
+        experiment_type = settings["experiment_type"]
+        experiment_index = self.experiment_type.FindString(experiment_type)
+        module = self.experiment_string_to_module[experiment_type]
+        if module in self.experiment_module_to_panel:
+            panel = self.experiment_module_to_panel[module]
+            panel.save_settings(settings["experiment_specific_values"])
+            del settings["experiment_specific_values"]
+        cockpit.util.user_config.set_value(self.config_key, settings)
         # Reset the panel, destroying us and creating a new panel with
         # the proper values in all parameters, except for experiment type.
-        panel = self.resetCallback()
-        panel.experimentType.SetSelection(experimentIndex)
-        panel.onExperimentTypeChoice()
+        panel = self.reset_callback()
+        panel.experiment_type.SetSelection(experiment_index)
+        panel.on_experiment_type_choice()
 
-    def runExperiment(self):
+    def run_experiment(self):
         """Run the experiment per the user's settings."""
         # Returns True to close dialog box, None or False otherwise.
-        self.saveSettings()
+        self.save_settings()
         # Find the Z mover with the smallest range of motion, assumed
         # to be our experiment mover.
         mover = wx.GetApp().depot.get_sorted_stage_movers()[2][-1]
@@ -605,63 +606,63 @@ class ExperimentConfigPanel(wx.Panel):
             return True
         # TODO: check that the filename is valid
 
-        exposureSettings = []
+        exposure_settings = []
 
-        if self.exposureMode.GetStringSelection() == "Expose simultaneously":
-            lightTimePairs = [
+        if self.exposure_mode.GetStringSelection() == "Expose simultaneously":
+            light_time_pairs = [
                 (
                     light,
                     gui_utils.try_parse_num(
-                        self.lightExposureTimes[i], decimal.Decimal
+                        self.light_exposure_times[i], decimal.Decimal
                     ),
                 )
-                for i, light in enumerate(self.allLights)
+                for i, light in enumerate(self.all_lights)
                 if (
-                    self.allLights[i].get_is_enabled()
-                    and self.lightExposureTimes[i].GetValue()
+                    self.all_lights[i].get_is_enabled()
+                    and self.light_exposure_times[i].GetValue()
                 )
             ]
-            if not lightTimePairs and not gui_utils.get_user_permission(
+            if not light_time_pairs and not gui_utils.get_user_permission(
                 "No enabled light has a define exposure time. Are you sure you want to continue?"
             ):
                 return True
 
-            exposureSettings = [(cameras, lightTimePairs)]
+            exposure_settings = [(cameras, light_time_pairs)]
 
-        elif self.exposureMode.GetStringSelection() == "Expose sequentially":
+        elif self.exposure_mode.GetStringSelection() == "Expose sequentially":
             # A separate exposure for each camera.
             for camera in cameras:
-                cameraSettings = self.cameraToExposureTimes[camera]
+                camera_settings = self.camera_to_exposure_times[camera]
                 settings = []
-                for i, light in enumerate(self.allLights):
+                for i, light in enumerate(self.all_lights):
                     if not light.get_is_enabled():
                         continue
-                    timeControl = cameraSettings[i]
-                    if timeControl.GetValue():
+                    time_control = camera_settings[i]
+                    if time_control.GetValue():
                         settings.append(
                             (
                                 light,
                                 gui_utils.try_parse_num(
-                                    timeControl, decimal.Decimal
+                                    time_control, decimal.Decimal
                                 ),
                             )
                         )
-                exposureSettings.append(([camera], settings))
+                exposure_settings.append(([camera], settings))
 
-        elif self.exposureMode.GetStringSelection() == "Expose channels":
+        elif self.exposure_mode.GetStringSelection() == "Expose channels":
             # Check that there are active channels and they all have an order
-            if not any(c.IsChecked() for c in self.channelsChecked.values()):
+            if not any(c.IsChecked() for c in self.channels_checked.values()):
                 wx.MessageDialog(
                     self,
                     "No channels are enabled, so the experiment cannot be run.",
                     style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK,
                 ).ShowModal()
                 return True
-            unsortedExposureSettings = {}
+            unsorted_exposure_settings = {}
             for channel, checkbox, order in zip(
                 self.channels.names,
-                self.channelsChecked.values(),
-                self.channelsOrder.values(),
+                self.channels_checked.values(),
+                self.channels_order.values(),
             ):
                 if checkbox.IsChecked():
                     if order.GetSelection() == -1:
@@ -672,55 +673,55 @@ class ExperimentConfigPanel(wx.Panel):
                             style=wx.ICON_EXCLAMATION | wx.STAY_ON_TOP | wx.OK,
                         ).ShowModal()
                         return True
-                    channelSettings = self.channels.get(channel)
+                    channel_settings = self.channels.get(channel)
                     cameras = []
                     cameras.extend(
                         cam_handler
-                        for cam_handler in self.allCameras
-                        if channelSettings[cam_handler.name]
+                        for cam_handler in self.all_cameras
+                        if channel_settings[cam_handler.name]
                     )
-                    lightTimePairs = [
+                    light_time_pairs = [
                         (
                             light_handler,
                             decimal.Decimal(
                                 float(
-                                    channelSettings[light_handler.name][
+                                    channel_settings[light_handler.name][
                                         "exposure_time"
                                     ]
                                 )
                             ),
                         )
-                        for light_handler in self.allLights
-                        if channelSettings[light_handler.name]["is_enabled"]
+                        for light_handler in self.all_lights
+                        if channel_settings[light_handler.name]["is_enabled"]
                     ]
-                    unsortedExposureSettings[order.GetSelection()] = (
+                    unsorted_exposure_settings[order.GetSelection()] = (
                         cameras,
-                        lightTimePairs,
+                        light_time_pairs,
                     )
 
-            exposureSettings = [
-                unsortedExposureSettings[i]
-                for i in sorted(unsortedExposureSettings.keys())
+            exposure_settings = [
+                unsorted_exposure_settings[i]
+                for i in sorted(unsorted_exposure_settings.keys())
             ]
 
         altitude = cockpit.interfaces.stage_mover.get_position_for_axis(2)
         # Default to "current is bottom"
-        altBottom = altitude
-        zHeight = gui_utils.try_parse_num(self.stackHeight, float)
-        if self.zPositionMode.GetStringSelection() == "Current is center":
-            altBottom = altitude - zHeight / 2
-        elif self.zPositionMode.GetStringSelection() == "Use saved top/bottom":
-            altBottom = cockpit.interfaces.stage_mover.mover.saved_bottom
-            zHeight = cockpit.interfaces.stage_mover.mover.saved_top - altBottom
+        alt_bottom = altitude
+        z_height = gui_utils.try_parse_num(self.stack_height, float)
+        if self.z_position_mode.GetStringSelection() == "Current is center":
+            alt_bottom = altitude - z_height / 2
+        elif self.z_position_mode.GetStringSelection() == "Use saved top/bottom":
+            alt_bottom = cockpit.interfaces.stage_mover.mover.saved_bottom
+            z_height = cockpit.interfaces.stage_mover.mover.saved_top - alt_bottom
 
-        sliceHeight = gui_utils.try_parse_num(self.sliceHeight, float)
-        if zHeight == 0:
+        slice_height = gui_utils.try_parse_num(self.slice_height, float)
+        if z_height == 0:
             # 2D mode.
-            zHeight = 1e-6
-            sliceHeight = 1e-6
+            z_height = 1e-6
+            slice_height = 1e-6
 
         try:
-            savePath = self.filepath_panel.GetPath()
+            save_path = self.filepath_panel.get_path()
         except Exception:
             cockpit.gui.ExceptionBox(
                 "Failed to get filename for data.", parent=self
@@ -728,50 +729,50 @@ class ExperimentConfigPanel(wx.Panel):
             return True
 
         params = {
-            "num_reps": gui_utils.try_parse_num(self.numReps),
-            "rep_duration": gui_utils.try_parse_num(self.repDuration, float),
+            "num_reps": gui_utils.try_parse_num(self.num_reps),
+            "rep_duration": gui_utils.try_parse_num(self.rep_duration, float),
             "z_positioner": mover,
-            "alt_bottom": altBottom,
-            "z_height": zHeight,
-            "slice_height": sliceHeight,
-            "exposure_settings": exposureSettings,
-            "save_path": savePath,
+            "alt_bottom": alt_bottom,
+            "z_height": z_height,
+            "slice_height": slice_height,
+            "exposure_settings": exposure_settings,
+            "save_path": save_path,
         }
-        experimentType = self.experimentType.GetStringSelection()
-        module = self.experimentStringToModule[experimentType]
-        if module in self.experimentModuleToPanel:
+        experiment_type = self.experiment_type.GetStringSelection()
+        module = self.experiment_string_to_module[experiment_type]
+        if module in self.experiment_module_to_panel:
             # Add on the special parameters needed by this experiment type.
-            params = self.experimentModuleToPanel[module].augment_params(params)
+            params = self.experiment_module_to_panel[module].augment_params(params)
 
         self.runner = module.EXPERIMENT_CLASS(**params)
         return self.runner.run()
 
-    def getSettingsDict(self):
+    def get_settings_dict(self):
         """Generate a dict of our current settings."""
-        sequencedExposureSettings = []
-        for i, camera in enumerate(self.allCameras):
-            sequencedExposureSettings.append(
-                [c.GetValue() for c in self.cameraToExposureTimes[camera]]
+        sequenced_exposure_settings = []
+        for i, camera in enumerate(self.all_cameras):
+            sequenced_exposure_settings.append(
+                [c.GetValue() for c in self.camera_to_exposure_times[camera]]
             )
-        simultaneousTimes = [c.GetValue() for c in self.lightExposureTimes]
+        simultaneous_times = [c.GetValue() for c in self.light_exposure_times]
 
-        newSettings = {
-            "filenameTemplate": self.filepath_panel.GetTemplate(),
-            "num_reps": self.numReps.GetValue(),
-            "rep_duration": self.repDuration.GetValue(),
-            "sequencedExposureSettings": sequencedExposureSettings,
-            "exposure_mode": self.exposureMode.GetSelection(),
-            "simultaneousExposureTimes": simultaneousTimes,
-            "slice_height": self.sliceHeight.GetValue(),
-            "stackHeight": self.stackHeight.GetValue(),
-            "ZPositionMode": self.zPositionMode.GetSelection(),
+        new_settings = {
+            "filename_template": self.filepath_panel.get_template(),
+            "num_reps": self.num_reps.GetValue(),
+            "rep_duration": self.rep_duration.GetValue(),
+            "sequenced_exposure_settings": sequenced_exposure_settings,
+            "exposure_mode": self.exposure_mode.GetSelection(),
+            "simultaneous_exposure_times": simultaneous_times,
+            "slice_height": self.slice_height.GetValue(),
+            "stack_height": self.stack_height.GetValue(),
+            "z_position_mode": self.z_position_mode.GetSelection(),
         }
-        return newSettings
+        return new_settings
 
-    def saveSettings(self):
+    def save_settings(self):
         """Save the current experiment settings to config."""
         cockpit.util.user_config.set_value(
-            self.configKey, self.getSettingsDict()
+            self.config_key, self.get_settings_dict()
         )
 
 
@@ -789,13 +790,13 @@ class FilepathPanel(wx.Panel):
             " '{time}' will be replaced with their current values."
         )
 
-        self._fname_ctrl = wx.TextCtrl(self, value="")
+        self._filename_ctrl = wx.TextCtrl(self, value="")
 
         self._update_btn = wx.Button(self, label="Update")
         self._update_btn.SetToolTip("Update 'Filename' based on 'Template'.")
-        self._update_btn.Bind(wx.EVT_BUTTON, self._OnUpdateFilename)
+        self._update_btn.Bind(wx.EVT_BUTTON, self._on_update_filename)
 
-        self.UpdateFilename()
+        self.update_filename()
 
         grid = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -808,12 +809,12 @@ class FilepathPanel(wx.Panel):
 
         add_pair("Directory:", self._dir_ctrl)
         add_pair("Template:", self._template_ctrl)
-        add_pair("Filename:", self._fname_ctrl)
+        add_pair("Filename:", self._filename_ctrl)
         grid.Add(self._update_btn, static_sizer)
 
         self.SetSizer(grid)
 
-    def UpdateFilename(self, mappings: typing.Mapping[str, str] = {}) -> None:
+    def update_filename(self, mappings: typing.Mapping[str, str] = {}) -> None:
         all_mappings = {
             "date": time.strftime("%Y%m%d"),
             "time": time.strftime("%H%M%S"),
@@ -822,24 +823,24 @@ class FilepathPanel(wx.Panel):
 
         template = self._template_ctrl.GetValue()
         basename = template.format_map(Default(**all_mappings))
-        self._fname_ctrl.SetValue(basename)
+        self._filename_ctrl.SetValue(basename)
 
-    def _OnUpdateFilename(self, evt: wx.CommandEvent) -> None:
+    def _on_update_filename(self, evt: wx.CommandEvent) -> None:
         del evt
-        self.UpdateFilename()
+        self.update_filename()
 
-    def GetPath(self) -> str:
+    def get_path(self) -> str:
         """Return full filepath to use."""
         dirname = self._dir_ctrl.GetPath()
-        basename = self._fname_ctrl.GetValue()
+        basename = self._filename_ctrl.GetValue()
         if not basename:
             raise Exception("Filename is empty")
         return os.path.join(dirname, basename)
 
-    def GetTemplate(self) -> str:
+    def get_template(self) -> str:
         return self._template_ctrl.GetValue()
 
-    def SetTemplate(self, template: str) -> None:
+    def set_template(self, template: str) -> None:
         self._template_ctrl.SetValue(template)
 
 

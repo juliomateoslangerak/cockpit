@@ -98,7 +98,7 @@ class MyExperiment(immediateMode.ImmediateModeExperiment):
         # Get all light sources that the microscope has.
         allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         # getHandlersOfType returns an unordered set datatype. If we want to
-        # index into allLights, we need to convert it to a list first.
+        # index into all_lights, we need to convert it to a list first.
         allLights = list(allLights)
         # Print the names of all light sources.
         for light in allLights:

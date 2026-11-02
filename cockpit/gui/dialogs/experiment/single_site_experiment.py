@@ -52,7 +52,7 @@
 
 import wx
 
-from cockpit.gui.dialogs.experiment import experimentConfigPanel
+from cockpit.gui.dialogs.experiment import experiment_config_panel
 from cockpit.gui.gui_utils import EVT_COCKPIT_VALIDATION_ERROR
 
 
@@ -66,56 +66,56 @@ class SingleSiteExperimentDialog(wx.Dialog):
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
         self.SetExtraStyle(wx.WS_EX_VALIDATE_RECURSIVELY)
-        self.Bind(EVT_COCKPIT_VALIDATION_ERROR, self.onValidationError)
+        self.Bind(EVT_COCKPIT_VALIDATION_ERROR, self.on_validation_error)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         ## Contains all the actual UI elements beyond the dialog window itself.
-        self.panel = experimentConfigPanel.ExperimentConfigPanel(
+        self.panel = experiment_config_panel.ExperimentConfigPanel(
             self,
-            resizeCallback=self.onExperimentPanelResize,
-            resetCallback=self.onReset,
+            resize_callback=self.on_experiment_panel_resize,
+            reset_callback=self.on_reset,
         )
         self.sizer.Add(self.panel)
 
-        self.buttonBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.button_box = wx.BoxSizer(wx.HORIZONTAL)
 
         button = wx.Button(self, -1, "Reset")
         button.SetToolTip(
             wx.ToolTip("Reload this window with all default values")
         )
-        button.Bind(wx.EVT_BUTTON, self.onReset)
-        self.buttonBox.Add(button, 0, wx.ALIGN_LEFT | wx.ALL, 5)
+        button.Bind(wx.EVT_BUTTON, self.on_reset)
+        self.button_box.Add(button, 0, wx.ALIGN_LEFT | wx.ALL, 5)
 
-        self.buttonBox.Add((1, 1), 1, wx.EXPAND)
+        self.button_box.Add((1, 1), 1, wx.EXPAND)
 
         button = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        self.buttonBox.Add(button, 0, wx.ALL, 5)
+        self.button_box.Add(button, 0, wx.ALL, 5)
 
         button = wx.Button(self, wx.ID_OK, "Start")
         button.SetToolTip(wx.ToolTip("Start the experiment"))
-        button.Bind(wx.EVT_BUTTON, self.onStart)
-        self.buttonBox.Add(button, 0, wx.ALL, 5)
+        button.Bind(wx.EVT_BUTTON, self.on_start)
+        self.button_box.Add(button, 0, wx.ALL, 5)
 
-        self.sizer.Add(self.buttonBox, 1, wx.EXPAND)
+        self.sizer.Add(self.button_box, 1, wx.EXPAND)
 
-        self.statusbar = wx.StaticText(
+        self.status_bar = wx.StaticText(
             self,
             -1,
             name="status bar",
             style=wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE,
         )
-        self.sizer.Add(self.statusbar, 0, wx.EXPAND)
+        self.sizer.Add(self.status_bar, 0, wx.EXPAND)
 
         self.SetSizerAndFit(self.sizer)
 
-    def onValidationError(self, evt):
+    def on_validation_error(self, evt):
         if getattr(evt, "empty", False):
-            self.statusbar.SetLabel(
+            self.status_bar.SetLabel(
                 "Missing value for %s." % evt.control.GetName()
             )
         else:
-            self.statusbar.SetLabel(
+            self.status_bar.SetLabel(
                 "Invalid value for %s." % evt.control.GetName()
             )
         # Currently, some controls have the same name/label (e.g. the exposure time
@@ -136,35 +136,35 @@ class SingleSiteExperimentDialog(wx.Dialog):
             ],
         )
 
-    def onExperimentPanelResize(self, panel):
+    def on_experiment_panel_resize(self, panel):
         """Our experiment panel resized itself."""
         self.SetSizerAndFit(self.sizer)
 
-    def onStart(self, event=None):
+    def on_start(self, event=None):
         """Attempt to run the experiment.
 
         If the testrun fails, report why.
         """
-        self.statusbar.SetLabel("")
+        self.status_bar.SetLabel("")
         if not self.Validate():
             return
-        if self.panel.runExperiment():
+        if self.panel.run_experiment():
             self.Hide()
 
-    def onReset(self, event=None):
+    def on_reset(self, event=None):
         """Blow away the dialog and recreate it from scratch."""
         parent = self.GetParent()
         global dialog
         dialog.Destroy()
         dialog = None
-        showDialog(parent)
+        show_dialog(parent)
 
 
 ## Global singleton
 dialog = None
 
 
-def showDialog(parent):
+def show_dialog(parent):
     global dialog
     if not dialog:
         dialog = SingleSiteExperimentDialog(parent)

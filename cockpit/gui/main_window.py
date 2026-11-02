@@ -79,8 +79,8 @@ from cockpit.gui import (
     view_file_drop_target,
 )
 from cockpit.gui.dialogs.experiment import (
-    multiSiteExperiment,
-    singleSiteExperiment,
+    multi_site_experiment,
+    single_site_experiment,
 )
 from cockpit.util.csv_plotter import CSVPlotter
 from cockpit.util.intensity import IntensityProfilerFrame
@@ -135,11 +135,11 @@ class MainWindowPanel(wx.Panel):
         for label, fn in (
             (
                 "Single-site\nexperiment",
-                lambda event: singleSiteExperiment.showDialog(self),
+                lambda event: single_site_experiment.show_dialog(self),
             ),
             (
                 "Multi-site\nexperiment",
-                lambda event: multiSiteExperiment.showDialog(self),
+                lambda event: multi_site_experiment.show_dialog(self),
             ),
             ("View last\nfile", self.on_view_last_file),
         ):

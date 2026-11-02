@@ -36,7 +36,7 @@ import cockpit.util.user_config
 from cockpit import depot, events
 from cockpit.gui.camera.view_panel import ViewPanel
 from cockpit.gui.device import EnableButton
-from cockpit.gui.dialogs.experiment import singleSiteExperiment
+from cockpit.gui.dialogs.experiment import single_site_experiment
 from cockpit.gui.macro_stage.macro_stage_xy import go_to_xyz_dialog, MacroStageXY
 from cockpit.gui.macro_stage.macro_stage_z import MacroStageZ
 from cockpit.gui.safe_controls import EVT_SAFE_CONTROL_COMMIT, SetPointGauge
@@ -362,7 +362,7 @@ class ActionsPanel(wx.Panel):
             mosaic_panel.set_select_func(None)
 
     def _on_experiment(self, event):
-        singleSiteExperiment.showDialog(self.GetTopLevelParent())
+        single_site_experiment.show_dialog(self.GetTopLevelParent())
 
     def _on_marker(self, event):
         colour = self._sel_mar.GetStringSelection()

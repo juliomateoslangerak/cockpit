@@ -69,7 +69,7 @@ from cockpit.experiment import (
 
 
 ## List of registered modules.
-registeredModules = [
+registered_modules = [
     z_stack,
     swept_shutter,
     offset_gain_correction,
@@ -83,7 +83,7 @@ registeredModules = [
 ]
 
 
-def getExperimentModules():
+def get_experiment_modules():
     """Retrieve all registered experiments."""
-    global registeredModules
-    return registeredModules
+    global registered_modules
+    return registered_modules

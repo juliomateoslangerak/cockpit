@@ -53,7 +53,7 @@ import logging
 import traceback
 import typing
 
-import numpy
+import numpy as np
 import wx
 from OpenGL.GL import *
 
@@ -432,7 +432,7 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             # Draw direction of motion
             delta = motor_pos - self.prev_stage_position[:2]
 
-            if sum(numpy.fabs(delta)) > self._min_delta_to_display:
+            if sum(np.fabs(delta)) > self._min_delta_to_display:
                 self.draw_arrow(
                     (
                         motor_pos[0] - self.offset[0],

@@ -75,7 +75,7 @@
 import sys
 import time
 
-import numpy
+import numpy as np
 import scipy.ndimage
 
 from cockpit.util import datadoc
@@ -94,14 +94,14 @@ class Corrector:
         self.image_shape = map_data[0].shape
 
         ## In-order array of exposure times.
-        self.exposure_times = numpy.array(exposure_times, dtype=numpy.float32)
+        self.exposure_times = np.array(exposure_times, dtype=np.float32)
         ## 3D array of pixel values for each pixel for each exposure time.
-        self.image_data = numpy.array(map_data, dtype=numpy.float32)
+        self.image_data = np.array(map_data, dtype=np.float32)
 
         # Generate a linear fit for the data as a whole, so we can map any
         # exposure time to a single value in counts.
-        self.slope, self.intercept = numpy.polyfit(
-            self.exposure_times, map(numpy.mean, self.image_data), 1
+        self.slope, self.intercept = np.polyfit(
+            self.exposure_times, map(np.mean, self.image_data), 1
         )
         print("Linear fit constructed")
 
@@ -110,7 +110,7 @@ class Corrector:
         # the data range (assuming 0 and 2**16 are the limits).
         ## List of SubCorrectors covering all valid data ranges.
         self.sub_correctors = []
-        exposure_spacing = numpy.median(
+        exposure_spacing = np.median(
             self.exposure_times[1:] - self.exposure_times[:-1]
         )
         print("Calculate a median spacing of", exposure_spacing)
@@ -157,10 +157,10 @@ class Corrector:
             x_vals = corrector.exposure_times
             y_vals = corrector.image_data
             print(
-                "Extrapolating with", x_vals, [numpy.median(v) for v in y_vals]
+                "Extrapolating with", x_vals, [np.median(v) for v in y_vals]
             )
-            y_vals.shape = len(x_vals), numpy.product(self.image_shape)
-            slopes, intercepts = numpy.polyfit(x_vals, y_vals, 1)
+            y_vals.shape = len(x_vals), np.product(self.image_shape)
+            slopes, intercepts = np.polyfit(x_vals, y_vals, 1)
             # Restore our previous shape.
             y_vals.shape = len(x_vals), self.image_shape[0], self.image_shape[1]
             # Calculate extrapolated "exposure times" at the target.
@@ -175,12 +175,12 @@ class Corrector:
                 print(
                     "Extrapolated to negative time at",
                     times[0],
-                    numpy.median(images[0]),
+                    np.median(images[0]),
                 )
             else:
                 images.append(extrapolated)
                 times.append(target - self.intercept / self.slope)
-            images = numpy.array(images)
+            images = np.array(images)
             new_correctors.append(SubCorrector(times, images, 1))
         self.sub_correctors.extend(new_correctors)
 
@@ -193,15 +193,15 @@ class Corrector:
         apply them iteratively to cover all the input data.
         """
         # Start out with "all uncorrected" data.
-        result = numpy.ones(input_data.shape, dtype=numpy.float32) * -1
+        result = np.ones(input_data.shape, dtype=np.float32) * -1
         for corrector in self.sub_correctors:
             exposures = corrector.correct(input_data)
-            valid_indices = numpy.where(exposures != -1)
+            valid_indices = np.where(exposures != -1)
             result[valid_indices] = exposures[valid_indices]
-            if numpy.all(result != -1):
+            if np.all(result != -1):
                 # All done
                 break
-        if numpy.any(result == -1):
+        if np.any(result == -1):
             # We failed to correct some of the pixels. This should only be an
             # issue if our response map is basically flat at one end (the
             # low end, most likely), such that our extrapolation of the
@@ -209,7 +209,7 @@ class Corrector:
             # map of a pixel flattens at the bottom at 108 counts, then our
             # extrapolation past the end of the map data will not go below 108,
             # and if the pixel actually reads 107 then we can't correct it.
-            bad_pixels = numpy.where(result == -1)
+            bad_pixels = np.where(result == -1)
             print("Failed to correct %d pixels" % len(bad_pixels[0]))
             for x, y in zip(*bad_pixels):
                 print(
@@ -257,7 +257,7 @@ class SubCorrector:
             "Making subcontractor with times/median values",
             "\n".join(
                 [
-                    str((t, numpy.median(d)))
+                    str((t, np.median(d)))
                     for t, d in zip(exposure_times, images)
                 ]
             ),
@@ -280,14 +280,14 @@ class SubCorrector:
             self.image_shape[0],
             self.image_shape[1],
         )
-        self.uniform_data = numpy.zeros(sampled_shape, dtype=numpy.float32)
-        self.uniform_exposures = numpy.zeros(sampled_shape, dtype=numpy.float32)
+        self.uniform_data = np.zeros(sampled_shape, dtype=np.float32)
+        self.uniform_exposures = np.zeros(sampled_shape, dtype=np.float32)
         for i in range(self.image_shape[0]):
             for j in range(self.image_shape[1]):
-                self.uniform_data[:, i, j] = numpy.linspace(
+                self.uniform_data[:, i, j] = np.linspace(
                     self.min_vals[i, j], self.max_vals[i, j], self.num_samples
                 )
-                self.uniform_exposures[:, i, j] = numpy.interp(
+                self.uniform_exposures[:, i, j] = np.interp(
                     self.uniform_data[:, i, j],
                     self.image_data[:, i, j],
                     self.exposure_times,
@@ -305,9 +305,9 @@ class SubCorrector:
             * (input_data - self.min_vals)
             / (self.max_vals - self.min_vals)
         )
-        map_input = numpy.zeros((3, self.image_shape[0], self.image_shape[1]))
+        map_input = np.zeros((3, self.image_shape[0], self.image_shape[1]))
         map_input[:1] = indices
-        map_input[1:] = numpy.indices(self.image_shape)
+        map_input[1:] = np.indices(self.image_shape)
         exposures = scipy.ndimage.map_coordinates(
             self.uniform_exposures, map_input, order=1, cval=-1
         )
@@ -325,9 +325,9 @@ class SubCorrector:
     def __repr__(self):
         return "<SubCorrector with range (%.2f %d, %.2f %d)>" % (
             self.exposure_times[0],
-            numpy.median(self.uniform_data[0]),
+            np.median(self.uniform_data[0]),
             self.exposure_times[-1],
-            numpy.median(self.uniform_data[-1]),
+            np.median(self.uniform_data[-1]),
         )
 
 
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     map_data = [e[1] for e in exp_data_pairs]
 
     print("Loaded exposure time / mean value pairs:")
-    print("\n".join(map(str, [(t, numpy.mean(d)) for t, d in exp_data_pairs])))
+    print("\n".join(map(str, [(t, np.mean(d)) for t, d in exp_data_pairs])))
 
     start = time.time()
     corrector = Corrector(exposure_times, map_data)
@@ -373,8 +373,8 @@ if __name__ == "__main__":
     correction_times = []
     for filename in data_files:
         input_data = datadoc.DataDoc(filename).image_array
-        #    print ("Loading",filename,"initial stats",input_data.min(),input_data.max(),numpy.median(input_data),numpy.std(input_data))
-        result = numpy.zeros(input_data.shape, dtype=numpy.float32)
+        #    print ("Loading",filename,"initial stats",input_data.min(),input_data.max(),np.median(input_data),np.std(input_data))
+        result = np.zeros(input_data.shape, dtype=np.float32)
         sub_start = time.time()
         for wavelength in range(input_data.shape[0]):
             for timepoint in range(input_data.shape[1]):
@@ -385,14 +385,14 @@ if __name__ == "__main__":
                     )
         correction_times.append(time.time() - sub_start)
         datadoc.write_data_as_mrc(result, filename + suffix)
-    #    print ("%s: %.2f, %.2f, %.2f, %.2f" % (filename, result.min(), result.max(), numpy.mean(result), numpy.std(result)))
+    #    print ("%s: %.2f, %.2f, %.2f, %.2f" % (filename, result.min(), result.max(), np.mean(result), np.std(result)))
 
     overall_time = time.time() - start
     print(
         "Initialization took %.2f; correction took on average %.2f; overall %.2f for %d files"
         % (
             time_to_make,
-            numpy.mean(correction_times),
+            np.mean(correction_times),
             overall_time,
             len(data_files),
         )

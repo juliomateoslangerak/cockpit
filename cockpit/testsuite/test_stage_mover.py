@@ -21,7 +21,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-import numpy
+import numpy as np
 
 from cockpit.interfaces import stage_mover
 
@@ -149,7 +149,7 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
 
     def test_site_serialization_round_trip(self):
         site = stage_mover.Site(
-            numpy.array([1.0, 2.5, -3.0]),
+            np.array([1.0, 2.5, -3.0]),
             group="test",
             color=(1, 2, 3),
             size=4.5,

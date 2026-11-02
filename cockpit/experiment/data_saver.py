@@ -784,8 +784,8 @@ class ZarrDataSaver:
         self._camera_to_channel_ids = {
             camera: [] for camera in self._camera_to_images_kept_per_rep
         }
-        for channelId, channel in enumerate(self._channels):
-            self._camera_to_channel_ids[channel[0]] += [channelId]
+        for channel_id, channel in enumerate(self._channels):
+            self._camera_to_channel_ids[channel[0]] += [channel_id]
 
     def _compute_channel_shapes(self):
         """

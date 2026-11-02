@@ -90,7 +90,7 @@ class ExperimentConfigPanel(wx.Panel):
     into your GUI. Call its runExperiment function when you are ready to start
     the experiment.
 
-    The parent is required to implement onExperimentPanelResize so that changes
+    The parent is required to implement on_experiment_panel_resize so that changes
     in the panel size will be handled properly.
     """
 

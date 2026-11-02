@@ -38,12 +38,12 @@ class PolarizationDevice(device.Device):
 
         [SI polarizer]
         type: cockpit.devices.polarization_rotator.PolarizationDevice
-        analogSource: NAME_OF_EXECUTOR_DEVICE
-        analogLine: 1
-        siVoltages: 488: 0.915, 1.05, 1.23
+        analog_source: NAME_OF_EXECUTOR_DEVICE
+        analog_line: 1
+        si_voltages: 488: 0.915, 1.05, 1.23
                     561: 1.32, 0.90, 1.12
                     647: 1.18, 1.61, 0.97
-        idleVoltage: 1.0
+        idle_voltage: 1.0
         offset: 0                # in volts
         gain: 6553.6             # in ADU per volt
 
@@ -60,7 +60,7 @@ class PolarizationDevice(device.Device):
     """
 
     _config_types = {
-        "idlevoltage": float,
+        "idle_voltage": float,
         "offset": float,
         "gain": float,
     }
@@ -79,9 +79,9 @@ class PolarizationDevice(device.Device):
         h = a_handler.register_analog(self, a_line, offset, gain)
 
         # If there are indexed positions in the config, add them to the handler.
-        idlevoltage = self.config.get("idlevoltage", 0)
+        idlevoltage = self.config.get("idle_voltage", 0)
         voltages = {}
-        for vdef in self.config.get("sivoltages", "").split("\n"):
+        for vdef in self.config.get("si_voltages", "").split("\n"):
             if vdef == "":
                 continue
             key, values = vdef.strip("\n").split(":")

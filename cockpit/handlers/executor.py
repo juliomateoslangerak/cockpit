@@ -732,7 +732,7 @@ class TriggerProxy(DeviceHandler):
         super().__init__(
             name + " trigger", name + " group", False, {}, depot.GENERIC_DEVICE
         )
-        self.triggerNow = lambda: trig_source.trigger_digital(self)
+        self.trigger_now = lambda: trig_source.trigger_digital(self)
 
 
 ## This handler can examine and modify an action table, but delegates
@@ -757,7 +757,7 @@ class DelegateTrigger(SimpleExecutor):
         if isinstance(trig_source, str):
             trig_source = depot.get_handler(trig_source, depot.EXECUTOR)
         self._trigger = trig_source.register_digital(self, trig_line)
-        self.trigger_now = self._trigger.triggerNow
+        self.trigger_now = self._trigger.trigger_now
         self._trigger_time = trig_time
         self._response_time = response_time
 

@@ -144,7 +144,7 @@ class TestExecuteAndWait(TestEvents):
 
         # We check the mock subscriber to test that the publication
         # caused by the emitter, went to other subscribers and not
-        # only to the executeAndWaitFor releaser.
+        # only to the execute_and_wait_for releaser.
         self.subscriber.assert_called_once_with()
 
     def test_abort_wait_for_event(self):

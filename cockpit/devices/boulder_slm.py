@@ -83,14 +83,15 @@ class BoulderSLM(device.Device):
         [slm]
         type: cockpit.devices.boulder_slm.BoulderSLM
         uri: PYRO:pyroSLM@slmhost:8000
-        triggerSource: NAME_OF_EXECUTOR_DEVICE
-        triggerLine: 2
+        trigger_source: NAME_OF_EXECUTOR_DEVICE
+        settling_time: 10.0
+        trigger_line: 2
 
     """
 
     _config_types = {
-        "settlingtime": float,
-        "triggerLine": int,
+        "settling_time": float,
+        "trigger_line": int,
     }
 
     def __init__(self, name, config={}):
@@ -254,9 +255,9 @@ class BoulderSLM(device.Device):
         return self.connection.get_sequence_index()
 
     def get_handlers(self):
-        trigsource = self.config.get("triggersource", None)
-        trigline = self.config.get("triggerline", None)
-        dt = decimal.Decimal(self.config.get("settlingtime", 10))
+        trigger_source = self.config.get("trigger_source", None)
+        trigger_line = self.config.get("trigger_line", None)
+        dt = decimal.Decimal(self.config.get("settling_time", 10))
         result = []
         self.handler = cockpit.handlers.executor.DelegateTrigger(
             "slm",
@@ -270,7 +271,7 @@ class BoulderSLM(device.Device):
                 "get_is_enabled": self.get_is_enabled,
             },
         )
-        self.handler.delegate_to(trigsource, trigline, 0, dt)
+        self.handler.delegate_to(trigger_source, trigger_line, 0, dt)
         result.append(self.handler)
         return result
 

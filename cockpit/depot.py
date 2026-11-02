@@ -207,9 +207,9 @@ class DeviceDepot:
                 DummyStage(
                     "dummy Z stage",
                     {
-                        "z-lower-limits": "0",
-                        "z-upper-limits": "2500",
-                        "z-units-per-micron": "1",
+                        "z_lower_limits": "0",
+                        "z_upper_limits": "2500",
+                        "z_units_per_micron": "1",
                     },
                 )
             )
@@ -219,12 +219,12 @@ class DeviceDepot:
                 DummyStage(
                     "dummy XY stage",
                     {
-                        "x-lower-limits": "0",
-                        "x-upper-limits": "25000",
-                        "x-units-per-micron": "1",
-                        "y-lower-limits": "0",
-                        "y-upper-limits": "12000",
-                        "y-units-per-micron": "1",
+                        "x_lower_limits": "0",
+                        "x_upper_limits": "25000",
+                        "x_units_per_micron": "1",
+                        "y_lower_limits": "0",
+                        "y_upper_limits": "12000",
+                        "y_units_per_micron": "1",
                     },
                 )
             )

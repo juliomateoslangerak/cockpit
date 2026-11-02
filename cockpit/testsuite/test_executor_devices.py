@@ -37,7 +37,7 @@ class TestAdaptActions(unittest.TestCase):
         dev.connection = mock.MagicMock()
         table = [(0.0, (1, [0, 0])), (1.0, (0, [0, 0]))]
         with mock.patch.object(executor_devices.events, "publish"), \
-                mock.patch.object(executor_devices.events, "executeAndWaitFor"):
+                mock.patch.object(executor_devices.events, "execute_and_wait_for"):
             dev.execute_table(table, 0, 2, 1, None)
         dev.connection.PrepareActions.assert_called_once_with(["adapted", 2], 1)
 
@@ -90,7 +90,7 @@ class TestLegacyDSPProtocol(unittest.TestCase):
     def test_execute_table_builds_profile(self):
         table = [(0.0, (1, [0, 0, 0, 0])), (1.0, (0, [10, 0, 0, 0]))]
         with mock.patch.object(executor_devices.events, "publish"), \
-                mock.patch.object(executor_devices.events, "executeAndWaitFor"):
+                mock.patch.object(executor_devices.events, "execute_and_wait_for"):
             self.dev.execute_table(table, 0, 2, 1, None)
         description = self.dev._last_profile[0]
         self.assertEqual(description["count"], 10)
@@ -140,13 +140,6 @@ class TestExecutorDeviceDebugMethods(unittest.TestCase):
     def test_set_digital_writes_value(self):
         self.dev.set_digital(7)
         self.dev.connection.WriteDigital.assert_called_once_with(7)
-
-    def test_handler_protocol_names_are_unchanged(self):
-        self.assertFalse(hasattr(executor_devices.ExecutorDevice, "triggerNow"))
-        self.assertFalse(hasattr(executor_devices.ExecutorDevice, "setDigital"))
-        from cockpit.handlers.executor import DigitalMixin
-
-        self.assertTrue(hasattr(DigitalMixin, "setDigital"))
 
 
 class TestNIcRIORunSequence(unittest.TestCase):

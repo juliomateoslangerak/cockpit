@@ -284,7 +284,7 @@ class TestMicroscopeValueLoggerPull(unittest.TestCase):
 
         dev = microscope_device.MicroscopeValueLogger(
             "vl",
-            {"uri": "PYRO:vl@h:1", "pulldata": "True", "pollinterval": "5"},
+            {"uri": "PYRO:vl@h:1", "pull_data": "True", "poll_interval": "5"},
         )
         with mock.patch("Pyro4.Proxy") as proxy_cls, mock.patch.object(
             microscope_device.value_logger, "PollingLogger"

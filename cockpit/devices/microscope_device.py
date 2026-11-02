@@ -322,10 +322,10 @@ class MicroscopeLaser(MicroscopeBase):
       type: MicroscopeLaser
       uri: PYRO:DeepstarLaser@192.168.0.2:7001
       wavelength: 488
-      triggerSource: trigsource
-      triggerLine: 1
+      trigger_source: trigger_source
+      trigger_line: 1
 
-      [trigsource]
+      [trigger_source]
       type: ExecutorDevice
       ...
     """
@@ -350,8 +350,8 @@ class MicroscopeLaser(MicroscopeBase):
                 is_enabled=True,
             )
         )
-        trigger_source = self.config.get("triggersource", None)
-        trigger_line = self.config.get("triggerline", None)
+        trigger_source = self.config.get("trigger_source", None)
+        trigger_line = self.config.get("trigger_line", None)
         if trigger_source:
             trigger_handler = depot.get_handler(trigger_source, depot.EXECUTOR)
         else:
@@ -540,12 +540,12 @@ class MicroscopeStage(MicroscopeBase):
 
     This device requires two configurations per axis:
 
-    1. The ``axis-name`` configuration specifies the name of the axis
+    1. The ``axis_name`` configuration specifies the name of the axis
        on the Python microscope ``StageDevice``.  Usually, this is
        something like ``X`` or ``Y`` but can be any string.  Refer to
        the device documentation.
 
-    2. The ``units-per-micron`` configuration specifies the number of
+    2. The ``units_per_micron`` configuration specifies the number of
        units, or steps, used by the device in a µm.  This value is
        used to convert between the device units into physical units.
 
@@ -555,18 +555,18 @@ class MicroscopeStage(MicroscopeBase):
       [XY stage]
       type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeXYStage@192.168.0.2:7001
-      x-axis-name: X
-      y-axis-name: Y
+      x_axis_name: X
+      y_axis_name: Y
       # Each step is 0.1µm, therefore 10 steps per µm
-      x-units-per-micron: 10 # 1 step == 0.1µm
-      y-units-per-micron: 10 # 1 step == 0.1µm
+      x_units_per_micron: 10 # 1 step == 0.1µm
+      y_units_per_micron: 10 # 1 step == 0.1µm
 
       [Z stage]
       type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeZStage@192.168.0.2:7002
-      z-axis-name: Z
+      z_axis_name: Z
       # Each step is 25nm, therefore 40 steps per µm
-      x-units-per-micron: 40
+      x_units_per_micron: 40
 
     """
 
@@ -600,7 +600,7 @@ class MicroscopeStage(MicroscopeBase):
         their_axes_map = self._proxy.axes
 
         for one_letter_name in "xyz":
-            axis_config_name = one_letter_name + "-axis-name"
+            axis_config_name = one_letter_name + "_axis_name"
             if axis_config_name not in self.config:
                 # This stage does not have this axis.
                 continue
@@ -609,7 +609,7 @@ class MicroscopeStage(MicroscopeBase):
             if their_name not in their_axes_map:
                 raise Exception("unknown axis named '%s'" % their_name)
 
-            units_config_name = one_letter_name + "-units-per-micron"
+            units_config_name = one_letter_name + "_units_per_micron"
             if units_config_name not in self.config:
                 raise Exception(
                     "missing '%s' value in the configuration"
@@ -646,12 +646,12 @@ class MicroscopeStage(MicroscopeBase):
         # This is usually required as there is a manual joystick which can move
         # the stage without cockpit knowing about it.
         # Note: currently this variable isnt checked, all stages are polled
-        # in macrostageXY.
-        self.poll_stage = bool(self.config.get("poll-stage", False))
+        # in macrostage_xy.
+        self.poll_stage = bool(self.config.get("poll_stage", False))
         if self.poll_stage:
-            if len(self._axes) == int(self.config.get("num-stage-axes", 0)):
+            if len(self._axes) == int(self.config.get("num_stage_axes", 0)):
                 # need to know in advance how many axis need to initialized
-                self.poll_interval = float(self.config.get("poll-interval", 10))
+                self.poll_interval = float(self.config.get("poll_interval", 10))
                 self._position_cache = [0.0 for x in range(len(self._axes))]
 
     def get_handlers(self) -> typing.List[PositionerHandler]:
@@ -953,8 +953,8 @@ class MicroscopeValueLogger(MicroscopeBase):
         self.labels = [""] * self.num_sensors
         labels = self.config.get("labels", None)
         ##do we get data pushed or do we pull it from the remote.
-        self.pull_data = self.config.get("pulldata", False)
-        self.poll_interval = int(self.config.get("pollinterval", 20))
+        self.pull_data = self.config.get("pull_data", False)
+        self.poll_interval = int(self.config.get("poll_interval", 20))
         ##extract names of lines from file, too many are ignored,
         ## too few are padded with str(line number)
         temp_labels = []

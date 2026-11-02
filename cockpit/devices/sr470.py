@@ -37,11 +37,11 @@ class StanfordShutter(shutter.ShutterDevice):
 
         [561nm shutter]
         type: cockpit.devices.sr470.StanfordShutter
-        ipAddress: 192.168.0.10
+        ip_address: 192.168.0.10
         port: 5024
         lights: 561nm
-        triggerSource: NAME_OF_EXECUTOR_DEVICE
-        triggerLine: 3
+        trigger_source: NAME_OF_EXECUTOR_DEVICE
+        trigger_line: 3
 
     """
 

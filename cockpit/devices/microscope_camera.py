@@ -201,8 +201,8 @@ class MicroscopeCamera(MicroscopeBase, CameraDevice):
 
     def get_handlers(self):
         """Return camera handlers."""
-        trigger_source = self.config.get("triggersource", None)
-        trigger_line = self.config.get("triggerline", None)
+        trigger_source = self.config.get("trigger_source", None)
+        trigger_line = self.config.get("trigger_line", None)
         if trigger_source:
             trigger_handler = depot.get_handler(trigger_source, depot.EXECUTOR)
         else:

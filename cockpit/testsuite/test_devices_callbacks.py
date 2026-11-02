@@ -1,6 +1,6 @@
 """Callback-mapping regression tests for aurox, boulder_slm and dummy_analog.
 
-The handler protocol keys (e.g. "set_enabled", "getMovementTime") are
+The handler protocol keys (e.g. "set_enabled", "get_movement_time") are
 unchanged; these tests check that they map to the PEP 8 device methods.
 """
 

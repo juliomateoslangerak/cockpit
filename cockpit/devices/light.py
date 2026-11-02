@@ -37,21 +37,21 @@ class SimpleLight(cockpit.devices.device.Device):
 
         [led source]
         type: cockpit.devices.light.SimpleLight
-        triggerSource: NAME_OF_EXECUTOR_DEVICE
-        triggerLine: 1
+        trigger_source: NAME_OF_EXECUTOR_DEVICE
+        trigger_line: 1
 
     """
 
     def get_handlers(self):
         self.handlers = []
-        trigsource = self.config.get("triggersource", None)
-        trigline = self.config.get("triggerline", None)
-        if trigsource:
-            trighandler = cockpit.depot.get_handler(
-                trigsource, cockpit.depot.EXECUTOR
+        trigger_source = self.config.get("trigger_source", None)
+        trigger_line = self.config.get("trigger_line", None)
+        if trigger_source:
+            trigger_handler = cockpit.depot.get_handler(
+                trigger_source, cockpit.depot.EXECUTOR
             )
         else:
-            trighandler = None
+            trigger_handler = None
         self._exposure_time = 100
         self.handlers.append(
             LightHandler(
@@ -66,8 +66,8 @@ class SimpleLight(cockpit.devices.device.Device):
                 },
                 self.config.get("wavelength", None),
                 100,
-                trighandler,
-                trigline,
+                trigger_handler,
+                trigger_line,
             )
         )
 

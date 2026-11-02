@@ -305,7 +305,7 @@ def one_shot_subscribe(event: str, func: _Subscriber):
 
 
 # Clear one-shot subscribers on abort.  Usually, these were subscribed
-# by executeAndWaitFor, which leaves the calling thread waiting for a
+# by execute_and_wait_for, which leaves the calling thread waiting for a
 # lock to be released.  On an abort, that event may never happen.
 _publisher.subscribe(USER_ABORT, _one_shot_publisher.clear)
 

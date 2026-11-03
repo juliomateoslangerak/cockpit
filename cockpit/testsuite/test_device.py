@@ -6,11 +6,7 @@ from unittest import mock
 
 from microscope import ROI
 
-from cockpit.devices import camera
-from cockpit.devices import device
-from cockpit.devices import microscope_camera
-from cockpit.devices import server
-from cockpit.devices import sr470
+from cockpit.devices import camera, device, microscope_camera, server, sr470
 
 
 class TestDeviceProtocolBoundary(unittest.TestCase):
@@ -403,6 +399,7 @@ class TestMicroscopeStageHandlers(unittest.TestCase):
 class TestDIOOutputWindow(unittest.TestCase):
     def test_window_builds_and_updates_state(self):
         import wx
+
         from cockpit.devices import microscope_device
 
         dio = microscope_device.MicroscopeDIO(

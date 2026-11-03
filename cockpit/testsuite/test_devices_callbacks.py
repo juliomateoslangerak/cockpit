@@ -7,9 +7,7 @@ unchanged; these tests check that they map to the PEP 8 device methods.
 import unittest
 from unittest import mock
 
-from cockpit.devices import aurox
-from cockpit.devices import boulder_slm
-from cockpit.devices import dummy_analog
+from cockpit.devices import aurox, boulder_slm, dummy_analog
 
 
 class TestClaritySetEnabled(unittest.TestCase):

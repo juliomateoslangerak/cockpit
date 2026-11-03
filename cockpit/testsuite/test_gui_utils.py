@@ -19,10 +19,11 @@
 ## along with Cockpit.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
 import wx
 
-from cockpit.testsuite.test_gui import WxTestCase
 from cockpit.gui import gui_utils
+from cockpit.testsuite.test_gui import WxTestCase
 
 
 class TestAddLabeledInput(WxTestCase):

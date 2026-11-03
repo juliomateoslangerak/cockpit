@@ -37,7 +37,10 @@ from cockpit import depot, events
 from cockpit.gui.camera.view_panel import ViewPanel
 from cockpit.gui.device import EnableButton
 from cockpit.gui.dialogs.experiment import single_site_experiment
-from cockpit.gui.macro_stage.macro_stage_xy import go_to_xyz_dialog, MacroStageXY
+from cockpit.gui.macro_stage.macro_stage_xy import (
+    MacroStageXY,
+    go_to_xyz_dialog,
+)
 from cockpit.gui.macro_stage.macro_stage_z import MacroStageZ
 from cockpit.gui.safe_controls import EVT_SAFE_CONTROL_COMMIT, SetPointGauge
 from cockpit.interfaces import stage_mover

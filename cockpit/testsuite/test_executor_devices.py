@@ -6,8 +6,7 @@ from unittest import mock
 
 import numpy as np
 
-from cockpit.devices import executor_devices
-from cockpit.devices import ni_crio_fpga
+from cockpit.devices import executor_devices, ni_crio_fpga
 
 
 def _json_commands_from_send(sock):

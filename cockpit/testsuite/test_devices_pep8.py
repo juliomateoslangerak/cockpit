@@ -7,9 +7,7 @@ callers depend on, without touching real hardware.
 import unittest
 from unittest import mock
 
-from cockpit.devices import aerotech_axis
-from cockpit.devices import drawer
-from cockpit.devices import light
+from cockpit.devices import aerotech_axis, drawer, light
 
 
 class TestAerotechLimitsConfig(unittest.TestCase):

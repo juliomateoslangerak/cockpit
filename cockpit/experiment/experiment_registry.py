@@ -55,12 +55,12 @@
 # hardware that is not available).
 
 from cockpit.experiment import (
-    sim_flux,
     offset_gain_correction,
     opto_script_example,
     response_map,
     rotator_sweep,
     si2d,
+    sim_flux,
     structured_illumination,
     stuttered_z_stack,
     swept_shutter,

@@ -87,12 +87,13 @@ def collection_order_tuple(order_str):
 
     A bit more sensible, lower-case, one character, tuple.
     """
-    to1char = {
+    to_one_char = {
         0: "a",
         1: "p",
         2: "z",
     }
-    z_order = [to1char[x] for x in COLLECTION_ORDERS[order_str]]
+    z_order = [to_one_char[x] for x in COLLECTION_ORDERS[order_str]]
+
     return tuple(z_order)
 
 
@@ -172,14 +173,14 @@ class SIExperiment(experiment.Experiment):
 
     def __init__(
         self,
-        collectionOrder,
-        bleachCompensations,
-        numAngles,
-        numPhases,
-        angleHandler=None,
-        phaseHandler=None,
-        polarizerHandler=None,
-        slmHandler=None,
+        collection_order,
+        bleach_compensations,
+        num_angles,
+        num_phases,
+        angle_handler=None,
+        phase_handler=None,
+        polarizer_handler=None,
+        slm_handler=None,
         *args,
         **kwargs,
     ):
@@ -188,58 +189,58 @@ class SIExperiment(experiment.Experiment):
         Each handler (angle, phase, and slm) will be used if present.
 
         Args:
-            collectionOrder (str): Key from COLLECTION_ORDERS that indicates
+            collection_order (str): Key from COLLECTION_ORDERS that indicates
                 what order we change the angle, phase, and Z step in.
-            bleachCompensations (dict): Maps light handlers to how much to
+            bleach_compensations (dict): Maps light handlers to how much to
                 increase their exposure times on successive angles, to
                 compensate for bleaching.
-            numAngles (int): How many angles to perform. Sometimes we only
+            num_angles (int): How many angles to perform. Sometimes we only
                 want to do 1 angle, for example.
-            numPhases (int): How many phases to perform.
-            angleHandler (DeviceHandler): Handler for the device that handles
+            num_phases (int): How many phases to perform.
+            angle_handler (DeviceHandler): Handler for the device that handles
                 rotations of the illumination pattern.
-            phaseHandler (DeviceHandler): Handler for the device that handles
+            phase_handler (DeviceHandler): Handler for the device that handles
                 phase changes in the illumination pattern.
-            polarizerHandler (DeviceHandler): Handler for the polarizer.
-            slmHandler (DeviceHandler): Optionally, both angle and phase can
+            polarizer_handler (DeviceHandler): Handler for the polarizer.
+            slm_handler (DeviceHandler): Optionally, both angle and phase can
                 be handled by an SLM or similar pattern-generating device
                 instead.
         """
         # Store the collection order in the MRC header.
-        metadata = "SI order: %s" % collectionOrder
+        metadata = "SI order: %s" % collection_order
         # Store the diffraction angle in MRC metadata
         slmdev = depot.get_device_with_name("slm")
         if slmdev:
-            diffangle = slmdev.connection.get_sim_diffraction_angle()
-            metadata += ": SLM diff_angle %.3f" % diffangle
+            diff_angle = slmdev.connection.get_sim_diffraction_angle()
+            metadata += ": SLM diff_angle %.3f" % diff_angle
         if "metadata" in kwargs:
             # Augment the existing string.
             kwargs["metadata"] += "; %s" % metadata
         else:
             kwargs["metadata"] = metadata
         super().__init__(*args, **kwargs)
-        self.numAngles = numAngles
-        self.numPhases = numPhases
-        self.numZSlices = int(math.ceil(self.z_height / self.slice_height))
+        self.num_angles = num_angles
+        self.num_phases = num_phases
+        self.num_z_slices = int(math.ceil(self.z_height / self.slice_height))
         if self.z_height > 1e-6:
             # Non-2D experiment; tack on an extra image to hit the top of
             # the volume.
-            self.numZSlices += 1
-        self.collectionOrder = collectionOrder
-        self.angleHandler = angleHandler
-        self.phaseHandler = phaseHandler
-        self.polarizerHandler = polarizerHandler
-        self.slmHandler = slmHandler
-        self.handlerToBleachCompensation = bleachCompensations
+            self.num_z_slices += 1
+        self.collection_order = collection_order
+        self.angle_handler = angle_handler
+        self.phase_handler = phase_handler
+        self.polarizer_handler = polarizer_handler
+        self.slm_handler = slm_handler
+        self.handler_to_bleach_compensation = bleach_compensations
 
-    def genSIPositions(self):
+    def gen_si_positions(self):
         """Generate a sequence of (angle, phase, Z) positions for SI experiments,
         based on the order the user specified."""
-        ordering = COLLECTION_ORDERS[self.collectionOrder]
-        maxVals = (self.numAngles, self.numPhases, self.numZSlices)
-        for i in range(maxVals[ordering[0]]):
-            for j in range(maxVals[ordering[1]]):
-                for k in range(maxVals[ordering[2]]):
+        ordering = COLLECTION_ORDERS[self.collection_order]
+        max_vals = (self.num_angles, self.num_phases, self.num_z_slices)
+        for i in range(max_vals[ordering[0]]):
+            for j in range(max_vals[ordering[1]]):
+                for k in range(max_vals[ordering[2]]):
                     vals = (i, j, k)
                     angle = vals[ordering.index(0)]
                     phase = vals[ordering.index(1)]
@@ -253,146 +254,146 @@ class SIExperiment(experiment.Experiment):
         at each Z-slice, one for each phase.
         """
         table = action_table.ActionTable()
-        curTime = 0
-        prevAngle, prevZ, prevPhase = None, None, None
+        cur_time = 0
+        prev_angle, prev_z, prev_phase = None, None, None
 
         # Set initial angle and phase, if relevant. We assume the SLM (if any)
         # is already showing the correct pattern for the first image set.
         # Increment the time slightly after each "motion" so that actions are well-ordered.
-        if self.angleHandler is not None:
-            theta = self.angleHandler.indexed_position(0)
-            table.add_action(curTime, self.angleHandler, theta)
-            curTime += decimal.Decimal("1e-6")
-        if self.phaseHandler is not None:
-            table.add_action(curTime, self.phaseHandler, 0)
-            curTime += decimal.Decimal("1")
-        table.add_action(curTime, self.z_positioner, self.z_start)
-        curTime += decimal.Decimal("1")
+        if self.angle_handler is not None:
+            theta = self.angle_handler.indexed_position(0)
+            table.add_action(cur_time, self.angle_handler, theta)
+            cur_time += decimal.Decimal("1e-6")
+        if self.phase_handler is not None:
+            table.add_action(cur_time, self.phase_handler, 0)
+            cur_time += decimal.Decimal("1")
+        table.add_action(cur_time, self.z_positioner, self.z_start)
+        cur_time += decimal.Decimal("1")
 
-        if self.slmHandler is not None:
+        if self.slm_handler is not None:
             # Add a first trigger of the SLM to get first new image.
-            table.add_action(curTime, self.slmHandler, 0)
+            table.add_action(cur_time, self.slm_handler, 0)
             # Wait a few ms for any necessary SLM triggers.
-            curTime = decimal.Decimal("5e-3")
+            cur_time = decimal.Decimal("5e-3")
 
-        for angle, phase, z in self.genSIPositions():
-            delayBeforeImaging = 0
+        for angle, phase, z in self.gen_si_positions():
+            delay_before_imaging = 0
             # Figure out which positions changed. They need to be held flat
             # up until the move, then spend some amount of time moving,
             # then have some time to stabilize. Or, if we have an SLM, then we
             # need to trigger it and then wait for it to stabilize.
             # Ensure we truly are doing this after all exposure events are done.
-            curTime = max(
-                curTime,
+            cur_time = max(
+                cur_time,
                 table.get_first_and_last_action_times()[1]
                 + decimal.Decimal("1e-6"),
             )
-            if angle != prevAngle and prevAngle is not None:
-                if self.angleHandler is not None:
-                    theta = self.angleHandler.indexedPosition(angle)
+            if angle != prev_angle and prev_angle is not None:
+                if self.angle_handler is not None:
+                    theta = self.angle_handler.indexedPosition(angle)
                     (
-                        motionTime,
-                        stabilizationTime,
-                    ) = self.angleHandler.getMovementTime(prevAngle, theta)
+                        motion_time,
+                        stabilization_time,
+                    ) = self.angle_handler.getMovementTime(prev_angle, theta)
                     # Move to the next position.
                     table.add_action(
-                        curTime + motionTime, self.angleHandler, theta
+                        cur_time + motion_time, self.angle_handler, theta
                     )
-                    delayBeforeImaging = max(
-                        delayBeforeImaging, motionTime + stabilizationTime
+                    delay_before_imaging = max(
+                        delay_before_imaging, motion_time + stabilization_time
                     )
                 # Advance time slightly so all actions are sorted (e.g. we
                 # don't try to change angle and phase in the same timestep).
-                curTime += decimal.Decimal(".001")
+                cur_time += decimal.Decimal(".001")
 
-            if phase != prevPhase and prevPhase is not None:
-                if self.phaseHandler is not None:
+            if phase != prev_phase and prev_phase is not None:
+                if self.phase_handler is not None:
                     (
-                        motionTime,
-                        stabilizationTime,
-                    ) = self.phaseHandler.getMovementTime(prevPhase, phase)
+                        motion_time,
+                        stabilization_time,
+                    ) = self.phase_handler.get_movement_time(prev_phase, phase)
                     # Hold flat.
-                    table.add_action(curTime, self.phaseHandler, prevPhase)
+                    table.add_action(cur_time, self.phase_handler, prev_phase)
                     # Move to the next position.
                     table.add_action(
-                        curTime + motionTime, self.phaseHandler, phase
+                        cur_time + motion_time, self.phase_handler, phase
                     )
-                    delayBeforeImaging = max(
-                        delayBeforeImaging, motionTime + stabilizationTime
+                    delay_before_imaging = max(
+                        delay_before_imaging, motion_time + stabilization_time
                     )
                 # Advance time slightly so all actions are sorted (e.g. we
                 # don't try to change angle and phase in the same timestep).
-                curTime += decimal.Decimal(".001")
+                cur_time += decimal.Decimal(".001")
 
-            if z != prevZ:
-                if prevZ is not None:
+            if z != prev_z:
+                if prev_z is not None:
                     (
-                        motionTime,
-                        stabilizationTime,
-                    ) = self.z_positioner.get_movement_time(prevZ, z)
+                        motion_time,
+                        stabilization_time,
+                    ) = self.z_positioner.get_movement_time(prev_z, z)
                     # Hold flat.
-                    table.add_action(curTime, self.z_positioner, prevZ)
+                    table.add_action(cur_time, self.z_positioner, prev_z)
                     # Move to the next position.
-                    table.add_action(curTime + motionTime, self.z_positioner, z)
-                    delayBeforeImaging = max(
-                        delayBeforeImaging, motionTime + stabilizationTime
+                    table.add_action(cur_time + motion_time, self.z_positioner, z)
+                    delay_before_imaging = max(
+                        delay_before_imaging, motion_time + stabilization_time
                     )
                 # Advance time slightly so all actions are sorted (e.g. we
                 # don't try to change angle and phase in the same timestep).
-                curTime += decimal.Decimal(".001")
+                cur_time += decimal.Decimal(".001")
 
-            prevAngle = angle
-            prevPhase = phase
-            prevZ = z
+            prev_angle = angle
+            prev_phase = phase
+            prev_z = z
 
-            curTime += delayBeforeImaging
+            cur_time += delay_before_imaging
             # Image the sample.
             # expose handles the SLM triggers. This may result in an additional
             # short delay before exposure, but is the best way to support SIM
             # in a series of exposures at different wavelengths, with the SIM
             # pattern optimised for each wavelength.
-            for cameras, lightTimePairs in self.exposure_settings:
-                curTime = self.expose(
-                    curTime, cameras, lightTimePairs, angle, phase, table
+            for cameras, light_time_pairs in self.exposure_settings:
+                cur_time = self.expose(
+                    cur_time, cameras, light_time_pairs, angle, phase, table
                 )
 
         # Hold Z, angle, and phase steady through to the end, then ramp down
         # to 0 to prep for the next experiment.
-        table.add_action(curTime, self.z_positioner, prevZ)
-        motionTime, stabilizationTime = self.z_positioner.get_movement_time(
+        table.add_action(cur_time, self.z_positioner, prev_z)
+        motion_time, stabilization_time = self.z_positioner.get_movement_time(
             self.z_height, self.z_start
         )
-        table.add_action(curTime + motionTime, self.z_positioner, self.z_start)
-        finalWaitTime = motionTime + stabilizationTime
+        table.add_action(cur_time + motion_time, self.z_positioner, self.z_start)
+        final_wait_time = motion_time + stabilization_time
 
         # Ramp down Z
-        table.add_action(curTime + finalWaitTime, self.z_positioner, self.z_start)
+        table.add_action(cur_time + final_wait_time, self.z_positioner, self.z_start)
 
-        if self.angleHandler is not None:
+        if self.angle_handler is not None:
             # Ramp down angle
-            theta = self.angleHandler.indexedPosition(0)
-            motionTime, stabilizationTime = self.angleHandler.getMovementTime(
-                prevAngle, theta
+            theta = self.angle_handler.indexedPosition(0)
+            motion_time, stabilization_time = self.angle_handler.get_movement_time(
+                prev_angle, theta
             )
-            table.add_action(curTime + motionTime, self.angleHandler, theta)
-            finalWaitTime = max(finalWaitTime, motionTime + stabilizationTime)
-        if self.phaseHandler is not None:
+            table.add_action(cur_time + motion_time, self.angle_handler, theta)
+            final_wait_time = max(final_wait_time, motion_time + stabilization_time)
+        if self.phase_handler is not None:
             # Ramp down phase
-            table.add_action(curTime, self.phaseHandler, prevPhase)
-            motionTime, stabilizationTime = self.phaseHandler.getMovementTime(
-                prevPhase, 0
+            table.add_action(cur_time, self.phase_handler, prev_phase)
+            motion_time, stabilization_time = self.phase_handler.get_movement_time(
+                prev_phase, 0
             )
-            table.add_action(curTime + motionTime, self.phaseHandler, 0)
-            finalWaitTime = max(finalWaitTime, motionTime + stabilizationTime)
-        if self.polarizerHandler is not None:
+            table.add_action(cur_time + motion_time, self.phase_handler, 0)
+            final_wait_time = max(final_wait_time, motion_time + stabilization_time)
+        if self.polarizer_handler is not None:
             # Return to idle voltage.
-            table.add_action(curTime, self.polarizerHandler, (0, "default"))
-            finalWaitTime = finalWaitTime + decimal.Decimal(1e-6)
+            table.add_action(cur_time, self.polarizer_handler, (0, "default"))
+            final_wait_time = final_wait_time + decimal.Decimal(1e-6)
 
         # Set SLM back to 0th image ready for next measurement in timelapse or multi-site.
-        if self.slmHandler is not None:
-            # Toggle the slmHandler's digital line handler to advance one frame.
-            table.add_toggle(curTime, self.slmHandler)
+        if self.slm_handler is not None:
+            # Toggle the slm_handler's digital line handler to advance one frame.
+            table.add_toggle(cur_time, self.slm_handler)
 
         return table
 
@@ -401,31 +402,31 @@ class SIExperiment(experiment.Experiment):
         based on the current angle, to compensate for bleaching; 2: uses an SLM
         (if available) to optimise SIM for each exposure."""
         # new light_time_pairs with exposure times adjusted for bleaching.
-        newPairs = []
+        new_pairs = []
         # If a SIM pattern puts the 1st-order spots for a given wavelength at
         # the edge of the back pupil, the 1st-order spots from longer wave-
         # lengths will fall beyond the edge of the pupil. Therefore, we use the
         # longest wavelength in a given exposure to determine the SIM pattern.
         wavelengths = []
-        # Using tExp rather than 'time' to avoid confusion between table event
+        # Using t_exp rather than 'time' to avoid confusion between table event
         # times and exposure durations.
-        for light, tExp in light_time_pairs:
+        for light, t_exp in light_time_pairs:
             # SIM wavelength
             wavelengths.append(light.wavelength)
             # Bleaching compensation
-            tExpNew = tExp * (
+            t_exp_new = t_exp * (
                 1
-                + decimal.Decimal(self.handlerToBleachCompensation[light])
+                + decimal.Decimal(self.handler_to_bleach_compensation[light])
                 * angle
             )
-            newPairs.append((light, tExpNew))
-        longestWavelength = max(wavelengths)
+            new_pairs.append((light, t_exp_new))
+        longest_wavelength = max(wavelengths)
         # Pre-exposure delay due to polarizer and SLM settling times.
         delay = decimal.Decimal(0.0)
         # Set polarizer position
-        if self.polarizerHandler is not None:
-            pos = self.polarizerHandler.indexed_position(
-                angle, longestWavelength
+        if self.polarizer_handler is not None:
+            pos = self.polarizer_handler.indexed_position(
+                angle, longest_wavelength
             )
             ## Need to check last position to calculate move time. This
             # is currently only tracked outside this function, so we need to inspect
@@ -434,25 +435,25 @@ class SIExperiment(experiment.Experiment):
             # i)   track state in some attribute on Experiment
             # ii)  pass state between to this function and back again;
             # iii) have handlers track state as table is built.
-            lastpos = table.get_last_action_for(self.polarizerHandler)[1]
-            if lastpos is None:
-                lastpos = 0
+            last_pos = table.get_last_action_for(self.polarizer_handler)[1]
+            if last_pos is None:
+                last_pos = 0
             table.add_action(
-                cur_time, self.polarizerHandler, (angle, longestWavelength)
+                cur_time, self.polarizer_handler, (angle, longest_wavelength)
             )
             dt = decimal.Decimal(
-                sum(self.polarizerHandler.get_movement_time(lastpos, pos))
+                sum(self.polarizer_handler.get_movement_time(last_pos, pos))
             )
             delay = max(delay, dt)
         # SLM trigger
-        if self.slmHandler is not None:
-            ## Add SLM event ot set pattern for phase, angle and longestWavelength.
+        if self.slm_handler is not None:
+            ## Add SLM event ot set pattern for phase, angle and longest_wavelength.
             table.add_action(
-                cur_time, self.slmHandler, (angle, phase, longestWavelength)
+                cur_time, self.slm_handler, (angle, phase, longest_wavelength)
             )
-            delay = max(delay, self.slmHandler.get_movement_time())
+            delay = max(delay, self.slm_handler.get_movement_time())
         cur_time += delay
-        return super().expose(cur_time, cameras, newPairs, table)
+        return super().expose(cur_time, cameras, new_pairs, table)
 
     def reorder_img_file(self):
         """Reorder the Z dimension in the file.
@@ -462,7 +463,7 @@ class SIExperiment(experiment.Experiment):
         their reconstruction programs are only capable to handle them
         in angle-z-phase order.
         """
-        z_order = collection_order_tuple(self.collectionOrder)
+        z_order = collection_order_tuple(self.collection_order)
         z_wanted = ("a", "z", "p")
         if z_order == z_wanted:
             # Already in order; don't do anything.
@@ -472,9 +473,9 @@ class SIExperiment(experiment.Experiment):
         order_in = tuple(doc.image.Mrc.axis_order_str())
 
         length_getters = {
-            "a": self.numAngles,
-            "z": self.numZSlices,
-            "p": self.numPhases,
+            "a": self.num_angles,
+            "z": self.num_z_slices,
+            "p": self.num_phases,
         }
         ## If data is truncated, the number of Z planes in the header
         ## may differ from the number of Z planes in the data.  So
@@ -591,134 +592,134 @@ class BaseSIMExperimentUI(wx.Panel):
     Subclasses must implement class property `_CONFIG_KEY_SUFFIX`.
     """
 
-    def __init__(self, parent, configKey):
+    def __init__(self, parent, config_key):
         super().__init__(parent=parent)
 
-        self.configKey = configKey + self._CONFIG_KEY_SUFFIX
-        self.allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
-        self.settings = self.loadSettings()
+        self.config_key = config_key + self._CONFIG_KEY_SUFFIX
+        self.all_lights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+        self.settings = self.load_settings()
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         text = wx.StaticText(self, -1, "Exposure bleach compensation (%):")
-        rowSizer.Add(text, 0, wx.ALL, 5)
+        row_sizer.Add(text, 0, wx.ALL, 5)
         ## Ordered list of bleach compensation percentages.
-        self.bleachCompensations, subSizer = gui_utils.make_lights_controls(
+        self.bleach_compensations, sub_sizer = gui_utils.make_lights_controls(
             self,
-            [str(l.name) for l in self.allLights],
-            self.settings["bleachCompensations"],
+            [str(l.name) for l in self.all_lights],
+            self.settings["bleach_compensations"],
         )
-        rowSizer.Add(subSizer)
-        sizer.Add(rowSizer)
+        row_sizer.Add(sub_sizer)
+        sizer.Add(row_sizer)
         # Now a row for the collection order.
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.siCollectionOrder = gui_utils.add_labeled_input(
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.si_collection_order = gui_utils.add_labeled_input(
             self,
-            rowSizer,
+            row_sizer,
             label="Collection order",
             control=wx.Choice(self, choices=sorted(COLLECTION_ORDERS.keys())),
             helper_string='What order to change the angle, phase, and Z step of the experiment. E.g. for "Angle, Phase, Z" Angle will change most slowly and Z will change fastest.',
         )
-        self.siCollectionOrder.SetSelection(self.settings["siCollectionOrder"])
-        sizer.Add(rowSizer)
+        self.si_collection_order.SetSelection(self.settings["si_collection_order"])
+        sizer.Add(row_sizer)
         self.SetSizerAndFit(sizer)
 
-    def augmentParams(self, params):
+    def augment_params(self, params):
         """Given a parameters dict (parameter name to value) to hand to the
         experiment instance, augment them with our special parameters."""
-        self.saveSettings()
-        params["numAngles"] = 3
-        params["numPhases"] = 5
-        params["collectionOrder"] = self.siCollectionOrder.GetStringSelection()
-        params["angleHandler"] = depot.get_handler_with_name("SI angle")
-        params["phaseHandler"] = depot.get_handler_with_name("SI phase")
-        params["polarizerHandler"] = depot.get_handler_with_name("SI polarizer")
-        params["slmHandler"] = depot.get_handler("slm", depot.EXECUTOR)
+        self.save_settings()
+        params["num_angles"] = 3
+        params["num_phases"] = 5
+        params["collection_order"] = self.si_collection_order.GetStringSelection()
+        params["angle_handler"] = depot.get_handler_with_name("SI angle")
+        params["phase_handler"] = depot.get_handler_with_name("SI phase")
+        params["polarizer_handler"] = depot.get_handler_with_name("SI polarizer")
+        params["slm_handler"] = depot.get_handler("slm", depot.EXECUTOR)
         compensations = {}
-        for i, light in enumerate(self.allLights):
-            val = gui_utils.try_parse_num(self.bleachCompensations[i], float)
+        for i, light in enumerate(self.all_lights):
+            val = gui_utils.try_parse_num(self.bleach_compensations[i], float)
             if val:
                 # Convert from percentage to multiplier
                 compensations[light] = 0.01 * float(val)
             else:
                 compensations[light] = 0
-        params["bleachCompensations"] = compensations
+        params["bleach_compensations"] = compensations
         return params
 
-    def _getDefaultSettings(self):
-        allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+    def _get_default_settings(self):
+        all_lights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
         default = {
-            "bleachCompensations": ["" for l in self.allLights],
-            "siCollectionOrder": 0,
+            "bleach_compensations": ["" for l in self.all_lights],
+            "si_collection_order": 0,
         }
         return default
 
-    def loadSettings(self):
+    def load_settings(self):
         """Load the saved experiment settings, if any."""
         result = cockpit.util.user_config.get_value(
-            self.configKey, default=self._getDefaultSettings()
+            self.config_key, default=self._get_default_settings()
         )
 
-        allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
-        if len(result["bleachCompensations"]) != len(self.allLights):
+        all_lights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+        if len(result["bleach_compensations"]) != len(self.all_lights):
             # Number of light sources has changed; invalidate the config.
-            result["bleachCompensations"] = ["" for light in self.allLights]
+            result["bleach_compensations"] = ["" for light in self.all_lights]
         return result
 
-    def getSettingsDict(self):
+    def get_settings_dict(self):
         """Generate a dict of our settings."""
         return {
-            "bleachCompensations": [
-                c.GetValue() for c in self.bleachCompensations
+            "bleach_compensations": [
+                c.GetValue() for c in self.bleach_compensations
             ],
-            "siCollectionOrder": self.siCollectionOrder.GetSelection(),
+            "si_collection_order": self.si_collection_order.GetSelection(),
         }
 
-    def saveSettings(self, settings=None):
+    def save_settings(self, settings=None):
         """Save the current experiment settings to config."""
         if settings is None:
-            settings = self.getSettingsDict()
-        cockpit.util.user_config.set_value(self.configKey, settings)
+            settings = self.get_settings_dict()
+        cockpit.util.user_config.set_value(self.config_key, settings)
 
 
 class ExperimentUI(BaseSIMExperimentUI):
     _CONFIG_KEY_SUFFIX = "SIExperimentSettings"
 
-    def __init__(self, parent, configKey):
-        super().__init__(parent, configKey)
+    def __init__(self, parent, config_key):
+        super().__init__(parent, config_key)
 
-        self.shouldOnlyDoOneAngle = wx.CheckBox(
+        self.should_only_do_one_angle = wx.CheckBox(
             self, label="Do only one angle"
         )
-        self.shouldOnlyDoOneAngle.SetValue(
-            self.settings["shouldOnlyDoOneAngle"]
+        self.should_only_do_one_angle.SetValue(
+            self.settings["should_only_do_one_angle"]
         )
 
         top_row_sizer = self.Sizer.GetItem(0).Sizer
-        top_row_sizer.Prepend(self.shouldOnlyDoOneAngle, 0, wx.ALL, 5)
+        top_row_sizer.Prepend(self.should_only_do_one_angle, 0, wx.ALL, 5)
         self.Sizer.SetSizeHints(self)
 
-    def augmentParams(self, params):
-        params = super().augmentParams(params)
-        if self.shouldOnlyDoOneAngle.GetValue():
-            params["numAngles"] = 1
+    def augment_params(self, params):
+        params = super().augment_params(params)
+        if self.should_only_do_one_angle.GetValue():
+            params["num_angles"] = 1
         return params
 
-    def _getDefaultSettings(self):
-        default = super()._getDefaultSettings()
+    def _get_default_settings(self):
+        default = super()._get_default_settings()
         default.update(
             {
-                "shouldOnlyDoOneAngle": False,
+                "should_only_do_one_angle": False,
             }
         )
         return default
 
-    def getSettingsDict(self):
-        all_settings = super().getSettingsDict()
+    def get_settings_dict(self):
+        all_settings = super().get_settings_dict()
         all_settings.update(
             {
-                "shouldOnlyDoOneAngle": self.shouldOnlyDoOneAngle.GetValue(),
+                "should_only_do_one_angle": self.should_only_do_one_angle.GetValue(),
             }
         )
         return all_settings

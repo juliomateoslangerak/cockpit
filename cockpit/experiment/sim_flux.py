@@ -36,50 +36,50 @@ class ExperimentUI(structured_illumination.BaseSIMExperimentUI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.numPhases = gui_utils.add_labeled_input(
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.num_phases = gui_utils.add_labeled_input(
             self,
-            rowSizer,
+            row_sizer,
             label="Number of phases",
             helper_string="How many phases do you want?",
         )
-        self.numPhases.SetValue(str(self.settings["numPhases"]))
-        self.Sizer.Insert(0, rowSizer)
+        self.num_phases.SetValue(str(self.settings["num_phases"]))
+        self.Sizer.Insert(0, row_sizer)
 
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.numAngles = gui_utils.add_labeled_input(
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.num_angles = gui_utils.add_labeled_input(
             self,
-            rowSizer,
+            row_sizer,
             label="Number of angles",
             helper_string="How many angles do you want?",
         )
-        self.numAngles.SetValue(str(self.settings["numAngles"]))
-        self.Sizer.Insert(1, rowSizer)
+        self.num_angles.SetValue(str(self.settings["num_angles"]))
+        self.Sizer.Insert(1, row_sizer)
 
         self.Sizer.SetSizeHints(self)
 
-    def augmentParams(self, params):
-        params = super().augmentParams(params)
-        params["numAngles"] = int(self.numAngles.GetValue())
-        params["numPhases"] = int(self.numPhases.GetValue())
+    def augment_params(self, params):
+        params = super().augment_params(params)
+        params["num_angles"] = int(self.num_angles.GetValue())
+        params["num_phases"] = int(self.num_phases.GetValue())
         return params
 
-    def _getDefaultSettings(self):
-        default = super()._getDefaultSettings()
+    def _get_default_settings(self):
+        default = super()._get_default_settings()
         default.update(
             {
-                "numAngles": 2,
-                "numPhases": 50,
+                "num_angles": 2,
+                "num_phases": 50,
             }
         )
         return default
 
-    def getSettingsDict(self):
-        all_settings = super().getSettingsDict()
+    def get_settings_dict(self):
+        all_settings = super().get_settings_dict()
         all_settings.update(
             {
-                "numAngles": self.numAngles.GetValue(),
-                "numPhases": self.numPhases.GetValue(),
+                "num_angles": self.num_angles.GetValue(),
+                "num_phases": self.num_phases.GetValue(),
             }
         )
         return all_settings

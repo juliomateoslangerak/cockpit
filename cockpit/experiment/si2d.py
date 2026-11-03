@@ -31,7 +31,7 @@ class ExperimentUI(structured_illumination.BaseSIMExperimentUI):
 
     _CONFIG_KEY_SUFFIX = "SIExperiment2D"
 
-    def augmentParams(self, params):
-        params = super().augmentParams(params)
-        params["numPhases"] = 3
+    def augment_params(self, params):
+        params = super().augment_params(params)
+        params["num_phases"] = 3
         return params

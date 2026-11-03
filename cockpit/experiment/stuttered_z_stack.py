@@ -68,26 +68,26 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
     |   |||| ...
     """
 
-    def __init__(self, sampleRates, *args, **kwargs):
+    def __init__(self, sample_rates, *args, **kwargs):
         """Set up the stuttered Z-stack experiment.
 
         If we hit the end of the list before running out of reps, then we
         recommence from the beginning.
 
         Args:
-            sampleRates (list): A list of (interval, num_reps) tuples
+            sample_rates (list): A list of (interval, num_reps) tuples
                 indicating the amount of time in seconds between each rep, and
                 the number of reps to perform at that rate.
         """
         super().__init__(*args, **kwargs)
-        self.sampleRates = sampleRates
-        self.shouldAbort = False
+        self.sample_rates = sample_rates
+        self.should_abort = False
 
         events.subscribe(events.USER_ABORT, self.on_abort)
 
     def on_abort(self):
         """User aborted."""
-        self.shouldAbort = True
+        self.should_abort = True
 
     def execute(self):
         """Call Experiment.execute() repeatedly, while varying self.num_reps and
@@ -95,26 +95,26 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
         # HACK: replace self.num_reps since it's used in Experiment.execute(),
         # which we will be calling from within this function. We'll handle
         # reps more directly.
-        trueReps = self.num_reps
-        numRepsPerformed = 0
-        sequenceIndex = 0
-        wasSuccessful = True
-        while numRepsPerformed < trueReps:
-            interval, numReps = self.sampleRates[
-                sequenceIndex % len(self.sampleRates)
+        true_reps = self.num_reps
+        num_reps_performed = 0
+        sequence_index = 0
+        was_successful = True
+        while num_reps_performed < true_reps:
+            interval, num_reps = self.sample_rates[
+                sequence_index % len(self.sample_rates)
             ]
-            numReps = min(numReps, trueReps - numRepsPerformed)
+            num_reps = min(num_reps, true_reps - num_reps_performed)
             # Set these values so that Experiment.execute() can use them
             # safely.
-            self.numReps = numReps
-            self.repDuration = interval
+            self.num_reps = num_reps
+            self.rep_duration = interval
             # Run a normal experiment.
-            wasSuccessful = super().execute()
-            sequenceIndex += 1
-            numRepsPerformed += numReps
-            if self.shouldAbort:
+            was_successful = super().execute()
+            sequence_index += 1
+            num_reps_performed += num_reps
+            if self.should_abort:
                 return False
-        return wasSuccessful
+        return was_successful
 
 
 ## A consistent name to use to refer to the class itself.
@@ -123,14 +123,14 @@ from cockpit.gui.gui_utils import FLOATVALIDATOR, INTVALIDATOR
 
 
 class ExperimentUI(wx.Panel):
-    def __init__(self, parent, configKey):
+    def __init__(self, parent, config_key):
         super().__init__(parent=parent)
 
-        self.configKey = configKey
+        self.config_key = config_key
         ## List of (interval in seconds, number of reps) tuples
         # representing the rate at which we should image the
         # sample.
-        self.sampleRates = []
+        self.sample_rates = []
 
         sizer = wx.FlexGridSizer(2, 6, 2, 2)
         sizer.Add((0, 0))
@@ -141,26 +141,26 @@ class ExperimentUI(wx.Panel):
         sizer.Add((0, 0))
         # Commence second row.
         button = wx.Button(self, -1, "Clear")
-        button.Bind(wx.EVT_BUTTON, self.onClear)
+        button.Bind(wx.EVT_BUTTON, self.on_clear)
         button.SetToolTip(wx.ToolTip("Remove all entries"))
         sizer.Add(button)
 
         button = wx.Button(self, -1, "Delete last")
-        button.Bind(wx.EVT_BUTTON, self.onDeleteLast)
+        button.Bind(wx.EVT_BUTTON, self.on_delete_last)
         button.SetToolTip(wx.ToolTip("Remove the most recently-added entry"))
         sizer.Add(button)
 
-        self.sequenceText = wx.TextCtrl(
+        self.sequence_text = wx.TextCtrl(
             self, -1, size=(200, -1), style=wx.TE_READONLY
         )
-        self.sequenceText.SetToolTip(
+        self.sequence_text.SetToolTip(
             wx.ToolTip(
                 "Displays the sequence of "
                 + "sampling intervals and reps we will perform for this "
                 + "experiment."
             )
         )
-        sizer.Add(self.sequenceText)
+        sizer.Add(self.sequence_text)
 
         self.interval = wx.TextCtrl(self, -1, size=(60, -1))
         self.interval.SetToolTip(
@@ -173,18 +173,18 @@ class ExperimentUI(wx.Panel):
         self.interval.allow_empty = True
         sizer.Add(self.interval)
 
-        self.numReps = wx.TextCtrl(self, -1, size=(60, -1))
-        self.numReps.SetToolTip(
+        self.num_reps = wx.TextCtrl(self, -1, size=(60, -1))
+        self.num_reps.SetToolTip(
             wx.ToolTip(
                 "Number of reps to perform at this " + "sampling interval."
             )
         )
-        self.numReps.SetValidator(INTVALIDATOR)
-        sizer.Add(self.numReps)
+        self.num_reps.SetValidator(INTVALIDATOR)
         self.num_reps.allow_empty = True
+        sizer.Add(self.num_reps)
 
         button = wx.Button(self, -1, "Add")
-        button.Bind(wx.EVT_BUTTON, self.onAdd)
+        button.Bind(wx.EVT_BUTTON, self.on_add)
         button.SetToolTip(
             wx.ToolTip("Add this (interval, reps) pair to the sequence.")
         )
@@ -192,52 +192,52 @@ class ExperimentUI(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-    def onClear(self, event=None):
+    def on_clear(self, event=None):
         """User clicked the "Clear" button; wipe out our current settings."""
-        self.sampleRates = []
-        self.setText()
+        self.sample_rates = []
+        self.set_text()
 
-    def onDeleteLast(self, event=None):
+    def on_delete_last(self, event=None):
         """User clicked the "Delete last" button; remove the most recent setting."""
-        self.sampleRates = self.sampleRates[:-1]
-        self.setText()
+        self.sample_rates = self.sample_rates[:-1]
+        self.set_text()
 
-    def onAdd(self, event=None):
+    def on_add(self, event=None):
         """User clicked the "Add" button; add the new pair to our settings."""
         interval = float(self.interval.GetValue())
-        numReps = int(self.numReps.GetValue())
-        self.sampleRates.append((interval, numReps))
+        num_reps = int(self.num_reps.GetValue())
+        self.sample_rates.append((interval, num_reps))
         self.interval.SetValue("")
-        self.numReps.SetValue("")
-        self.setText()
+        self.num_reps.SetValue("")
+        self.set_text()
 
-    def setText(self):
+    def set_text(self):
         """Update our text display of the settings."""
         text = ", ".join(
-            ["(%.2f, %d)" % (i, n) for (i, n) in self.sampleRates]
+            ["(%.2f, %d)" % (i, n) for (i, n) in self.sample_rates]
         )
-        self.sequenceText.SetValue(text)
+        self.sequence_text.SetValue(text)
 
-    def augmentParams(self, params, shouldSave=True):
-        if shouldSave:
-            self.saveSettings()
-        params["sampleRates"] = self.getSampleRates()
+    def augment_params(self, params, should_save=True):
+        if should_save:
+            self.save_settings()
+        params["sample_rates"] = self.get_sample_rates()
         return params
 
-    def loadSettings(self):
+    def load_settings(self):
         return cockpit.util.user_config.get_value(
-            self.configKey + "StutteredZStackSettings", default=[]
+            self.config_key + "StutteredZStackSettings", default=[]
         )
 
-    def getSampleRates(self):
-        return self.sampleRates
+    def get_sample_rates(self):
+        return self.sample_rates
 
-    def getSettingsDict(self):
-        return self.augmentParams({}, shouldSave=False)
+    def get_settings_dict(self):
+        return self.augment_params({}, should_save=False)
 
-    def saveSettings(self, settings=None):
+    def save_settings(self, settings=None):
         if settings is None:
-            settings = self.getSettingsDict()
+            settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.configKey + "StutteredZStackSettings", settings
+            self.config_key + "StutteredZStackSettings", settings
         )

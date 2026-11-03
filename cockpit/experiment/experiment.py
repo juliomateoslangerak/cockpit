@@ -130,7 +130,7 @@ class Experiment:
                 provided then no data will be saved.
 
         *Altitudes* refer to the net position of the Z stage, and are used by
-        the stagemover. *z* values refer to the position of the z_positioner
+        the stage_mover. *z* values refer to the position of the z_positioner
         specified in the args.
         """
         self.num_reps = num_reps

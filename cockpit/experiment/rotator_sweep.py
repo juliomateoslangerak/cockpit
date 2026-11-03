@@ -37,48 +37,48 @@ class RotatorSweepExperiment(experiment.Experiment):
 
     def __init__(
         self,
-        polarizerHandler=None,
-        settlingTime=0.1,
-        startV=0.0,
-        maxV=10.0,
-        vSteps=100,
+        polarizer_handler=None,
+        settling_time=0.1,
+        start_v=0.0,
+        max_v=10.0,
+        v_steps=100,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.polarizerHandler = polarizerHandler
-        self.settlingTime = settlingTime
+        self.polarizer_handler = polarizer_handler
+        self.settling_time = settling_time
         # Look up the rotator analogue line handler.
-        self.lineHandler = polarizerHandler
-        self.vRange = (startV, maxV, vSteps)
-        vDelta = float(maxV - startV) / vSteps
+        self.line_handler = polarizer_handler
+        self.v_range = (start_v, max_v, v_steps)
+        v_delta = float(max_v - start_v) / v_steps
         # Add voltage parameters to the metadata.
-        self.metadata = "Rotator start and delta: [%f, %f]" % (startV, vDelta)
+        self.metadata = "Rotator start and delta: [%f, %f]" % (start_v, v_delta)
 
     def generate_actions(self):
         """Create the ActionTable needed to run the experiment."""
         table = action_table.ActionTable()
-        curTime = 0
-        vStart, vLessThan, vSteps = self.vRange
-        dv = float(vLessThan - vStart) / float(vSteps)
-        dt = decimal.Decimal(self.settlingTime)
+        cur_time = 0
+        v_start, v_less_than, v_steps = self.v_range
+        dv = float(v_less_than - v_start) / float(v_steps)
+        dt = decimal.Decimal(self.settling_time)
 
-        for step in range(vSteps):
+        for step in range(v_steps):
             # Move to next polarization rotator voltage.
-            vTarget = vStart + step * dv
-            table.add_action(curTime, self.lineHandler, vTarget)
-            curTime += dt
+            v_target = v_start + step * dv
+            table.add_action(cur_time, self.line_handler, v_target)
+            cur_time += dt
             # Image the sample.
-            for cameras, lightTimePairs in self.exposure_settings:
-                curTime = self.expose(curTime, cameras, lightTimePairs, table)
+            for cameras, light_time_pairs in self.exposure_settings:
+                cur_time = self.expose(cur_time, cameras, light_time_pairs, table)
                 # Advance the time very slightly so that all exposures
                 # are strictly ordered.
-                curTime += decimal.Decimal(".001")
+                cur_time += decimal.Decimal(".001")
             # Hold the rotator angle constant during the exposure.
-            table.add_action(curTime, self.lineHandler, vTarget)
+            table.add_action(cur_time, self.line_handler, v_target)
             # Advance time slightly so all actions are sorted (e.g. we
             # don't try to change angle and phase in the same timestep).
-            curTime += dt
+            cur_time += dt
 
         return table
 
@@ -93,83 +93,83 @@ class ExperimentUI(wx.Panel):
 
     def __init__(self, parent, configKey):
         super().__init__(parent=parent)
-        self.configKey = configKey
+        self.configkey = configKey
         sizer = wx.GridSizer(2, 4, 1)
         ## Maps strings to TextCtrls describing how to configure
         # response curve experiments.
-        self.settings = self.loadSettings()
-        self.settlingTimeControl = gui_utils.add_labeled_input(
+        self.settings = self.load_settings()
+        self.settling_time_control = gui_utils.add_labeled_input(
             self,
             sizer,
             label="settling time",
-            default_value=self.settings["settlingTime"],
+            default_value=self.settings["settling_time"],
         )
-        self.settlingTimeControl.SetValidator(FLOATVALIDATOR)
+        self.settling_time_control.SetValidator(FLOATVALIDATOR)
 
-        self.vStepsControl = gui_utils.add_labeled_input(
+        self.v_steps_control = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V steps",
-            default_value=self.settings["vSteps"],
+            default_value=self.settings["v_steps"],
         )
-        self.vStepsControl.SetValidator(INTVALIDATOR)
+        self.v_steps_control.SetValidator(INTVALIDATOR)
 
-        self.startVControl = gui_utils.add_labeled_input(
+        self.start_v_control = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V start",
-            default_value=self.settings["startV"],
+            default_value=self.settings["start_v"],
         )
-        self.startVControl.SetValidator(FLOATVALIDATOR)
+        self.start_v_control.SetValidator(FLOATVALIDATOR)
 
-        self.maxVControl = gui_utils.add_labeled_input(
+        self.max_v_control = gui_utils.add_labeled_input(
             self,
             sizer,
             label="V max",
-            default_value=self.settings["maxV"],
+            default_value=self.settings["max_v"],
         )
-        self.maxVControl.SetValidator(FLOATVALIDATOR)
+        self.max_v_control.SetValidator(FLOATVALIDATOR)
 
         self.SetSizerAndFit(sizer)
 
-    def augmentParams(self, params):
+    def augment_params(self, params):
         """Given a parameters dict (parameter name to value) to hand to the
         experiment instance, augment them with our special parameters."""
-        self.saveSettings()
-        params["settlingTime"] = gui_utils.try_parse_num(
-            self.settlingTimeControl, float
+        self.save_settings()
+        params["settling_time"] = gui_utils.try_parse_num(
+            self.settling_time_control, float
         )
-        params["startV"] = gui_utils.try_parse_num(self.startVControl, float)
-        params["maxV"] = gui_utils.try_parse_num(self.maxVControl, float)
-        params["vSteps"] = gui_utils.try_parse_num(self.vStepsControl)
-        params["polarizerHandler"] = depot.get_handler_with_name("SI polarizer")
+        params["start_v"] = gui_utils.try_parse_num(self.start_v_control, float)
+        params["max_v"] = gui_utils.try_parse_num(self.max_v_control, float)
+        params["v_steps"] = gui_utils.try_parse_num(self.v_steps_control)
+        params["polarizer_handler"] = depot.get_handler_with_name("SI polarizer")
         return params
 
-    def loadSettings(self):
+    def load_settings(self):
         """Load the saved experiment settings, if any."""
         return cockpit.util.user_config.get_value(
-            self.configKey + "RotatorSweepExperimentSettings",
+            self.configkey + "RotatorSweepExperimentSettings",
             default={
-                "settlingTime": "0.1",
-                "startV": "0.0",
-                "maxV": "10.0",
-                "vSteps": "100",
+                "settling_time": "0.1",
+                "start_v": "0.0",
+                "max_v": "10.0",
+                "v_steps": "100",
             },
         )
 
-    def getSettingsDict(self):
+    def get_settings_dict(self):
         """Generate a dict of our settings."""
         return {
-            "settlingTime": self.settlingTimeControl.GetValue(),
-            "startV": self.startVControl.GetValue(),
-            "maxV": self.maxVControl.GetValue(),
-            "vSteps": self.vStepsControl.GetValue(),
+            "settling_time": self.settling_time_control.GetValue(),
+            "start_v": self.start_v_control.GetValue(),
+            "max_v": self.max_v_control.GetValue(),
+            "v_steps": self.v_steps_control.GetValue(),
         }
 
-    def saveSettings(self, settings=None):
+    def save_settings(self, settings=None):
         """Save the current experiment settings to config."""
         if settings is None:
-            settings = self.getSettingsDict()
+            settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.configKey + "RotatorSweepExperimentSettings", settings
+            self.configkey + "RotatorSweepExperimentSettings", settings
         )

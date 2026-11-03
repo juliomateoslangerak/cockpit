@@ -80,27 +80,27 @@ class OptoExperiment(z_stack.ZStackExperiment):
     """
 
     def __init__(
-        self, lightToSequence, lightToIsOnDuringAcquisition, **kwargs
+        self, light_to_sequence, light_to_is_on_during_acquisition, **kwargs
     ):
         """Set up the opto experiment with its light sequences.
 
         Args:
-            lightToSequence (dict): Maps light handler names to lists of
+            light_to_sequence (dict): Maps light handler names to lists of
                 [start, stop] times for illuminating them prior to running a
                 standard Z-stack.
-            lightToIsOnDuringAcquisition (dict): Maps light handler names to
+            light_to_is_on_during_acquisition (dict): Maps light handler names to
                 whether or not those lights should be left on while taking
                 images in the Z-stack section of the experiment.
         """
         # Convert from light source names to light handlers.
-        self.lightToSequence = {}
-        for name, sequence in lightToSequence.items():
+        self.light_to_sequence = {}
+        for name, sequence in light_to_sequence.items():
             handler = depot.get_handler_with_name(name)
-            self.lightToSequence[handler] = sequence
-        self.lightToIsOnDuringAcquisition = {}
-        for name, isOn in lightToIsOnDuringAcquisition.items():
+            self.light_to_sequence[handler] = sequence
+        self.light_to_is_on_during_acquisition = {}
+        for name, is_on in light_to_is_on_during_acquisition.items():
             handler = depot.get_handler_with_name(name)
-            self.lightToIsOnDuringAcquisition[handler] = isOn
+            self.light_to_is_on_during_acquisition[handler] = is_on
         # Call the ZStackExperiment constructor with all of our remaining
         # parameters, which are in the "kwargs" dictionary object.
         super().__init__(**kwargs)
@@ -111,23 +111,23 @@ class OptoExperiment(z_stack.ZStackExperiment):
         # HACK: replace self.num_reps since it's referred to in
         # Experiment.execute(), and we want to handle repeats at a higher
         # level.
-        numReps = self.num_reps
-        self.numReps = 1
-        for i in range(numReps):
+        num_reps = self.num_reps
+        self.num_reps = 1
+        for i in range(num_reps):
             if self.should_abort:
                 # User aborted experiment.
                 break
             # Create a new thread for activating each light in parallel.
             # We could do this single-threaded, but it would require an
-            # in-depth examination of self.lightToSequence to determine when
+            # in-depth examination of self.light_to_sequence to determine when
             # to turn on each light.
             threads = []
-            for light, sequence in self.lightToSequence.items():
-                newThread = threading.Thread(
-                    target=self.shineLight, args=[light, sequence]
+            for light, sequence in self.light_to_sequence.items():
+                new_thread = threading.Thread(
+                    target=self.shine_light, args=[light, sequence]
                 )
-                newThread.start()
-                threads.append(newThread)
+                new_thread.start()
+                threads.append(new_thread)
             # Wait for all of our threads to finish.
             for thread in threads:
                 thread.join()
@@ -135,33 +135,34 @@ class OptoExperiment(z_stack.ZStackExperiment):
             # Pre-acquisition illumination is complete; move on to taking
             # images.
             # Turn on all lights that want to be left on during acquisition.
-            activatedLights = []
-            for light, shouldBeOn in self.lightToIsOnDuringAcquisition.items():
-                if shouldBeOn:
+            activated_lights = []
+            for light, should_be_on in self.light_to_is_on_during_acquisition.items():
+                if should_be_on:
                     light.set_exposing(True)
-                    activatedLights.append(light)
+                    activated_lights.append(light)
             # Invoke our base class' execute() function to collect data.
             result = super().execute()
             # Turn off the triggering lights.
-            for light in activatedLights:
+            for light in activated_lights:
                 light.set_exposing(False)
+
         return result
 
-    def shineLight(self, light, sequence):
+    def shine_light(self, light, sequence):
         """Given a light source and a list of [start, stop] pairs when the
         light should be enabled/disabled, turn the light on and off according
         to the sequence."""
-        curTime = 0
+        cur_time = 0
         for start, stop in sequence:
             # Sleep until we should start illumination.
-            time.sleep(start - curTime)
+            time.sleep(start - cur_time)
             # Turn the light on.
             light.set_exposing(True)
             # Sleep until we should turn the light off.
             time.sleep(stop - start)
             # Turn the light off.
             light.set_exposing(False)
-            curTime = stop
+            cur_time = stop
 
 
 ## A consistent name to use to refer to the experiment class itself.
@@ -171,16 +172,16 @@ EXPERIMENT_CLASS = OptoExperiment
 class ExperimentUI(wx.Panel):
     """Generate the UI for special parameters used by this experiment."""
 
-    def __init__(self, parent, configKey):
+    def __init__(self, parent, config_key):
         super().__init__(parent=parent)
 
-        self.configKey = configKey
+        self.config_key = config_key
 
         ## List of all light sources available for use.
-        self.allLights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+        self.all_lights = depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
 
         ## User config settings.
-        self.settings = self.loadSettings()
+        self.settings = self.load_settings()
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(
@@ -192,7 +193,7 @@ class ExperimentUI(wx.Panel):
 
         # Generate a header to label the controls in each OptoPanel. Sizes
         # for each element are derived from the OptoPanel's layout.
-        headerSizer = wx.BoxSizer(wx.HORIZONTAL)
+        header_sizer = wx.BoxSizer(wx.HORIZONTAL)
         for text, size in [
             ("Light", 60),
             ("", 80),
@@ -203,25 +204,25 @@ class ExperimentUI(wx.Panel):
             ("", 80),
             ("On during acquisition", 200),
         ]:
-            headerSizer.Add(wx.StaticText(self, -1, text, size=(size, -1)))
+            header_sizer.Add(wx.StaticText(self, -1, text, size=(size, -1)))
 
-        sizer.Add(headerSizer)
+        sizer.Add(header_sizer)
 
         ## Maps light handlers to OptoPanel instances.
-        self.lightToPanel = {}
-        defaultVals = []
-        for light in self.allLights:
-            sequence = self.settings["lightToSequence"].get(light.name, [])
-            doesStartOn = self.settings["lightToIsOnDuringAcquisition"].get(
+        self.light_to_panel = {}
+        default_vals = []
+        for light in self.all_lights:
+            sequence = self.settings["light_to_sequence"].get(light.name, [])
+            does_start_on = self.settings["light_to_is_on_during_acquisition"].get(
                 light.name, False
             )
-            panel = OptoPanel(self, light, sequence, doesStartOn)
-            self.lightToPanel[light] = panel
+            panel = OptoPanel(self, light, sequence, does_start_on)
+            self.light_to_panel[light] = panel
             sizer.Add(panel)
 
         self.SetSizerAndFit(sizer)
 
-    def getLightToSequence(self):
+    def get_light_to_sequence(self):
         """Return a mapping of light source names to lists of illumination
         sequences. e.g. {"650 LED": [[0, 20], [30, 50]]} to indicate that the
         650 LED should be on from 0 to 20 seconds, and from 30 to 50 seconds.
@@ -231,12 +232,12 @@ class ExperimentUI(wx.Panel):
         """
         return dict(
             [
-                (l.name, self.lightToPanel[l].getSequence())
-                for l in self.allLights
+                (l.name, self.light_to_panel[l].get_sequence())
+                for l in self.all_lights
             ]
         )
 
-    def getLightToIsOnDuringAcquisition(self):
+    def get_light_to_is_on_during_acquisition(self):
         """Returns a mapping of light source names to whether or not those
         lights should be left on during image acquisition (independently of
         whether those lights are being used as traditional imaging lights).
@@ -246,43 +247,43 @@ class ExperimentUI(wx.Panel):
         """
         return dict(
             [
-                (l.name, self.lightToPanel[l].getIsOnDuringAcquisition())
-                for l in self.allLights
+                (l.name, self.light_to_panel[l].get_is_on_during_acquisition())
+                for l in self.all_lights
             ]
         )
 
-    def augmentParams(self, params, shouldSave=True):
+    def augment_params(self, params, shouldSave=True):
         """Given a parameters dict (parameter name to value) to hand to the
         experiment instance,
         augment them with our special parameters."""
         if shouldSave:
-            self.saveSettings()
-        params["lightToSequence"] = self.getLightToSequence()
-        params["lightToIsOnDuringAcquisition"] = (
-            self.getLightToIsOnDuringAcquisition()
+            self.save_settings()
+        params["light_to_sequence"] = self.get_light_to_sequence()
+        params["light_to_is_on_during_acquisition"] = (
+            self.get_light_to_is_on_during_acquisition()
         )
         return params
 
-    def loadSettings(self):
+    def load_settings(self):
         """Load the saved experiment settings, if any."""
         return cockpit.util.user_config.get_value(
-            self.configKey + "optoExampleSettings",
+            self.config_key + "optoExampleSettings",
             default={
-                "lightToSequence": {},
-                "lightToIsOnDuringAcquisition": {},
+                "light_to_sequence": {},
+                "light_to_is_on_during_acquisition": {},
             },
         )
 
-    def getSettingsDict(self):
+    def get_settings_dict(self):
         """Generate a dict of our settings."""
-        return self.augmentParams({}, shouldSave=False)
+        return self.augment_params({}, shouldSave=False)
 
-    def saveSettings(self, settings=None):
+    def save_settings(self, settings=None):
         """Save the current experiment settings to config."""
         if settings is None:
-            settings = self.getSettingsDict()
+            settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.configKey + "optoExampleSettings", settings
+            self.config_key + "optoExampleSettings", settings
         )
 
 
@@ -305,79 +306,79 @@ class OptoPanel(wx.Panel):
         sizer.Add(wx.StaticText(self, -1, light.name + ": ", size=(60, -1)))
 
         button = wx.Button(self, -1, "Clear", size=(80, -1))
-        button.Bind(wx.EVT_BUTTON, self.onClear)
+        button.Bind(wx.EVT_BUTTON, self.on_clear)
         button.SetToolTip(
             wx.ToolTip("Remove all entries for this light source")
         )
         sizer.Add(button)
 
         button = wx.Button(self, -1, "Delete last", size=(80, -1))
-        button.Bind(wx.EVT_BUTTON, self.onDeleteLast)
+        button.Bind(wx.EVT_BUTTON, self.on_delete_last)
         button.SetToolTip(
             wx.ToolTip("Remove the last entry for this light source")
         )
         sizer.Add(button)
 
-        self.sequenceText = wx.TextCtrl(
+        self.sequence_text = wx.TextCtrl(
             self, -1, size=(200, -1), style=wx.TE_READONLY
         )
-        self.sequenceText.SetToolTip(
+        self.sequence_text.SetToolTip(
             wx.ToolTip(
                 "Displays the sequence of on/off actions this light source will perform prior to starting the acquisition."
             )
         )
-        sizer.Add(self.sequenceText)
+        sizer.Add(self.sequence_text)
 
-        self.startText = wx.TextCtrl(self, -1, size=(40, -1))
-        self.startText.SetToolTip(
+        self.start_text = wx.TextCtrl(self, -1, size=(40, -1))
+        self.start_text.SetToolTip(
             wx.ToolTip("Time, in seconds, at which to start illumination")
         )
-        sizer.Add(self.startText)
-        self.startText.SetValidator(FLOATVALIDATOR)
+        sizer.Add(self.start_text)
+        self.start_text.SetValidator(FLOATVALIDATOR)
         self.start_text.allow_empty = True
 
-        self.stopText = wx.TextCtrl(self, -1, size=(40, -1))
-        self.startText.SetToolTip(
+        self.stop_text = wx.TextCtrl(self, -1, size=(40, -1))
+        self.start_text.SetToolTip(
             wx.ToolTip("Time, in seconds, at which to stop illumination")
         )
-        sizer.Add(self.stopText)
-        self.stopText.SetValidator(FLOATVALIDATOR)
+        sizer.Add(self.stop_text)
+        self.stop_text.SetValidator(FLOATVALIDATOR)
         self.stop_text.allow_empty = True
 
         button = wx.Button(self, -1, "Add", size=(80, -1))
-        button.Bind(wx.EVT_BUTTON, self.onAdd)
+        button.Bind(wx.EVT_BUTTON, self.on_add)
         button.SetToolTip(
             wx.ToolTip("Add this start/stop pair to the sequence of actions.")
         )
         sizer.Add(button)
 
-        self.isOnDuringAcquisition = wx.CheckBox(self)
-        self.isOnDuringAcquisition.SetToolTip(
+        self.is_on_during_acquisition = wx.CheckBox(self)
+        self.is_on_during_acquisition.SetToolTip(
             wx.ToolTip(
                 "If checked, this light source will continuously shine on the sample during acquisition."
             )
         )
-        self.isOnDuringAcquisition.SetValue(doesStartOn)
-        sizer.Add(self.isOnDuringAcquisition)
+        self.is_on_during_acquisition.SetValue(doesStartOn)
+        sizer.Add(self.is_on_during_acquisition)
 
         self.SetSizerAndFit(sizer)
-        self.updateDisplay()
+        self.update_display()
 
-    def onClear(self, event=None):
+    def on_clear(self, event=None):
         """Clear all illumination settings."""
         self.sequence = []
-        self.updateDisplay()
+        self.update_display()
 
-    def onDeleteLast(self, event=None):
+    def on_delete_last(self, event=None):
         """Delete the last entry in the illumination settings."""
         self.sequence = self.sequence[:-1]
-        self.updateDisplay()
+        self.update_display()
 
-    def onAdd(self, event=None):
+    def on_add(self, event=None):
         """Add a new entry to the illumination settings, merging entries as
         necessary."""
-        start = gui_utils.try_parse_num(self.startText, float)
-        stop = gui_utils.try_parse_num(self.stopText, float)
+        start = gui_utils.try_parse_num(self.start_text, float)
+        stop = gui_utils.try_parse_num(self.stop_text, float)
         if start >= stop:
             # No-op; easiest way for this to happen is for the stop text to
             # have no value.
@@ -385,43 +386,43 @@ class OptoPanel(wx.Panel):
         # Go through our list of sequences and see if we need to merge them
         # together.
         self.sequence.append([start, stop])
-        indexToDelete = len(self.sequence) - 1
-        didChange = True
-        while didChange:
-            didChange = False
-            for i, (altStart, altStop) in enumerate(self.sequence):
+        index_to_delete = len(self.sequence) - 1
+        did_change = True
+        while did_change:
+            did_change = False
+            for i, (alt_start, alt_stop) in enumerate(self.sequence):
                 # Check for overlap.
-                if (start < altStart and stop > altStart) or (
-                    stop > altStop and start < altStop
+                if (start < alt_start and stop > alt_start) or (
+                    stop > alt_stop and start < alt_stop
                 ):
                     # Merge the two entries.
-                    start = min(start, altStart)
-                    stop = max(stop, altStop)
+                    start = min(start, alt_start)
+                    stop = max(stop, alt_stop)
                     self.sequence[i] = [start, stop]
-                    didChange = True
+                    did_change = True
                     # Destroy the old sequence as it's been merged with
                     # this one.
-                    del self.sequence[indexToDelete]
-                    indexToDelete = i
+                    del self.sequence[index_to_delete]
+                    index_to_delete = i
                     break
 
         # Sort the sequence by start time.
         self.sequence.sort(key=lambda s: s[0])
-        self.startText.SetValue("")
-        self.stopText.SetValue("")
-        self.updateDisplay()
+        self.start_text.SetValue("")
+        self.stop_text.SetValue("")
+        self.update_display()
 
-    def updateDisplay(self):
+    def update_display(self):
         """Update our textual display of the illumination settings."""
         text = ", ".join(
             ["(%.2f, %.2f)" % (start, stop) for start, stop in self.sequence]
         )
-        self.sequenceText.SetValue(text)
+        self.sequence_text.SetValue(text)
 
-    def getSequence(self):
+    def get_sequence(self):
         """Simple accessor."""
         return self.sequence
 
-    def getIsOnDuringAcquisition(self):
+    def get_is_on_during_acquisition(self):
         """Simple accessor."""
-        return self.isOnDuringAcquisition.GetValue()
+        return self.is_on_during_acquisition.GetValue()

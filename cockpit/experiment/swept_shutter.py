@@ -69,41 +69,41 @@ class OpenShutterSweepExperiment(experiment.Experiment):
         the top.
         """
         table = action_table.ActionTable()
-        curTime = 0
-        for cameras, lightTimePairs in self.exposure_settings:
+        cur_time = 0
+        for cameras, light_time_pairs in self.exposure_settings:
             # Start the stage at the bottom.
-            table.add_action(curTime, self.z_positioner, 0)
+            table.add_action(cur_time, self.z_positioner, 0)
             # Ensure our exposure is at least as long as the time needed to
             # move through the sample.
-            motionTime, stabilizationTime = self.z_positioner.get_movement_time(
+            motion_time, stabilization_time = self.z_positioner.get_movement_time(
                 0, self.z_height
             )
             # Image the sample.
-            curTime = self.expose(curTime, cameras, lightTimePairs, table)
+            cur_time = self.expose(cur_time, cameras, light_time_pairs, table)
 
             # End the exposure with the stage at the top.
-            table.add_action(curTime, self.z_positioner, self.z_height)
-            curTime += stabilizationTime
+            table.add_action(cur_time, self.z_positioner, self.z_height)
+            cur_time += stabilization_time
             # Move back to the start so we're ready for the next set of cameras
             # or the next rep.
-            motionTime, stabilizationTime = self.z_positioner.get_movement_time(
+            motion_time, stabilization_time = self.z_positioner.get_movement_time(
                 self.z_height, 0
             )
-            curTime += motionTime
-            table.add_action(curTime, self.z_positioner, 0)
+            cur_time += motion_time
+            table.add_action(cur_time, self.z_positioner, 0)
             # Hold flat for the stabilization time, and any time needed for
             # the cameras to be ready. Only needed if we're doing multiple
             # reps, so we can proceed immediately to the next one.
             cameraReadyTime = 0
             if self.num_reps > 1:
-                for cameras, lightTimePairs in self.exposure_settings:
+                for cameras, light_time_pairs in self.exposure_settings:
                     for camera in cameras:
                         cameraReadyTime = max(
                             cameraReadyTime,
                             self.get_time_when_camera_can_expose(table, camera),
                         )
                 table.add_action(
-                    max(curTime + stabilizationTime, cameraReadyTime),
+                    max(cur_time + stabilization_time, cameraReadyTime),
                     self.z_positioner,
                     0,
                 )

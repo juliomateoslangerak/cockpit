@@ -68,7 +68,7 @@ class ImmediateModeExperiment(experiment.Experiment):
         self,
         num_reps,
         rep_duration,
-        imagesPerRep,
+        images_per_rep,
         slice_height=0,
         metadata="",
         save_path="",
@@ -94,7 +94,7 @@ class ImmediateModeExperiment(experiment.Experiment):
             save_path=save_path,
         )
         # Number of images to be collected per camera per rep.
-        self.imagesPerRep = imagesPerRep
+        self.images_per_rep = images_per_rep
 
         # We didn't pass a proper exposure_settings value when calling
         # the Experiment constructor so we must fix the cameras and
@@ -114,10 +114,10 @@ class ImmediateModeExperiment(experiment.Experiment):
 
         self.all_handlers += self.cameras + self.lights
 
-        self.lightToExposureTime = {l: set() for l in self.lights}
-        self.cameraToIsReady = {c: True for c in self.cameras}
-        self.cameraToImageCount = {c: 0 for c in self.cameras}
-        self.cameraToIgnoredImageIndices = {c: set() for c in self.cameras}
+        self.light_to_exposure_time = {l: set() for l in self.lights}
+        self.camera_to_is_ready = {c: True for c in self.cameras}
+        self.camera_to_image_count = {c: 0 for c in self.cameras}
+        self.camera_to_ignored_image_indices = {c: set() for c in self.cameras}
 
     def prepare_handlers(self):
         """Unlike with normal experiments, we don't prep handlers."""
@@ -131,25 +131,25 @@ class ImmediateModeExperiment(experiment.Experiment):
 
         Assume we use all active cameras and light sources.
         """
-        self.cameraToImageCount = {c: self.imagesPerRep for c in self.cameras}
+        self.camera_to_image_count = {c: self.images_per_rep for c in self.cameras}
         return super().run()
 
     def execute(self):
         """Run the experiment.
 
-        Return True if it was successful. This will call self.executeRep()
+        Return True if it was successful. This will call self.execute_rep()
         iteratively, taking care of the time to pass between reps for you.
         """
         for i in range(self.num_reps):
             if self.should_abort:
                 break
-            startTime = time.time()
-            self.executeRep(i)
-            endTime = time.time()
-            waitTime = self.rep_duration - (endTime - startTime)
-            time.sleep(max(0, waitTime))
+            start_time = time.time()
+            self.execute_rep(i)
+            end_time = time.time()
+            wait_time = self.rep_duration - (end_time - start_time)
+            time.sleep(max(0, wait_time))
 
-    def executeRep(self, repNum):
+    def execute_rep(self, repNum):
         """Execute one rep of the experiment.
 
         Override this function to perform your experiment logic.
@@ -160,5 +160,5 @@ class ImmediateModeExperiment(experiment.Experiment):
         """
         raise RuntimeError(
             ("Immediate-mode experiment %s " % self)
-            + "didn't implement its executeRep function."
+            + "didn't implement its execute_rep function."
         )

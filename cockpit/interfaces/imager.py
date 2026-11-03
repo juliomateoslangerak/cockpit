@@ -74,10 +74,10 @@ def pause_video(func):
         was_in_video_mode = wx.GetApp().imager.am_in_video_mode
         if was_in_video_mode:
             wx.GetApp().imager.should_stop_video_mode = True
-            tstart = time.time()
+            t_start = time.time()
             while wx.GetApp().imager.am_in_video_mode:
                 time.sleep(0.05)
-                if time.time() > tstart + 1.0:
+                if time.time() > t_start + 1.0:
                     print("Timeout pausing video mode - abort and restart.")
                     events.publish(events.USER_ABORT)
                     break

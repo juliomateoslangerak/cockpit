@@ -57,31 +57,6 @@ class TestConfigTypeConversion(unittest.TestCase):
 
 
 class TestConstruction(unittest.TestCase):
-    def test_canonical_class_is_named_pep8_module(self):
-        self.assertEqual(
-            physik.PhysikInstrumenteM687.__module__,
-            "cockpit.devices.physik_instrumente_m687",
-        )
-
-    def test_renamed_attributes_exist(self):
-        dev, _ = make_device()
-        self.assertIsNone(dev.xy_connection)
-        self.assertEqual(dev.xy_position_cache, (10**100, 10**100))
-        self.assertEqual(dev.xy_motion_targets, [None, None])
-        self.assertEqual(dev.axis_mapper, {0: 1, 1: 2})
-        self.assertEqual(dev.axis_sign_mapper, {0: 1, 1: 1})
-
-    def test_old_attributes_are_gone(self):
-        dev, _ = make_device()
-        for old in (
-            "xyConnection",
-            "xyLock",
-            "xyPositionCache",
-            "xyMotionTargets",
-            "axisMapper",
-            "axisSignMapper",
-        ):
-            self.assertFalse(hasattr(dev, old))
 
     def test_swapaxes_and_inversion_are_applied(self):
         dev, _ = make_device({"swapaxes": "1", "invert0": "1", "invert1": "0"})

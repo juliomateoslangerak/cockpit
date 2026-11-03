@@ -189,11 +189,11 @@ class CameraPanel(wx.Panel):
         self.sizer.AddSpacer(2)
 
         line_height = int(self.GetFont().GetFractionalPointSize() / 2.0)
-        self.line = wx.StaticText(self, label="", size=(-1, line_height))
+        self.line = wx.Panel(self, size=(-1, line_height))
         self.line.SetBackgroundColour(
             wavelength_to_color(self.camera.wavelength or 0)
         )
-        self.sizer.Add(self.line, flag=wx.EXPAND)
+        self.sizer.Add(self.line, 0, wx.EXPAND | wx.ALL, 2)
         # If there are problems here, it's because the inline function below is
         # being called outside of the main thread and needs taking out and
         # wrapping with wx.CallAfter.

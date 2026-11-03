@@ -142,7 +142,9 @@ class EnumerateSitesPanel(wx.Panel):
                     ]
                     base_indices.extend(new_indices)
                     base_frequencies.extend([frequency] * len(new_indices))
-                elif cockpit.interfaces.stage_mover.does_site_exist(int(token)):
+                elif cockpit.interfaces.stage_mover.does_site_exist(
+                    int(token)
+                ):
                     base_indices.append(int(token))
                     base_frequencies.append(frequency)
 

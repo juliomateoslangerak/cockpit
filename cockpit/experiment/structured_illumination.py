@@ -107,9 +107,7 @@ def postpad_data(data, shape):
     postpad_length = shape - np.array(data.shape)
     pad_width = list(zip([0] * len(shape), postpad_length))
     ## Let numpy figure out what to convert NaN into for blank values
-    return np.pad(
-        data, pad_width, mode="constant", constant_values=[np.nan]
-    )
+    return np.pad(data, pad_width, mode="constant", constant_values=[np.nan])
 
 
 def reorder_z_dim(data, order_packed, z_lengths, z_order, z_wanted):
@@ -334,7 +332,9 @@ class SIExperiment(experiment.Experiment):
                     # Hold flat.
                     table.add_action(cur_time, self.z_positioner, prev_z)
                     # Move to the next position.
-                    table.add_action(cur_time + motion_time, self.z_positioner, z)
+                    table.add_action(
+                        cur_time + motion_time, self.z_positioner, z
+                    )
                     delay_before_imaging = max(
                         delay_before_imaging, motion_time + stabilization_time
                     )
@@ -363,28 +363,36 @@ class SIExperiment(experiment.Experiment):
         motion_time, stabilization_time = self.z_positioner.get_movement_time(
             self.z_height, self.z_start
         )
-        table.add_action(cur_time + motion_time, self.z_positioner, self.z_start)
+        table.add_action(
+            cur_time + motion_time, self.z_positioner, self.z_start
+        )
         final_wait_time = motion_time + stabilization_time
 
         # Ramp down Z
-        table.add_action(cur_time + final_wait_time, self.z_positioner, self.z_start)
+        table.add_action(
+            cur_time + final_wait_time, self.z_positioner, self.z_start
+        )
 
         if self.angle_handler is not None:
             # Ramp down angle
             theta = self.angle_handler.indexedPosition(0)
-            motion_time, stabilization_time = self.angle_handler.get_movement_time(
-                prev_angle, theta
+            motion_time, stabilization_time = (
+                self.angle_handler.get_movement_time(prev_angle, theta)
             )
             table.add_action(cur_time + motion_time, self.angle_handler, theta)
-            final_wait_time = max(final_wait_time, motion_time + stabilization_time)
+            final_wait_time = max(
+                final_wait_time, motion_time + stabilization_time
+            )
         if self.phase_handler is not None:
             # Ramp down phase
             table.add_action(cur_time, self.phase_handler, prev_phase)
-            motion_time, stabilization_time = self.phase_handler.get_movement_time(
-                prev_phase, 0
+            motion_time, stabilization_time = (
+                self.phase_handler.get_movement_time(prev_phase, 0)
             )
             table.add_action(cur_time + motion_time, self.phase_handler, 0)
-            final_wait_time = max(final_wait_time, motion_time + stabilization_time)
+            final_wait_time = max(
+                final_wait_time, motion_time + stabilization_time
+            )
         if self.polarizer_handler is not None:
             # Return to idle voltage.
             table.add_action(cur_time, self.polarizer_handler, (0, "default"))
@@ -497,7 +505,7 @@ class SIExperiment(experiment.Experiment):
         ## header.  We fake the struct by using multiple u1 per
         ## element.
         ext_header_stride = 4 * (
-                doc.image_header.NumIntegers + doc.image_header.NumFloats
+            doc.image_header.NumIntegers + doc.image_header.NumFloats
         )
         ext_header_dtype = ",".join(["u1"] * ext_header_stride)
         with open(self.save_path, "rb") as fh:
@@ -506,7 +514,7 @@ class SIExperiment(experiment.Experiment):
                 fh, count=doc.get_n_planes(), dtype=ext_header_dtype
             )
         assert (
-                doc.image_header.next == ext_header.nbytes
+            doc.image_header.next == ext_header.nbytes
         ), "next value from datadoc differs from computed length"
         assert order_in[-2:] == (
             "y",
@@ -621,7 +629,9 @@ class BaseSIMExperimentUI(wx.Panel):
             control=wx.Choice(self, choices=sorted(COLLECTION_ORDERS.keys())),
             helper_string='What order to change the angle, phase, and Z step of the experiment. E.g. for "Angle, Phase, Z" Angle will change most slowly and Z will change fastest.',
         )
-        self.si_collection_order.SetSelection(self.settings["si_collection_order"])
+        self.si_collection_order.SetSelection(
+            self.settings["si_collection_order"]
+        )
         sizer.Add(row_sizer)
         self.SetSizerAndFit(sizer)
 
@@ -631,10 +641,14 @@ class BaseSIMExperimentUI(wx.Panel):
         self.save_settings()
         params["num_angles"] = 3
         params["num_phases"] = 5
-        params["collection_order"] = self.si_collection_order.GetStringSelection()
+        params["collection_order"] = (
+            self.si_collection_order.GetStringSelection()
+        )
         params["angle_handler"] = depot.get_handler_with_name("SI angle")
         params["phase_handler"] = depot.get_handler_with_name("SI phase")
-        params["polarizer_handler"] = depot.get_handler_with_name("SI polarizer")
+        params["polarizer_handler"] = depot.get_handler_with_name(
+            "SI polarizer"
+        )
         params["slm_handler"] = depot.get_handler("slm", depot.EXECUTOR)
         compensations = {}
         for i, light in enumerate(self.all_lights):

@@ -90,7 +90,7 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         num_exposures,
         save_path,
         exposure_multiplier=2,
-        max_intensity=2 ** 12,
+        max_intensity=2**12,
         cosmic_ray_threshold=10,
         num_collections=5,
         should_preserve_intermediary_files=False,
@@ -136,7 +136,9 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         self.max_intensity = max_intensity
         self.cosmic_ray_threshold = cosmic_ray_threshold
         self.num_collections = num_collections
-        self.should_preserve_intermediary_files = should_preserve_intermediary_files
+        self.should_preserve_intermediary_files = (
+            should_preserve_intermediary_files
+        )
 
         ## Maps camera handlers to lists of averaged images.
         self.cam_to_averages = dict([(cam, []) for cam in cameras])
@@ -286,7 +288,9 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
                     )
                     settings.append((light, exposure_time))
                 for i in range(self.num_exposures):
-                    cur_time = self.expose(cur_time, used_cams, settings, table)
+                    cur_time = self.expose(
+                        cur_time, used_cams, settings, table
+                    )
         return table
 
     def record_image(self, image, camera):
@@ -427,9 +431,9 @@ class ExperimentUI(wx.Panel):
             row_sizer,
             "Keep the raw data in addition to the averaged files.",
         )
-        self.correction_args["correction_should_preserve_intermediary_files"] = (
-            control
-        )
+        self.correction_args[
+            "correction_should_preserve_intermediary_files"
+        ] = control
         sizer.Add(row_sizer)
         self.SetSizerAndFit(sizer)
 

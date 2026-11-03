@@ -100,7 +100,9 @@ class CamerasWindow(wx.Frame):
     @cockpit.util.threads.call_in_main_thread
     def on_camera_enable_event(self, camera, enabled):
         active_views = [view for view in self.views if view.get_is_enabled()]
-        if enabled and camera not in [view.cur_camera for view in active_views]:
+        if enabled and camera not in [
+            view.cur_camera for view in active_views
+        ]:
             inactive_views = set(self.views).difference(active_views)
             inactive_views.pop().enable(camera)
         elif not (enabled):

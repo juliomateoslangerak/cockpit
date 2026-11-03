@@ -87,7 +87,9 @@ class ZStackExperiment(experiment.Experiment):
                 (
                     motion_time,
                     stabilization_time,
-                ) = self.z_positioner.get_movement_time(prev_altitude, z_target)
+                ) = self.z_positioner.get_movement_time(
+                    prev_altitude, z_target
+                )
             cur_time += motion_time
             table.add_action(cur_time, self.z_positioner, z_target)
             cur_time += stabilization_time
@@ -95,7 +97,9 @@ class ZStackExperiment(experiment.Experiment):
 
             # Image the sample.
             for cameras, light_time_pairs in self.exposure_settings:
-                cur_time = self.expose(cur_time, cameras, light_time_pairs, table)
+                cur_time = self.expose(
+                    cur_time, cameras, light_time_pairs, table
+                )
                 # Advance the time very slightly so that all exposures
                 # are strictly ordered.
                 cur_time += decimal.Decimal("1e-10")

@@ -31,7 +31,9 @@ from cockpit.handlers import device
 class DigitalIOHandler(device.DeviceHandler):
     """A handler for Digital IO devices."""
 
-    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
+    def __init__(
+        self, name, group_name, is_eligible_for_experiments, callbacks
+    ):
         super().__init__(
             name, group_name, is_eligible_for_experiments, callbacks, depot.DIO
         )

@@ -227,7 +227,8 @@ class Experiment:
         self.prepare_handlers()
 
         self.camera_to_readout_time = {
-            c: c.get_time_between_exposures(is_exact=True) for c in self.cameras
+            c: c.get_time_between_exposures(is_exact=True)
+            for c in self.cameras
         }
         for camera, read_time in self.camera_to_readout_time.items():
             if type(read_time) is not decimal.Decimal:
@@ -353,7 +354,9 @@ class Experiment:
         """Prepare all of the handlers needed in the experiment so that they're
         in the correct mode."""
         # Store the pre-experiment altitude.
-        self.initial_altitude = cockpit.interfaces.stage_mover.get_position()[-1]
+        self.initial_altitude = cockpit.interfaces.stage_mover.get_position()[
+            -1
+        ]
         # Ensure that we're the only ones moving things around.
         cockpit.interfaces.stage_mover.wait_for_stop()
         # TODO: Handling multiple movers on an axis is broken. Do not proceed if
@@ -365,8 +368,12 @@ class Experiment:
             wx.MessageBox("Wrong axis mover selected.")
             raise Exception("Wrong axis mover selected.")
         # Prepare our position.
-        cockpit.interfaces.stage_mover.go_to_z(self.alt_bottom, should_block=True)
-        self.z_start = cockpit.interfaces.stage_mover.get_all_positions()[-1][-1]
+        cockpit.interfaces.stage_mover.go_to_z(
+            self.alt_bottom, should_block=True
+        )
+        self.z_start = cockpit.interfaces.stage_mover.get_all_positions()[-1][
+            -1
+        ]
         events.publish(events.PREPARE_FOR_EXPERIMENT, self)
         # Prepare cameras.
         for camera in self.cameras:
@@ -578,7 +585,9 @@ class Experiment:
                 str(
                     [
                         "%.2f" % p
-                        for p in (cockpit.interfaces.stage_mover.get_position())
+                        for p in (
+                            cockpit.interfaces.stage_mover.get_position()
+                        )
                     ]
                 ),
             )
@@ -601,13 +610,17 @@ class Experiment:
                     text += ": " + ",".join(
                         [
                             "%.3fms" % t
-                            for t in sorted(self.light_to_exposure_time[handler])
+                            for t in sorted(
+                                self.light_to_exposure_time[handler]
+                            )
                         ]
                     )
                     # Record the exposure duration(s) of the light source.
                     # find associated power entries (if they have them)
 
-                    for hand in depot.get_handlers_in_group(handler.group_name):
+                    for hand in depot.get_handlers_in_group(
+                        handler.group_name
+                    ):
                         if hand.device_type == depot.LIGHT_POWER:
                             text += " %3.3f mW" % hand.last_power
                 if text:
@@ -672,7 +685,9 @@ class Experiment:
             cam_exposure_ready_time = self.get_time_when_camera_can_expose(
                 table, camera
             )
-            exposure_start_time = max(exposure_start_time, cam_exposure_ready_time)
+            exposure_start_time = max(
+                exposure_start_time, cam_exposure_ready_time
+            )
 
         # Determine the maximum exposure time, which depends on our light
         # sources as well as how long we have to wait for the cameras to be
@@ -694,7 +709,9 @@ class Experiment:
                 camera.get_exposure_mode()
                 == cockpit.handlers.camera.TRIGGER_AFTER
             ):
-                next_ready_time = self.get_time_when_camera_can_expose(table, camera)
+                next_ready_time = self.get_time_when_camera_can_expose(
+                    table, camera
+                )
                 # Ensure camera is exposing for long enough to finish reading
                 # out the last frame.
                 max_exposure_time = max(
@@ -704,7 +721,8 @@ class Experiment:
             # If the camera has a rolling shutter we need to add to the camera exposure time the readout time
             # to ensure that all the pixels are exposed when we turn on the lights
             elif (
-                    camera.get_shuttering_mode() == ElectronicShutteringMode.ROLLING
+                camera.get_shuttering_mode()
+                == ElectronicShutteringMode.ROLLING
             ):
                 max_exposure_time += self.camera_to_readout_time[
                     camera
@@ -802,10 +820,14 @@ class Experiment:
                 table.add_toggle(exposure_start + min_exposure_time, camera)
             elif exposure_mode == cockpit.handlers.camera.TRIGGER_DURATION:
                 table.add_action(exposure_start, camera, True)
-                table.add_action(exposure_start + min_exposure_time, camera, False)
+                table.add_action(
+                    exposure_start + min_exposure_time, camera, False
+                )
             else:  # TRIGGER_BEFORE case
                 table.add_toggle(exposure_start, camera)
-            reset_end_time = max(reset_end_time, exposure_start + min_exposure_time)
+            reset_end_time = max(
+                reset_end_time, exposure_start + min_exposure_time
+            )
             self.camera_to_image_count[camera] += 1
             self.camera_to_ignored_image_indices[camera].add(
                 self.camera_to_image_count[camera]
@@ -842,7 +864,9 @@ class Experiment:
             # out) some time after last_use_time, depending on its declared
             # exposure time.
             next_use_time += camera.get_exposure_time(is_exact=True)
-        next_use_time += self.camera_to_readout_time[camera] + decimal.Decimal(0.1)
+        next_use_time += self.camera_to_readout_time[camera] + decimal.Decimal(
+            0.1
+        )
         return next_use_time
 
     def get_exposure_time_for_camera(self, camera):

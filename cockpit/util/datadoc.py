@@ -96,12 +96,15 @@ class DataDoc:
         num_timepoints = self.image_header.NumTimes
         num_x = self.image_header.Num[0]
         num_y = self.image_header.Num[1]
-        num_z = self.image_header.Num[2] // (self.num_wavelengths * num_timepoints)
+        num_z = self.image_header.Num[2] // (
+            self.num_wavelengths * num_timepoints
+        )
         ## Size in pixels of the data, since having it as a Numpy array
         # instead of a tuple (from self.image_array.shape) is occasionally
         # handy.
         self.size = np.array(
-            [self.num_wavelengths, num_timepoints, num_z, num_y, num_x], dtype=int
+            [self.num_wavelengths, num_timepoints, num_z, num_y, num_x],
+            dtype=int,
         )
         ## 5D array of pixel data, indexed as
         # self.image_array[wavelength][time][z][y][x]
@@ -113,8 +116,8 @@ class DataDoc:
         # Indexed as
         # self.extended_header_ints[wavelength, time, z, i]
         # Either may be empty, depending on how big the extended header is.
-        self.extended_header_ints, self.extended_header_floats = get_extended_header(
-            self.image.Mrc.e, self.image_header
+        self.extended_header_ints, self.extended_header_floats = (
+            get_extended_header(self.image.Mrc.e, self.image_header)
         )
         ## Datatype of our array.
         self.dtype = self.image_array.dtype.type
@@ -189,7 +192,9 @@ class DataDoc:
             # Since we flattened out this axis, change its index to be the only
             # possible valid index.
             axes[projection_axis] = 0
-            return self.take_slice_from_data(data, axes, should_transform, order)
+            return self.take_slice_from_data(
+                data, axes, should_transform, order
+            )
         elif projection_axis in [3, 4]:
             # Projecting through Y or X; just transform the local volume.
             dialog = wx.ProgressDialog(
@@ -307,7 +312,9 @@ class DataDoc:
                     target_coords[:, :, 4 - axis] = basis
                 else:
                     target_coords[:, :, 4 - axis] = axes[axis]
-            return self.map_coords(data, target_coords, target_shape, axes, order)
+            return self.map_coords(
+                data, target_coords, target_shape, axes, order
+            )
         else:
             # Simply take an ordinary slice.
             # Ellipsis is a builtin keyword for the full-array slice. Who knew?
@@ -361,9 +368,7 @@ class DataDoc:
 
             # Chop off the trailing 1, reorder to ZYX, and insert the time
             # coordinate.
-            tmp = np.zeros(
-                (4, transformed_coords.shape[1]), dtype=np.float
-            )
+            tmp = np.zeros((4, transformed_coords.shape[1]), dtype=np.float)
             for i in range(3):
                 tmp[i + 1] = transformed_coords[2 - i]
 
@@ -398,9 +403,7 @@ class DataDoc:
         transforms = self.get_transformation_matrices()
         inverse_transforms = [np.linalg.inv(matrix) for matrix in transforms]
         # Reorder to XYZ and add a dummy 4th dimension.
-        transposed_coord = np.array(
-            [[coord[3]], [coord[2]], [coord[1]], [1]]
-        )
+        transposed_coord = np.array([[coord[3]], [coord[2]], [coord[1]], [1]])
         # XYZ center, which needs to be added and subtracted from the
         # coordinates before/after transforming so that rotation is done
         # about the center of the image.
@@ -688,9 +691,7 @@ def make_header_for(data, should_set_min_max=True, **kwargs):
             min_val = data[i].min()
             max_val = data[i].max()
             if i == 0:
-                setattr(
-                    header, "mmm1", (min_val, max_val, np.median(data[i]))
-                )
+                setattr(header, "mmm1", (min_val, max_val, np.median(data[i])))
             else:
                 setattr(header, "mm%d" % (i + 1), (min_val, max_val))
     return header
@@ -839,11 +840,11 @@ def get_extended_header(data, header):
     # Load the extended header as a bytesequence.
     for i in range(images_per_wavelength * num_wavelengths):
         offset = int(i * chunk_size)
-        int_array[i * int_size: (i + 1) * int_size] = data[
+        int_array[i * int_size : (i + 1) * int_size] = data[
             offset : offset + int_size
         ]
-        float_array[i * float_size: (i + 1) * float_size] = data[
-            offset + int_size: offset + chunk_size
+        float_array[i * float_size : (i + 1) * float_size] = data[
+            offset + int_size : offset + chunk_size
         ]
     # Cast to appropriate datatypes.
     int_array.dtype = np.int32
@@ -855,7 +856,12 @@ def get_extended_header(data, header):
     shape = []
     num_timepoints = header.NumTimes
     num_z = header.Num[2] // (num_wavelengths * num_timepoints)
-    key_to_size = {"w": num_wavelengths, "t": num_timepoints, "z": num_z, "y": 1}
+    key_to_size = {
+        "w": num_wavelengths,
+        "t": num_timepoints,
+        "z": num_z,
+        "y": 1,
+    }
     for key in order_str:
         if key in key_to_size:
             shape.append(key_to_size[key])
@@ -883,7 +889,7 @@ def load_header(path):
     header_buffer = data[:1024]
     header = mrc.make_hdr_array(header_buffer)
     num_bytes = header.next
-    extended_data = data[1024: 1024 + num_bytes]
+    extended_data = data[1024 : 1024 + num_bytes]
     ints, floats = get_extended_header(extended_data, header)
     return header, header_buffer, ints, floats
 

@@ -191,7 +191,9 @@ class CockpitApp(wx.App):
             self._stage = cockpit.interfaces.stage_mover.mover
             self._channels = cockpit.interfaces.channels.Channels()
             for fpath in self.config["global"].getpaths("channel-files", []):
-                new_channels = cockpit.interfaces.channels.load_from_file(fpath)
+                new_channels = cockpit.interfaces.channels.load_from_file(
+                    fpath
+                )
                 self._channels.update(new_channels)
 
             status.Update(update_num, "Initializing user interface...")
@@ -513,7 +515,8 @@ def main(argv: List[str]) -> int:
             bad_threads.append(thread)
     if bad_threads:
         _logger.error(
-            "Found %d non-daemon threads at exit.  These are:", len(bad_threads)
+            "Found %d non-daemon threads at exit.  These are:",
+            len(bad_threads),
         )
         for thread in bad_threads:
             _logger.error("Thread '%s': %s", thread.name, thread.__dict__)

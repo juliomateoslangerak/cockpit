@@ -131,7 +131,9 @@ class ImmediateModeExperiment(experiment.Experiment):
 
         Assume we use all active cameras and light sources.
         """
-        self.camera_to_image_count = {c: self.images_per_rep for c in self.cameras}
+        self.camera_to_image_count = {
+            c: self.images_per_rep for c in self.cameras
+        }
         return super().run()
 
     def execute(self):

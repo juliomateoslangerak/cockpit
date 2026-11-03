@@ -145,24 +145,28 @@ class Corrector:
         # Clean up the remainder.
         self.sub_correctors.append(
             SubCorrector(
-                self.exposure_times[cur_indices], self.image_data[cur_indices], 2
+                self.exposure_times[cur_indices],
+                self.image_data[cur_indices],
+                2,
             )
         )
         # Ensure we have linear mapping to the bottom and top of the dataset,
         # by linearly extrapolating out to -maxint and maxint. We fit lines to
         # our bottom and top subcorrectors and extrapolate along their slopes.
         new_correctors = []
-        for start_index, target in [(0, -(2 ** 16) + 1), (-1, (2 ** 16) - 1)]:
+        for start_index, target in [(0, -(2**16) + 1), (-1, (2**16) - 1)]:
             corrector = self.sub_correctors[start_index]
             x_vals = corrector.exposure_times
             y_vals = corrector.image_data
-            print(
-                "Extrapolating with", x_vals, [np.median(v) for v in y_vals]
-            )
+            print("Extrapolating with", x_vals, [np.median(v) for v in y_vals])
             y_vals.shape = len(x_vals), np.product(self.image_shape)
             slopes, intercepts = np.polyfit(x_vals, y_vals, 1)
             # Restore our previous shape.
-            y_vals.shape = len(x_vals), self.image_shape[0], self.image_shape[1]
+            y_vals.shape = (
+                len(x_vals),
+                self.image_shape[0],
+                self.image_shape[1],
+            )
             # Calculate extrapolated "exposure times" at the target.
             extrapolated = slopes * target + intercepts
             extrapolated.shape = self.image_shape

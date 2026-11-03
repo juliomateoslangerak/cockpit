@@ -117,7 +117,12 @@ class DeviceHandler:
         return wrapper
 
     def __init__(
-        self, name, group_name, is_eligible_for_experiments, callbacks, device_type
+        self,
+        name,
+        group_name,
+        is_eligible_for_experiments,
+        callbacks,
+        device_type,
     ):
         """Set up the handler for a device.
 
@@ -194,7 +199,8 @@ class DeviceHandler:
 
     def finalize_initialization(self):
         """Do any final initialization actions, now that all devices are set up,
-        all subscriptions have been made, and all initial publications are done."""
+        all subscriptions have been made, and all initial publications are done.
+        """
         pass
 
     def get_is_eligible_for_experiments(self):

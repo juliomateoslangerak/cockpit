@@ -139,7 +139,8 @@ class CameraHandlerTestCase(unittest.TestCase):
         camera.set_enabled(True)
 
         mockEvents.subscribe.assert_called_with(
-            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepare_for_experiment
+            cockpit.events.PREPARE_FOR_EXPERIMENT,
+            camera.prepare_for_experiment,
         )
 
     @mock_events_at("cockpit.handlers.camera")
@@ -147,7 +148,8 @@ class CameraHandlerTestCase(unittest.TestCase):
         camera = cockpit.handlers.camera.CameraHandler(**self.args)
         camera.set_enabled(False)
         mockEvents.unsubscribe.assert_called_with(
-            cockpit.events.PREPARE_FOR_EXPERIMENT, camera.prepare_for_experiment
+            cockpit.events.PREPARE_FOR_EXPERIMENT,
+            camera.prepare_for_experiment,
         )
 
     def test_enabled_getter(self):

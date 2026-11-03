@@ -95,7 +95,9 @@ class MainWindowPanel(wx.Panel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Find out what devices we have to work with.
-        light_toggles = wx.GetApp().depot.get_handlers_of_type(depot.LIGHT_TOGGLE)
+        light_toggles = wx.GetApp().depot.get_handlers_of_type(
+            depot.LIGHT_TOGGLE
+        )
 
         ## Maps LightSource handlers to their associated panels of controls.
         self.light_to_panel = {}
@@ -339,7 +341,8 @@ class ChannelsMenu(wx.Menu):
             self.add_channel_item(name)
 
         wx.GetApp().channels.Bind(
-            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.on_channel_added
+            cockpit.interfaces.channels.EVT_CHANNEL_ADDED,
+            self.on_channel_added,
         )
         wx.GetApp().channels.Bind(
             cockpit.interfaces.channels.EVT_CHANNEL_REMOVED,

@@ -81,7 +81,9 @@ class GenericPositionerHandler(device.DeviceHandler):
     reset_cache = device.DeviceHandler.reset_cache
     cached = device.DeviceHandler.cached
 
-    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
+    def __init__(
+        self, name, group_name, is_eligible_for_experiments, callbacks
+    ):
         super().__init__(
             name,
             group_name,

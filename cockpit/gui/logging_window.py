@@ -138,11 +138,15 @@ class LoggingWindow(wx.Frame):
                 # ---Logging Error--- messages.
                 if target is self.std_out:
                     _logger.debug(
-                        "".join(filter(lambda c: ord(c) < 128, self.text_cache))
+                        "".join(
+                            filter(lambda c: ord(c) < 128, self.text_cache)
+                        )
                     )
                 else:
                     _logger.error(
-                        "".join(filter(lambda c: ord(c) < 128, self.text_cache))
+                        "".join(
+                            filter(lambda c: ord(c) < 128, self.text_cache)
+                        )
                     )
                 self.text_cache = ""
 

@@ -44,7 +44,9 @@ class TestChannelsApi(unittest.TestCase):
     def test_change_replaces_channel_keeps_order(self):
         self.channels.change("first", {"camera": {"exposure": 20}})
         self.assertEqual(self.channels.names, ["first", "second"])
-        self.assertEqual(self.channels.get("first"), {"camera": {"exposure": 20}})
+        self.assertEqual(
+            self.channels.get("first"), {"camera": {"exposure": 20}}
+        )
 
     def test_remove_drops_channel(self):
         self.channels.remove("first")
@@ -59,7 +61,9 @@ class TestChannelsApi(unittest.TestCase):
 
         self.assertEqual(self.channels.names, ["first", "second", "third"])
         self.assertEqual(self.channels.get("second"), {"laser": {"power": 7}})
-        self.assertEqual(self.channels.get("third"), {"camera": {"exposure": 1}})
+        self.assertEqual(
+            self.channels.get("third"), {"camera": {"exposure": 1}}
+        )
 
 
 class TestChannelsFileRoundTrip(unittest.TestCase):

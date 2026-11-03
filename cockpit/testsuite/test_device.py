@@ -93,9 +93,11 @@ class TestMicroscopeCameraInitialize(unittest.TestCase):
                 "roi": "(0,0,10,10)",
             },
         )
-        with mock.patch("Pyro4.Proxy") as proxy_cls, mock.patch(
-            "cockpit.util.listener.Listener"
-        ) as listener_cls, mock.patch("cockpit.events.publish"):
+        with (
+            mock.patch("Pyro4.Proxy") as proxy_cls,
+            mock.patch("cockpit.util.listener.Listener") as listener_cls,
+            mock.patch("cockpit.events.publish"),
+        ):
             cam.initialize()
         proxy = proxy_cls.return_value
         proxy_cls.assert_called_once_with("PYRO:cam@host:7000")
@@ -120,7 +122,9 @@ class TestMicroscopeCameraCallbacks(unittest.TestCase):
         cam._proxy.get_exposure_time.return_value = 0.05
         cam._proxy.get_cycle_time.return_value = 0.1
         self.assertEqual(float(cam.get_exposure_time("cam", True)), 50.0)
-        self.assertIsInstance(cam.get_exposure_time("cam", True), decimal.Decimal)
+        self.assertIsInstance(
+            cam.get_exposure_time("cam", True), decimal.Decimal
+        )
         self.assertIsInstance(cam.get_exposure_time("cam", False), float)
         self.assertIsInstance(
             cam.get_time_between_exposures("cam", True), decimal.Decimal
@@ -187,7 +191,9 @@ class TestMicroscopeCameraCallbacks(unittest.TestCase):
                 callbacks[name].assert_called_with("cam", True)
         # get_min_exposure_time takes only the name from its callback and
         # converts the result to Decimal when is_exact is set.
-        self.assertIsInstance(handler.get_min_exposure_time(is_exact=True), decimal.Decimal)
+        self.assertIsInstance(
+            handler.get_min_exposure_time(is_exact=True), decimal.Decimal
+        )
         callbacks["get_min_exposure_time"].assert_called_with("cam")
         handler.get_exposure_time()
         callbacks["get_exposure_time"].assert_called_with("cam", False)
@@ -260,7 +266,9 @@ class TestMicroscopeLaser(unittest.TestCase):
         self.assertEqual(self.power.callbacks["get_power"](), 0.5)
         # setPower runs in a new thread, so wait for the proxy write.
         self.power.callbacks["set_power"](0.25)
-        self.assertTrue(self._wait_for(lambda: self.laser._proxy.power == 0.25))
+        self.assertTrue(
+            self._wait_for(lambda: self.laser._proxy.power == 0.25)
+        )
         self.assertEqual(self.laser._proxy.power, 0.25)
 
     @staticmethod
@@ -282,11 +290,13 @@ class TestMicroscopeValueLoggerPull(unittest.TestCase):
             "vl",
             {"uri": "PYRO:vl@h:1", "pull_data": "True", "poll_interval": "5"},
         )
-        with mock.patch("Pyro4.Proxy") as proxy_cls, mock.patch.object(
-            microscope_device.value_logger, "PollingLogger"
-        ) as polling_cls, mock.patch.object(
-            microscope_device.events, "publish"
-        ) as publish:
+        with (
+            mock.patch("Pyro4.Proxy") as proxy_cls,
+            mock.patch.object(
+                microscope_device.value_logger, "PollingLogger"
+            ) as polling_cls,
+            mock.patch.object(microscope_device.events, "publish") as publish,
+        ):
             proxy = proxy_cls.return_value
             proxy.get_num_sensors.return_value = 2
             proxy.getValues.return_value = [1.0, 2.0]
@@ -296,7 +306,9 @@ class TestMicroscopeValueLoggerPull(unittest.TestCase):
             self.assertEqual(args[1], 5)
             self.assertEqual(args[2], dev.get_remote_values)
             self.assertEqual(dev.get_remote_values(), [1.0, 2.0])
-            publish.assert_any_call(microscope_device.events.VALUELOGGER_INPUT, [1.0, 2.0])
+            publish.assert_any_call(
+                microscope_device.events.VALUELOGGER_INPUT, [1.0, 2.0]
+            )
         proxy.getValues.assert_called_with()
 
 
@@ -313,11 +325,10 @@ class TestMicroscopeFilterCallbacks(unittest.TestCase):
         filt.filters = ["f0", "f1"]
         filt.cameras = []
         filt.lights = []
-        with mock.patch(
-            "cockpit.handlers.filter.FilterHandler"
-        ) as handler_cls, mock.patch(
-            "Pyro4.Proxy"
-        ) as async_proxy_cls:
+        with (
+            mock.patch("cockpit.handlers.filter.FilterHandler") as handler_cls,
+            mock.patch("Pyro4.Proxy") as async_proxy_cls,
+        ):
             filt.get_handlers()
             callbacks = handler_cls.call_args.args[3]
             self.assertEqual(callbacks["set_position"], filt.set_position)
@@ -415,9 +426,10 @@ class TestDIOOutputWindow(unittest.TestCase):
         app = wx.App(False)
         frame = None
         try:
-            with mock.patch.object(
-                microscope_device.events, "subscribe"
-            ), mock.patch.object(microscope_device.events, "publish"):
+            with (
+                mock.patch.object(microscope_device.events, "subscribe"),
+                mock.patch.object(microscope_device.events, "publish"),
+            ):
                 frame = microscope_device.DIOOutputWindow(dio, parent=None)
                 self.assertEqual(sorted(frame.line_to_button), [0, 1])
                 frame.output_changed(0, True)
@@ -439,7 +451,10 @@ class TestHandlerCleanupProtocol(unittest.TestCase):
         from cockpit.handlers import camera as handler_camera
         from cockpit.handlers import device as handler_device
 
-        for cls in (handler_device.DeviceHandler, handler_camera.CameraHandler):
+        for cls in (
+            handler_device.DeviceHandler,
+            handler_camera.CameraHandler,
+        ):
             with self.subTest(cls=cls.__name__):
                 self.assertTrue(
                     callable(getattr(cls, "cleanup_after_experiment", None))
@@ -456,8 +471,10 @@ class TestHandlerCleanupProtocol(unittest.TestCase):
         exp = experiment_mod.Experiment.__new__(experiment_mod.Experiment)
         exp.all_handlers = [handler]
         exp.initial_altitude = None
-        with mock.patch.object(experiment_mod.events, "publish") as publish, \
-                mock.patch.object(experiment_mod.gc, "collect"):
+        with (
+            mock.patch.object(experiment_mod.events, "publish") as publish,
+            mock.patch.object(experiment_mod.gc, "collect"),
+        ):
             exp.cleanup()
         handler.cleanup_after_experiment.assert_called_once_with()
         publish.assert_any_call(experiment_mod.events.CLEANUP_AFTER_EXPERIMENT)
@@ -488,14 +505,12 @@ class TestMicroscopeDIO(unittest.TestCase):
                 "paths": "{'p': [1, 0]}",
             },
         )
-        with mock.patch("Pyro4.Proxy") as proxy_cls, mock.patch(
-            "cockpit.util.listener.Listener"
-        ), mock.patch.object(
-            microscope_device.value_logger, "ValueLogger"
-        ), mock.patch.object(
-            microscope_device.events, "subscribe"
-        ), mock.patch.object(
-            microscope_device.events, "publish"
+        with (
+            mock.patch("Pyro4.Proxy") as proxy_cls,
+            mock.patch("cockpit.util.listener.Listener"),
+            mock.patch.object(microscope_device.value_logger, "ValueLogger"),
+            mock.patch.object(microscope_device.events, "subscribe"),
+            mock.patch.object(microscope_device.events, "publish"),
         ):
             proxy_cls.return_value.get_num_lines.return_value = 2
             self.dio.initialize()

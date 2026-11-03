@@ -160,7 +160,9 @@ class Nanomover(Device):
             cockpit.interfaces.stage_mover.go_to_xy(
                 self.middle_xy, should_block=True
             )
-            cockpit.interfaces.stage_mover.go_to_xy(initial_pos, should_block=True)
+            cockpit.interfaces.stage_mover.go_to_xy(
+                initial_pos, should_block=True
+            )
             print("Exercising complete. Thank you!")
 
             cockpit.util.user_config.set_value(

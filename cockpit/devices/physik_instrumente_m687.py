@@ -223,7 +223,9 @@ class PhysikInstrumenteM687(Device):
                         position, should_block=True
                     )
             cockpit.interfaces.stage_mover.go_to_xy((0, 0), should_block=True)
-            cockpit.interfaces.stage_mover.go_to_xy(initial_pos, should_block=True)
+            cockpit.interfaces.stage_mover.go_to_xy(
+                initial_pos, should_block=True
+            )
             print("Exercising complete. Thank you!")
 
             cockpit.util.user_config.set_value(
@@ -412,7 +414,10 @@ class PhysikInstrumenteM687(Device):
         # The factor of 1000 converts from microns to millimeters.
         self.send_xy_command(
             b"MOV %d %f"
-            % (self.axis_mapper[axis], self.axis_sign_mapper[axis] * pos / 1000.0)
+            % (
+                self.axis_mapper[axis],
+                self.axis_sign_mapper[axis] * pos / 1000.0,
+            )
         )
         self.send_xy_position_updates()
 
@@ -549,7 +554,8 @@ class PhysikInstrumenteM687(Device):
             print(items)
             start, end, (box_start, box_end), desire = items
             assert (
-                self.do_boxes_intersect(start, end, (box_start, box_end)) == desire
+                self.do_boxes_intersect(start, end, (box_start, box_end))
+                == desire
             )
             s1, s2 = start
             e1, e2 = end

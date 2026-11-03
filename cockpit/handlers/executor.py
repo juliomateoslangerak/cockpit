@@ -70,7 +70,14 @@ from cockpit.handlers.generic_positioner import GenericPositionerHandler
 class ExecutorHandler(DeviceHandler):
     """This handler is responsible for executing portions of experiments."""
 
-    def __init__(self, name, group_name, callbacks, digital_lines=None, analog_lines=None):
+    def __init__(
+        self,
+        name,
+        group_name,
+        callbacks,
+        digital_lines=None,
+        analog_lines=None,
+    ):
         """Set up the executor handler.
 
         callbacks must include the following:
@@ -144,7 +151,9 @@ class ExecutorHandler(DeviceHandler):
     def _raise_no_analog_exception(self, *args, **kwargs):
         raise Exception("Analog lines not supported.")
 
-    def execute_table(self, table, start_index, stop_index, num_reps, rep_duration):
+    def execute_table(
+        self, table, start_index, stop_index, num_reps, rep_duration
+    ):
         """Run a portion of a table describing the actions to perform in a
         given experiment.
 
@@ -167,7 +176,10 @@ class ExecutorHandler(DeviceHandler):
         else:
             digital_state = None
         if isinstance(self, AnalogMixin):
-            analog_state = [self.get_analog_line(line) for line in range(self._analog_lines)]
+            analog_state = [
+                self.get_analog_line(line)
+                for line in range(self._analog_lines)
+            ]
         else:
             analog_state = None
 
@@ -187,7 +199,9 @@ class ExecutorHandler(DeviceHandler):
                     pos = line_handler.indexed_position(*args)
                 else:
                     pos = args
-                analog_state[line_handler.line] = line_handler.pos_to_native(pos)
+                analog_state[line_handler.line] = line_handler.pos_to_native(
+                    pos
+                )
             elif h in self.digital_clients:
                 # set/clear appropriate bit
                 change = 1 << self.digital_clients[h]
@@ -195,7 +209,9 @@ class ExecutorHandler(DeviceHandler):
                 if args:
                     digital_state |= change
                 else:
-                    digital_state = digital_state & (2 ** self._digital_lines - 1) - (change)
+                    digital_state = digital_state & (
+                        2**self._digital_lines - 1
+                    ) - (change)
 
             # Check for simultaneous actions.
             if t_prev is not None and t == t_prev:
@@ -289,7 +305,9 @@ class DigitalMixin:
             if state:
                 new_state = old_state | 1 << line
             else:
-                new_state = old_state & (2**self._digital_lines - 1) - (1 << line)
+                new_state = old_state & (2**self._digital_lines - 1) - (
+                    1 << line
+                )
             self.write_digital(new_state)
 
     def write_digital(self, state):
@@ -311,7 +329,7 @@ class DigitalMixin:
         return list(
             filter(
                 lambda h: h.device_type == depot.LIGHT_TOGGLE
-                          and h.get_is_enabled(),
+                and h.get_is_enabled(),
                 self.digital_clients,
             )
         )
@@ -460,7 +478,14 @@ class AnalogMixin:
 
 class AnalogLineHandler(GenericPositionerHandler):
     def __init__(
-        self, name, group_name, analog_source, line, offset, gain, movement_time_func
+        self,
+        name,
+        group_name,
+        analog_source,
+        line,
+        offset,
+        gain,
+        movement_time_func,
     ):
         """A type of GenericPositioner for analog outputs.
 
@@ -481,8 +506,10 @@ class AnalogLineHandler(GenericPositionerHandler):
         self._saved_pos = None
         # Set up callbacks used by GenericPositionHandler methods.
         self.callbacks = {}
-        self.callbacks["move_absolute"] = lambda pos: analog_source.set_analog_line(
-            line, self.pos_to_native(pos)
+        self.callbacks["move_absolute"] = (
+            lambda pos: analog_source.set_analog_line(
+                line, self.pos_to_native(pos)
+            )
         )
         self.callbacks["get_position"] = lambda: self.native_to_pos(
             analog_source.get_analog_line(line)
@@ -506,7 +533,9 @@ class AnalogLineHandler(GenericPositionerHandler):
         self.move_absolute(self._saved_pos)
 
     def move_relative(self, delta):
-        self.callbacks["move_absolute"](self.callbacks["get_position"]() + delta)
+        self.callbacks["move_absolute"](
+            self.callbacks["get_position"]() + delta
+        )
 
     def pos_to_native(self, pos):
         return self.gain * (self.offset + pos)
@@ -690,7 +719,9 @@ class SimpleExecutor(DeviceHandler):
     """A class for a handler that can perform actions in an experiment, but
     doesn't have any analog or digital capabilities."""
 
-    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
+    def __init__(
+        self, name, group_name, is_eligible_for_experiments, callbacks
+    ):
         super().__init__(
             name,
             group_name,
@@ -705,7 +736,9 @@ class SimpleExecutor(DeviceHandler):
                 cb = lambda *args, **kwargs: cb
             self.__setattr__(cb_name, cb)
 
-    def execute_table(self, table, start_index, stop_index, num_reps, rep_duration):
+    def execute_table(
+        self, table, start_index, stop_index, num_reps, rep_duration
+    ):
         """Execute whatever the device does and publish an event on completion."""
         self.callbacks["execute_table"](
             table, start_index, stop_index, num_reps, rep_duration
@@ -743,16 +776,22 @@ class TriggerProxy(DeviceHandler):
 
 
 class DelegateTrigger(SimpleExecutor):
-    def __init__(self, name, group_name, is_eligible_for_experiments, callbacks):
+    def __init__(
+        self, name, group_name, is_eligible_for_experiments, callbacks
+    ):
         """def __init__(self, name, group_name, trig_source, trig_line,
         examine_actions, movementTime=0):."""
-        super().__init__(name, group_name, is_eligible_for_experiments, callbacks)
+        super().__init__(
+            name, group_name, is_eligible_for_experiments, callbacks
+        )
         self._trigger = None
         self._trigger_time = 0
         self._response_time = 0
         self.trigger_now = lambda: None
 
-    def delegate_to(self, trig_source, trig_line, trig_time=0, response_time=0):
+    def delegate_to(
+        self, trig_source, trig_line, trig_time=0, response_time=0
+    ):
         """Delegate trigger actions to some trig_source."""
         if isinstance(trig_source, str):
             trig_source = depot.get_handler(trig_source, depot.EXECUTOR)

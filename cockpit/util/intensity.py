@@ -99,10 +99,10 @@ class IntensityProfiler:
             # Use a the fifth of the data around the bead, or to edge of dataset.
             data_subset = self._data[
                 :,
-                max(0, int(peaky - half_width)): min(
+                max(0, int(peaky - half_width)) : min(
                     int(ny), int(peaky + half_width)
                 ),
-                max(0, int(peakx - half_width)): min(
+                max(0, int(peakx - half_width)) : min(
                     int(nx), int(peakx + half_width)
                 ),
             ]
@@ -116,7 +116,9 @@ class IntensityProfiler:
                 ]
             )
             phase_arr = np.sum(np.sum(data_subset - bkg, axis=2), axis=1)
-            phase_arr = np.reshape(phase_arr, (-1, n_phases)).astype(np.float32)
+            phase_arr = np.reshape(phase_arr, (-1, n_phases)).astype(
+                np.float32
+            )
             sep_arr = np.dot(self.sepmatrix(), phase_arr.transpose())
             mag = np.zeros((n_phases // 2 + 1, nz // n_phases)).astype(
                 np.float32
@@ -402,7 +404,9 @@ class IntensityProfilerFrame(wx.Frame):
         # raw data is a feature of the bead, or due to noise.
         avg_y = self.profiler.results["avg"][1:]
         avg_x = np.arange(len(avg_y)) * (self.profiler.z_delta or 1)
-        avg = plot.PolyLine(list(zip(avg_x, avg_y)), colour="red", style=wx.DOT)
+        avg = plot.PolyLine(
+            list(zip(avg_x, avg_y)), colour="red", style=wx.DOT
+        )
         # First order.
         first_y = self.profiler.results["mag"][1, 1:]
         first_x = np.arange(len(first_y)) * (self.profiler.z_delta or 1)

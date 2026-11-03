@@ -81,7 +81,12 @@ class NdarrayInMrcFile(np.ndarray):
 
 class Mrc:
     def __init__(
-        self, path, mode="r", ext_hdr_size=0, ext_hdr_nints=0, ext_hdr_nfloats=0
+        self,
+        path,
+        mode="r",
+        ext_hdr_size=0,
+        ext_hdr_nints=0,
+        ext_hdr_nfloats=0,
     ):
         """mode can be 'r' or 'r+'"""
         import os
@@ -164,7 +169,9 @@ class Mrc:
             ("float", "%s%df4" % (byteorder, self.num_floats)),
         ]
 
-        self.ext_hdr_array = np.recarray(shape=nz, dtype=type_descr, buf=self.e)
+        self.ext_hdr_array = np.recarray(
+            shape=nz, dtype=type_descr, buf=self.e
+        )
         if self.is_byte_swapped:
             self.ext_hdr_array = self.ext_hdr_array.newbyteorder()
 
@@ -563,7 +570,10 @@ class Mrc2:
         self.hdr = implement_hdr(hdr_array)
 
         self._nz_before_byte_order = self.hdr.Num[0]
-        if self._nz_before_byte_order < 0 or self._nz_before_byte_order > 10000:
+        if (
+            self._nz_before_byte_order < 0
+            or self._nz_before_byte_order > 10000
+        ):
             self.hdr._array.dtype = self.hdr._array.dtype.newbyteorder()
             self._file_is_byte_swapped = True
 
@@ -571,12 +581,12 @@ class Mrc2:
         self._ext_hdr_num_ints = self.hdr.NumIntegers
         self._ext_hdr_num_floats = self.hdr.NumFloats
         self._ext_hdr_bytes_per_sec = (
-                                          self._ext_hdr_num_ints + self._ext_hdr_num_floats
+            self._ext_hdr_num_ints + self._ext_hdr_num_floats
         ) * 4
         self._data_offset = self._hdr_size + self._ext_hdr_size
 
         if self._ext_hdr_size > 0 and (
-                self._ext_hdr_num_ints > 0 or self._ext_hdr_num_floats > 0
+            self._ext_hdr_num_ints > 0 or self._ext_hdr_num_floats > 0
         ):
             n_secs = self._ext_hdr_size // self._ext_hdr_bytes_per_sec
             byteorder = "="
@@ -612,7 +622,7 @@ class Mrc2:
         self._ext_hdr_num_ints = self.hdr.NumIntegers = num_ints
         self._ext_hdr_num_floats = self.hdr.NumFloats = num_floats
         self._ext_hdr_bytes_per_sec = (
-                                          self._ext_hdr_num_ints + self._ext_hdr_num_floats
+            self._ext_hdr_num_ints + self._ext_hdr_num_floats
         ) * 4
 
         if n_secs is None:
@@ -624,7 +634,7 @@ class Mrc2:
         self._data_offset = self._hdr_size + self._ext_hdr_size
 
         if self._ext_hdr_size > 0 and (
-                self._ext_hdr_num_ints > 0 or self._ext_hdr_num_floats > 0
+            self._ext_hdr_num_ints > 0 or self._ext_hdr_num_floats > 0
         ):
             n_secs = self._ext_hdr_size // self._ext_hdr_bytes_per_sec
             byteorder = "="

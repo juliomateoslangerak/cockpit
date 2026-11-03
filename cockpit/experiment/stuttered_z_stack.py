@@ -91,7 +91,8 @@ class StutteredZStackExperiment(z_stack.ZStackExperiment):
 
     def execute(self):
         """Call Experiment.execute() repeatedly, while varying self.num_reps and
-        self.rep_duration so that we do the right sequence with the right timings."""
+        self.rep_duration so that we do the right sequence with the right timings.
+        """
         # HACK: replace self.num_reps since it's used in Experiment.execute(),
         # which we will be calling from within this function. We'll handle
         # reps more directly.

@@ -182,7 +182,7 @@ class ExperimentConfigPanel(wx.Panel):
             label="Rep duration (s):",
             default_value=self.settings["rep_duration"],
             helper_string="Amount of time that must pass between the start "
-                          + "of each rep. Use 0 if you don't want any wait time.",
+            + "of each rep. Use 0 if you don't want any wait time.",
         )
         self.rep_duration.SetValidator(gui_utils.FLOATVALIDATOR)
 
@@ -224,7 +224,9 @@ class ExperimentConfigPanel(wx.Panel):
             panel.Hide()
             self.sizer.Add(panel)
             self.experiment_module_to_panel[module] = panel
-        self.experiment_type.Bind(wx.EVT_CHOICE, self.on_experiment_type_choice)
+        self.experiment_type.Bind(
+            wx.EVT_CHOICE, self.on_experiment_type_choice
+        )
         self.on_experiment_type_choice()
 
         # Section for exposure settings. We allow either setting per-laser
@@ -278,11 +280,15 @@ class ExperimentConfigPanel(wx.Panel):
                 "Use the same settings as are currently used to take images with the '+' button"
             )
         )
-        use_current_button.Bind(wx.EVT_BUTTON, self.on_use_current_exposure_settings)
+        use_current_button.Bind(
+            wx.EVT_BUTTON, self.on_use_current_exposure_settings
+        )
         simultaneous_sizer.Add(use_current_button)
 
         self.simultaneous_exposure_panel.SetSizerAndFit(simultaneous_sizer)
-        exposure_sizer.Add(self.simultaneous_exposure_panel, 0, wx.ALL, border=5)
+        exposure_sizer.Add(
+            self.simultaneous_exposure_panel, 0, wx.ALL, border=5
+        )
 
         ## Panel for when we expose each camera in sequence.
         self.sequenced_exposure_panel = wx.Panel(
@@ -346,12 +352,16 @@ class ExperimentConfigPanel(wx.Panel):
 
         for channel in self.channels.names:
             # Checkboxes to activate channels
-            channel_check_box = wx.CheckBox(self.channel_exposure_panel, label="")
+            channel_check_box = wx.CheckBox(
+                self.channel_exposure_panel, label=""
+            )
             self.channels_checked[channel] = channel_check_box
             channel_sizer.Add(
                 channel_check_box, flag=wx.ALL | wx.EXPAND, border=2
             )
-            channel_check_box.Bind(wx.EVT_CHECKBOX, self.on_channel_check_box_toggle)
+            channel_check_box.Bind(
+                wx.EVT_CHECKBOX, self.on_channel_check_box_toggle
+            )
 
             # Channel labels
             channel_label = wx.StaticText(
@@ -710,9 +720,13 @@ class ExperimentConfigPanel(wx.Panel):
         z_height = gui_utils.try_parse_num(self.stack_height, float)
         if self.z_position_mode.GetStringSelection() == "Current is center":
             alt_bottom = altitude - z_height / 2
-        elif self.z_position_mode.GetStringSelection() == "Use saved top/bottom":
+        elif (
+            self.z_position_mode.GetStringSelection() == "Use saved top/bottom"
+        ):
             alt_bottom = cockpit.interfaces.stage_mover.mover.saved_bottom
-            z_height = cockpit.interfaces.stage_mover.mover.saved_top - alt_bottom
+            z_height = (
+                cockpit.interfaces.stage_mover.mover.saved_top - alt_bottom
+            )
 
         slice_height = gui_utils.try_parse_num(self.slice_height, float)
         if z_height == 0:
@@ -742,7 +756,9 @@ class ExperimentConfigPanel(wx.Panel):
         module = self.experiment_string_to_module[experiment_type]
         if module in self.experiment_module_to_panel:
             # Add on the special parameters needed by this experiment type.
-            params = self.experiment_module_to_panel[module].augment_params(params)
+            params = self.experiment_module_to_panel[module].augment_params(
+                params
+            )
 
         self.runner = module.EXPERIMENT_CLASS(**params)
         return self.runner.run()

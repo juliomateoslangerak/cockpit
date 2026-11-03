@@ -146,12 +146,12 @@ class MultiSiteExperimentDialog(wx.Dialog):
             size=FIELD_SIZE,
             min_size=CONTROL_SIZE,
             helper_string="Minimum amount of time to pass between each cycle. If the "
-                          + "cycle finishes early, then I will wait until this much "
-                          + "time has passed. You can enter multiple values here "
-                          + "separated by commas; I will then use each wait time in "
-                          + 'sequence; e.g. "60,120,180" means the first '
-                          + "cycle takes one minute, the second two, the third three, "
-                          + "the fourth one, the fifth two, and so on.",
+            + "cycle finishes early, then I will wait until this much "
+            + "time has passed. You can enter multiple values here "
+            + "separated by commas; I will then use each wait time in "
+            + 'sequence; e.g. "60,120,180" means the first '
+            + "cycle takes one minute, the second two, the third three, "
+            + "the fourth one, the fifth two, and so on.",
         )
 
         self.delay_before_starting = gui_utils.add_labeled_input(
@@ -162,9 +162,9 @@ class MultiSiteExperimentDialog(wx.Dialog):
             size=FIELD_SIZE,
             min_size=CONTROL_SIZE,
             helper_string="Amount of time to wait before starting the experiment. "
-                          + "This is useful if you have a lengthy period to wait for "
-                          + "your cells to reach the stage you're interested in, for "
-                          + "example.",
+            + "This is useful if you have a lengthy period to wait for "
+            + "your cells to reach the stage you're interested in, for "
+            + "example.",
         )
 
         self.delay_before_imaging = gui_utils.add_labeled_input(
@@ -175,8 +175,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             size=FIELD_SIZE,
             min_size=CONTROL_SIZE,
             helper_string="Amount of time to wait after moving to a site before "
-                          + "I start imaging the site. This is mostly useful if "
-                          + "your stage needs time to stabilize after moving.",
+            + "I start imaging the site. This is mostly useful if "
+            + "your stage needs time to stabilize after moving.",
         )
 
         controls_sizer.Add(column_sizer, 0, wx.ALL, 5)
@@ -199,7 +199,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 border=3,
                 flags=wx.ALL,
                 helper_string="If checked, then at the end of the experiment, I will "
-                              + "power down all the devices I can.",
+                + "power down all the devices I can.",
             )
 
         self.should_optimize_site_order = gui_utils.add_labeled_input(
@@ -212,8 +212,8 @@ class MultiSiteExperimentDialog(wx.Dialog):
             border=3,
             flags=wx.ALL,
             helper_string="If checked, then I will calculate an ordering of the sites "
-                          + "that will minimize the total time spent in transit; "
-                          + "otherwise, I will use the order you specify.",
+            + "that will minimize the total time spent in transit; "
+            + "otherwise, I will use the order you specify.",
         )
 
         self.should_customize_light_frequencies = gui_utils.add_labeled_input(
@@ -226,12 +226,12 @@ class MultiSiteExperimentDialog(wx.Dialog):
             border=3,
             flags=wx.ALL,
             helper_string="This allows you to set up experiments where different "
-                          + "light sources are enabled for different cycles. If you "
-                          + "set a frequency of 5 for a given light, for example, "
-                          + "then that light will only be used for every 5th pass "
-                          + "(the 1st, 6th, 11th, etc. cycles). You can specify an "
-                          + 'offset, too: "5 + 1" would enable the light for the '
-                          + "2nd, 7th, 12th, etc. cycles.",
+            + "light sources are enabled for different cycles. If you "
+            + "set a frequency of 5 for a given light, for example, "
+            + "then that light will only be used for every 5th pass "
+            + "(the 1st, 6th, 11th, etc. cycles). You can specify an "
+            + 'offset, too: "5 + 1" would enable the light for the '
+            + "2nd, 7th, 12th, etc. cycles.",
         )
         self.should_customize_light_frequencies.Bind(
             wx.EVT_CHECKBOX, self.on_customize_light_frequencies
@@ -339,7 +339,11 @@ class MultiSiteExperimentDialog(wx.Dialog):
         for i, item in enumerate(self.panel_sizer.GetChildren()):
             if item.GetWindow() is self.show_scan_button:
                 self.panel_sizer.Insert(
-                    i + 1, self.experiment_panel, 0, wx.ALIGN_CENTER | wx.ALL, 5
+                    i + 1,
+                    self.experiment_panel,
+                    0,
+                    wx.ALIGN_CENTER | wx.ALL,
+                    5,
                 )
         self.panel_sizer.Layout()
         self.Refresh()
@@ -379,7 +383,9 @@ class MultiSiteExperimentDialog(wx.Dialog):
                     sites_list.append(site_id)
             if self.should_optimize_site_order.GetValue():
                 cycle_num_to_sites_list.append(
-                    cockpit.interfaces.stage_mover.optimised_site_order(sites_list)
+                    cockpit.interfaces.stage_mover.optimised_site_order(
+                        sites_list
+                    )
                 )
             else:
                 cycle_num_to_sites_list.append(sites_list)
@@ -487,7 +493,9 @@ class MultiSiteExperimentDialog(wx.Dialog):
             self.should_power_down_when_done is not None
             and self.should_power_down_when_done.GetValue()
         ):
-            handlers = wx.GetApp().depot.get_handlers_of_type(depot.POWER_CONTROL)
+            handlers = wx.GetApp().depot.get_handlers_of_type(
+                depot.POWER_CONTROL
+            )
             for handler in handlers:
                 handler.disable()
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")

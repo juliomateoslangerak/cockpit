@@ -75,8 +75,8 @@ class OpenShutterSweepExperiment(experiment.Experiment):
             table.add_action(cur_time, self.z_positioner, 0)
             # Ensure our exposure is at least as long as the time needed to
             # move through the sample.
-            motion_time, stabilization_time = self.z_positioner.get_movement_time(
-                0, self.z_height
+            motion_time, stabilization_time = (
+                self.z_positioner.get_movement_time(0, self.z_height)
             )
             # Image the sample.
             cur_time = self.expose(cur_time, cameras, light_time_pairs, table)
@@ -86,8 +86,8 @@ class OpenShutterSweepExperiment(experiment.Experiment):
             cur_time += stabilization_time
             # Move back to the start so we're ready for the next set of cameras
             # or the next rep.
-            motion_time, stabilization_time = self.z_positioner.get_movement_time(
-                self.z_height, 0
+            motion_time, stabilization_time = (
+                self.z_positioner.get_movement_time(self.z_height, 0)
             )
             cur_time += motion_time
             table.add_action(cur_time, self.z_positioner, 0)
@@ -100,7 +100,9 @@ class OpenShutterSweepExperiment(experiment.Experiment):
                     for camera in cameras:
                         cameraReadyTime = max(
                             cameraReadyTime,
-                            self.get_time_when_camera_can_expose(table, camera),
+                            self.get_time_when_camera_can_expose(
+                                table, camera
+                            ),
                         )
                 table.add_action(
                     max(cur_time + stabilization_time, cameraReadyTime),

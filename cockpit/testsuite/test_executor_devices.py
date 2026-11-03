@@ -35,10 +35,14 @@ class TestAdaptActions(unittest.TestCase):
         dev = _AdaptingExecutor("executor", {})
         dev.connection = mock.MagicMock()
         table = [(0.0, (1, [0, 0])), (1.0, (0, [0, 0]))]
-        with mock.patch.object(executor_devices.events, "publish"), \
-                mock.patch.object(executor_devices.events, "execute_and_wait_for"):
+        with (
+            mock.patch.object(executor_devices.events, "publish"),
+            mock.patch.object(executor_devices.events, "execute_and_wait_for"),
+        ):
             dev.execute_table(table, 0, 2, 1, None)
-        dev.connection.PrepareActions.assert_called_once_with(["adapted", 2], 1)
+        dev.connection.PrepareActions.assert_called_once_with(
+            ["adapted", 2], 1
+        )
 
 
 class TestNIcRIOAdaptActions(unittest.TestCase):
@@ -82,14 +86,18 @@ class TestLegacyDSPProtocol(unittest.TestCase):
         self.dev._current_analogs = [1, 2, 3, 4]
         self.dev.connection.ReadDigital.return_value = 7
         self.dev.on_prepare_for_experiment()
-        self.dev.connection.receiveClient.assert_called_once_with("PYRO:receiver")
+        self.dev.connection.receiveClient.assert_called_once_with(
+            "PYRO:receiver"
+        )
         self.assertEqual(self.dev._last_analogs, [1, 2, 3, 4])
         self.assertEqual(self.dev._last_digital, 7)
 
     def test_execute_table_builds_profile(self):
         table = [(0.0, (1, [0, 0, 0, 0])), (1.0, (0, [10, 0, 0, 0]))]
-        with mock.patch.object(executor_devices.events, "publish"), \
-                mock.patch.object(executor_devices.events, "execute_and_wait_for"):
+        with (
+            mock.patch.object(executor_devices.events, "publish"),
+            mock.patch.object(executor_devices.events, "execute_and_wait_for"),
+        ):
             self.dev.execute_table(table, 0, 2, 1, None)
         description = self.dev._last_profile[0]
         self.assertEqual(description["count"], 10)
@@ -118,7 +126,9 @@ class TestNIcRIOExperimentDone(unittest.TestCase):
         dev.name = "cRIO"
         with mock.patch.object(ni_crio_fpga.events, "publish") as publish:
             dev.experiment_done()
-        publish.assert_called_once_with(ni_crio_fpga.events.EXECUTOR_DONE % "cRIO")
+        publish.assert_called_once_with(
+            ni_crio_fpga.events.EXECUTOR_DONE % "cRIO"
+        )
 
 
 class TestExecutorDeviceDebugMethods(unittest.TestCase):
@@ -147,10 +157,14 @@ class TestNIcRIORunSequence(unittest.TestCase):
         dev.tickrate = 10
         dev.connection = mock.MagicMock()
         dev.run_sequence([(0.0, 1), (1.5, 0)])
-        dev.connection.run_sequence_on_fpga.assert_called_once_with([(0, 1), (15, 0)])
+        dev.connection.run_sequence_on_fpga.assert_called_once_with(
+            [(0, 1), (15, 0)]
+        )
 
     def test_connection_run_sequence_renamed_and_wire_key_unchanged(self):
-        self.assertTrue(hasattr(ni_crio_fpga.Connection, "run_sequence_on_fpga"))
+        self.assertTrue(
+            hasattr(ni_crio_fpga.Connection, "run_sequence_on_fpga")
+        )
         self.assertFalse(hasattr(ni_crio_fpga.NIcRIO, "runSequence"))
         self.assertTrue(hasattr(ni_crio_fpga.NIcRIO, "run_sequence"))
         conn = ni_crio_fpga.Connection(None, "127.0.0.1", [1, 2], "127.0.0.1")
@@ -236,7 +250,9 @@ class TestNIcRIOConnectionFPGACommands(unittest.TestCase):
             int(np.binary_repr(t, 32) + np.binary_repr(d, 32), 2)
             for t, d in sequence
         ]
-        expected = "".join(str(value).rjust(20, "0") for value in packed).encode()
+        expected = "".join(
+            str(value).rjust(20, "0") for value in packed
+        ).encode()
         self.conn.connection.sendall.assert_called_once_with(expected)
 
     def test_fpga_status_feeds_analog_digital_and_idle_reads(self):

@@ -191,7 +191,9 @@ class LinkamStage(MicroscopeBase, Device):
         self.status_thread = threading.Thread(
             target=self.poll_status, name="Linkam-status"
         )
-        events.subscribe(events.COCKPIT_INIT_COMPLETE, self.status_thread.start)
+        events.subscribe(
+            events.COCKPIT_INIT_COMPLETE, self.status_thread.start
+        )
 
     def poll_status(self):
         """Fetch the status from the remote and update the UI.

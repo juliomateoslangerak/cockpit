@@ -314,7 +314,9 @@ def execute_and_wait_for(event_type: str, func: _Subscriber, *args, **kwargs):
     """Call the specified function with the provided arguments, and then wait
     for the named event to occur.
     """
-    return execute_and_wait_for_or_timeout(event_type, func, None, *args, **kwargs)
+    return execute_and_wait_for_or_timeout(
+        event_type, func, None, *args, **kwargs
+    )
 
 
 def execute_and_wait_for_or_timeout(

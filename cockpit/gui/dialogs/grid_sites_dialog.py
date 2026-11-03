@@ -153,7 +153,9 @@ class GridSitesDialog(wx.Dialog):
         for x_offset in range(int(self.num_columns.GetValue())):
             x_location = cur_location[0] - x_offset * pixel_size * image_width
             for y_offset in range(int(self.num_rows.GetValue())):
-                y_location = cur_location[1] - y_offset * pixel_size * image_height
+                y_location = (
+                    cur_location[1] - y_offset * pixel_size * image_height
+                )
                 target = np.array([x_location, y_location, cur_location[2]])
                 new_site = cockpit.interfaces.stage_mover.Site(
                     target, size=marker_size

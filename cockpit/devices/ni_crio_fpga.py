@@ -459,7 +459,9 @@ class Connection:
         """
         new_count = [new_count]
 
-        self.run_command(self.command_dict["updateNrReps"], new_count, msg_length)
+        self.run_command(
+            self.command_dict["updateNrReps"], new_count, msg_length
+        )
 
     def send_tables(
         self,
@@ -505,7 +507,9 @@ class Connection:
                 )
                 analogue_list.append(analogue_value)
 
-            command = int(self.command_dict["sendAnalogues"]) + analogue_channel
+            command = (
+                int(self.command_dict["sendAnalogues"]) + analogue_channel
+            )
             self.run_command(command, analogue_list, msg_length)
             analogue_channel = analogue_channel + 1
 
@@ -623,7 +627,9 @@ class Connection:
         line = "Analogue " + str(line)
         return self.status.get_status(line)
 
-    def MoveAbsolute(self, analogue_channel, analogue_value_adu, msg_length=20):
+    def MoveAbsolute(
+        self, analogue_channel, analogue_value_adu, msg_length=20
+    ):
         """Changes an analogue_channel output to the specified analogue_value_adu value
 
         analogue_value_adu is taken as a raw 16 or 32bit value
@@ -631,7 +637,9 @@ class Connection:
         msg_length is an int indicating the max length of the analogue as a decimal string
         """
         analogue = [analogue_channel, int(analogue_value_adu)]
-        self.run_command(self.command_dict["writeAnalogue"], analogue, msg_length)
+        self.run_command(
+            self.command_dict["writeAnalogue"], analogue, msg_length
+        )
         while self.ReadPosition(analogue[0]) != analogue[1]:
             time.sleep(0.01)
         return
@@ -675,7 +683,9 @@ class Connection:
         msg_length -- int indicating the length of num_reps and rep_duration as decimal strings
         """
         self.run_command(
-            self.command_dict["initProfile"], [num_reps, rep_duration], msg_length
+            self.command_dict["initProfile"],
+            [num_reps, rep_duration],
+            msg_length,
         )
 
     def get_frame_data(self):
@@ -693,11 +703,15 @@ class Connection:
         send_list = list()
         for t, d in time_digital_sequence:
             # binarize and concatenate time and digital value
-            value = np.binary_repr(t, 32) + np.binary_repr(d, digitals_bit_depth)
+            value = np.binary_repr(t, 32) + np.binary_repr(
+                d, digitals_bit_depth
+            )
             value = int(value, 2)
             send_list.append(value)
 
-        self.run_command(self.command_dict["runSequence"], send_list, msg_length)
+        self.run_command(
+            self.command_dict["runSequence"], send_list, msg_length
+        )
 
 
 class FPGAStatus(threading.Thread):

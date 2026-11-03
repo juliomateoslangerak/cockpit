@@ -132,10 +132,14 @@ class MosaicCommon:
         else:
             # IMD 20150306 Save current mover, change to coarse to generate mosaic
             # do move, and change mover back.
-            original_mover = cockpit.interfaces.stage_mover.mover.cur_handler_index
+            original_mover = (
+                cockpit.interfaces.stage_mover.mover.cur_handler_index
+            )
             cockpit.interfaces.stage_mover.mover.cur_handler_index = 0
             cockpit.interfaces.stage_mover.go_to_xy(target, should_block)
-            cockpit.interfaces.stage_mover.mover.cur_handler_index = original_mover
+            cockpit.interfaces.stage_mover.mover.cur_handler_index = (
+                original_mover
+            )
 
     def draw_overlay(self):
         """Draw the overlay.
@@ -195,7 +199,10 @@ class MosaicCommon:
             glEnd()
 
         # If we're selecting tiles, draw the box the user is selecting.
-        if self.select_tiles_func is not None and self.last_click_pos is not None:
+        if (
+            self.select_tiles_func is not None
+            and self.last_click_pos is not None
+        ):
             start = self.canvas.map_screen_to_canvas(self.last_click_pos)
             end = self.canvas.map_screen_to_canvas(self.prev_mouse_pos)
             glColor3f(0, 0, 1)
@@ -607,7 +614,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.should_restart = True
 
     def make_button(
-        self, parent, label, left_action, right_action, help_text, size=(-1, -1)
+        self,
+        parent,
+        label,
+        left_action,
+        right_action,
+        help_text,
+        size=(-1, -1),
     ):
         """Create a button with the appropriate properties."""
         button = wx.Button(parent, -1, label, size=size)
@@ -629,7 +642,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         # \todo Should we necessarily assume a 512x512 area here?
         # if we haven't previously set crosshair_box_size (maybe no camera active)
         if self.crosshair_box_size == 0:
-            self.crosshair_box_size = 512 * wx.GetApp().objectives.get_pixel_size()
+            self.crosshair_box_size = (
+                512 * wx.GetApp().objectives.get_pixel_size()
+            )
         self.offset = wx.GetApp().objectives.get_offset()
         scale = 150.0 / self.crosshair_box_size
         self.canvas.zoom_to(
@@ -646,7 +661,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         if axis in [0, 1]:
             # Only care about the X and Y axes.
             # append new position
-            self.trails.append(cockpit.interfaces.stage_mover.get_position()[:2])
+            self.trails.append(
+                cockpit.interfaces.stage_mover.get_position()[:2]
+            )
             wx.CallAfter(self.canvas.Refresh)
 
     def _on_objective_changed(self, event: wx.CommandEvent) -> None:
@@ -714,7 +731,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     # Invert the scaling direction.
                     multiplier = 2 - multiplier
                     delta *= -1
-                self.canvas.zoom_at_point(multiplier ** delta, mouse_pos)
+                self.canvas.zoom_at_point(multiplier**delta, mouse_pos)
         if event.RightDown():
             # Display a context menu.
             menu = wx.Menu()
@@ -746,7 +763,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             )
             menu_id += 1
             menu.Append(menu_id, "Clear old trails")
-            self.Bind(wx.EVT_MENU, lambda event: self.clear_trails(), id=menu_id)
+            self.Bind(
+                wx.EVT_MENU, lambda event: self.clear_trails(), id=menu_id
+            )
 
             cockpit.gui.gui_utils.place_menu_at_mouse(self, menu)
 
@@ -798,7 +817,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         should start a new spiral if the stage has moved."""
         if axis == 2:
             return
-        events.unsubscribe(events.STAGE_POSITION, self.on_stage_move_when_paused)
+        events.unsubscribe(
+            events.STAGE_POSITION, self.on_stage_move_when_paused
+        )
         self.should_restart = True
 
     def generate_mosaic(self, camera):
@@ -903,8 +924,8 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # Get the scaling for the camera we're using, since they may
             # have changed.
             try:
-                min_val, max_val = cockpit.gui.camera.window.get_camera_scaling(
-                    camera
+                min_val, max_val = (
+                    cockpit.gui.camera.window.get_camera_scaling(camera)
                 )
                 # HACK: If this is the first image being acquired the
                 # viewCanvas has not yet set the scaling.  Its default
@@ -1140,10 +1161,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         to our focal plane parameters."""
         center, normal = self.focal_plane_params
         point = np.array(point)
-        z = (
-            -np.dot(normal[:2], point[:2] - center[:2]) / normal[2]
-            + center[2]
-        )
+        z = -np.dot(normal[:2], point[:2] - center[:2]) / normal[2] + center[2]
         return z
 
     def on_select_site(self, event=None):
@@ -1281,7 +1299,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             self.should_continue.clear()
             return
 
-        self.show_camera_menu("Make mosaic with %s camera", self.generate_mosaic)
+        self.show_camera_menu(
+            "Make mosaic with %s camera", self.generate_mosaic
+        )
 
     def continue_mosaic(self):
         """Force continuation of mosaic after stage move."""
@@ -1323,7 +1343,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     def on_delete_tiles(self, event=None, should_force_stop=None):
         """User clicked the "delete tiles" button; start/stop deleting tiles."""
-        am_deleting = "Stop" not in self.name_to_button["Delete tiles"].GetLabel()
+        am_deleting = (
+            "Stop" not in self.name_to_button["Delete tiles"].GetLabel()
+        )
         if should_force_stop:
             am_deleting = False
         label = ["Delete tiles", "Stop deleting"][am_deleting]
@@ -1360,7 +1382,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def rescale_with_camera(self, camera):
         """Given a camera handler, rescale the mosaic tiles based on that
         camera's display's black- and white-points."""
-        self.canvas.rescale(cockpit.gui.camera.window.get_camera_scaling(camera))
+        self.canvas.rescale(
+            cockpit.gui.camera.window.get_camera_scaling(camera)
+        )
 
     def save_mosaic(self, event=None):
         """Save the mosaic to disk.
@@ -1479,7 +1503,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     # the bead's pixels.
                     x_dists = [(x - xi) ** 2 for xi in x_vals]
                     y_dists = [(y - yi) ** 2 for yi in y_vals]
-                    max_dist_squared = max(map(sum, list(zip(x_dists, y_dists))))
+                    max_dist_squared = max(
+                        map(sum, list(zip(x_dists, y_dists)))
+                    )
                     # Area of a circle containing all pixels
                     area = np.pi * max_dist_squared
                     # Reject beads whose area is less than 60% of the area of

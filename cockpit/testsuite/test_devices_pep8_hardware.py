@@ -73,9 +73,7 @@ class TestStanfordShutter(unittest.TestCase):
 
     def test_cleanup_after_experiment_asserts_closed_first(self):
         self.dev.on_cleanup_after_experiment()
-        self.assertEqual(
-            self.sent, ["ASRT 0", "POLR 0", "SRCE 2", "ENAB 1"]
-        )
+        self.assertEqual(self.sent, ["ASRT 0", "POLR 0", "SRCE 2", "ENAB 1"])
 
     def test_prepare_for_experiment_enables_trigger(self):
         self.dev.on_prepare_for_experiment(None)
@@ -131,9 +129,7 @@ class TestNanomover(unittest.TestCase):
         dev.connection.connection.posXYZ_OMX.assert_not_called()
 
     def test_get_handlers_uses_soft_limits_and_protocol_callbacks(self):
-        dev, _ = self.make(
-            {"soft_limits": "((0, 100), (0, 200), (10, 300))"}
-        )
+        dev, _ = self.make({"soft_limits": "((0, 100), (0, 200), (10, 300))"})
         handlers = dev.get_handlers()
         self.assertEqual(len(handlers), 3)
         self.assertEqual(list(handlers[1].soft_limits), [0, 200])
@@ -144,21 +140,28 @@ class TestNanomover(unittest.TestCase):
 
     def test_default_limits_when_config_missing(self):
         dev, _ = self.make()
-        self.assertEqual(dev.soft_limits, [[0, 25000], [0, 25000], [7300, 25000]])
+        self.assertEqual(
+            dev.soft_limits, [[0, 25000], [0, 25000], [7300, 25000]]
+        )
 
     def test_prompt_exercise_stage_asks_when_timestamp_is_old(self):
         dev, _ = self.make()
-        with mock.patch.object(
-            nanomover.cockpit.util.user_config, "get_value", return_value=0
-        ) as get_value, mock.patch.object(
-            nanomover.cockpit.util.user_config, "set_value"
-        ) as set_value, mock.patch.object(
-            nanomover.cockpit.gui.gui_utils,
-            "get_user_permission",
-            return_value=True,
-        ) as ask, mock.patch.object(
-            nanomover.cockpit.interfaces.stage_mover, "go_to_xy"
-        ) as go_to_xy:
+        with (
+            mock.patch.object(
+                nanomover.cockpit.util.user_config, "get_value", return_value=0
+            ) as get_value,
+            mock.patch.object(
+                nanomover.cockpit.util.user_config, "set_value"
+            ) as set_value,
+            mock.patch.object(
+                nanomover.cockpit.gui.gui_utils,
+                "get_user_permission",
+                return_value=True,
+            ) as ask,
+            mock.patch.object(
+                nanomover.cockpit.interfaces.stage_mover, "go_to_xy"
+            ) as go_to_xy,
+        ):
             dev.position_cache = (1, 2, 3)
             dev.prompt_exercise_stage()
         get_value.assert_called_once_with(
@@ -173,25 +176,30 @@ class TestNanomover(unittest.TestCase):
 
     def test_prompt_exercise_stage_skips_when_recent(self):
         dev, _ = self.make()
-        with mock.patch.object(
-            nanomover.cockpit.util.user_config,
-            "get_value",
-            return_value=nanomover.time.time(),
-        ), mock.patch.object(
-            nanomover.cockpit.gui.gui_utils, "get_user_permission"
-        ) as ask:
+        with (
+            mock.patch.object(
+                nanomover.cockpit.util.user_config,
+                "get_value",
+                return_value=nanomover.time.time(),
+            ),
+            mock.patch.object(
+                nanomover.cockpit.gui.gui_utils, "get_user_permission"
+            ) as ask,
+        ):
             dev.prompt_exercise_stage()
         ask.assert_not_called()
 
     def test_receive_data_publishes_stopped_when_all_stopped(self):
         dev, _ = self.make()
-        with mock.patch.object(
-            nanomover.events, "publish"
-        ) as publish, mock.patch.object(dev, "publish_position"):
+        with (
+            mock.patch.object(nanomover.events, "publish") as publish,
+            mock.patch.object(dev, "publish_position"),
+        ):
             dev.receiveData("nanoMotionStatus", [1, 2, 3], "allStopped")
         self.assertEqual(dev.cur_position, [1, 2, 3])
         stopped = [
-            c.args for c in publish.call_args_list
+            c.args
+            for c in publish.call_args_list
             if c.args[0] == events.STAGE_STOPPED
         ]
         self.assertEqual(
@@ -238,7 +246,12 @@ class TestPicomotor(unittest.TestCase):
         self.assertEqual(len(handlers), 3)
         self.assertEqual(
             set(handlers[2].callbacks),
-            {"move_absolute", "move_relative", "get_position", "get_movement_time"},
+            {
+                "move_absolute",
+                "move_relative",
+                "get_position",
+                "get_movement_time",
+            },
         )
         self.assertEqual(handlers[2].callbacks["get_position"](), 3.0)
 
@@ -289,12 +302,10 @@ class TestLinkamStage(unittest.TestCase):
         proxy.get_value_limits.side_effect = [(-10, 10), (-20, 20)]
         if position is not None:
             proxy.get_position.return_value = position
-        with mock.patch.object(
-            linkam_stage.Pyro4, "Proxy", return_value=proxy
-        ), mock.patch.object(
-            linkam_stage.value_logger, "ValueLogger"
-        ), mock.patch.object(
-            linkam_stage.events, "subscribe"
+        with (
+            mock.patch.object(linkam_stage.Pyro4, "Proxy", return_value=proxy),
+            mock.patch.object(linkam_stage.value_logger, "ValueLogger"),
+            mock.patch.object(linkam_stage.events, "subscribe"),
         ):
             dev = linkam_stage.LinkamStage("linkam", {"uri": "PYRO:x@h:1"})
         return dev, proxy
@@ -342,11 +353,14 @@ class TestLinkamStage(unittest.TestCase):
 class TestStagePiezoLimits(unittest.TestCase):
     def make_handlers(self, config):
         executor = mock.Mock()
-        with mock.patch.object(
-            stage.depot, "get_handler", return_value=executor
-        ), mock.patch.object(
-            stage.stage_positioner.PositionerHandler,
-            "connect_to_analog_source",
+        with (
+            mock.patch.object(
+                stage.depot, "get_handler", return_value=executor
+            ),
+            mock.patch.object(
+                stage.stage_positioner.PositionerHandler,
+                "connect_to_analog_source",
+            ),
         ):
             dev = stage.SimplePiezo("piezo", dict(config))
             return dev.get_handlers()
@@ -398,7 +412,9 @@ class TestPolarizationRotator(unittest.TestCase):
         )
         executor.register_analog.assert_called_once_with(dev, "1", 0.5, 2.0)
         self.assertEqual(handlers, [analog_handler])
-        self.assertEqual(analog_handler.positions, {"488": (0.9, 1.0, 1.1), None: [1.5] * 3})
+        self.assertEqual(
+            analog_handler.positions, {"488": (0.9, 1.0, 1.1), None: [1.5] * 3}
+        )
 
     def test_missing_control_source_raises(self):
         dev = polarization_rotator.PolarizationDevice("SI polarizer", {})

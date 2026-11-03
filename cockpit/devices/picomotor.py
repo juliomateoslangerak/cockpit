@@ -432,7 +432,9 @@ class PicoMotorDevice(device.Device):
                     if len(self.axis_mapper[ax].split(">")) == 2:
                         position = position.split(">")[1]
                     # Positions are in steps, and we need microns.
-                    self.xy_position_cache[ax] = float(position) / self.STAGE_CAL
+                    self.xy_position_cache[ax] = (
+                        float(position) / self.STAGE_CAL
+                    )
 
         # returning cached values, either single axis or all.
         if axis is not None:

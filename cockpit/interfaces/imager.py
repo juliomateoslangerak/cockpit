@@ -211,7 +211,10 @@ class Imager:
             # image, we add 5 seconds for any processing and transfer
             # which should be more than enough (see issue #584).
             timeout = 5.0 + (
-                (camera.get_exposure_time() + camera.get_time_between_exposures())
+                (
+                    camera.get_exposure_time()
+                    + camera.get_time_between_exposures()
+                )
                 / 1000
             )
             try:

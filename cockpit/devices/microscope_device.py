@@ -422,9 +422,7 @@ class MicroscopeFilter(MicroscopeBase):
         fdefs = [
             re.split(r":\s*|,\s*", f) for f in re.split(r"\n", fdefs) if f
         ]
-        self.filters = [
-            cockpit.handlers.filter.Filter(*f) for f in fdefs
-        ]
+        self.filters = [cockpit.handlers.filter.Filter(*f) for f in fdefs]
 
     def get_handlers(self):
         """Return device handlers."""
@@ -503,9 +501,7 @@ class _MicroscopeStageAxis:
     def get_handler(self) -> PositionerHandler:
         return self._handler
 
-    def get_movement_time(
-        self, index: int, start: float, end: float
-    ) -> float:
+    def get_movement_time(self, index: int, start: float, end: float) -> float:
         # TODO: this is not implemented yet but it shouldn't be called
         # anyway because we are not eligible for experiments.
         del index
@@ -651,7 +647,9 @@ class MicroscopeStage(MicroscopeBase):
         if self.poll_stage:
             if len(self._axes) == int(self.config.get("num_stage_axes", 0)):
                 # need to know in advance how many axis need to initialized
-                self.poll_interval = float(self.config.get("poll_interval", 10))
+                self.poll_interval = float(
+                    self.config.get("poll_interval", 10)
+                )
                 self._position_cache = [0.0 for x in range(len(self._axes))]
 
     def get_handlers(self) -> typing.List[PositionerHandler]:

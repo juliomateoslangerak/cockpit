@@ -32,7 +32,12 @@ class TestAerotechLimitsConfig(unittest.TestCase):
         self.assertEqual(list(handlers[0].soft_limits), [-45000, 5000])
         self.assertEqual(
             set(handlers[0].callbacks),
-            {"move_absolute", "move_relative", "get_position", "get_movement_time"},
+            {
+                "move_absolute",
+                "move_relative",
+                "get_position",
+                "get_movement_time",
+            },
         )
 
 
@@ -45,7 +50,9 @@ class TestAerotechMovementTime(unittest.TestCase):
     def test_long_move_uses_cruise_time(self):
         dt, settle = self.axis.get_movement_time(1, 0, 1000000)
         # 1000 mm displacement at v=1000, a=1000: cruise dominates.
-        self.assertAlmostEqual(dt, 1000 * ((1000.0 / 1000) + (1000 / 1000)) + 10)
+        self.assertAlmostEqual(
+            dt, 1000 * ((1000.0 / 1000) + (1000 / 1000)) + 10
+        )
         self.assertEqual(settle, 2)
 
     def test_short_move_uses_triangular_profile(self):
@@ -67,7 +74,9 @@ class TestAerotechOpenConnection(unittest.TestCase):
 
     def test_open_connection_is_the_renamed_method(self):
         self.assertTrue(callable(aerotech_axis.AerotechZStage.open_connection))
-        self.assertFalse(hasattr(aerotech_axis.AerotechZStage, "openConnection"))
+        self.assertFalse(
+            hasattr(aerotech_axis.AerotechZStage, "openConnection")
+        )
 
 
 class TestDrawerParseConfig(unittest.TestCase):
@@ -130,7 +139,9 @@ class TestAmbientLightExposureTime(unittest.TestCase):
         handler = dev.get_handlers()[0]
         self.assertEqual(handler.get_exposure_time(), 100.0)
         handler.callbacks["set_exposure_time"]("Ambient", 7.5)
-        self.assertEqual(handler.callbacks["get_exposure_time"]("Ambient"), 7.5)
+        self.assertEqual(
+            handler.callbacks["get_exposure_time"]("Ambient"), 7.5
+        )
 
 
 if __name__ == "__main__":

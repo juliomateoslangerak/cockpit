@@ -125,7 +125,9 @@ class Label(wx.StaticText):
 class ValueDisplay(wx.BoxSizer):
     """A simple value display for devices."""
 
-    def __init__(self, parent, label, value="", format_str=None, unit_str=None):
+    def __init__(
+        self, parent, label, value="", format_str=None, unit_str=None
+    ):
         super().__init__(wx.HORIZONTAL)
         self.value = value
         label = Label(
@@ -359,7 +361,8 @@ class SettingsEditor(wx.Frame):
         apply_button = wx.Button(self, id=wx.ID_APPLY)
         apply_button.SetToolTip(wx.ToolTip("Apply these settings."))
         apply_button.Bind(
-            wx.EVT_BUTTON, lambda evt: self.device.update_settings(self.current)
+            wx.EVT_BUTTON,
+            lambda evt: self.device.update_settings(self.current),
         )
         button_sizer.Add(apply_button, 1, flag=wx.EXPAND)
 

@@ -53,7 +53,10 @@ class RotatorSweepExperiment(experiment.Experiment):
         self.v_range = (start_v, max_v, v_steps)
         v_delta = float(max_v - start_v) / v_steps
         # Add voltage parameters to the metadata.
-        self.metadata = "Rotator start and delta: [%f, %f]" % (start_v, v_delta)
+        self.metadata = "Rotator start and delta: [%f, %f]" % (
+            start_v,
+            v_delta,
+        )
 
     def generate_actions(self):
         """Create the ActionTable needed to run the experiment."""
@@ -70,7 +73,9 @@ class RotatorSweepExperiment(experiment.Experiment):
             cur_time += dt
             # Image the sample.
             for cameras, light_time_pairs in self.exposure_settings:
-                cur_time = self.expose(cur_time, cameras, light_time_pairs, table)
+                cur_time = self.expose(
+                    cur_time, cameras, light_time_pairs, table
+                )
                 # Advance the time very slightly so that all exposures
                 # are strictly ordered.
                 cur_time += decimal.Decimal(".001")
@@ -139,10 +144,14 @@ class ExperimentUI(wx.Panel):
         params["settling_time"] = gui_utils.try_parse_num(
             self.settling_time_control, float
         )
-        params["start_v"] = gui_utils.try_parse_num(self.start_v_control, float)
+        params["start_v"] = gui_utils.try_parse_num(
+            self.start_v_control, float
+        )
         params["max_v"] = gui_utils.try_parse_num(self.max_v_control, float)
         params["v_steps"] = gui_utils.try_parse_num(self.v_steps_control)
-        params["polarizer_handler"] = depot.get_handler_with_name("SI polarizer")
+        params["polarizer_handler"] = depot.get_handler_with_name(
+            "SI polarizer"
+        )
         return params
 
     def load_settings(self):

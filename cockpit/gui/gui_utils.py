@@ -288,7 +288,9 @@ def add_labeled_input(
     if control is None:
         if control_type is None:
             control_type = wx.TextCtrl
-        control = control_type(parent, id, default_value, size=size, name=label)
+        control = control_type(
+            parent, id, default_value, size=size, name=label
+        )
     text = wx.StaticText(parent, -1, label)
     row_sizer = wx.BoxSizer(wx.HORIZONTAL)
     row_sizer.SetMinSize(min_size)

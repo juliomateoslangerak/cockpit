@@ -175,7 +175,9 @@ class ExecutorDevice(device.Device):
         # an overhaul of how depot determines handler types.
         result.append(
             cockpit.handlers.imager.ImagerHandler(
-                "%s imager" % (self.name), "imager", {"take_image": h.take_image}
+                "%s imager" % (self.name),
+                "imager",
+                {"take_image": h.take_image},
             )
         )
 
@@ -315,7 +317,9 @@ class LegacyDSP(ExecutorDevice):
         # an overhaul of how depot determines handler types.
         result.append(
             cockpit.handlers.imager.ImagerHandler(
-                "%s imager" % (self.name), "imager", {"take_image": h.take_image}
+                "%s imager" % (self.name),
+                "imager",
+                {"take_image": h.take_image},
             )
         )
 
@@ -407,7 +411,9 @@ class LegacyDSP(ExecutorDevice):
         # Update records of last positions.
         self._last_digital = digitals[-1][1]
         self._last_analogs = list(
-            map(lambda x, y: x - (y[-1:][1:] or 0), self._last_analogs, analogs)
+            map(
+                lambda x, y: x - (y[-1:][1:] or 0), self._last_analogs, analogs
+            )
         )
 
         events.publish(

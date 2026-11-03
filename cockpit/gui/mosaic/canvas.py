@@ -344,7 +344,9 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
                 layer,
                 metadata,
             ) = self.pending_images.get()
-            new_tiles.append(Tile(data, position, size, scalings, layer, metadata))
+            new_tiles.append(
+                Tile(data, position, size, scalings, layer, metadata)
+            )
         self.tiles.extend(new_tiles)
         for mega_tile in self.mega_tiles:
             mega_tile.prerender_tiles(new_tiles)
@@ -357,11 +359,19 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
             event.RequestMore()
 
     def add_image(
-        self, data, position, size, scalings=(None, None), layer=0, metadata=None
+        self,
+        data,
+        position,
+        size,
+        scalings=(None, None),
+        layer=0,
+        metadata=None,
     ):
         """Add a new image to the mosaic.
         @cockpit.util.threads.call_in_main_thread."""
-        self.pending_images.put((data, position, size, scalings, layer, metadata))
+        self.pending_images.put(
+            (data, position, size, scalings, layer, metadata)
+        )
 
     @cockpit.util.threads.call_in_main_thread
     def rescale(self, min_max=None):
@@ -580,9 +590,7 @@ class MosaicCanvas(wx.glcanvas.GLCanvas):
         nb_integers = 8
         nb_floats = 32
         int_metadata_buffer = np.array([0] * nb_integers, dtype=np.int32)
-        float_metadata_buffer = np.array(
-            [0.0] * nb_floats, dtype=np.float32
-        )
+        float_metadata_buffer = np.array([0.0] * nb_floats, dtype=np.float32)
         float_metadata_buffer[12] = 1.0  # intensity scaling
 
         header.NumIntegers = nb_integers

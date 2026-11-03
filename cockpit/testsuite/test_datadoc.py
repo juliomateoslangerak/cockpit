@@ -28,9 +28,7 @@ from cockpit.util import datadoc
 
 class TestWriteDataAsMrc(unittest.TestCase):
     def setUp(self):
-        self.data = np.array(range(256), dtype=np.uint8).reshape(
-            (16, 16)
-        )
+        self.data = np.array(range(256), dtype=np.uint8).reshape((16, 16))
 
     def assertWriteAndReadingBack(self):
         with tempfile.NamedTemporaryFile() as fh:

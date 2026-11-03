@@ -119,13 +119,13 @@ class TestObjectiveControls(WxTestCase):
         patcher = mock.patch.object(cockpit.events, "publish")
         self.publish = patcher.start()
         self.addCleanup(patcher.stop)
-        self.panel = main_panels.ObjectiveControls(
-            self.frame, self.objectives
-        )
+        self.panel = main_panels.ObjectiveControls(self.frame, self.objectives)
 
     def test_initial_choice(self):
         choice = self.panel._choice
-        self.assertEqual(choice.GetStrings(), self.objectives.get_names_sorted())
+        self.assertEqual(
+            choice.GetStrings(), self.objectives.get_names_sorted()
+        )
         self.assertEqual(choice.GetStringSelection(), "20x")
 
     def test_choice_event_changes_objective(self):

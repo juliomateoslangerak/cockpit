@@ -82,7 +82,9 @@ class HandlerPositionCtrl(wx.TextCtrl):
     def _OnMove(self, event: wx.CommandEvent) -> None:
         axis = event.EventData[0]
         if axis == self._axis:
-            pos = stage_mover.get_all_positions()[self._handler_index][self._axis]
+            pos = stage_mover.get_all_positions()[self._handler_index][
+                self._axis
+            ]
             self.SetValue("%5.2f" % pos)
 
     def _OnHandlerChange(self, event: wx.CommandEvent) -> None:
@@ -265,7 +267,8 @@ class SaveTopBottomPanel(wx.Panel):
         self._top_ctrl.ChangeValue("%.1f" % stage_mover.mover.saved_top)
         self._bottom_ctrl.ChangeValue("%.1f" % stage_mover.mover.saved_bottom)
         self._height_ctrl.ChangeValue(
-            "%.2f" % (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom)
+            "%.2f"
+            % (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom)
         )
 
     def OnEditTopPosition(self, evt: wx.CommandEvent) -> None:
@@ -282,7 +285,8 @@ class SaveTopBottomPanel(wx.Panel):
 
     def OnGoToCentre(self, evt: wx.CommandEvent) -> None:
         centre = stage_mover.mover.saved_bottom + (
-            (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom) / 2.0
+            (stage_mover.mover.saved_top - stage_mover.mover.saved_bottom)
+            / 2.0
         )
         stage_mover.move_z_check_mover_limits(centre)
 

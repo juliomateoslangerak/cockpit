@@ -228,7 +228,13 @@ class ResponseMapExperiment(
         num_times = len(self.times_and_images)
         num_cams = len(self.times_and_images[0][1])
         all_images = np.zeros(
-            (num_cams, num_times, 1, self.max_image_dims[0], self.max_image_dims[1]),
+            (
+                num_cams,
+                num_times,
+                1,
+                self.max_image_dims[0],
+                self.max_image_dims[1],
+            ),
             dtype=np.float32,
         )
         exposure_times = []
@@ -270,7 +276,9 @@ class ResponseMapExperiment(
             corrector = cockpit.util.correct_nonlinear.Corrector(
                 x_vals, averaged_images[:, cam]
             )
-            corrected_images[:, cam] = map(corrector.correct, raw_images[:, cam])
+            corrected_images[:, cam] = map(
+                corrector.correct, raw_images[:, cam]
+            )
         self.plot_pixels(
             x_vals, corrected_images, "Corrected pixel linearity survey"
         )
@@ -356,7 +364,9 @@ class ResponseMapExperiment(
                     )
                     settings.append((light, exposure_time))
                 for i in range(self.num_exposures):
-                    cur_time = self.expose(cur_time, used_cams, settings, table)
+                    cur_time = self.expose(
+                        cur_time, used_cams, settings, table
+                    )
         return table
 
     def process_images(self, exposure_time):
@@ -396,9 +406,7 @@ class ResponseMapExperiment(
             # exposed, we want to find statistics that are true for most
             # of the images, hence the per-image statistics here.
             median_std = np.median([np.std(image) for image in images])
-            median_median = np.median(
-                [np.median(image) for image in images]
-            )
+            median_median = np.median([np.median(image) for image in images])
             accumulator = np.zeros(images[0].shape, dtype=np.float32)
             num_clean_images = 0
             for image in images:
@@ -480,9 +488,9 @@ class ExperimentUI(wx.Panel):
             row_sizer,
             "Keep the raw data in addition to the averaged files.",
         )
-        self.response_args["response_map_should_preserve_intermediary_files"] = (
-            control
-        )
+        self.response_args[
+            "response_map_should_preserve_intermediary_files"
+        ] = control
         sizer.Add(row_sizer)
         self.SetSizerAndFit(sizer)
 

@@ -191,14 +191,18 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
         Or return the value instead if should_return is true. The basic idea
         here is to go from stage coordinates to view coordinates.
         """
-        new_x = -1 * ((x - self.min_x) / float(self.max_x - self.min_x) * 2 - 1)
+        new_x = -1 * (
+            (x - self.min_x) / float(self.max_x - self.min_x) * 2 - 1
+        )
         new_y = (y - self.min_y) / float(self.max_y - self.min_y) * 2 - 1
         if should_return:
             return (new_x, new_y)
         else:
             glVertex2f(new_x, new_y)
 
-    def draw_arrow(self, base_location, vector, color, arrow_size, arrow_head_size):
+    def draw_arrow(
+        self, base_location, vector, color, arrow_size, arrow_head_size
+    ):
         """Draw an arrow from the first point along the specified vector."""
         # Normalize.
         delta = vector / np.sqrt(np.vdot(vector, vector)) * arrow_size
@@ -207,24 +211,24 @@ class MacroStageBase(wx.glcanvas.GLCanvas):
 
         point_location = base_location + delta
         head_location_1 = (
-                point_location
-                - np.array(
+            point_location
+            - np.array(
                 [
                     np.cos(angle + ARROWHEAD_ANGLE),
                     np.sin(angle + ARROWHEAD_ANGLE),
                 ]
             )
-                * arrow_head_size
+            * arrow_head_size
         )
         head_location_2 = (
-                point_location
-                - np.array(
+            point_location
+            - np.array(
                 [
                     np.cos(angle - ARROWHEAD_ANGLE),
                     np.sin(angle - ARROWHEAD_ANGLE),
                 ]
             )
-                * arrow_head_size
+            * arrow_head_size
         )
 
         # Draw

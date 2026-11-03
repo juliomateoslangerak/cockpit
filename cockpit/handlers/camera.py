@@ -154,7 +154,9 @@ class CameraHandler(device.DeviceHandler):
     @property
     def color(self):
         if self.wavelength is not None:
-            return cockpit.util.colors.wavelength_to_color(self.wavelength, 0.8)
+            return cockpit.util.colors.wavelength_to_color(
+                self.wavelength, 0.8
+            )
         else:
             return (127,) * 3
 
@@ -215,7 +217,9 @@ class CameraHandler(device.DeviceHandler):
         If is_exact is specified, then we return a decimal.Decimal value instead
         of a raw floating point value.
         """
-        return self.callbacks["get_time_between_exposures"](self.name, is_exact)
+        return self.callbacks["get_time_between_exposures"](
+            self.name, is_exact
+        )
 
     @cached
     def get_min_exposure_time(self, is_exact=False):

@@ -191,7 +191,9 @@ class TestHandlers(unittest.TestCase):
             self.assertEqual(
                 handler.callbacks["move_relative"], dev.move_xy_relative
             )
-            self.assertEqual(handler.callbacks["get_position"], dev.get_xy_position)
+            self.assertEqual(
+                handler.callbacks["get_position"], dev.get_xy_position
+            )
 
 
 class TestExerciseStage(unittest.TestCase):
@@ -202,37 +204,47 @@ class TestExerciseStage(unittest.TestCase):
     def test_recent_exercise_does_not_prompt(self):
         dev, _ = make_device()
         recent = time.time() - 60.0
-        with mock.patch.object(
-            physik.cockpit.util.user_config,
-            "get_value",
-            return_value=recent,
-        ), mock.patch.object(
-            physik.cockpit.gui.gui_utils, "get_user_permission"
-        ) as permission:
+        with (
+            mock.patch.object(
+                physik.cockpit.util.user_config,
+                "get_value",
+                return_value=recent,
+            ),
+            mock.patch.object(
+                physik.cockpit.gui.gui_utils, "get_user_permission"
+            ) as permission,
+        ):
             dev.prompt_exercise_stage()
         permission.assert_not_called()
 
     def test_old_exercise_prompts_and_stores_timestamp(self):
         dev, _ = make_device()
         dev.soft_limits = ((0, 0), (1, 1))
-        with mock.patch.object(
-            physik.cockpit.util.user_config,
-            "get_value",
-            return_value=0,
-        ), mock.patch.object(
-            physik.cockpit.util.user_config, "set_value"
-        ) as set_value, mock.patch.object(
-            physik.cockpit.gui.gui_utils,
-            "get_user_permission",
-            return_value=True,
-        ) as permission, mock.patch.object(
-            physik.cockpit.interfaces.stage_mover, "go_to_xy"
-        ) as go_to_xy:
+        with (
+            mock.patch.object(
+                physik.cockpit.util.user_config,
+                "get_value",
+                return_value=0,
+            ),
+            mock.patch.object(
+                physik.cockpit.util.user_config, "set_value"
+            ) as set_value,
+            mock.patch.object(
+                physik.cockpit.gui.gui_utils,
+                "get_user_permission",
+                return_value=True,
+            ) as permission,
+            mock.patch.object(
+                physik.cockpit.interfaces.stage_mover, "go_to_xy"
+            ) as go_to_xy,
+        ):
             dev.prompt_exercise_stage()
         permission.assert_called_once()
         self.assertTrue(go_to_xy.called)
         set_value.assert_called_once()
-        self.assertEqual(set_value.call_args.args[0], "PIM687LastExerciseTimestamp")
+        self.assertEqual(
+            set_value.call_args.args[0], "PIM687LastExerciseTimestamp"
+        )
 
 
 if __name__ == "__main__":

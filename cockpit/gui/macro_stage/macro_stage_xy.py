@@ -262,7 +262,8 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
 
     def on_safety_change(self, axis, value, is_max):
         r"""Safety limits have changed, which means we need to force a refresh.
-        \todo Redrawing everything just to tackle the safety limits is a bit excessive."""
+        \todo Redrawing everything just to tackle the safety limits is a bit excessive.
+        """
         # We only care about the X and Y axes.
         if axis in [0, 1]:
             wx.CallAfter(self.Refresh)
@@ -295,7 +296,9 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
             square_offsets = [(0, 0), (0, 1), (1, 1), (1, 0)]
-            step_sizes = cockpit.interfaces.stage_mover.get_cur_step_sizes()[:2]
+            step_sizes = cockpit.interfaces.stage_mover.get_cur_step_sizes()[
+                :2
+            ]
 
             # Draw hard stage motion limits
             hard_limits = cockpit.interfaces.stage_mover.get_hard_limits()[:2]
@@ -411,8 +414,14 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             glBegin(GL_LINE_LOOP)
             for x, y in square_offsets:
                 glVertex2f(
-                    motor_pos[0] - offset[0] + square_size * x - square_size / 2,
-                    motor_pos[1] + offset[1] + square_size * y - square_size / 2,
+                    motor_pos[0]
+                    - offset[0]
+                    + square_size * x
+                    - square_size / 2,
+                    motor_pos[1]
+                    + offset[1]
+                    + square_size * y
+                    - square_size / 2,
                 )
             glEnd()
 
@@ -459,7 +468,7 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
             glLineWidth(1)
             glBegin(GL_LINES)
             y_offset = self.min_y + 0.9 * (
-                    self.view_delta_y + 0.5 * (self.view_extent - stage_height)
+                self.view_delta_y + 0.5 * (self.view_extent - stage_height)
             )
             glVertex2f(hard_limits[0][0], y_offset)
             glVertex2f(hard_limits[0][1], y_offset)
@@ -567,12 +576,16 @@ class MacroStageXY(macro_stage_base.MacroStageBase):
         """Remap a click location from pixel coordinates to realspace coordinates."""
         width, height = self.GetClientSize()
         x = (
-                float(width - click_location[0]) / width * (self.max_x - self.min_x)
-                + self.min_x
+            float(width - click_location[0])
+            / width
+            * (self.max_x - self.min_x)
+            + self.min_x
         )
         y = (
-                float(height - click_location[1]) / height * (self.max_y - self.min_y)
-                + self.min_y
+            float(height - click_location[1])
+            / height
+            * (self.max_y - self.min_y)
+            + self.min_y
         )
         return [x + self.offset[0], y - self.offset[1]]
 

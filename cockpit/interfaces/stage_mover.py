@@ -175,7 +175,9 @@ class StageMover:
 
         # FIXME: we should have sensible defaults (see issue #638).
         self._saved_top = user_config.get_value("savedTop", default=3010.0)
-        self._saved_bottom = user_config.get_value("savedBottom", default=3000.0)
+        self._saved_bottom = user_config.get_value(
+            "savedBottom", default=3000.0
+        )
 
         ## XXX: We have a single index for all axis, even though each
         ## axis may have a different number of stages.  While we don't
@@ -219,7 +221,9 @@ class StageMover:
         for stage_index in range(self.n_stages):
             default_step_sizes = []
             for axis in (0, 1, 2):
-                limits = self.axis_to_handlers[axis][stage_index].get_hard_limits()
+                limits = self.axis_to_handlers[axis][
+                    stage_index
+                ].get_hard_limits()
                 step_size = sensible_previous_step_size(
                     (limits[1] - limits[0]) / 100.0
                 )
@@ -308,7 +312,9 @@ class StageMover:
 
         We just republish an abstracted stage position for that axis.
         """
-        events.publish(events.STAGE_POSITION, axis, get_position_for_axis(axis))
+        events.publish(
+            events.STAGE_POSITION, axis, get_position_for_axis(axis)
+        )
 
     def on_stop(self, name):
         """Handle one of our devices stopping motion; this unblocks _go_to_axes
@@ -328,7 +334,10 @@ class StageMover:
             # Get the offset for the movers that aren't being adjusted.
             offset = 0
             for handler in self.axis_to_handlers[axis]:
-                if handler != self.axis_to_handlers[axis][self.cur_handler_index]:
+                if (
+                    handler
+                    != self.axis_to_handlers[axis][self.cur_handler_index]
+                ):
                     offset += handler.get_position()
 
             handler = self.axis_to_handlers[axis][self.cur_handler_index]
@@ -363,7 +372,9 @@ def make_initial_publications():
     """Publicize any information that various widgets care about."""
     # for axis in range(3):
     for axis in mover.axis_to_handlers.keys():
-        events.publish(events.STAGE_POSITION, axis, get_position_for_axis(axis))
+        events.publish(
+            events.STAGE_POSITION, axis, get_position_for_axis(axis)
+        )
         limits = get_soft_limits_for_axis(axis)
         for is_max in [0, 1]:
             events.publish(
@@ -594,7 +605,9 @@ def get_hard_limits() -> StageLimits:
 
 def get_individual_hard_limits(axis):
     """Returns a list of all hard motion limits for the given axis."""
-    return [handler.get_hard_limits() for handler in mover.axis_to_handlers[axis]]
+    return [
+        handler.get_hard_limits() for handler in mover.axis_to_handlers[axis]
+    ]
 
 
 def get_soft_limits_for_axis(axis):
@@ -619,7 +632,9 @@ def get_soft_limits():
 
 def get_individual_soft_limits(axis):
     """Returns a list of all soft motion limits for the given axis."""
-    return [handler.get_soft_limits() for handler in mover.axis_to_handlers[axis]]
+    return [
+        handler.get_soft_limits() for handler in mover.axis_to_handlers[axis]
+    ]
 
 
 def set_soft_limit(axis, value, is_max):
@@ -663,7 +678,7 @@ def move_z_check_mover_limits(target):
         handler = mover.cur_handler_index
         mover_pos = get_all_positions()[handler][2]
         if (mover_pos + offset) > limits[mover.cur_handler_index][1] or (
-                mover_pos + offset
+            mover_pos + offset
         ) < limits[mover.cur_handler_index][0]:
             # need to drop down a handler to see if next handler can do the move
             mover.cur_handler_index -= 1
@@ -716,7 +731,9 @@ def optimised_site_order(base_order):
             break
 
         # Find the closest remaining point
-        next_point = min(remaining_points, key=lambda a: distance(a, cur_point))
+        next_point = min(
+            remaining_points, key=lambda a: distance(a, cur_point)
+        )
         total_tour_cost += distance(cur_point, next_point)
         cur_point = next_point
     # Add cost of closing the loop back to the first point.

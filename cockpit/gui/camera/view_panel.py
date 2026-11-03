@@ -119,7 +119,9 @@ class ViewPanel(wx.Panel):
         """
         if event.LeftDClick():
             if self.image_position is None:
-                self.image_position = cockpit.interfaces.stage_mover.get_position()
+                self.image_position = (
+                    cockpit.interfaces.stage_mover.get_position()
+                )
             x, y = event.GetPosition() * self.GetContentScaleFactor()
             pixel_size = wx.GetApp().objectives.get_pixel_size()
             x0, y0 = self.canvas.glToIndices(0, 0)
@@ -199,7 +201,9 @@ class ViewPanel(wx.Panel):
         self.canvas.reset_view()
 
         # Subscribe to new image events only after canvas is prepared.
-        events.subscribe(events.NEW_IMAGE % self.cur_camera.name, self.on_image)
+        events.subscribe(
+            events.NEW_IMAGE % self.cur_camera.name, self.on_image
+        )
 
     def change_size(self, size=wx.Size(VIEW_WIDTH, VIEW_HEIGHT - 40)):
         """TODO: This needs revision, too many sizes are being set."""

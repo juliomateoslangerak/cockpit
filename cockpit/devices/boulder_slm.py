@@ -380,16 +380,18 @@ class BoulderSLM(device.Device):
         cockpit.gui.gui_utils.place_menu_at_mouse(event.GetEventObject(), menu)
 
     def test_sim_sequence(self):
-        inputs = cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
-            None,
-            "Generate a SIM sequence",
-            [
-                "wavelength",
-                "total angles",
-                "total phases",
-                "order\n0 for a then ph\n1 for ph then a",
-            ],
-            (488, 3, 5, 0),
+        inputs = (
+            cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
+                None,
+                "Generate a SIM sequence",
+                [
+                    "wavelength",
+                    "total angles",
+                    "total phases",
+                    "order\n0 for a then ph\n1 for ph then a",
+                ],
+                (488, 3, 5, 0),
+            )
         )
         wavelength, angles, phases, order = [int(i) for i in inputs]
         if order == 0:

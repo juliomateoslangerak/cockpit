@@ -81,7 +81,9 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
 
         self.handlers = []
         for axis in range(3):
-            handler = Mock(spec=["get_position", "move_absolute", "set_soft_limit"])
+            handler = Mock(
+                spec=["get_position", "move_absolute", "set_soft_limit"]
+            )
             handler.name = "axis_%d" % axis
             handler.get_position.return_value = axis + 1
             self.handlers.append(handler)
@@ -129,15 +131,21 @@ class TestStageMoverHandlerProtocol(unittest.TestCase):
         with patch.object(stage_mover.events, "publish") as publish:
             self.assertTrue(stage_mover.set_soft_limit(0, 10.0, True))
             handler.set_soft_limit.assert_called_once_with(10.0, True)
-            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 10.0, True)
+            publish.assert_any_call(
+                stage_mover.events.SOFT_SAFETY_LIMIT, 0, 10.0, True
+            )
 
             stage_mover.set_soft_min(0, 0.0)
             handler.set_soft_limit.assert_called_with(0.0, False)
-            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 0.0, False)
+            publish.assert_any_call(
+                stage_mover.events.SOFT_SAFETY_LIMIT, 0, 0.0, False
+            )
 
             stage_mover.set_soft_max(0, 20.0)
             handler.set_soft_limit.assert_called_with(20.0, True)
-            publish.assert_any_call(stage_mover.events.SOFT_SAFETY_LIMIT, 0, 20.0, True)
+            publish.assert_any_call(
+                stage_mover.events.SOFT_SAFETY_LIMIT, 0, 20.0, True
+            )
 
     def test_set_soft_limit_returns_false_when_handler_fails(self):
         handler = self.handlers[0]

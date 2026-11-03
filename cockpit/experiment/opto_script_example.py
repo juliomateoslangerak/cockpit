@@ -136,7 +136,10 @@ class OptoExperiment(z_stack.ZStackExperiment):
             # images.
             # Turn on all lights that want to be left on during acquisition.
             activated_lights = []
-            for light, should_be_on in self.light_to_is_on_during_acquisition.items():
+            for (
+                light,
+                should_be_on,
+            ) in self.light_to_is_on_during_acquisition.items():
                 if should_be_on:
                     light.set_exposing(True)
                     activated_lights.append(light)
@@ -213,9 +216,9 @@ class ExperimentUI(wx.Panel):
         default_vals = []
         for light in self.all_lights:
             sequence = self.settings["light_to_sequence"].get(light.name, [])
-            does_start_on = self.settings["light_to_is_on_during_acquisition"].get(
-                light.name, False
-            )
+            does_start_on = self.settings[
+                "light_to_is_on_during_acquisition"
+            ].get(light.name, False)
             panel = OptoPanel(self, light, sequence, does_start_on)
             self.light_to_panel[light] = panel
             sizer.Add(panel)

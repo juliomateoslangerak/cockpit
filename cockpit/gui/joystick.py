@@ -146,7 +146,9 @@ class Joystick:
                 mosaic.window.canvas.multiply_zoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
-            move_relative([-0.01 * d * self._speed for d in delta] + [0], False)
+            move_relative(
+                [-0.01 * d * self._speed for d in delta] + [0], False
+            )
         elif buttonTest(event.ButtonState, 1):
             move_relative([0, 0, -0.01 * delta[1] * self._speed], False)
         else:

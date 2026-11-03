@@ -130,7 +130,7 @@ class MrcDataSaver:
         # header.
         # The default of a googol megabytes ought to be enough to avoid
         # splitting files if no cap is specified. :)
-        self.max_filesize = 10 ** 100
+        self.max_filesize = 10**100
 
         global unique_id
         ## Unique ID for our instance
@@ -152,11 +152,14 @@ class MrcDataSaver:
             self.max_width = max(width, self.max_width)
             self.max_height = max(height, self.max_height)
             self.camera_to_index[camera] = i
-            self.camera_to_images_kept_per_rep[camera] = self.camera_to_images_per_rep[
-                camera
-            ] - len(self.camera_to_ignored_image_indices[camera])
+            self.camera_to_images_kept_per_rep[camera] = (
+                self.camera_to_images_per_rep[camera]
+                - len(self.camera_to_ignored_image_indices[camera])
+            )
         ## We need this for the upper bound on the array of data we write.
-        self.max_images_per_rep = max(self.camera_to_images_kept_per_rep.values())
+        self.max_images_per_rep = max(
+            self.camera_to_images_kept_per_rep.values()
+        )
 
         ## Number of bytes to allocate for each image in the file.
         # \todo Assuming unsigned 16-bit integer here.
@@ -173,10 +176,10 @@ class MrcDataSaver:
         )
         # Now check that there are less than 2^15 -1 images per channel as
         # dv files can't index more than this.
-        if (self.max_reps_per_file * self.max_images_per_rep) > (2 ** 15) - 1:
+        if (self.max_reps_per_file * self.max_images_per_rep) > (2**15) - 1:
             # then ensure that we split files at the end of a time point
             # // operator is floor division
-            self.max_reps_per_file = ((2 ** 15) - 1) // self.max_images_per_rep
+            self.max_reps_per_file = ((2**15) - 1) // self.max_images_per_rep
         # Sanity check.
         self.max_reps_per_file = max(self.max_reps_per_file, 1)
         ## Whether or not we need to split the data into multiple files.
@@ -249,7 +252,7 @@ class MrcDataSaver:
             num_timepoints = self.max_reps_per_file
             if i == len(self.file_handles) - 1:
                 num_timepoints = self.num_reps - (
-                        self.max_reps_per_file * (len(self.file_handles) - 1)
+                    self.max_reps_per_file * (len(self.file_handles) - 1)
                 )
             header = cockpit.util.datadoc.make_header_for_shape(
                 (
@@ -280,7 +283,11 @@ class MrcDataSaver:
                 # falls in the sequence.
                 temp_titles.append(
                     "File %d of %d; base timepoint %d"
-                    % (i + 1, len(self.file_handles), i * self.max_reps_per_file)
+                    % (
+                        i + 1,
+                        len(self.file_handles),
+                        i * self.max_reps_per_file,
+                    )
                 )
             header.NumTitles = len(temp_titles)
             header.title[: len(temp_titles)] = temp_titles
@@ -305,7 +312,9 @@ class MrcDataSaver:
             self.int_metadata_buffers.append(
                 np.array([0] * num_integers, dtype=np.int32)
             )
-            float_metadata_buffer = np.array([0.0] * num_floats, dtype=np.float32)
+            float_metadata_buffer = np.array(
+                [0.0] * num_floats, dtype=np.float32
+            )
             float_metadata_buffer[12] = 1.0  # intensity scaling
             self.float_metadata_buffers.append(float_metadata_buffer)
 
@@ -339,7 +348,9 @@ class MrcDataSaver:
         names = [camera.dye or camera.name for camera in self.cameras]
         totals = []
         for camera in self.cameras:
-            totals.append(self.camera_to_images_kept_per_rep[camera] * self.num_reps)
+            totals.append(
+                self.camera_to_images_kept_per_rep[camera] * self.num_reps
+            )
         ## Thread that handles updating the UI.
         self.status_thread = StatusUpdateThread(
             names, totals, self.num_reps, self.rep_duration
@@ -365,7 +376,9 @@ class MrcDataSaver:
         for camera in self.cameras:
 
             def func(data, metadata, camera=camera):
-                return self.on_image(self.camera_to_index[camera], data, metadata)
+                return self.on_image(
+                    self.camera_to_index[camera], data, metadata
+                )
 
             self.lambdas.append(func)
             events.subscribe(events.NEW_IMAGE % camera.name, func)
@@ -390,13 +403,15 @@ class MrcDataSaver:
         # Wait until it's been a bit without getting any more images in, or
         # until we have all the images we expected to get for each camera.
         while (
-                time.time() - self.last_image_time < self.rep_duration + 1.0
+            time.time() - self.last_image_time < self.rep_duration + 1.0
         ) or not self.image_queue.empty():
             #            print ((time.time() - self.start_time),self.rep_duration*self.num_reps)
             am_done = True
             for camera in self.cameras:
                 total = self.images_kept[self.camera_to_index[camera]]
-                target = self.camera_to_images_kept_per_rep[camera] * self.num_reps
+                target = (
+                    self.camera_to_images_kept_per_rep[camera] * self.num_reps
+                )
                 if total != target:
                     # There exists a camera for which we do not have all
                     # images yet.
@@ -484,9 +499,9 @@ class MrcDataSaver:
 
         num_cameras = len(self.cameras)
         plane_index = (
-                int(timepoint * self.max_images_per_rep * num_cameras)
-                + (z_index * num_cameras)
-                + camera_index
+            int(timepoint * self.max_images_per_rep * num_cameras)
+            + (z_index * num_cameras)
+            + camera_index
         )
 
         ## Offsets for the plane metadata in the extended header, and
@@ -694,7 +709,9 @@ class ZarrDataSaver:
             camera: 0 for camera in self._camera_to_channel_ids
         }
         # Dict to keep track of how many images we've written, on a per-camera basis.
-        self._images_kept = {camera: 0 for camera in self._camera_to_channel_ids}
+        self._images_kept = {
+            camera: 0 for camera in self._camera_to_channel_ids
+        }
 
         # List of functions that receive image data.
         self._image_receiving_funcs = []
@@ -759,7 +776,10 @@ class ZarrDataSaver:
         #  a dictionary with the camera name and the target number of images to be kept.
         #  Also because the total of expected images is used later in the executeAndSave method.
         self.status_thread = StatusUpdateThread(
-            [camera.dye or camera.name for camera in self._camera_to_channel_ids],
+            [
+                camera.dye or camera.name
+                for camera in self._camera_to_channel_ids
+            ],
             list(self._camera_to_images_kept.values()),
             self._num_reps,
             self._rep_duration,
@@ -853,7 +873,7 @@ class ZarrDataSaver:
         # Wait until it's been a bit without getting any more images in, or
         # until we have all the images we expected to get for each camera.
         while (
-                time.time() - self._last_image_time < self._rep_duration + 1.0
+            time.time() - self._last_image_time < self._rep_duration + 1.0
         ) or not self._image_queue.empty():
             am_done = True
             if self._images_kept != self._camera_to_images_kept:
@@ -958,7 +978,8 @@ class ZarrDataSaver:
         self._images_received[camera] += 1
         # First determine if we actually want to keep this image.
         if (
-                self._images_received[camera] % self._camera_to_images_per_rep[camera]
+            self._images_received[camera]
+            % self._camera_to_images_per_rep[camera]
         ) in self._camera_to_ignored_image_indices[camera]:
             # This image should be discarded.
             return
@@ -968,7 +989,9 @@ class ZarrDataSaver:
         # image in the file.
         image_index = self._images_kept[camera]
         time_index = image_index // self._camera_to_images_kept_per_rep[camera]
-        channel_z_reminder = image_index % self._camera_to_images_kept_per_rep[camera]
+        channel_z_reminder = (
+            image_index % self._camera_to_images_kept_per_rep[camera]
+        )
         channel_index = self._camera_to_channel_ids[camera][
             channel_z_reminder
             // self.channel_shapes[0][
@@ -980,7 +1003,9 @@ class ZarrDataSaver:
         )  # Only takes into account one possible z-shape per channel or camera
 
         with self._thread_lock:
-            self.append_image_to_zarr(time_index, channel_index, z_index, image_data)
+            self.append_image_to_zarr(
+                time_index, channel_index, z_index, image_data
+            )
             self._images_kept[camera] += 1
             self._last_image_time = time.time()
 
@@ -994,7 +1019,9 @@ class ZarrDataSaver:
         )
 
     @cockpit.util.threads.call_in_main_thread
-    def append_image_to_zarr(self, time_index, channel_index, z_index, image_data):
+    def append_image_to_zarr(
+        self, time_index, channel_index, z_index, image_data
+    ):
         """
         Append a new image to the zarr array.
         We call this in the main thread, so we can ensure it is run in the

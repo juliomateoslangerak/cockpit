@@ -39,7 +39,9 @@ class PanelLabel(wx.StaticText):
 class LightPanel(wx.Panel):
     """A panel of controls for a single light source."""
 
-    def __init__(self, parent, light_toggle, light_power=None, light_filters=[]):
+    def __init__(
+        self, parent, light_toggle, light_power=None, light_filters=[]
+    ):
         super().__init__(parent, style=wx.BORDER_RAISED)
         self.light = light_toggle
         self.light_power = light_power
@@ -113,7 +115,9 @@ class LightPanel(wx.Panel):
     def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
         self.light.remove_watch("exposure_time", self.exposure_ctrl.SetValue)
         if self.light_power is not None:
-            self.light_power.remove_watch("power_set_point", self._set_power_percent)
+            self.light_power.remove_watch(
+                "power_set_point", self._set_power_percent
+            )
             self._timer.Stop()
         event.Skip()
 
@@ -149,13 +153,16 @@ class LightControlsPanel(wx.Panel):
         light_powers = depot.get_handlers_of_type(depot.LIGHT_POWER)
         light_filters = list(
             filter(
-                lambda f: f.lights, depot.get_handlers_of_type(depot.LIGHT_FILTER)
+                lambda f: f.lights,
+                depot.get_handlers_of_type(depot.LIGHT_FILTER),
             )
         )
         self.panels = {}
         for light in light_toggles:
             power = next(
-                filter(lambda p: p.group_name == light.group_name, light_powers),
+                filter(
+                    lambda p: p.group_name == light.group_name, light_powers
+                ),
                 None,
             )
             filters = list(
@@ -325,7 +332,8 @@ class ChannelsPanel(wx.Panel):
             self.add_button(name)
 
         wx.GetApp().channels.Bind(
-            cockpit.interfaces.channels.EVT_CHANNEL_ADDED, self.on_channel_added
+            cockpit.interfaces.channels.EVT_CHANNEL_ADDED,
+            self.on_channel_added,
         )
         wx.GetApp().channels.Bind(
             cockpit.interfaces.channels.EVT_CHANNEL_REMOVED,

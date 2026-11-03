@@ -126,7 +126,9 @@ class LightHandler(device.DeviceHandler):
         # Most lasers use bulb-type triggering. Ensure they're not left on after
         # an abort event.
         if trigger_handler and trigger_line:
-            on_abort = lambda *args: trigger_handler.set_digital(trigger_line, False)
+            on_abort = lambda *args: trigger_handler.set_digital(
+                trigger_line, False
+            )
             events.subscribe(events.USER_ABORT, on_abort)
 
     def make_initial_publications(self):

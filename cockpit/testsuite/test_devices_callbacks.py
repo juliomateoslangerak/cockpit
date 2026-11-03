@@ -28,9 +28,14 @@ class TestClaritySetEnabled(unittest.TestCase):
         self.dev._proxy.enable.assert_not_called()
 
     def test_set_enabled_key_maps_to_set_enabled_method(self):
-        with mock.patch.object(aurox.microscope_device.MicroscopeFilter,
-                               "get_handlers", return_value=[]), \
-                mock.patch.object(aurox, "ClaritySlideHandler") as handler_cls:
+        with (
+            mock.patch.object(
+                aurox.microscope_device.MicroscopeFilter,
+                "get_handlers",
+                return_value=[],
+            ),
+            mock.patch.object(aurox, "ClaritySlideHandler") as handler_cls,
+        ):
             self.dev.get_handlers()
         callbacks = handler_cls.call_args.args[3]
         self.assertEqual(callbacks["set_enabled"], self.dev.set_enabled)
@@ -54,7 +59,9 @@ class TestBoulderSLMCallbacks(unittest.TestCase):
         self.assertEqual(callbacks["set_enabled"], self.dev.set_enabled)
         self.assertEqual(callbacks["get_is_enabled"], self.dev.get_is_enabled)
         self.assertEqual(callbacks["execute_table"], self.dev.execute_table)
-        self.assertEqual(callbacks["examine_actions"], self.dev.examine_actions)
+        self.assertEqual(
+            callbacks["examine_actions"], self.dev.examine_actions
+        )
 
     def test_cleanup_after_experiment_disables_when_not_powered_before(self):
         self.dev.was_powered = False
@@ -97,8 +104,9 @@ class TestDummyAnalogMovementTime(unittest.TestCase):
         dev.name = "dummy"
         dev.config = {"analog_source": "exe", "analog_line": 2, "gain": 1}
         executor = mock.MagicMock()
-        with mock.patch.object(dummy_analog.depot, "get_handler",
-                               return_value=executor):
+        with mock.patch.object(
+            dummy_analog.depot, "get_handler", return_value=executor
+        ):
             dev.get_handlers()
         args = executor.register_analog.call_args.args
         self.assertEqual(args[4], dev.get_movement_time)

@@ -184,7 +184,9 @@ class Image(BaseGL):
 
     @property
     def offset(self):
-        return -(self.v_min - self.data_min) / ((self.data_peak_to_peak * self.scale) or 1)
+        return -(self.v_min - self.data_min) / (
+            (self.data_peak_to_peak * self.scale) or 1
+        )
 
     def __del__(self):
         """Clean up textures."""
@@ -371,11 +373,14 @@ class Histogram(BaseGL):
 
     def data_to_gl(self, val):
         return -1 + 2 * (val - self.lower_bound) / (
-                (self.upper_bound - self.lower_bound) or 1
+            (self.upper_bound - self.lower_bound) or 1
         )
 
     def gl_to_data(self, x):
-        return self.lower_bound + ((self.upper_bound - self.lower_bound) or 1) * (x + 1) / 2
+        return (
+            self.lower_bound
+            + ((self.upper_bound - self.lower_bound) or 1) * (x + 1) / 2
+        )
 
     def set_data(self, data):
         # Calculate histogram.
@@ -409,8 +414,12 @@ class Histogram(BaseGL):
         if self.counts is None:
             return
         binw = self.bins[1] - self.bins[0]
-        self.lower_bound = min(self.bins.min() - binw, self.lower_threshold - binw)
-        self.upper_bound = max(self.bins.max() + binw, self.upper_threshold + binw)
+        self.lower_bound = min(
+            self.bins.min() - binw, self.lower_threshold - binw
+        )
+        self.upper_bound = max(
+            self.bins.max() + binw, self.upper_threshold + binw
+        )
         w = self.upper_bound - self.lower_bound
         glUseProgram(self.get_shader())
         v = []
@@ -806,16 +815,28 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
             event.Skip()
         elif event.LeftDown():
             # Started dragging
-            self.mouse_drag_x, self.mouse_drag_y = self.cur_mouse_x, self.cur_mouse_y
-            self.mouse_left_down_x, self.mouse_left_down_y = self.cur_mouse_x, self.cur_mouse_y
+            self.mouse_drag_x, self.mouse_drag_y = (
+                self.cur_mouse_x,
+                self.cur_mouse_y,
+            )
+            self.mouse_left_down_x, self.mouse_left_down_y = (
+                self.cur_mouse_x,
+                self.cur_mouse_y,
+            )
             black_point_x = (
                 0.5
-                * (1 + self.histogram.data_to_gl(self.histogram.lower_threshold))
+                * (
+                    1
+                    + self.histogram.data_to_gl(self.histogram.lower_threshold)
+                )
                 * self.w
             )
             white_point_x = (
                 0.5
-                * (1 + self.histogram.data_to_gl(self.histogram.upper_threshold))
+                * (
+                    1
+                    + self.histogram.data_to_gl(self.histogram.upper_threshold)
+                )
                 * self.w
             )
             # Set drag mode based on current window position
@@ -827,7 +848,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 else:
                     self.drag_mode = DRAG_CANVAS
             elif abs(self.cur_mouse_x - black_point_x) < abs(
-                    self.cur_mouse_x - white_point_x
+                self.cur_mouse_x - white_point_x
             ):
                 self.drag_mode = DRAG_BLACKPOINT
             else:
@@ -943,11 +964,16 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
 
     def on_set_histogram(self, event=None):
         """Let the user specify the blackpoint and whitepoint for image scaling."""
-        values = cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
-            parent=self,
-            title="Set histogram scale parameters",
-            prompts=["Blackpoint", "Whitepoint"],
-            defaultValues=[self.histogram.lower_threshold, self.histogram.upper_threshold],
+        values = (
+            cockpit.gui.dialogs.get_number_dialog.get_many_numbers_from_user(
+                parent=self,
+                title="Set histogram scale parameters",
+                prompts=["Blackpoint", "Whitepoint"],
+                defaultValues=[
+                    self.histogram.lower_threshold,
+                    self.histogram.upper_threshold,
+                ],
+            )
         )
         values = [float(v) for v in values]
         self.image.v_min = self.histogram.lower_threshold = values[0]
@@ -1016,11 +1042,11 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         gl_x = (-1 + 2 * x / self.w - self.pan_x * self.zoom) / self.zoom
         gl_y = (
             -(
-                    -1
-                    + 2
-                    * y
-                    / (self.h - (HISTOGRAM_HEIGHT * self.GetContentScaleFactor()))
-                    + self.pan_y * self.zoom
+                -1
+                + 2
+                * y
+                / (self.h - (HISTOGRAM_HEIGHT * self.GetContentScaleFactor()))
+                + self.pan_y * self.zoom
             )
             / self.zoom
         )
@@ -1036,7 +1062,8 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
         v_lim = self.image_shape[0] / max(self.image_shape)
         data_x = int((1 + gl_x / h_lim) * self.image_shape[1] // 2)
         data_y = int(
-            self.image_shape[0] - ((1 + gl_y / v_lim) * self.image_shape[0] // 2)
+            self.image_shape[0]
+            - ((1 + gl_y / v_lim) * self.image_shape[0] // 2)
         )
         data_x_clamped = max(0, min(data_x, self.image_shape[1]))
         data_y_clamped = max(0, min(data_y, self.image_shape[0]))

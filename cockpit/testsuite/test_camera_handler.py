@@ -64,7 +64,7 @@ def mock_not_in_video_mode():
 
     class MockCockpitApp:
         @property
-        def Imager(self):
+        def imager(self):
             return MockImager()
 
     with unittest.mock.patch(

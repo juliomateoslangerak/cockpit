@@ -30,7 +30,7 @@ class TestAddLabeledInput(WxTestCase):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         control = gui_utils.add_labeled_input(
-            self.frame, sizer, label="Test", helperString="Help text"
+            self.frame, sizer, label="Test", helper_string="Help text"
         )
 
         self.assertIsInstance(control, wx.TextCtrl)

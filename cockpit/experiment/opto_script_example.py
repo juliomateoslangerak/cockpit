@@ -334,7 +334,7 @@ class OptoPanel(wx.Panel):
         )
         sizer.Add(self.startText)
         self.startText.SetValidator(FLOATVALIDATOR)
-        self.startText.allowEmpty = True
+        self.start_text.allow_empty = True
 
         self.stopText = wx.TextCtrl(self, -1, size=(40, -1))
         self.startText.SetToolTip(
@@ -342,7 +342,7 @@ class OptoPanel(wx.Panel):
         )
         sizer.Add(self.stopText)
         self.stopText.SetValidator(FLOATVALIDATOR)
-        self.stopText.allowEmpty = True
+        self.stop_text.allow_empty = True
 
         button = wx.Button(self, -1, "Add", size=(80, -1))
         button.Bind(wx.EVT_BUTTON, self.onAdd)

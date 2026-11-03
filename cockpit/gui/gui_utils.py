@@ -74,9 +74,9 @@ class _BaseValidator(wx.Validator):
     SetValidator.
     """
 
-    def __init__(self, allowEmpty=False):
+    def __init__(self, allow_empty=False):
         super().__init__()
-        self.Bind(wx.EVT_CHAR, self.OnChar)
+        self.Bind(wx.EVT_CHAR, self.on_char)
 
     def Clone(self):
         # The copy constructor mentioned above.
@@ -104,7 +104,7 @@ class _BaseValidator(wx.Validator):
 
         # Validate empty case
         if val == "":
-            if getattr(ctrl, "allowEmpty", False):
+            if getattr(ctrl, "allow_empty", False):
                 return True
             else:
                 evt = CockpitValidationErrorEvent(
@@ -122,7 +122,7 @@ class _BaseValidator(wx.Validator):
             wx.PostEvent(ctrl, evt)
             return False
 
-    def OnChar(self, event):
+    def on_char(self, event):
         # Define in subclass
         pass
 
@@ -140,7 +140,7 @@ class FloatValidator(_BaseValidator):
             value = "0."
         return float(value)
 
-    def OnChar(self, event):
+    def on_char(self, event):
         key = event.GetKeyCode()
         if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
             # Pass cursors, backspace, etc. to control
@@ -169,7 +169,7 @@ class IntValidator(_BaseValidator):
     def _validate(self, value):
         return int(value)
 
-    def OnChar(self, event):
+    def on_char(self, event):
         key = event.GetKeyCode()
         if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
             # Pass cursors, backspace, etc. to control
@@ -193,7 +193,7 @@ class CSVValidator(_BaseValidator):
             converted.append(float(v))
         return converted
 
-    def OnChar(self, event):
+    def on_char(self, event):
         key = event.GetKeyCode()
         if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
             # Pass cursors, backspace, etc. to control
@@ -232,10 +232,10 @@ def make_lights_controls(parent, labels, defaults):
         # Changed 'control' to 'ctrl' to more clearly discriminate from 'controls'.
         ctrl = wx.TextCtrl(parent, size=(40, -1), name=label)
         ctrl.SetValue(default_val)
-        # allowEmpty=True lets validator know this control may be empty
+        # allow_empty=True lets validator know this control may be empty
         ctrl.SetValidator(FLOATVALIDATOR)
-        # TODO: TextCtrl does not have allowEmpty
-        ctrl.allowEmpty = True
+        # TODO: TextCtrl does not have allow_empty
+        ctrl.allow_empty = True
         controls.append(ctrl)
         sizer.Add(ctrl, 0, wx.ALL, 5)
     return controls, sizer

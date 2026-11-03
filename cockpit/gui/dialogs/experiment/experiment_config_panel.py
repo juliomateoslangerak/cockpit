@@ -323,9 +323,9 @@ class ExperimentConfigPanel(wx.Panel):
                     name="exposure: %s for %s" % (label, camera.name),
                 )
                 exposure_time.SetValue(default_val)
-                # allowEmpty=True lets validator know this control may be empty.
+                # allow_empty=True lets validator know this control may be empty.
                 exposure_time.SetValidator(gui_utils.FLOATVALIDATOR)
-                exposure_time.allowEmpty = True
+                exposure_time.allow_empty = True
                 sequence_sizer.Add(exposure_time, 0, wx.ALL, border=5)
                 times.append(exposure_time)
             self.camera_to_exposure_times[camera] = times

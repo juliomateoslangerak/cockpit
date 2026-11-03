@@ -170,7 +170,7 @@ class ExperimentUI(wx.Panel):
             )
         )
         self.interval.SetValidator(FLOATVALIDATOR)
-        self.interval.allowEmpty = True
+        self.interval.allow_empty = True
         sizer.Add(self.interval)
 
         self.numReps = wx.TextCtrl(self, -1, size=(60, -1))
@@ -180,8 +180,8 @@ class ExperimentUI(wx.Panel):
             )
         )
         self.numReps.SetValidator(INTVALIDATOR)
-        self.numReps.allowEmpty = True
         sizer.Add(self.numReps)
+        self.num_reps.allow_empty = True
 
         button = wx.Button(self, -1, "Add")
         button.Bind(wx.EVT_BUTTON, self.onAdd)

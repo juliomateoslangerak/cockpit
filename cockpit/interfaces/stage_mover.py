@@ -513,6 +513,13 @@ def delete_site(site_id):
         unique_site_index -= 1
 
 
+def delete_all_sites():
+    global unique_site_index
+    for site_id in list(mover.id_to_site.keys()):
+        delete_site(site_id)
+    unique_site_index = 0
+
+
 def get_all_sites() -> typing.List[int]:
     """Retrieve the sites as a list."""
     return list(mover.id_to_site.values())

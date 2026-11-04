@@ -542,7 +542,7 @@ class _MicroscopeStageAxis:
 class MicroscopeStage(MicroscopeBase):
     """Device class for a Python microscope StageDevice.
 
-    This device requires two configurations per axis:
+    This device requires four configurations per axis:
 
     1. The ``axis_name`` configuration specifies the name of the axis
        on the Python microscope ``StageDevice``.  Usually, this is
@@ -553,6 +553,12 @@ class MicroscopeStage(MicroscopeBase):
        units, or steps, used by the device in a µm.  This value is
        used to convert between the device units into physical units.
 
+    3. The ``velocity`` configuration specifies the velocity along the
+       axis in microns per millisecond.
+
+    4  The ``settling_time`` configuration specifies the time required to
+       stabilize once the target position is reached.
+
     For example, a remote XY stage with 0.1µm steps, and a separate Z
     stage with 25nm steps, would have a configuration entry like so::
 
@@ -562,15 +568,21 @@ class MicroscopeStage(MicroscopeBase):
       x_axis_name: X
       y_axis_name: Y
       # Each step is 0.1µm, therefore 10 steps per µm
-      x-units-per-micron: 10 # 1 step == 0.1µm
-      y-units-per-micron: 10 # 1 step == 0.1µm
+      x_units_per_micron: 10 # 1 step == 0.1µm
+      y_units_per_micron: 10 # 1 step == 0.1µm
+      x_velocity: 10
+      y_velocity: 10
+      x_settling_time: 10
+      y_settling_time: 10
 
       [Z stage]
       type: cockpit.devices.microscope_device.MicroscopeStage
       uri: PYRO:SomeZStage@192.168.0.2:7002
       z_axis_name: Z
       # Each step is 25nm, therefore 40 steps per µm
-      x-units-per-micron: 40
+      z_units_per_micron: 40
+      z_velocity: 40
+      z_settling_time: 40
 
     """
 
@@ -626,11 +638,41 @@ class MicroscopeStage(MicroscopeBase):
                     % units_config_name
                 )
 
+            velocity_config_name = one_letter_name + "_velocity"
+            if velocity_config_name not in self.config:
+                raise Exception(
+                    "missing '%s' value in the configuration"
+                    % velocity_config_name
+                )
+            velocity = float(self.config[velocity_config_name])
+            if velocity <= 0.0:
+                raise ValueError(
+                    "'%s' configuration must be a positive value"
+                    % velocity_config_name
+                )
+
+            settling_time_config_name = one_letter_name + "_settling_time"
+            if settling_time_config_name not in self.config:
+                raise Exception(
+                    "missing '%s' value in the configuration"
+                    % settling_time_config_name
+                )
+            settling_time = float(self.config[settling_time_config_name])
+            if settling_time < 0.0:
+                raise ValueError(
+                    "'%s' configuration cannot be a negative value"
+                )
+
             their_axis = their_axes_map[their_name]
             cockpit_index = stage_mover.AXIS_MAP[one_letter_name]
             self._axes.append(
                 _MicroscopeStageAxis(
-                    their_axis, cockpit_index, units_per_micron, self.name
+                    axis=their_axis,
+                    index=cockpit_index,
+                    units_per_micron=units_per_micron,
+                    velocity=velocity,
+                    settling_time=settling_time,
+                    stage_name=self.name
                 )
             )
             handled_axis_names.add(their_name)
@@ -649,7 +691,7 @@ class MicroscopeStage(MicroscopeBase):
         # check if we need to poll for updates of position
         # This is usually required as there is a manual joystick which can move
         # the stage without cockpit knowing about it.
-        # Note: currently this variable isnt checked, all stages are polled
+        # Note: currently this variable isn't checked, all stages are polled
         # in macrostage_xy.
         self.poll_stage = bool(self.config.get("poll_stage", False))
         if self.poll_stage:

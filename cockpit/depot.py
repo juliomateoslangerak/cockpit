@@ -214,6 +214,8 @@ class DeviceDepot:
                         "z_lower_limits": "0",
                         "z_upper_limits": "2500",
                         "z_units_per_micron": "1",
+                        "z_velocity": "10",
+                        "z_settling_time": "10",
                     },
                 )
             )
@@ -226,9 +228,13 @@ class DeviceDepot:
                         "x_lower_limits": "0",
                         "x_upper_limits": "25000",
                         "x_units_per_micron": "1",
+                        "x_velocity": "10",
+                        "x_settling_time": "1000",
                         "y_lower_limits": "0",
                         "y_upper_limits": "12000",
                         "y_units_per_micron": "1",
+                        "y_velocity": "10",
+                        "y_settling_time": "10",
                     },
                 )
             )

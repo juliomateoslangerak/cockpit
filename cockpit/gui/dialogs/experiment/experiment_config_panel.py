@@ -760,8 +760,12 @@ class ExperimentConfigPanel(wx.Panel):
                 params
             )
 
-        self.runner = module.EXPERIMENT_CLASS(**params)
-        return self.runner.run()
+        try:
+            self.runner = module.EXPERIMENT_CLASS(**params)
+            return self.runner.run(confirm=gui_utils.get_user_permission)
+        except Exception:
+            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
+            return False
 
     def get_settings_dict(self):
         """Generate a dict of our current settings."""

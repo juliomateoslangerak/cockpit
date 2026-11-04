@@ -518,6 +518,16 @@ def get_all_sites() -> typing.List[int]:
     return list(mover.id_to_site.values())
 
 
+def sites_in_group(group) -> typing.List[int]:
+    """Return the IDs of the sites in the given group, in the order they were
+    saved."""
+    return [
+        site.unique_id
+        for site in mover.id_to_site.values()
+        if site.group == group
+    ]
+
+
 def does_site_exist(site_id):
     """Return True if there's a site with the specified ID."""
     return site_id in mover.id_to_site

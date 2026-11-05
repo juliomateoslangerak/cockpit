@@ -145,7 +145,7 @@ the system expects.
     The mouse has moved over a camera view, and the specified
     coordinates have the given value.
 
-``"new site"``
+``NEW_SITE``
     The user has marked a position as being of interest.
 
 ``OBJECTIVE_CHANGE``

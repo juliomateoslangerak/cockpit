@@ -90,7 +90,7 @@ SITE_COLORS = [
 CAMERA_TIMEOUT = 1
 
 ## Simple structure for marking potential beads.
-BeadSite = collections.namedtuple("BeadSite", ["pos", "size", "intensity"])
+BeadSite = collections.namedtuple("BeadSite", ["position", "size", "intensity"])
 
 
 def _pause_mosaic_loop(func):
@@ -980,12 +980,12 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
     def set_tile_overlap(self):
         """Display dialogue box to set tile overlap."""
-        value = cockpit.gui.dialogs.get_number_dialog.getNumberFromUser(
+        value = cockpit.gui.dialogs.get_number_dialog.get_number_from_user(
             self.GetParent(),
             "Set mosaic tile overlap.",
             "Tile overlap in %",
             self.overlap,
-            atMouse=True,
+            at_mouse=True,
         )
         self.overlap = float(value)
         cockpit.util.user_config.set_value("mosaic_tile_overlap", self.overlap)
@@ -1002,7 +1002,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
                     break
         # Get image size in microns.
         # This data should be grabbed from the metadata as the system
-        # settings, stage pos etc may have changed
+        # settings, stage position etc may have changed
         data, metadata = cockpit.gui.camera.window.get_image_for_camera(camera)
         pixel_size = metadata["pixel_size"]
         width, height = camera.get_image_size()
@@ -1217,7 +1217,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         if not items:
             # No selected sites.
             return
-        offset = cockpit.gui.dialogs.offset_sites_dialog.showDialogModal(self)
+        offset = cockpit.gui.dialogs.offset_sites_dialog.show_dialog_modal(self)
         if offset is not None:
             for item in items:
                 site_id = int(self.sites_box.GetString(item).split(":")[0])

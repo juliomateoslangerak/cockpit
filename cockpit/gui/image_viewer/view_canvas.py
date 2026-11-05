@@ -969,7 +969,7 @@ class ViewCanvas(wx.glcanvas.GLCanvas):
                 parent=self,
                 title="Set histogram scale parameters",
                 prompts=["Blackpoint", "Whitepoint"],
-                defaultValues=[
+                default_values=[
                     self.histogram.lower_threshold,
                     self.histogram.upper_threshold,
                 ],

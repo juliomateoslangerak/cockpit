@@ -60,21 +60,21 @@ class GetNumberDialog(wx.Dialog):
     wx.GetNumberFromUser except that we allow for floating point values as
     well."""
 
-    def __init__(self, parent, title, prompt, default, atMouse=False):
+    def __init__(self, parent, title, prompt, default, at_mouse=False):
         # Nothing checks how the window was closed, so the OK button should
         # be the only way to close it.
         style = wx.CAPTION
-        if atMouse:
-            mousePos = wx.GetMousePosition()
-            super().__init__(parent, -1, title, mousePos, style=style)
+        if at_mouse:
+            mouse_pos = wx.GetMousePosition()
+            super().__init__(parent, -1, title, mouse_pos, style=style)
         else:
             super().__init__(parent, -1, title, style=style)
 
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.value = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
-            sizer=mainSizer,
+            sizer=main_sizer,
             label=prompt,
             default_value=str(default),
             size=(70, -1),
@@ -84,47 +84,47 @@ class GetNumberDialog(wx.Dialog):
             control_type=wx.TextCtrl,
         )
 
-        buttonsBox = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        # cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        # cancelButton.SetToolTip(wx.ToolTip("Close this window"))
-        # buttonsBox.Add(cancelButton, 0, wx.ALL, 5)
+        # cancel_button = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        # cancel_button.SetToolTip(wx.ToolTip("Close this window"))
+        # buttons_box.Add(cancelButton, 0, wx.ALL, 5)
 
-        startButton = wx.Button(self, wx.ID_OK, "Okay")
-        buttonsBox.Add(startButton, 0, wx.ALL, 5)
+        start_button = wx.Button(self, wx.ID_OK, "Okay")
+        buttons_box.Add(start_button, 0, wx.ALL, 5)
 
-        mainSizer.Add(buttonsBox, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
+        main_sizer.Add(buttons_box, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
 
-        self.SetSizer(mainSizer)
+        self.SetSizer(main_sizer)
         self.SetAutoLayout(True)
-        mainSizer.Fit(self)
+        main_sizer.Fit(self)
 
-    def getValue(self):
+    def get_value(self):
         return self.value.GetValue()
 
 
 class GetManyNumbersDialog(wx.Dialog):
     """As above, but we can accept any number of prompts for multiple numbers."""
 
-    def __init__(self, parent, title, prompts, defaultValues, atMouse=False):
+    def __init__(self, parent, title, prompts, default_values, at_mouse=False):
         # Nothing checks how the window was closed, so the OK button should
         # be the only way to close it.
         style = wx.CAPTION
-        if atMouse:
-            mousePos = wx.GetMousePosition()
-            super().__init__(parent, -1, title, mousePos, style=style)
+        if at_mouse:
+            mouse_pos = wx.GetMousePosition()
+            super().__init__(parent, -1, title, mouse_pos, style=style)
         else:
             super().__init__(parent, -1, title, style=style)
 
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.controls = []
         for i, prompt in enumerate(prompts):
             control = cockpit.gui.gui_utils.add_labeled_input(
                 parent=self,
-                sizer=mainSizer,
+                sizer=main_sizer,
                 label=prompt,
-                default_value=str(defaultValues[i]),
+                default_value=str(default_values[i]),
                 size=(70, -1),
                 min_size=(150, -1),
                 should_right_align_input=True,
@@ -133,40 +133,40 @@ class GetManyNumbersDialog(wx.Dialog):
             )
             self.controls.append(control)
 
-        buttonsBox = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        # cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        # cancelButton.SetToolTip(wx.ToolTip("Close this window"))
-        # buttonsBox.Add(cancelButton, 0, wx.ALL, 5)
+        # cancel_button = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        # cancel_button.SetToolTip(wx.ToolTip("Close this window"))
+        # buttons_box.Add(cancel_button, 0, wx.ALL, 5)
 
-        startButton = wx.Button(self, wx.ID_OK, "Okay")
-        buttonsBox.Add(startButton, 0, wx.ALL, 5)
+        start_button = wx.Button(self, wx.ID_OK, "Okay")
+        buttons_box.Add(start_button, 0, wx.ALL, 5)
 
-        mainSizer.Add(buttonsBox, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
+        main_sizer.Add(buttons_box, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
 
-        self.SetSizer(mainSizer)
+        self.SetSizer(main_sizer)
         self.SetAutoLayout(True)
-        mainSizer.Fit(self)
+        main_sizer.Fit(self)
 
-    def getValues(self):
+    def get_values(self):
         return [control.GetValue() for control in self.controls]
 
 
-def getNumberFromUser(parent, title, prompt, default, atMouse=True):
-    dialog = GetNumberDialog(parent, title, prompt, default, atMouse)
+def get_number_from_user(parent, title, prompt, default, at_mouse=True):
+    dialog = GetNumberDialog(parent, title, prompt, default, at_mouse)
     dialog.ShowModal()
-    value = dialog.getValue()
+    value = dialog.get_value()
     dialog.Destroy()
     return value
 
 
 def get_many_numbers_from_user(
-    parent, title, prompts, defaultValues, atMouse=True
+    parent, title, prompts, default_values, at_mouse=True
 ):
     dialog = GetManyNumbersDialog(
-        parent, title, prompts, defaultValues, atMouse
+        parent, title, prompts, default_values, at_mouse
     )
     dialog.ShowModal()
-    value = dialog.getValues()
+    value = dialog.get_values()
     dialog.Destroy()
     return value

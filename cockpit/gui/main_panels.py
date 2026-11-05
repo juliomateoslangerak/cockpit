@@ -54,8 +54,8 @@ class LightPanel(wx.Panel):
             safe_controls.EVT_SAFE_CONTROL_COMMIT,
             lambda event: self.light.set_exposure_time(event.Value),
         )
-        light_toggle.add_watch("exposure_time", self.exposure_ctrl.SetValue)
-        self.exposure_ctrl.SetValue(light_toggle.exposure_time)
+        light_toggle.add_watch("exposure_time", self.exposure_ctrl.set_value)
+        self.exposure_ctrl.set_value(light_toggle.exposure_time)
 
         self.sizer.Add(self.button, flag=wx.EXPAND)
         self.sizer.AddSpacer(2)
@@ -78,11 +78,11 @@ class LightPanel(wx.Panel):
             )
             self.power_ctrl = safe_controls.SpinGauge(
                 self,
-                minValue=0.0,
-                maxValue=100.0,
+                min_value=0.0,
+                max_value=100.0,
                 fetch_current=lambda: light_power.get_power() * 100.0,
             )
-            self.power_ctrl.SetValue(light_power.power_set_point * 100.0)
+            self.power_ctrl.set_value(light_power.power_set_point * 100.0)
             light_power.add_watch("power_set_point", self._set_power_percent)
             self.power_ctrl.Bind(
                 safe_controls.EVT_SAFE_CONTROL_COMMIT,
@@ -113,7 +113,7 @@ class LightPanel(wx.Panel):
         self.light_power.last_power = self.light_power.callbacks["get_power"]()
 
     def on_destroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.light.remove_watch("exposure_time", self.exposure_ctrl.SetValue)
+        self.light.remove_watch("exposure_time", self.exposure_ctrl.set_value)
         if self.light_power is not None:
             self.light_power.remove_watch(
                 "power_set_point", self._set_power_percent
@@ -122,7 +122,7 @@ class LightPanel(wx.Panel):
         event.Skip()
 
     def _set_power_percent(self, power):
-        self.power_ctrl.SetValue(power * 100.0)
+        self.power_ctrl.set_value(power * 100.0)
 
     def SetFocus(self):
         # Sets focus to the main button to avoid accidental data entry

@@ -59,16 +59,18 @@ class SafeControl:
         Args:
           cancel (Bool): A flag indicating that input was cancelled.
         """
+        # TODO: the GetId called here is going to be a method of the wx element
+        # that SafeControl is mixed in with. It should not really be here
         if cancel or self._pending is not None:
-            evt = SafeControlPendingEvent(id=self.GetId(), Value=self._pending)
-        elif self.Value is not None:
-            evt = SafeControlCommitEvent(
-                id=self.GetId(), Value=self.Value, Commit=True
+            event = SafeControlPendingEvent(id=self.GetId(), Value=self._pending)
+        elif self.value is not None:
+            event = SafeControlCommitEvent(
+                id=self.GetId(), Value=self.value, Commit=True
             )
         else:
             return
-        evt.SetEventObject(self)
-        wx.PostEvent(self, evt)
+        event.SetEventObject(self)
+        wx.PostEvent(self, event)
 
     def set_pending(self, pending=None):
         """Set the pending value.
@@ -84,7 +86,7 @@ class SafeControl:
         if pending is None:
             self._pending = None
             self.SetBackgroundColour(wx.NullColour)
-            self.Value = self._committed
+            self.value = self._committed
         else:
             try:
                 self._pending = float(pending)
@@ -97,28 +99,28 @@ class SafeControl:
     def cancel(self):
         """Cancel - resets to last committed value."""
         if self._pending is not None:
-            self.SetValue(self._committed)
+            self.set_value(self._committed)
             self.post_event(cancel=True)
 
     def commit(self):
         """Commit the pending value."""
         if self._pending is None:
             return
-        self.SetValue(self._pending)
+        self.set_value(self._pending)
         self.post_event()
 
-    def SetValue(self, value):
+    def set_value(self, value):
         """Commits a value and updates the displayed value.
 
         Args:
           value: The value, as an int, float or float-parsable string.
         """
-        self.Value = value
+        self.value = value
         self._committed = value
         self.set_pending(None)
         self.Refresh()
 
-    def ReleaseFocus(self):
+    def release_focus(self):
         p = self.GetParent()
         while not p.AcceptsFocus():
             p = p.GetParent()
@@ -137,8 +139,8 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
     def __init__(
         self,
         *args,
-        minValue=0,
-        maxValue=float("inf"),
+        min_value=0.0,
+        max_value=float("inf"),
         inc=0.2,
         value=0,
         **kwargs,
@@ -149,19 +151,19 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
           *args:  Variable-length arguments list.
 
         Kwargs:
-          minValue (float): The minimum allowable value.
-          maxValue (float): The maximum allowable value
+          min_value (float): The minimum allowable value.
+          max_value (float): The maximum allowable value
           inc (float): The increment for value changes.
           value  (float): The initial value
           **kwargs: arbitrary keyword arguments.
         """
         super().__init__(*args, **kwargs)
         self._pending = None
-        self._min = minValue
-        self._max = maxValue
+        self._min = min_value
+        self._max = max_value
         self._inc = inc
         self._committed = None
-        self._checkTimer = wx.Timer(self)
+        self._check_timer = wx.Timer(self)
         if str(inc).find(".") != -1:
             self._places = len(str(inc)) - str(inc).find(".") - 1
         else:
@@ -171,7 +173,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
             self.te.SetInitialSize(kwargs.get("size"))
         else:
             longest = (
-                max(map(len, (str(minValue), str(maxValue))))
+                max(map(len, (str(min_value), str(max_value))))
                 + self._places
                 + 2
             )
@@ -186,7 +188,7 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         self.Fit()
         sb.MaxSize = (-1, te.Size[-1])
         # initialise _committed
-        self.SetValue(value)
+        self.set_value(value)
         # initialise text control
         self.te.SetValue(str(value))
         # Pass background colour to the text control.
@@ -194,36 +196,36 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         # Set up the SpinButton
         sb.SetRange(0, 2)
         sb.Value = 1
-        self.Bind(wx.EVT_SPIN, self.OnSpin)
+        self.Bind(wx.EVT_SPIN, self.on_spin)
 
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
-        self.Bind(wx.EVT_TEXT, self.OnText)
-        self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
+        self.Bind(wx.EVT_CHAR_HOOK, self.on_char)
+        self.Bind(wx.EVT_TEXT, self.on_text)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.on_mouse_wheel)
 
         # Use a timer to check control still has focus.
-        self.Bind(wx.EVT_TIMER, self.CheckFocus)
+        self.Bind(wx.EVT_TIMER, self.check_focus)
         self.Bind(wx.EVT_SET_FOCUS, self.GetParent().SetFocus)
-        self.Bind(wx.EVT_CHILD_FOCUS, self.OnFocus)
+        self.Bind(wx.EVT_CHILD_FOCUS, self.on_focus)
         self.Bind(wx.EVT_KILL_FOCUS, lambda evt: self.cancel())
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
 
         self.AcceptsFocusRecursively = lambda: True
         self.AcceptsFocus = lambda: False
 
-    def OnFocus(self, evt):
+    def on_focus(self, event):
         """Start the timer that detects loss of focus.
 
         Args:
-          evt: A wx.EVT_SET_FOCUS or wx.EVT_CHILD_FOCUS event.
+          event: A wx.EVT_SET_FOCUS or wx.EVT_CHILD_FOCUS event.
         """
-        if not self._checkTimer.IsRunning():
-            self._checkTimer.StartOnce(500)
+        if not self._check_timer.IsRunning():
+            self._check_timer.StartOnce(500)
 
-    def CheckFocus(self, evt):
+    def check_focus(self, event):
         """Ensure this control displays committed values when it loses focus.
 
         Args:
-          evt (wx.TimerEvent): The event.
+          event (wx.TimerEvent): The event.
 
         On some platforms, TextEntry controls do not reliably receive
         EVT_KILL_FOCUS events when they lose focus, so we use a timer to check
@@ -234,18 +236,18 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         ):
             self.cancel()
         else:
-            self._checkTimer.StartOnce(500)
+            self._check_timer.StartOnce(500)
 
-    def OnMouseWheel(self, evt):
-        """Update value and apperance on mouse scroll.
+    def on_mouse_wheel(self, event):
+        """Update value and appearance on mouse scroll.
 
         Args:
-          evt (wx.MouseEvent): The event.
+          event (wx.MouseEvent): The event.
         """
-        if evt.WheelRotation > 0:
-            new_val = self.Value + self._inc
-        elif evt.WheelRotation < 0:
-            new_val = self.Value - self._inc
+        if event.WheelRotation > 0:
+            new_val = self.value + self._inc
+        elif event.WheelRotation < 0:
+            new_val = self.value - self._inc
         else:
             return
         self.te.SetFocus()
@@ -253,54 +255,54 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         self.set_pending(new_val)
         self.post_event()
 
-    def OnSpin(self, evt):
+    def on_spin(self, event):
         """Update value and appearance on spin button event.
 
         Args:
-          evt (wx.SpinEvent): The event.
+          event (wx.SpinEvent): The event.
         """
         self.te.SetFocus()
-        if evt.Position == 0:
-            new_val = self.Value - self._inc
-        elif evt.Position == 2:
-            new_val = self.Value + self._inc
+        if event.Position == 0:
+            new_val = self.value - self._inc
+        elif event.Position == 2:
+            new_val = self.value + self._inc
         else:
             return
         new_val = max(min(new_val, self._max), self._min)
         self.set_pending(new_val)
-        evt.EventObject.Value = 1
+        event.EventObject.Value = 1
         self.post_event()
 
-    def OnText(self, evt):
+    def on_text(self, event):
         """Update value and appearance on validated text input
 
         Args:
-          evt (wx.CommandEvent(wx.wxEVT_TEXT)): The event.
+          event (wx.CommandEvent(wx.wxEVT_TEXT)): The event.
         """
         self.SetBackgroundColour(
             wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)
         )
-        if evt.String in ["", ".", "-"]:
+        if event.String in ["", ".", "-"]:
             return
-        text = self.GetValue()
+        text = self.get_value()
         self.set_pending(text)
         self.post_event()
 
-    def OnChar(self, evt):
+    def on_char(self, event):
         """Handle character events.
 
         This function just routes keypresses to different behaviours; input
         validation is carried out elsewhere.
 
         Args:
-          evt (wx.KeyEvent): The event.
+          event (wx.KeyEvent): The event.
         """
         self._laststr = self.te.GetValue()
-        if evt.KeyCode == wx.WXK_ESCAPE:
+        if event.KeyCode == wx.WXK_ESCAPE:
             # Cancel on escape
             self.cancel()
-            wx.CallAfter(self.ReleaseFocus)
-        elif evt.KeyCode in [
+            wx.CallAfter(self.release_focus)
+        elif event.KeyCode in [
             wx.WXK_NUMPAD_ENTER,
             wx.WXK_RETURN,
             wx.WXK_SPACE,
@@ -309,28 +311,28 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
         ]:
             if self._laststr != "":
                 # Commit on return, enter, space or tab
-                self._pending = min(max(self.Value, self._min), self._max)
+                self._pending = min(max(self.value, self._min), self._max)
                 self.commit()
-            if evt.KeyCode != wx.WXK_TAB:
-                wx.CallAfter(self.ReleaseFocus)
-            evt.Skip()
-        elif evt.KeyCode in [wx.WXK_UP, wx.WXK_NUMPAD_UP]:
+            if event.KeyCode != wx.WXK_TAB:
+                wx.CallAfter(self.release_focus)
+            event.Skip()
+        elif event.KeyCode in [wx.WXK_UP, wx.WXK_NUMPAD_UP]:
             # Up arrows increment value
-            self.set_pending(self.Value + [1, 10][evt.shiftDown] * self._inc)
+            self.set_pending(self.value + [1, 10][event.shiftDown] * self._inc)
             self.post_event()
-        elif evt.KeyCode in [wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN]:
+        elif event.KeyCode in [wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN]:
             # Down arrows decrement value
-            self.set_pending(self.Value - [1, 10][evt.shiftDown] * self._inc)
+            self.set_pending(self.value - [1, 10][event.shiftDown] * self._inc)
             self.post_event()
         else:
-            evt.Skip()
+            event.Skip()
 
-    def OnDestroy(self, evt):
-        self._checkTimer.Stop()
-        evt.Skip()
+    def on_destroy(self, event):
+        self._check_timer.Stop()
+        event.Skip()
 
     @property
-    def Value(self):
+    def value(self):
         """Return currently displayed value; fallback to last committed value.
 
         Returns:
@@ -338,38 +340,38 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
             committed value and, finally, last pending value.
         """
         try:
-            return float(self.GetValue())
+            return float(self.get_value())
         except:
             return self._committed if self._pending is None else self._pending
 
-    @Value.setter
-    def Value(self, value):
+    @value.setter
+    def value(self, value):
         """Set the currently display value.
 
         Args:
           value: The value to display as a string, int or float.
         """
-        if value is not None and (self.Value != value):
+        if value is not None and (self.value != value):
             s = str(value)
             if "." in s:
                 s = s[: s.find(".") + self._places + 1]
             self.te.ChangeValue(s)
 
-    def set_pending(self, pending):
+    def set_pending(self, pending=None):
         """Handle updates to the pending value.
 
         Args:
           pending (string): The new pending value as a string.
         """
         # Reset the focus-check timer.
-        self._checkTimer.StartOnce(500)
+        self._check_timer.StartOnce(500)
         super().set_pending(pending)
         if self._pending is not None and not self.HasFocus():
-            self.Value = self._pending
+            self.value = self._pending
         if pending is None:
             self.te.SetSelection(0, 0)
 
-    def GetValue(self):
+    def get_value(self):
         """Return the currently displayed value.
 
         Returns:
@@ -381,21 +383,21 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
 class GaugeValue:
     """Parameters used to display values on a gauge, with or without set point."""
 
-    def __init__(self, value=0, minVal=0, maxVal=100, tol=0.01, fetch=None):
+    def __init__(self, value=0, min_val=0, max_val=100, tolerance=0.01, fetch=None):
         """Create a GaugeValue
 
         Kwargs:
           value (float): An initial value.
           min_val (float): The minimum allowed value.
           max_val (float): The maximum allowed value.
-          tol (float): A tolerance used to compare current value and a set point.
+          tolerance (float): A tolerance used to compare current value and a set point.
           fetch (function): A function to fetch the current value from some source.
         """
 
-        self.min = minVal
-        self.max = maxVal
+        self.min = min_val
+        self.max = max_val
         self.setpoint = value
-        self.tol = tol
+        self.tolerance = tolerance
         self.fetch = fetch
         # The last observed value.
         self.last = None
@@ -433,11 +435,11 @@ class GaugeValue:
         """Test if the last fetched value is on target.
 
         Returns:
-          bool: Whether or not the last fetched value is within tol of the setpoint.
+          bool: Whether or not the last fetched value is within tolerance of the setpoint.
         """
         if self.last is None:
             return True
-        return abs(self.last - self.setpoint) / (self.range) < self.tol
+        return abs(self.last - self.setpoint) / (self.range) < self.tolerance
 
 
 class SetPointGauge(SafeControl, wx.Window):
@@ -451,11 +453,11 @@ class SetPointGauge(SafeControl, wx.Window):
         parent,
         id=wx.ID_ANY,
         tolerance=0.005,
-        minValue=0,
-        maxValue=100,
+        min_value=0.0,
+        max_value=100.0,
         fetch_current=None,
         margins=wx.Size(0, 3),
-        pos=wx.DefaultPosition,
+        position=wx.DefaultPosition,
         size=(-1, 18),
         style=wx.SL_HORIZONTAL,
     ):
@@ -467,11 +469,11 @@ class SetPointGauge(SafeControl, wx.Window):
         Kwargs:
           id (int): A wx ID.
           tolerance (float): The tolerance for checking value against setpoint.
-          minValue (float): The minimum allowable value.
-          maxValue (float): The maximum allowable value.
+          min_value (float): The minimum allowable value.
+          max_value (float): The maximum allowable value.
           fetch_current (function): A function to fetch the current value.
           margins (wx.Size): The horizontal and vertical margins.
-          pos (wx.Position): The window position.
+          position (wx.Position): The window position.
           size (wx.Size): The window size.
           style: A combination of wx WindowStyle flags.
         """
@@ -488,9 +490,9 @@ class SetPointGauge(SafeControl, wx.Window):
                 }
             )
 
-        wx.Window.__init__(self, parent, id, pos, size, style)
+        wx.Window.__init__(self, parent, id, position, size, style)
         self._value = GaugeValue(
-            50, minValue, maxValue, tolerance, fetch_current
+            50, min_value, max_value, tolerance, fetch_current
         )
         self._fetching = False
         self._vertical = style & wx.SL_VERTICAL > 0
@@ -503,29 +505,29 @@ class SetPointGauge(SafeControl, wx.Window):
         self._anim = []
         self._displayed = self._value.setpoint
         self._pending = None
-        self.SetValue(self.Value)  # initialises _committed
+        self.set_value(self.value)  # initialises _committed
 
         self._timer = wx.Timer(self)
         self._timer.Start(50)
 
         self._margins = margins
 
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.OnLDClick)
-        self.Bind(wx.EVT_MOUSE_EVENTS, self.OnDrag)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_TIMER, self.on_timer)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.on_ld_click)
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.on_drag)
         # bind window destroy event to allow us to stop the timer
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
 
         self.AcceptsFocusFromKeyboard = lambda: False
         self.SetDoubleBuffered(True)
 
     @property
-    def Value(self):
+    def value(self):
         return self._value.setpoint
 
-    @Value.setter
-    def Value(self, value):
+    @value.setter
+    def value(self, value):
         """
         Sets the current set point of a SetPointGauge in mapped units.
 
@@ -533,39 +535,39 @@ class SetPointGauge(SafeControl, wx.Window):
           value (float): A float in mapped units specifying the current set point.
         """
         delta = value - self._displayed
-        nsteps = int(min(10, abs(delta) // (0.01 * self._value.range)))
+        nb_steps = int(min(10, abs(delta) // (0.01 * self._value.range)))
         self._anim = [
-            self._displayed + i * delta / nsteps for i in range(nsteps)
+            self._displayed + i * delta / nb_steps for i in range(nb_steps)
         ]
         self._anim.append(value)
         self._anim.reverse()
         self._value.setpoint = value
 
-    def GetValue(self):
+    def get_value(self):
         """Return the current setpoint.
 
         Returns:
           float:  The current setpoint."""
         return self._value.setpoint
 
-    def PosToValue(self, pos):
+    def pos_to_value(self, position):
         """Convert a gauge position to mapped value.
 
         Args:
-          pos (wx.Position): The position, e.g. from a mouse click.
+          position (wx.Position): The position, e.g. from a mouse click.
 
         Returns:
-          float: The value represented at point pos in the gauge range.
+          float: The value represented at point position in the gauge range.
         """
         rect = self.GetClientRect()
         if self._vertical:
             return self._value.from_quotient(
-                (rect.height - pos[1]) / rect.Size[1]
+                (rect.height - position[1]) / rect.Size[1]
             )
         else:
-            return self._value.from_quotient(float(pos[0] / rect.Size[0]))
+            return self._value.from_quotient(float(position[0] / rect.Size[0]))
 
-    def ValueToPos(self, value):
+    def value_to_pos(self, value):
         """Convert a mapped value to a gauge position.
 
         Args:
@@ -580,52 +582,52 @@ class SetPointGauge(SafeControl, wx.Window):
         else:
             return self._value.to_quotient(value) * rect.Size[0]
 
-    def OnDrag(self, evt):
+    def on_drag(self, event):
         """Handle drag events.
 
         Updates pending value based on mouse position, issues events to update
         linked controls, and cancels on dragging beyond the limits of the gauge.
 
         Args:
-          evt (wx.MouseEvent): The drag event.
+          event (wx.MouseEvent): The drag event.
         """
-        pos = evt.GetLogicalPosition(wx.ClientDC(self))
+        pos = event.GetLogicalPosition(wx.ClientDC(self))
         if (
-            evt.Dragging()
-            and evt.LeftIsDown()
+            event.Dragging()
+            and event.LeftIsDown()
             and self.GetClientRect().Contains(pos)
         ):
-            self.set_pending(self.PosToValue(pos))
+            self.set_pending(self.pos_to_value(pos))
             self.post_event()
-        elif evt.LeftUp():
+        elif event.LeftUp():
             self.commit()
-        elif evt.Leaving() and self.HasFocus():
+        elif event.Leaving() and self.HasFocus():
             self.cancel()
-        evt.Skip()
+        event.Skip()
 
-    def OnLDClick(self, evt):
+    def on_ld_click(self, event):
         """Handle double-click events.
 
         Args:
-          evt (wx.MouseEvent): The double-click event.
+          event (wx.MouseEvent): The double-click event.
         """
-        pos = evt.GetPosition()
-        self.set_pending(self.PosToValue(pos))
+        pos = event.GetPosition()
+        self.set_pending(self.pos_to_value(pos))
         self.commit()
 
     @property
     def range(self):
         """The magnitude of the range represented by the gauge.the
 
-        Property synonym for GetRange().
+        Property synonym for get_range().
 
         Returns:
           float: The gauge range.
         """
-        return self.GetRange()
+        return self.get_range()
 
-    def GetRange(self):
-        """Retruns the range of a SetPointGauge value like a wx.Slider.
+    def get_range(self):
+        """Returns the range of a SetPointGauge value like a wx.Slider.
 
         Returns:
           float: The gauge range.
@@ -633,25 +635,25 @@ class SetPointGauge(SafeControl, wx.Window):
         rect = self.GetClientRect()
         return (0, [rect.width, rect.height][self._vertical])
 
-    def SetFetchCurrent(self, f):
+    def set_fetch_current(self, f):
         """
-        Sets the the function used to poll a SetPointGauge value.
+        Sets the function used to poll a SetPointGauge value.
 
         Args:
           f (function): a function with no arguments that returns a float.
         """
         self._value.fetch = f
 
-    def SetTolerance(self, value):
+    def set_tolerance(self, value):
         """
         Sets the tolerance of a SetPointGauge value in mapped units.
 
         Args:
           value (float): the tolerance as a fraction of the gauge range.
         """
-        self._value.tol = value
+        self._value.tolerance = value
 
-    def OnPaint(self, evt):
+    def on_paint(self, event):
         """
         Handles the ``wx.EVT_PAINT`` event for :class:`SetPointGauge`.
 
@@ -709,7 +711,7 @@ class SetPointGauge(SafeControl, wx.Window):
         dc.SetPen(wx.Pen(colour))
         dc.DrawRectangle(bar)
 
-        self.DrawLimitIndicators(dc)
+        self.draw_limit_indicators(dc)
 
         # Draw a scale
         dg = 0
@@ -753,27 +755,26 @@ class SetPointGauge(SafeControl, wx.Window):
                 pos *= rect.width
                 dc.DrawLine(int(pos), 0, int(pos), rect.height)
 
-    def DrawLimitIndicators(self, dc):
+    def draw_limit_indicators(self, device_context):
         """Draws <<< or >>> to indicate values exceeding gauge range.
 
         Args:
-          dc (wx.DeviceContext): The device context to use for drawing.
+          device_context (wx.DeviceContext): The device context to use for drawing.
         """
         rect = self.GetClientRect()
 
-        dirn = None
         if self._value.last is None:
             return
 
         if self._value.last < self._value.min:
-            dirn = -1
+            direction = -1
         elif self._value.last > self._value.max:
-            dirn = 1
+            direction = 1
         else:
             return
 
         if self._vertical:
-            dirn *= -1
+            direction *= -1
 
             def f_ch(pos, dirn):
                 mid = rect.width // 2
@@ -791,28 +792,28 @@ class SetPointGauge(SafeControl, wx.Window):
                     (pos, mid, pos - dirn * mid, rect.height),
                 ]
 
-        if dirn is not None:
-            dc.SetPen(wx.Pen(self.__class__.colours["on_target"], width=2))
+        if direction is not None:
+            device_context.SetPen(wx.Pen(self.__class__.colours["on_target"], width=2))
 
-            posns = [self.range[dirn == 1] - i * dirn * 6 for i in range(3)]
-            [dc.DrawLineList(f_ch(pos, dirn)) for pos in posns]
+            posns = [self.range[direction == 1] - i * direction * 6 for i in range(3)]
+            [device_context.DrawLineList(f_ch(pos, direction)) for pos in posns]
 
-    def OnTimer(self, evt):
+    def on_timer(self, event):
         """Handle the wx.EVT_TIMER event for :class:`SetPointGauge`.
 
         Args:
-          evt (wx.TimerEvent): The TimerEvent to be processed.
+          event (wx.TimerEvent): The TimerEvent to be processed.
         """
         if self._value.fetch and not self._fetching:
             delayedresult.startWorker(
-                self._onFetch, self._value.fetch, wargs=()
+                self._on_fetch, self._value.fetch, wargs=()
             )
             self._fetching = True
         if self._anim:
             self._displayed = self._anim.pop()
         self.Refresh()
 
-    def _onFetch(self, result):
+    def _on_fetch(self, result):
         """A callback to process the result of a call to self._value.fetch.
 
         Args:
@@ -824,9 +825,9 @@ class SetPointGauge(SafeControl, wx.Window):
             self._value.last = None
         self._fetching = False
 
-    def OnDestroy(self, evt):
+    def on_destroy(self, event):
         self._timer.Stop()
-        evt.Skip()
+        event.Skip()
 
 
 class SpinGauge(wx.Panel):
@@ -835,8 +836,8 @@ class SpinGauge(wx.Panel):
     def __init__(
         self,
         parent,
-        minValue=0,
-        maxValue=100,
+        min_value=0,
+        max_value=100,
         increment=None,
         fetch_current=None,
     ):
@@ -846,29 +847,29 @@ class SpinGauge(wx.Panel):
           parent (wx.Window): the parent window
 
         Kwargs:
-          minValue (float): The minimum allowable value.
-          maxValue (float): The maximum allowable value.
+          min_value (float): The minimum allowable value.
+          max_value (float): The maximum allowable value.
           increment (float): The base value increment.
           fetch_current (function): A function to fetch the current value.
-          pos (wx.Position): The window position.
+          position (wx.Position): The window position.
           size (wx.Size): The window size.
           style: A combination of wx WindowStyle flags.
         """
         super().__init__(parent=parent, id=wx.ID_ANY)
         # Determine increment
-        increment = increment or float("%1.g" % ((maxValue - minValue) / 1000))
+        increment = increment or float("%1.g" % ((max_value - min_value) / 1000))
 
         spinner = SafeSpinCtrlDouble(
             parent=self,
             id=wx.ID_ANY,
-            minValue=float(minValue),
-            maxValue=float(maxValue),
+            min_value=float(min_value),
+            max_value=float(max_value),
             inc=increment,
         )
         slider = SetPointGauge(
             self,
-            minValue=minValue,
-            maxValue=maxValue,
+            min_value=min_value,
+            max_value=max_value,
             fetch_current=fetch_current,
         )
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -889,46 +890,46 @@ class SpinGauge(wx.Panel):
         # so that the client can bind a simple actions to handle each case
         # separately.
         for c in self.controls:
-            c.Bind(EVT_SAFE_CONTROL_PENDING, self.ChildOnSafeControlEvent)
-            c.Bind(EVT_SAFE_CONTROL_COMMIT, self.ChildOnSafeControlEvent)
+            c.Bind(EVT_SAFE_CONTROL_PENDING, self.child_on_safe_control_event)
+            c.Bind(EVT_SAFE_CONTROL_COMMIT, self.child_on_safe_control_event)
         self.Bind(wx.EVT_SET_FOCUS, self.GetParent().SetFocus)
         self.AcceptsFocus = lambda: False
 
-    def ChildOnSafeControlEvent(self, evt):
+    def child_on_safe_control_event(self, event):
         """Handle child control value change events and update other controls.
 
         Args:
-          evt: The SafeControlPendingEvent or SafeControlCommitEvent to handle.
+          event: The SafeControlPendingEvent or SafeControlCommitEvent to handle.
         """
-        others = self.controls.difference([evt.GetEventObject()])
-        isCommit = isinstance(evt, SafeControlCommitEvent)
+        others = self.controls.difference([event.GetEventObject()])
+        is_commit = isinstance(event, SafeControlCommitEvent)
         for other in others:
-            if isCommit:
-                other.SetValue(evt.Value)
+            if is_commit:
+                other.set_value(event.Value)
             else:
-                other.set_pending(evt.Value)
-        if isCommit:
-            evt.Skip()  # Propogate up so self can handle commit events.
+                other.set_pending(event.Value)
+        if is_commit:
+            event.Skip()  # Propagate up so self can handle commit events.
 
     @property
-    def Value(self):
-        """A property synonym for GetValue.
+    def value(self):
+        """A property synonym for get_value.
 
         Returns:
           float: The current value of the control.
         """
         return self._value
 
-    @Value.setter
-    def Value(self, value):
+    @value.setter
+    def value(self, value):
         """Set the value displayed on child controls.
 
         Args:
           value: The new value as a float, int or float-parsable string.
         """
-        self.SetValue(value)
+        self.set_value(value)
 
-    def GetValue(self):
+    def get_value(self):
         """Get the current value.
 
         Returns:
@@ -936,7 +937,7 @@ class SpinGauge(wx.Panel):
         """
         return self._value
 
-    def SetValue(self, value):
+    def set_value(self, value):
         """Set the value displayed on child controls.
 
         Args:
@@ -945,4 +946,4 @@ class SpinGauge(wx.Panel):
         self._value = value
         self.slider.set_pending(None)
         for obj in self.controls:
-            obj.SetValue(value)
+            obj.set_value(value)

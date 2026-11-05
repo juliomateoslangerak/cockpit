@@ -419,7 +419,7 @@ class BoulderSLM(device.Device):
         except:
             raise Exception("Could not communicate with SLM service.")
         new_theta = float(
-            cockpit.gui.dialogs.get_number_dialog.getNumberFromUser(
+            cockpit.gui.dialogs.get_number_dialog.get_number_from_user(
                 None,
                 "Set SIM diffraction angle",
                 (
@@ -427,7 +427,7 @@ class BoulderSLM(device.Device):
                     "Current angle is %.2f°." % theta
                 ),
                 theta,
-                atMouse=True,
+                at_mouse=True,
             )
         )
         self.connection.set_sim_diffraction_angle(new_theta)

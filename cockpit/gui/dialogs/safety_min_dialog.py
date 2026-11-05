@@ -80,14 +80,14 @@ class SafetyMinDialog(wx.Dialog):
         self,
         parent,
         size=wx.DefaultSize,
-        pos=wx.DefaultPosition,
+        position=wx.DefaultPosition,
         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
     ):
-        super().__init__(parent, -1, "Set Z motion minimum", pos, size, style)
+        super().__init__(parent, -1, "Set Z motion minimum", position, size, style)
 
-        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.mainSizer.Add(
+        self.main_sizer.Add(
             wx.StaticText(
                 self,
                 -1,
@@ -99,9 +99,9 @@ class SafetyMinDialog(wx.Dialog):
             10,
         )
 
-        self.minStageZ = cockpit.gui.gui_utils.add_labeled_input(
+        self.min_stage_z = cockpit.gui.gui_utils.add_labeled_input(
             parent=self,
-            sizer=self.mainSizer,
+            sizer=self.main_sizer,
             label="stage Z minimum (µm):",
             default_value=str(
                 cockpit.interfaces.stage_mover.get_soft_limits()[2][0]
@@ -112,56 +112,56 @@ class SafetyMinDialog(wx.Dialog):
             border=3,
             control_type=wx.TextCtrl,
         )
-        rowSizer = wx.BoxSizer(wx.HORIZONTAL)
-        slideSafetyButton = wx.Button(self, -1, "Slide")
-        slideSafetyButton.SetToolTip(
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        slide_safety_button = wx.Button(self, -1, "Slide")
+        slide_safety_button.SetToolTip(
             wx.ToolTip("Set the safety to a good value for slide experiments")
         )
-        slideSafetyButton.Bind(
-            wx.EVT_BUTTON, lambda event: self.setSafetyText(SLIDE_SAFETY)
+        slide_safety_button.Bind(
+            wx.EVT_BUTTON, lambda event: self.set_safety_text(SLIDE_SAFETY)
         )
-        rowSizer.Add(slideSafetyButton, 0, wx.ALL, 5)
-        dishSafetyButton = wx.Button(self, -1, "Dish")
-        dishSafetyButton.SetToolTip(
+        row_sizer.Add(slide_safety_button, 0, wx.ALL, 5)
+        dish_safety_button = wx.Button(self, -1, "Dish")
+        dish_safety_button.SetToolTip(
             wx.ToolTip("Set the safety to a good value for dish experiments")
         )
-        dishSafetyButton.Bind(
-            wx.EVT_BUTTON, lambda event: self.setSafetyText(DISH_SAFETY)
+        dish_safety_button.Bind(
+            wx.EVT_BUTTON, lambda event: self.set_safety_text(DISH_SAFETY)
         )
-        rowSizer.Add(dishSafetyButton, 0, wx.ALL, 5)
+        row_sizer.Add(dish_safety_button, 0, wx.ALL, 5)
 
-        self.mainSizer.Add(rowSizer, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
+        self.main_sizer.Add(row_sizer, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
 
-        buttonsBox = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        cancelButton = wx.Button(self, label="Cancel")
-        cancelButton.SetToolTip(wx.ToolTip("Close this window"))
-        buttonsBox.Add(cancelButton, 0, wx.ALL, 5)
+        cancel_button = wx.Button(self, label="Cancel")
+        cancel_button.SetToolTip(wx.ToolTip("Close this window"))
+        buttons_box.Add(cancel_button, 0, wx.ALL, 5)
 
-        startButton = wx.Button(self, label="Apply")
-        startButton.SetToolTip(wx.ToolTip("Apply the chosen safety min"))
-        buttonsBox.Add(startButton, 0, wx.ALL, 5)
+        start_button = wx.Button(self, label="Apply")
+        start_button.SetToolTip(wx.ToolTip("Apply the chosen safety min"))
+        buttons_box.Add(start_button, 0, wx.ALL, 5)
 
-        self.mainSizer.Add(
-            buttonsBox, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3
+        self.main_sizer.Add(
+            buttons_box, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3
         )
 
-        self.SetSizer(self.mainSizer)
+        self.SetSizer(self.main_sizer)
         self.SetAutoLayout(True)
-        self.mainSizer.Fit(self)
+        self.main_sizer.Fit(self)
 
-        startButton.Bind(wx.EVT_BUTTON, self.OnStart)
+        start_button.Bind(wx.EVT_BUTTON, self.on_start)
 
-    def setSafetyText(self, value):
+    def set_safety_text(self, value):
         """Set the text for the stage safety min to a default value."""
-        self.minStageZ.SetValue("%.1f" % value)
+        self.min_stage_z.SetValue("%.1f" % value)
 
-    def OnStart(self, event):
+    def on_start(self, event):
         """Save the user's selected Z min to the user config, and then set the
         new min."""
         self.Hide()
         cockpit.interfaces.stage_mover.set_soft_min(
-            2, float(self.minStageZ.GetValue())
+            2, float(self.min_stage_z.GetValue())
         )
 
 
@@ -169,7 +169,7 @@ class SafetyMinDialog(wx.Dialog):
 dialog = None
 
 
-def showDialog(parent):
+def show_dialog(parent):
     """Generate the dialog for display.
 
     If it already exists, just bring it forwards.

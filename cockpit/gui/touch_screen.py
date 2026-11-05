@@ -682,8 +682,8 @@ class LightsPanelEntry(wx.Panel):
             sizer_row2_row1 = wx.BoxSizer(wx.HORIZONTAL)
             self.slider = SetPointGauge(
                 self,
-                minValue=0,
-                maxValue=100,
+                min_value=0,
+                max_value=100,
                 fetch_current=lambda: self.power.get_power() * 100,
                 margins=wx.Size(3, 3),
                 style=wx.BORDER_SIMPLE,
@@ -692,7 +692,7 @@ class LightsPanelEntry(wx.Panel):
                 EVT_SAFE_CONTROL_COMMIT,
                 lambda event: self.power.set_power(event.Value / 100),
             )
-            self.slider.SetValue(self.power.power_set_point * 100)
+            self.slider.set_value(self.power.power_set_point * 100)
             self.power.add_watch(
                 "power_set_point", self._set_slider_power_percent
             )
@@ -722,7 +722,7 @@ class LightsPanelEntry(wx.Panel):
         self.power_ctrl.set_value(power * 100)
 
     def _set_slider_power_percent(self, power):
-        self.slider.SetValue(power * 100)
+        self.slider.set_value(power * 100)
 
 
 class LightsPanel(wx.Panel):

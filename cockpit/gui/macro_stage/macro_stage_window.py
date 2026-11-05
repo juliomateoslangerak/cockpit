@@ -386,7 +386,7 @@ class MacroStagePanel(wx.Panel):
         stage_mover.recenter_fine_motion()
 
     def on_set_z_safeties(self, evt: wx.CommandEvent) -> None:
-        cockpit.gui.dialogs.safety_min_dialog.showDialog(self)
+        cockpit.gui.dialogs.safety_min_dialog.show_dialog(self)
 
     def on_touch_down(self, ect: wx.CommandEvent) -> None:
         zpos = wx.GetApp().config["stage"].getfloat("slideTouchdownAltitude")

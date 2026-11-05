@@ -56,12 +56,12 @@ import cockpit.gui.gui_utils
 
 
 ## @package dialogs.offsetSitesDialog
-# This module contains the \link dialogs.offsetSitesDialog.OffsetSites_Dialog
-# OffsetSites_Dialog \endlink
+# This module contains the \link dialogs.offsetSitesDialog.OffsetsitesDialog
+# OffsetsitesDialog \endlink
 # class, and code for displaying it.
 
 
-class OffsetSites_Dialog(wx.Dialog):
+class OffsetsitesDialog(wx.Dialog):
     """This dialog allows the user to add a positional offset to a selection of
     sites."""
 
@@ -87,23 +87,23 @@ class OffsetSites_Dialog(wx.Dialog):
                 )
             )
 
-        buttonBox = wx.BoxSizer(wx.HORIZONTAL)
+        button_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        cancelButton = wx.Button(self, wx.ID_CANCEL, "Cancel")
-        cancelButton.SetToolTip(wx.ToolTip("Close this window"))
-        buttonBox.Add(cancelButton, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        cancel_button = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        cancel_button.SetToolTip(wx.ToolTip("Close this window"))
+        button_box.Add(cancel_button, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        startButton = wx.Button(self, wx.ID_OK, "Move sites")
-        buttonBox.Add(startButton, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        start_button = wx.Button(self, wx.ID_OK, "Move sites")
+        button_box.Add(start_button, 0, wx.ALIGN_CENTRE | wx.ALL, 5)
 
-        buttonBox.Add((20, -1), 1, wx.ALL, 5)
-        sizer.Add(buttonBox, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        button_box.Add((20, -1), 1, wx.ALL, 5)
+        sizer.Add(button_box, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
         self.SetSizer(sizer)
         self.SetAutoLayout(True)
         sizer.Fit(self)
 
-    def getOffset(self):
+    def get_offset(self):
         """Return a list of floats indicating the offset to add."""
         result = []
         for control in self.controls:
@@ -114,12 +114,12 @@ class OffsetSites_Dialog(wx.Dialog):
         return result
 
 
-def showDialogModal(parent):
+def show_dialog_modal(parent):
     """Show the dialog.
 
     If it has not been created yet, then create it first.
     """
-    dialog = OffsetSites_Dialog(parent)
+    dialog = OffsetsitesDialog(parent)
     if dialog.ShowModal() == wx.ID_OK:
-        return dialog.getOffset()
+        return dialog.get_offset()
     return None

@@ -351,7 +351,12 @@ class TestMicroscopeStageAxisMotion(unittest.TestCase):
         self.axis.limits.upper = 100.0
         self.axis.position = 500.0
         self.wrapper = microscope_device._MicroscopeStageAxis(
-            self.axis, 0, 10.0, "stage"
+            axis=self.axis,
+            index=0,
+            units_per_micron=10.0,
+            velocity=500.0,
+            settling_time=100.0,
+            stage_name="stage"
         )
         self.callbacks = self.wrapper.get_handler().callbacks
 
@@ -399,7 +404,14 @@ class TestMicroscopeStageHandlers(unittest.TestCase):
         axis.limits.upper = 100.0
         axis.position = 50.0
         stage._axes = [
-            microscope_device._MicroscopeStageAxis(axis, 0, 1.0, "stage")
+            microscope_device._MicroscopeStageAxis(
+                axis=axis,
+                index=0,
+                units_per_micron=1.0,
+                velocity=500.0,
+                settling_time=100.0,
+                stage_name="stage"
+            )
         ]
         handlers = stage.get_handlers()
         self.assertEqual(len(handlers), 1)

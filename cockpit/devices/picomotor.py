@@ -93,9 +93,9 @@ _logger = logging.getLogger(__name__)
 # 1 mm 1
 # closed loop timing 0.1s
 # 1 cl 0.1
-# move to neagtive limit
+# move to negative limit
 # 1 mt -
-# Set curent pos to 0
+# Set current position to 0
 # 1 dh
 # move back to mid position (need to check position)
 # 1 pa 10000
@@ -180,11 +180,11 @@ class PicoMotorDevice(device.Device):
     def home_motors(self):
         """Routine to home all 3 motors. record position move to negative
         threshold (z axis should go to +ve limit so as not to ram objective)
-        check if moving, sleep and loop record new pos set home move to
+        check if moving, sleep and loop record new position set home move to
         start-end position to return to starting position loop through each
         axis."""
         orig_position = self.get_xy_position(should_use_cache=False)
-        for axis in range(0, 2):
+        for axis in range(2):
             print(
                 "homeing axis 1 %s, origPosiiton=%d"
                 % (self.axis_mapper[axis], orig_position[axis])
@@ -198,13 +198,14 @@ class PicoMotorDevice(device.Device):
             while self.check_for_motion(controller) == 1:
                 time.sleep(1)
             # record new position
-            newposition = self.get_xy_position(should_use_cache=False)
-            # set to pos zero
+            new_position = self.get_xy_position(should_use_cache=False)
+            # set to position zero
             self.send_xy_command("%s dh " % (self.axis_mapper[axis]), 0)
-            # move to pos +100 absolute to make sure we aren't in negative positions
+            # move to position +100 absolute to make sure we aren't in negative positions
             self.send_xy_command("%s pa 100" % (self.axis_mapper[axis]), 0)
             # calculate how to move back to where we were
-            endposition[axis] = -newposition[axis] + orig_position[axis]
+            # FIXME: endpositon is never defined. refactor to end_position
+            endposition[axis] = -new_position[axis] + orig_position[axis]
 
         print("home done now returning to last position", endposition)
         for axis in range(0, 2):
@@ -230,7 +231,7 @@ class PicoMotorDevice(device.Device):
     # record position
     # move to negative threshold (z axis should go to +ve limit so as not to ram objective)
     # check if moving, sleep and loop
-    # record new pos
+    # record new position
     # set home
     # move to start-end position to resturn to starting position
     # loop through each axis
@@ -251,16 +252,17 @@ class PicoMotorDevice(device.Device):
             while self.check_for_motion(controller) == 1:
                 time.sleep(1)
             # record new position
-            newposition = self.get_xy_position(should_use_cache=False)
-            # set to pos zero
+            new_position = self.get_xy_position(should_use_cache=False)
+            # set to position zero
             self.send_xy_command("%s dh " % (self.axis_mapper[axis]), 0)
-            # move to pos +100 absolute to make sure we aren't in negative positions
+            # move to position +100 absolute to make sure we aren't in negative positions
             self.send_xy_command("%s pa 100" % (self.axis_mapper[axis]), 0)
             # calculate how to move back to where we were
-            endpositon[axis] = -newposition[axis] + oldposition[axis]
+            # FIXME: endpositon and oldposition are never defined. refactor to end_position and old_position
+            endpositon[axis] = -new_position[axis] + oldposition[axis]
 
         print("home done now returning to last position", endposition)
-        for axis in range(0, 2):
+        for axis in range(2):
             while self.check_for_motion(controller) == 1:
                 time.sleep(1)
             self.send_xy_command(

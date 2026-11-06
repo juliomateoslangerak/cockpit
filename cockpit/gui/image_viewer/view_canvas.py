@@ -204,10 +204,10 @@ class Image(BaseGL):
     def get_display_range(self):
         return (self.v_min, self.v_max)
 
-    def set_display_range(self, vmin, vmax):
+    def set_display_range(self, v_min, v_max):
         """Set offset and scaling given clip points."""
-        self.v_min = float(vmin)
-        self.v_max = float(vmax)
+        self.v_min = float(v_min)
+        self.v_max = float(v_max)
 
     def set_data(self, data):
         self._data = data

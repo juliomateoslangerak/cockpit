@@ -366,6 +366,13 @@ class Histogram(BaseGL):
     def __init__(self):
         self.bins = None
         self.counts = None
+        self.smoothing_window = 4
+        self.smoothing_kernel = np.full(
+            self.smoothing_window,
+            1 / self.smoothing_window
+        )
+        self.bins_nb = 64
+        self.fine_bins_nb = self.bins_nb * self.smoothing_window
         self.lower_bound = None
         self.upper_bound = None
         self.lower_threshold = None
@@ -382,14 +389,7 @@ class Histogram(BaseGL):
             + ((self.upper_bound - self.lower_bound) or 1) * (x + 1) / 2
         )
 
-    def set_data(self, data):
-        # Calculate histogram.
-        # Use shifted average histogram to avoid binning artefacts.
-        # generate set of m histograms
-        #   each has class width h
-        #   start points 0, h/m, 2h/m, ..., (m-1)h/m
-        # 1 < m < 64
-        # sum to average
+    def set_data(self, data, density=True):
         if self.lower_bound is None:
             self.lower_bound = data.min()
         if self.upper_bound is None:
@@ -398,17 +398,24 @@ class Histogram(BaseGL):
             self.lower_threshold = self.lower_bound
         if self.upper_threshold is None:
             self.upper_threshold = self.upper_bound
-        nb_bins = 64
-        m = 4
-        self.bins = np.linspace(data.min(), data.max(), nb_bins)
-        self.counts = np.zeros(nb_bins)
-        h = self.bins[1] - self.bins[0]
-        for i in range(m):
-            these = np.bincount(
-                np.digitize(data.flat, self.bins + i * h / m, right=True),
-                minlength=nb_bins,
-            )
-            self.counts += these[0:nb_bins]
+
+        # the histogram is computed with a fine grain and after smoothed with
+        # a moving median kernel to avoid display artifacts
+        hist, _ = np.histogram(
+            data,
+            bins=self.fine_bins_nb,
+            density=density
+        )
+
+        # Smooth histogram
+        smoothed = np.convolve(hist, self.smoothing_kernel, mode="same")
+
+        # Resample to desired resolution
+        self.counts = smoothed.reshape(self.bins_nb, self.smoothing_window).mean(axis=1)
+
+        # Output bin centers
+        output_edges = np.linspace(self.lower_bound, self.upper_bound, self.bins_nb + 1)
+        self.bins = (output_edges[:-1] + output_edges[1:]) / 2
 
     def draw(self):
         if self.counts is None:

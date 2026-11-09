@@ -150,6 +150,9 @@ class Experiment:
         self.slice_height = slice_height
         self.exposure_settings = exposure_settings
 
+        # Flag to control run_thread abort
+        self.should_abort = None
+
         self.cameras = []
         self.lights = []
         for cameras, light_times in exposure_settings:
@@ -201,10 +204,6 @@ class Experiment:
         # from them.
         self.camera_to_ignored_image_indices = {c: set() for c in self.cameras}
 
-        ## Whether or not we should stop the experiment at the next opportunity.
-        self.should_abort = False
-        events.subscribe(events.USER_ABORT, self.on_abort)
-
         ## Resultant Z altitude prior to execution, used to restore position.
         self.initial_altitude = None
 
@@ -242,6 +241,11 @@ class Experiment:
 
         global last_experiment
         last_experiment = self
+
+        ## Whether we should stop the experiment at the next opportunity.
+        self.should_abort = False
+        events.subscribe(events.USER_ABORT, self.on_abort)
+
         self.sanity_check_environment()
         self.prepare_handlers()
 

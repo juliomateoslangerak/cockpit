@@ -105,7 +105,7 @@ class TestSubscriptions(TestEvents):
 class TestOneShotSubscriptions(TestEvents):
     def setUp(self):
         super().setUp()
-        cockpit.events.oneShotSubscribe(self.event_name, self.subscriber)
+        cockpit.events.one_shot_subscribe(self.event_name, self.subscriber)
 
     def test_called_only_once(self):
         """One shot subscriptions are not called on second publication"""
@@ -137,20 +137,20 @@ class TestExecuteAndWait(TestEvents):
         args = [1, 2]
         kwargs = {"foo": "bar"}
         emitter = self.mock_emitter(self.event_name)
-        cockpit.events.executeAndWaitFor(
+        cockpit.events.execute_and_wait_for(
             self.event_name, emitter, *args, **kwargs
         )
         emitter.assert_called_once_with(*args, **kwargs)
 
         # We check the mock subscriber to test that the publication
         # caused by the emitter, went to other subscribers and not
-        # only to the executeAndWaitFor releaser.
+        # only to the execute_and_wait_for releaser.
         self.subscriber.assert_called_once_with()
 
     def test_abort_wait_for_event(self):
         """User abort event stops waiting for an event"""
         emitter = self.mock_emitter(cockpit.events.USER_ABORT)
-        cockpit.events.executeAndWaitFor(self.event_name, emitter)
+        cockpit.events.execute_and_wait_for(self.event_name, emitter)
         emitter.assert_called_once_with()
 
         # We check the mock subscriber to test the event was not

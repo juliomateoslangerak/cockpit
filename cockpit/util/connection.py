@@ -56,47 +56,50 @@ import Pyro4
 from cockpit import depot
 
 
-## Simple class for managing connections to remote services.
 class Connection:
-    def __init__(self, serviceName, ipAddress, port, localIp=None):
-        ## Name of the service on the remote server.
-        self.serviceName = serviceName
+    """Simple class for managing connections to remote services."""
+
+    def __init__(self, service_name, ip_address, port, local_ip=None):
+        """Name of the service on the remote server."""
+        self.service_name = service_name
         ## IP address to connect to.
-        self.ipAddress = ipAddress
+        self.ip_address = ip_address
         ## Port to connect to.
         self.port = port
         ## Local IP address to use for communication, in the event that this
         # computer has multiple networks to choose from.
-        self.localIp = localIp
+        self.local_ip = local_ip
         ## Function to call when we get something from the camera.
         self.callback = None
         ## Extant connection to the camera.
         self.connection = None
 
-    ## Establish a connection with the remote service, and tell
-    # it to send us its data.
-    # By default we set a short timeout of 5s so that we find out fairly
-    # quickly if something went wrong.
     def connect(self, callback, timeout=5):
+        """Establish a connection with the remote service, and tell it to send
+        us its data.
+
+        By default we set a short timeout of 5s so that we find out fairly
+        quickly if something went wrong.
+        """
         self.callback = callback
         connection = Pyro4.Proxy(
-            "PYRO:%s@%s:%d" % (self.serviceName, self.ipAddress, self.port)
+            "PYRO:%s@%s:%d" % (self.service_name, self.ip_address, self.port)
         )
         connection._pyroTimeout = timeout
         self.connection = connection
-        server = depot.getHandlersOfType(depot.SERVER)[0]
-        uri = server.register(self.callback, self.localIp)
+        server = depot.get_handlers_of_type(depot.SERVER)[0]
+        uri = server.register(self.callback, self.local_ip)
         self.connection.receiveClient(uri)
 
-    ## Remove the connection and stop listening to the service.
     def disconnect(self):
+        """Remove the connection and stop listening to the service."""
         if self.connection is not None:
-            server = depot.getHandlersOfType(depot.SERVER)[0]
+            server = depot.get_handlers_of_type(depot.SERVER)[0]
             server.unregister(self.callback)
             try:
                 self.connection.receiveClient(None)
             except Exception as e:
                 print(
-                    "Couldn't disconnect from %s: %s" % (self.serviceName, e)
+                    "Couldn't disconnect from %s: %s" % (self.service_name, e)
                 )
             self.connection = None

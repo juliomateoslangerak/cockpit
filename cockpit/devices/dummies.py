@@ -27,10 +27,10 @@ import microscope.simulators
 import microscope.testsuite.devices
 import Pyro4
 
-import cockpit.devices.executorDevices
-import cockpit.devices.microscopeCamera
-import cockpit.devices.microscopeDevice
-from cockpit.handlers.stagePositioner import PositionerHandler
+import cockpit.devices.executor_devices
+import cockpit.devices.microscope_camera
+import cockpit.devices.microscope_device
+from cockpit.handlers.stage_positioner import PositionerHandler
 
 
 class _MicroscopeTestDevice:
@@ -65,7 +65,7 @@ class _MicroscopeTestDevice:
 
 
 class DummyCamera(
-    _MicroscopeTestDevice, cockpit.devices.microscopeCamera.MicroscopeCamera
+    _MicroscopeTestDevice, cockpit.devices.microscope_camera.MicroscopeCamera
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -74,7 +74,7 @@ class DummyCamera(
 
 
 class DummyDSP(
-    _MicroscopeTestDevice, cockpit.devices.executorDevices.ExecutorDevice
+    _MicroscopeTestDevice, cockpit.devices.executor_devices.ExecutorDevice
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -83,7 +83,7 @@ class DummyDSP(
 
 
 class DummyLaser(
-    _MicroscopeTestDevice, cockpit.devices.microscopeDevice.MicroscopeLaser
+    _MicroscopeTestDevice, cockpit.devices.microscope_device.MicroscopeLaser
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -92,24 +92,24 @@ class DummyLaser(
 
 
 class DummyStage(
-    _MicroscopeTestDevice, cockpit.devices.microscopeDevice.MicroscopeStage
+    _MicroscopeTestDevice, cockpit.devices.microscope_device.MicroscopeStage
 ):
     """Dummy stages.
 
-    This device requires the ``lower-limits``, ``upper-limits``, and
-    ``units-per-micron`` configuration values for each axis to be
+    This device requires the ``lower_limits``, ``upper_limits``, and
+    ``units_per_micron`` configuration values for each axis to be
     created.  The first letter of the configuration defines the axis.
     For example, to create a dummy XY stage:
 
     .. config: ini
 
         [dummy XY stage]
-        x-lower-limits: 0
-        x-upper-limits: 25000
-        x-units-per-micron: 1
-        y-lower-limits: 0
-        y-upper-limits: 12000
-        y-units-per-micron: 1
+        x_lower_limits: 0
+        x_upper_limits: 25000
+        x_units_per_micron: 1
+        y_lower_limits: 0
+        y_upper_limits: 12000
+        y_units_per_micron: 1
 
     """
 
@@ -117,9 +117,9 @@ class DummyStage(
         limits = {}  # type: typing.Dict[str, microscope.AxisLimits]
         config = config.copy()
         for one_letter in "xyz":
-            lower_limits_key = one_letter + "-lower-limits"
-            upper_limits_key = one_letter + "-upper-limits"
-            units_per_micron_key = one_letter + "-units-per-micron"
+            lower_limits_key = one_letter + "_lower_limits"
+            upper_limits_key = one_letter + "_upper_limits"
+            units_per_micron_key = one_letter + "_units_per_micron"
             if lower_limits_key in config and upper_limits_key in config:
                 if units_per_micron_key not in config:
                     Exception(
@@ -131,7 +131,7 @@ class DummyStage(
                 limits[one_letter] = microscope.AxisLimits(
                     lower_limits, upper_limits
                 )
-                config[one_letter + "-axis-name"] = one_letter
+                config[one_letter + "_axis_name"] = one_letter
             elif lower_limits_key in config or upper_limits_key in config:
                 raise Exception(
                     "only one limit for the '%s' axis on config" % one_letter
@@ -140,12 +140,12 @@ class DummyStage(
         test_stage = microscope.simulators.SimulatedStage(limits)
         super().__init__(test_stage, name, config)
 
-    def getHandlers(self) -> typing.List[PositionerHandler]:
-        handlers = super().getHandlers()
+    def get_handlers(self) -> typing.List[PositionerHandler]:
+        handlers = super().get_handlers()
         for handler in handlers:
             # XXX: cockpit's MicroscopeStage device class does not
-            # have getMovementTime yet (issue #614) so it can't be
+            # have get_movement_time yet (issue #614) so it can't be
             # used in experiments.  So we modify the handlers.
-            handler.isEligibleForExperiments = True
-            handler.callbacks["getMovementTime"] = lambda *args: (1, 1)
+            handler.is_eligible_for_experiments = True
+            handler.callbacks["get_movement_time"] = lambda *args: (1, 1)
         return handlers

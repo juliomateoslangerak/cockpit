@@ -114,7 +114,7 @@ class Joystick:
         self._buttonDownTimes[event.ButtonChange] = ts
         if buttonTest(event.ButtonChange, 2):
             wx.CallLater(
-                _CLICKMS, self._longPress, 2, wx.GetApp().Imager.videoMode
+                _CLICKMS, self._longPress, 2, wx.GetApp().imager.video_mode
             )
 
     def _onButtonUp(self, event):
@@ -126,30 +126,32 @@ class Joystick:
         if buttonTest(event.ButtonChange, 0):
             mosaic.window.centerCanvas()
         elif buttonTest(event.ButtonChange, 1):
-            from cockpit.interfaces.stageMover import changeMover
+            from cockpit.interfaces.stage_mover import change_mover
 
-            changeMover()
+            change_mover()
         elif buttonTest(event.ButtonChange, 2):
-            wx.GetApp().Imager.takeImage()
+            wx.GetApp().imager.take_image()
         elif buttonTest(event.ButtonChange, 3):
             mosaic.window.toggleMosaic()
 
     def _onMoveEvent(self, event):
-        from cockpit.interfaces.stageMover import moveRelative
+        from cockpit.interfaces.stage_mover import move_relative
 
         delta = tuple(map(sub, event.Position, self._centre))
         absdelta = map(abs, delta)
         if all([d < _THRESHOLD for d in absdelta]):
             if event.ZPosition > _THRESHOLD:
-                mosaic.window.canvas.multiplyZoom(0.99)
+                mosaic.window.canvas.multiply_zoom(0.99)
             elif event.ZPosition < -_THRESHOLD:
-                mosaic.window.canvas.multiplyZoom(1.01)
+                mosaic.window.canvas.multiply_zoom(1.01)
             return
         if buttonTest(event.ButtonState, 0):
-            moveRelative([-0.01 * d * self._speed for d in delta] + [0], False)
+            move_relative(
+                [-0.01 * d * self._speed for d in delta] + [0], False
+            )
         elif buttonTest(event.ButtonState, 1):
-            moveRelative([0, 0, -0.01 * delta[1] * self._speed], False)
+            move_relative([0, 0, -0.01 * delta[1] * self._speed], False)
         else:
-            mosaic.window.canvas.dragView(
+            mosaic.window.canvas.drag_view(
                 tuple(0.01 * d * self._speed for d in delta)
             )

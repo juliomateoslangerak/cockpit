@@ -72,8 +72,8 @@ class Device:
         "port": int,
     }
 
-    # Define __lt__ to make handlers sortable.
     def __lt__(self, other):
+        """Define __lt__ to make handlers sortable."""
         return self.name.lower() < other.name.lower()
 
     def __init__(self, name="", config={}):
@@ -83,9 +83,9 @@ class Device:
         for k, t in self._config_types.items():
             if k in self.config:
                 self.config[k] = t(self.config[k])
-        ip = config.get("ipaddress", False)
+        ip = config.get("ip_address", False)
         if ip:
-            self.ipAddress = ip
+            self.ip_address = ip
         port = config.get("port", False)
         if port:
             self.port = port
@@ -93,40 +93,53 @@ class Device:
         if uri:
             self.uri = uri
 
-    ## Perform any necessary initialization (e.g. connecting to hardware).
     def initialize(self):
+        """Perform any necessary initialization (e.g. connecting to hardware)."""
         pass
 
-    ## Generate a list of DeviceHandlers representing the various capabilities
-    # we are responsible for. Each DeviceHandler represents an abstract bit
-    # of hardware -- for example, a generic camera, or a stage mover along
-    # a single axis, or a light source. Take a look at the
-    # "handlers/deviceHandler.py" file for more information.
-    def getHandlers(self):
+    def get_handlers(self):
+        """Generate a list of DeviceHandlers representing the various
+        capabilities we are responsible for. Each DeviceHandler represents an
+        abstract bit of hardware -- for example, a generic camera, or a stage
+        mover along a single axis, or a light source. Take a look at the
+        "handlers/device.py" file for more information.
+        """
         return []
 
-    ## Construct any special UI the Device needs. Most Devices will not need
-    # to do anything here, but if you have settings that the user needs to be
-    # able to manipulate and that the normal UI will not handle, then this
-    # is where you create your specific UI.
-    # \return a WX Sizer or Panel that will be inserted into the main controls
-    #         window, or None if nothing is to be inserted.
-    def makeUI(self, parent):
+    def make_ui(self, parent):
+        """Construct any special UI the Device needs.
+
+        Most Devices will not need to do anything here, but if you have
+        settings that the user needs to be able to manipulate and that the
+        normal UI will not handle, then this is where you create your specific
+        UI.
+
+        Args:
+            parent (wx.Window): Parent window for the UI.
+
+        Returns:
+            wx.Sizer or wx.Panel or None: The sizer or panel that will be
+            inserted into the main controls window, or None if nothing is
+            to be inserted.
+        """
         return None
 
-    ## Subscribe to any events we care about.
-    def performSubscriptions(self):
+    def perform_subscriptions(self):
+        """Subscribe to any events we care about."""
         pass
 
-    ## Publish any needed information. This is called after all UI widgets
-    # have been generated, so they are able to respond to these publications.
-    def makeInitialPublications(self):
+    def make_initial_publications(self):
+        """Publish any needed information.
+
+        This is called after all UI widgets have been generated, so they are
+        able to respond to these publications.
+        """
         pass
 
-    ## Do any final actions needed, now that all of the devices are set up
-    # and all initial publications and subscriptions have been made.
-    def finalizeInitialization(self):
+    def finalize_initialization(self):
+        """Do any final actions needed, now that all of the devices are set up
+        and all initial publications and subscriptions have been made."""
         pass
 
-    def onExit(self) -> None:
+    def on_exit(self) -> None:
         pass

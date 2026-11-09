@@ -32,7 +32,7 @@ example:
 .. code:: ini
 
   [Testcam]
-  type: cockpit.devices.microscopeCamera.MicroscopeCamera
+  type: cockpit.devices.microscope_camera.MicroscopeCamera
   uri: PYRO:TestCamera@10.1.10.229:8000
 
 
@@ -44,8 +44,8 @@ triggering also requires information about the trigger line, e.g.:
 
 .. code:: ini
 
-  triggerSource: dsp
-  triggerLine: 8
+  trigger_source: dsp
+  trigger_line: 8
 
 In this instance, the hardware trigger comes from a device named
 ``dsp``, and utilises digital trigger line 8.
@@ -65,7 +65,7 @@ address and port number.  For example:
 .. code:: ini
 
   [server]
-  ipAddress: 10.1.10.186
+  ip_address: 10.1.10.186
   port: 7700
 
 will cause Cockpit to listen for returned image data at this address
@@ -88,20 +88,20 @@ For example, a 3 axis stage might have:
 
 .. code:: ini
 
-  type: cockpit.devices.microscopeDevice.MicroscopeStage
+  type: cockpit.devices.microscope_device.MicroscopeStage
   uri: PYRO:stage@localhost:8000
-  x-axis-name: x
-  y-axis-name: y
-  z-axis-name: z
-  x-units-per-micron: 1
-  y-units-per-micron: 1
-  z-units-per-micron: 1
-  x-velocity: 100
-  y-velocity: 100
-  z-velocity: 30
-  x-settling-time: 10
-  y-settling-time: 10
-  z-settling-time: 10
+  x_axis_name: x
+  y_axis_name: y
+  z_axis_name: z
+  x_units_per_micron: 1
+  y_units_per_micron: 1
+  z_units_per_micron: 1
+  x_velocity: 100
+  y_velocity: 100
+  z_velocity: 30
+  x_settling_time: 10
+  y_settling_time: 10
+  z_settling_time: 10
 
 Additionally, stages which are to be used in a synchronous manner with
 rapid image stacks, usually Z axis, require either digital or analogue
@@ -113,8 +113,8 @@ an analogue Z piezo stage is:
 
   [zPiezo]
   type: cockpit.devices.stage.SimplePiezo
-  analogSource: dsp
-  analogLine: 0
+  analog_source: dsp
+  analog_line: 0
   offset: 0
   gain: 37.2318
   min: 0
@@ -123,17 +123,17 @@ an analogue Z piezo stage is:
 Finally, some stages may have additional manual control mechanisms
 such as a joystick.  Moving the stage via this mechanism doesn't feed
 back to Cockpit so some other mechanism is need to keep up with these
-changes.  If you add a ``poll-stage: True`` config parameter, the
+changes.  If you add a ``poll_stage: True`` config parameter, the
 stage will be polled with some interval (defaults to 10s) to see if it
-has moved.  This functionality also requires a ``num-stage-axes``
+has moved.  This functionality also requires a ``num_stage_axes``
 parameter so that the stage polling only occurs after the final axis
 is initialised.  An example section to create this poll thread is:
 
 .. code:: ini
 
-  poll-stage: True
-  poll-interval: 5
-  num-stage-axes: 2
+  poll_stage: True
+  poll_interval: 5
+  num_stage_axes: 2
 
 
 Cameras
@@ -193,10 +193,10 @@ computer providing the executor you have a section along the lines of:
 .. code:: ini
 
   [dsp]
-  type: cockpit.devices.executorDevices.ExecutorDevice
+  type: cockpit.devices.executor_devices.ExecutorDevice
   uri: PYRO:redPitaya@192.168.0.20:8005
-  dlines: 16
-  alines: 2
+  digital_lines: 16
+  analog_lines: 2
 
 
 SI polariser
@@ -213,16 +213,16 @@ wavelength, e.g.:
 .. code:: ini
 
   [SI polariser]
-  type: cockpit.devices.polarizationRotator.PolarizationDevice
-  analogSource: dsp
-  analogLine: 1
+  type: cockpit.devices.polarization_rotator.PolarizationDevice
+  analog_source: dsp
+  analog_line: 1
   gain: 1618.171641791
   offset: 0
-  siVoltages: 488: 0.58, 0.67, 0.800
+  si_voltages: 488: 0.58, 0.67, 0.800
               561: 0.500, 0.60, 0.75
-  idleVoltage: 1.0
+  idle_voltage: 1.0
 
-Objectives
+objectives
 ``````````
 
 The specification of the objectives are also defined in the depot
@@ -232,7 +232,7 @@ transform.  The colour parameter is used to display possibly different
 accessible regions from different objectives in the stage and mosaic
 views.  Additionally, there is an offset parameter which enables
 difference between objective fields of view to be accounted for in
-stage position.  The ``lensID`` parameter is stored in image file
+stage position.  The ``lens_id`` parameter is stored in image file
 metadata fields so can be used to tag specific objectives, or
 objective types.
 
@@ -244,7 +244,7 @@ objective types.
   transform:(0, 1, 1)
   offset: (-34894, 320,-5955)
   colour:(1,0,0)
-  lensID: 10118
+  lens_id: 10118
 
 
 Digital IO
@@ -269,7 +269,7 @@ example:
 .. code:: ini
 
   # 4 lines: first 2 are output and last 2 are input
-  IOMap: 1,1,0,0
+  io_map: 1,1,0,0
   labels: ["Mirror1", "Mirror2", "In1", "In2"]
   paths: {"Widefield": [{"Mirror1": True, "Mirror2": False}, {"SIM": False}],
           "SIM": [{"Mirror1": False, "Mirror2": True}, {"Widefield": False}]}
@@ -300,8 +300,8 @@ If the data is pulled there is a definable poll interval (defaults to
 .. code:: ini
 
   labels:["T1", "T2"]
-  pullData: True
-  pollInterval: 10
+  pull_data: True
+  poll_interval: 10
 
 
 Additional specific parameters

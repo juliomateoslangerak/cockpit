@@ -145,7 +145,7 @@ the system expects.
     The mouse has moved over a camera view, and the specified
     coordinates have the given value.
 
-``"new site"``
+``NEW_SITE``
     The user has marked a position as being of interest.
 
 ``OBJECTIVE_CHANGE``
@@ -300,35 +300,39 @@ def publish(event: str, *args, **kwargs) -> None:
     _one_shot_publisher.publish(event, *args, **kwargs)
 
 
-def oneShotSubscribe(event: str, func: _Subscriber):
+def one_shot_subscribe(event: str, func: _Subscriber):
     return _one_shot_publisher.subscribe(event, func)
 
 
 # Clear one-shot subscribers on abort.  Usually, these were subscribed
-# by executeAndWaitFor, which leaves the calling thread waiting for a
+# by execute_and_wait_for, which leaves the calling thread waiting for a
 # lock to be released.  On an abort, that event may never happen.
 _publisher.subscribe(USER_ABORT, _one_shot_publisher.clear)
 
 
-## Call the specified function with the provided arguments, and then wait for
-# the named event to occur.
-def executeAndWaitFor(eventType: str, func: _Subscriber, *args, **kwargs):
-    return executeAndWaitForOrTimeout(eventType, func, None, *args, **kwargs)
+def execute_and_wait_for(event_type: str, func: _Subscriber, *args, **kwargs):
+    """Call the specified function with the provided arguments, and then wait
+    for the named event to occur.
+    """
+    return execute_and_wait_for_or_timeout(
+        event_type, func, None, *args, **kwargs
+    )
 
 
-## Call the specified function with the provided arguments, and then wait for
-# either the named event to occur or the timeout to expire.
-def executeAndWaitForOrTimeout(
-    eventType: str,
+def execute_and_wait_for_or_timeout(
+    event_type: str,
     func: _Subscriber,
     timeout: typing.Optional[float],
     *args,
     **kwargs,
 ):
+    """Call the specified function with the provided arguments, and then wait
+    for either the named event to occur or the timeout to expire.
+    """
     global _one_shot_publisher
 
     # Timeout implemented with a condition.
-    newCondition = threading.Condition(threading.Lock())
+    new_condition = threading.Condition(threading.Lock())
     # Mutable flag to show whether or not releaser called.
     released = [False]
     # Mutable object to store results.
@@ -340,29 +344,29 @@ def executeAndWaitForOrTimeout(
         # Show that releaser called.
         released[0] = True
         # Notify condition.
-        with newCondition:
-            newCondition.notify()
+        with new_condition:
+            new_condition.notify()
 
     def aborter():
         released[0] = True
-        with newCondition:
-            newCondition.notify()
+        with new_condition:
+            new_condition.notify()
 
     # Add a method to notify condition in the event of an abort event.
     releaser.__abort__ = aborter
 
-    _one_shot_publisher.subscribe(eventType, releaser)
+    _one_shot_publisher.subscribe(event_type, releaser)
     try:
         func(*args, **kwargs)
     except:
-        _one_shot_publisher.unsubscribe(eventType, releaser)
+        _one_shot_publisher.unsubscribe(event_type, releaser)
         raise
 
     # If event has not already happened, wait for notification or timeout.
     if not released[0]:
-        with newCondition:
+        with new_condition:
             # Blocks until another thread calls notify, or timeout.
-            newCondition.wait(timeout)
+            new_condition.wait(timeout)
 
     if released[0]:
         if len(result) == 1:
@@ -370,4 +374,4 @@ def executeAndWaitForOrTimeout(
         return result
     else:
         ## Timeout expired
-        _one_shot_publisher.unsubscribe(eventType, releaser)
+        _one_shot_publisher.unsubscribe(event_type, releaser)

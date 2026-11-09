@@ -30,8 +30,8 @@ class FaceTestCase(WxTestCase):
         self.face = cockpit.gui.freetype.Face(self.frame, 18)
 
     def test_render(self):
-        ## Not sure how to actual test if it gets rendered, but this
-        ## should at least not error.
+        """Not sure how to actual test if it gets rendered, but this should at
+        least not error."""
         self.face.render("foobar")
 
 

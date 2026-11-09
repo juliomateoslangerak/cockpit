@@ -50,8 +50,8 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 
-## Given a wavelength in nm, return an RGB color tuple.
-def wavelengthToColor(wavelength, saturation=1):
+def wavelength_to_color(wavelength, saturation=1):
+    """Given a wavelength in nm, return an RGB color tuple."""
     wavelength = float(wavelength)
     if wavelength == 0.0:
         return (192, 192, 192)
@@ -63,14 +63,17 @@ def wavelengthToColor(wavelength, saturation=1):
     decay = max(0, max(400 - wavelength, wavelength - 650))
     # Don't let value decay too much.
     value = max(0.5, 1 - decay / 200.0)
-    r, g, b = hsvToRgb(hue, saturation, value)
+    r, g, b = hsv_to_rgb(hue, saturation, value)
     return tuple(int(val * 255) for val in (r, g, b))
 
 
-## Convert to RGB. Taken from Pyrel:
-# https://bitbucket.org/derakon/pyrel/src/7c30ed65e11b5f483737df615fcc607ab6c47d8b/gui/colors.py?at=master
-# In turn, adapted from http://www.cs.rit.edu/~ncs/color/t_convert.html
-def hsvToRgb(hue, saturation, value):
+def hsv_to_rgb(hue, saturation, value):
+    """Convert to RGB.
+
+    Taken from Pyrel: https://bitbucket.org/derakon/pyrel/src/7c30ed65e11b5f483
+    737df615fcc607ab6c47d8b/gui/colors.py?at=master In turn, adapted from
+    http://www.cs.rit.edu/~ncs/color/t_convert.html
+    """
     if saturation == 0:
         # Greyscale.
         return (value, value, value)
@@ -78,10 +81,10 @@ def hsvToRgb(hue, saturation, value):
     hue = hue % 360
     hue /= 60.0
     sector = int(hue)
-    hueDecimal = hue - sector  # Portion of hue after decimal point
+    hue_decimal = hue - sector  # Portion of hue after decimal point
     p = value * (1 - saturation)
-    q = value * (1 - saturation * hueDecimal)
-    t = 1 - saturation * (1 - hueDecimal)
+    q = value * (1 - saturation * hue_decimal)
+    t = 1 - saturation * (1 - hue_decimal)
 
     if sector == 0:
         return (value, t, p)

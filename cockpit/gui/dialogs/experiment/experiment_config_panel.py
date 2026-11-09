@@ -790,18 +790,18 @@ class ExperimentConfigPanel(wx.Panel):
             )
 
         return cockpit.experiment.spec.ExperimentSpec(
-            experimentClass=module.EXPERIMENT_CLASS,
-            exposureSettings=exposure_settings,
-            numReps=gui_utils.try_parse_num(self.num_reps),
-            repDuration=gui_utils.try_parse_num(self.rep_duration, float),
-            zMode=cockpit.experiment.spec.ZMode(
+            experiment_class=module.EXPERIMENT_CLASS,
+            exposure_settings=exposure_settings,
+            num_reps=gui_utils.try_parse_num(self.num_reps),
+            rep_duration=gui_utils.try_parse_num(self.rep_duration, float),
+            z_mode=cockpit.experiment.spec.ZMode(
                 self.z_position_mode.GetStringSelection()
             ),
-            zHeight=gui_utils.try_parse_num(self.stack_height, float),
-            sliceHeight=gui_utils.try_parse_num(self.slice_height, float),
-            saveDir=self.filepath_panel.GetDirectory(),
-            filenameTemplate=filename_template,
-            extraParams=extra_params,
+            z_height=gui_utils.try_parse_num(self.stack_height, float),
+            slice_height=gui_utils.try_parse_num(self.slice_height, float),
+            save_dir=self.filepath_panel.get_directory(),
+            filename_template=filename_template,
+            extra_params=extra_params,
         )
 
     def get_settings_dict(self):

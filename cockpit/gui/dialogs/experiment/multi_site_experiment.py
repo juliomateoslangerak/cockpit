@@ -358,7 +358,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         Return a tuple of (total number of site lists, mapping of cycle number
         to site list).
         """
-        base_indices, frequencies = self.sites_panel.get_sites_list()
+        base_indices, frequencies = self.sites_panel.get_sites_frequencies()
         # Check for sites that have been deleted
         base_order = []
         base_frequencies = []
@@ -396,7 +396,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
         Return True if all is well, False otherwise.
         """
-        if not self.sites_panel.get_sites_list():
+        if not self.sites_panel.get_sites_frequencies()[0]:
             wx.MessageBox(
                 "You must select sites before running the experiment.",
                 "Error",
@@ -406,7 +406,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         # Verify that all sites are reachable; the user may have
         # restarted the cockpit (thus resetting motion safeties) and then
         # loaded a list of sites which we cannot now reach.
-        for site_id in self.sites_panel.get_sites_list()[0]:
+        for site_id in self.sites_panel.get_sites_frequencies()[0]:
             if not cockpit.interfaces.stage_mover.does_site_exist(site_id):
                 wx.MessageBox(
                     "Experiment cancelled:\n\nSite %s does not exist."

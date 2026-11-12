@@ -62,7 +62,7 @@ import typing
 import wx
 
 import cockpit.experiment.experiment_registry
-import cockpit.experiment.spec
+import cockpit.experiment.experiment_specs
 import cockpit.interfaces.stage_mover
 import cockpit.util.user_config
 from cockpit import depot
@@ -789,12 +789,12 @@ class ExperimentConfigPanel(wx.Panel):
                 extra_params
             )
 
-        return cockpit.experiment.spec.ExperimentSpec(
+        return cockpit.experiment.experiment_specs.ExperimentSpec(
             experiment_class=module.EXPERIMENT_CLASS,
             exposure_settings=exposure_settings,
             num_reps=gui_utils.try_parse_num(self.num_reps),
             rep_duration=gui_utils.try_parse_num(self.rep_duration, float),
-            z_mode=cockpit.experiment.spec.ZMode(
+            z_mode=cockpit.experiment.experiment_specs.ZMode(
                 self.z_position_mode.GetStringSelection()
             ),
             z_height=gui_utils.try_parse_num(self.stack_height, float),
@@ -872,7 +872,7 @@ class FilepathPanel(wx.Panel):
         self.SetSizer(grid)
 
     def update_filename(self, mappings: typing.Mapping[str, str] = {}) -> None:
-        basename = cockpit.experiment.spec.expand_filename(
+        basename = cockpit.experiment.experiment_specs.expand_filename(
             self._template_ctrl.GetValue(), mappings
         )
         self._filename_ctrl.SetValue(basename)

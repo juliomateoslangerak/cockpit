@@ -30,7 +30,8 @@ any number of times, e.g. at every site of a multi-site experiment.
 Example, from the cockpit shell::
 
     from decimal import Decimal
-    from cockpit.experiment import spec, zStack
+    from cockpit.experiment import experiment_specs as specs, z_stack
+    from cockpit.interfaces import stage_mover
 
     s = spec.ExperimentSpec(
         z-stack.ZStackExperiment,
@@ -39,7 +40,7 @@ Example, from the cockpit shell::
         z_height=5,
         slice_height=0.5,
         save_dir="/data/run1",
-        filename_template="{date}-{time}.mrc",
+        filename_template="{date}-{time}.dv",
     )
     s.run(confirm=lambda message: True)
 """
@@ -52,6 +53,7 @@ import typing
 
 import cockpit.interfaces.stage_mover
 from cockpit import depot
+from cockpit.experiment import multi_site_runner
 
 
 class ZMode(enum.Enum):
@@ -164,3 +166,77 @@ class ExperimentSpec:
         if experiment.run(confirm):
             return experiment
         return None
+
+
+def parse_light_frequency(text: str) -> typing.Tuple[int, int]:
+    """Parse "frequency" or "frequency + offset" into (frequency, offset).
+
+    A light with frequency 5 is used on cycles 0, 5, 10, ...; with
+    "5 + 1" it is used on cycles 1, 6, 11, ...
+    """
+    if "+" in text:
+        frequency, offset = [int(s) for s in text.split("+")]
+    else:
+        frequency, offset = int(text), 0
+    if frequency < 1 or not 0 <= offset < frequency:
+        raise ValueError(
+            "Invalid light frequency '%s': need frequency >= 1 and"
+            " 0 <= offset < frequency" % text
+        )
+    return frequency, offset
+
+
+@dataclasses.dataclass
+class MultiSiteSpec:
+    ## Experiment to run at each site.
+    site_experiment: ExperimentSpec
+    ## Site IDs, see cockpit.interfaces.stageMover.
+    sites: typing.List[int]
+    ## Visit sites[i] every frequencies[i]-th cycle. None means every cycle.
+    frequencies: typing.Optional[typing.List[int]] = None
+    num_cycles: int = 1
+    ## Minimum time, in seconds, between the start of consecutive cycles.
+    # Used in sequence: [60, 120] makes cycles alternate between one and
+    # two minutes.
+    cycle_durations: typing.Sequence[float] = (0,)
+    ## Seconds to wait before the first cycle.
+    delay_before_starting: float = 0
+    ## Seconds to wait after moving to a site before imaging it.
+    delay_before_imaging: float = 0
+    ## Reorder the sites to minimise travel time.
+    optimize_order: bool = True
+    ## Maps light handlers to (frequency, offset), see parseLightFrequency.
+    # Lights not in the mapping are used on every cycle.
+    light_frequencies: typing.Optional[dict] = None
+    ## Power off all POWER_CONTROL devices at the end.
+    power_down_when_done: bool = False
+
+    ## Raise ValueError if the experiment cannot be run.
+    def sanity_check(self):
+        if not self.sites:
+            raise ValueError("No sites selected.")
+        if self.frequencies is not None:
+            if len(self.frequencies) != len(self.sites):
+                raise ValueError("Need one frequency per site.")
+            if any(f < 1 for f in self.frequencies):
+                raise ValueError("Site frequencies must be at least 1.")
+        if self.num_cycles < 1:
+            raise ValueError("Need at least one cycle.")
+        if not self.cycle_durations:
+            raise ValueError("Need at least one cycle duration.")
+        # Verify that all sites are reachable; the user may have restarted
+        # cockpit (thus resetting motion safeties) and then loaded a list
+        # of sites which we cannot now reach.
+        for site_id in self.sites:
+            if not cockpit.interfaces.stage_mover.does_site_exist(site_id):
+                raise ValueError("Site %s does not exist." % site_id)
+            if not cockpit.interfaces.stage_mover.can_reach_site(site_id):
+                raise ValueError("Site %s cannot be reached." % site_id)
+
+    ## Start a MultiSiteRunner in the background and return it.
+    # \param confirm See cockpit.experiment.experiment.Experiment.run. It is
+    #        called from the runner's thread.
+    def run(self, confirm=None):
+        runner = multi_site_runner.MultiSiteRunner(self)
+        runner.run(confirm)
+        return runner

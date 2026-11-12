@@ -116,14 +116,14 @@ class EnumerateSitesPanel(wx.Panel):
 
         self.SetSizerAndFit(sizer)
 
-    def get_sites_list(self):
+    def get_sites_frequencies(self):
         # Construct the input list of sites
         sites_string = self.sites.GetValue()
         if sites_string == "Most recent site":
             sites = cockpit.interfaces.stage_mover.get_all_sites()
             if not sites:
-                return ([], [])
-            return ([sites[-1].unique_id], [1])
+                return [], []
+            return [sites[-1].unique_id], [1]
         try:
             site_tokens = self.sites.GetValue().split(",")
             base_indices = []
@@ -151,10 +151,10 @@ class EnumerateSitesPanel(wx.Panel):
                     base_indices.append(int(token))
                     base_frequencies.append(frequency)
 
-            return (base_indices, base_frequencies)
+            return base_indices, base_frequencies
         except Exception as e:
             _logger.warning(
                 'Invalid site list "%s"; returning no sites',
                 self.sites.GetValue(),
             )
-            return ([], [])
+            return [], []

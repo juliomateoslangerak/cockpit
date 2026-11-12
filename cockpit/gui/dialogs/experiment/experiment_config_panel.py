@@ -656,7 +656,7 @@ class ExperimentConfigPanel(wx.Panel):
             if not light_time_pairs and not gui_utils.get_user_permission(
                 "No enabled light has a define exposure time. Are you sure you want to continue?"
             ):
-                return True
+                return None
 
             exposure_settings = [(cameras, light_time_pairs)]
 

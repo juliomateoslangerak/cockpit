@@ -271,7 +271,7 @@ class Experiment:
         self.create_valid_action_table()
         if (
             self.num_reps > 1
-            and self.rep_duration < self.table.lastActionTime / 1000
+            and self.rep_duration < self.table.last_action_time / 1000
         ):
             warning = (
                 "Repeat duration is less than the time required to run "

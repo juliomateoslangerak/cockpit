@@ -53,6 +53,7 @@
 
 import decimal
 import math
+from decimal import Decimal
 
 from cockpit.experiment import action_table, experiment
 
@@ -71,7 +72,7 @@ class ZStackExperiment(experiment.Experiment):
         next.
         """
         table = action_table.ActionTable()
-        cur_time = 0
+        cur_time = Decimal(0.0)
         prev_altitude = None
         num_z_slices = int(math.ceil(self.z_height / self.slice_height))
         if self.z_height > 1e-6:
@@ -82,7 +83,7 @@ class ZStackExperiment(experiment.Experiment):
             # Move to the next position, then wait for the stage to
             # stabilize.
             z_target = self.z_start + self.slice_height * z_index
-            motion_time, stabilization_time = 0, 0
+            motion_time, stabilization_time = Decimal(0.0), Decimal(0.0)
             if prev_altitude is not None:
                 (
                     motion_time,
@@ -90,9 +91,9 @@ class ZStackExperiment(experiment.Experiment):
                 ) = self.z_positioner.get_movement_time(
                     prev_altitude, z_target
                 )
-            cur_time += motion_time
+            cur_time += Decimal(motion_time)
             table.add_action(cur_time, self.z_positioner, z_target)
-            cur_time += stabilization_time
+            cur_time += Decimal(stabilization_time)
             prev_altitude = z_target
 
             # Image the sample.
@@ -110,7 +111,7 @@ class ZStackExperiment(experiment.Experiment):
         motion_time, stabilization_time = self.z_positioner.get_movement_time(
             self.z_height, 0
         )
-        cur_time += motion_time
+        cur_time += Decimal(motion_time)
         table.add_action(cur_time, self.z_positioner, self.z_start)
         # Hold flat for the stabilization time, and any time needed for
         # the cameras to be ready. Only needed if we're doing multiple
@@ -124,7 +125,7 @@ class ZStackExperiment(experiment.Experiment):
                         self.get_time_when_camera_can_expose(table, camera),
                     )
         table.add_action(
-            max(cur_time + stabilization_time, camera_ready_time),
+            max(cur_time + Decimal(stabilization_time), camera_ready_time),
             self.z_positioner,
             self.z_start,
         )

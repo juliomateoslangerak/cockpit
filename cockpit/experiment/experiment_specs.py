@@ -162,6 +162,8 @@ class ExperimentSpec:
         }
         return self.experiment_class(**params)
 
+    ## Build and run the experiment. Return the Experiment if it was
+    # started, None otherwise. See Experiment.run for `confirm`.
     def run(self, confirm=None, mappings=None):
         """Build and run the experiment. Return the Experiment if it was
         started, None otherwise. See Experiment.run for `confirm`."""

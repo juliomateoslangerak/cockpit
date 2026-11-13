@@ -120,9 +120,9 @@ class ExperimentSpec:
             self.save_dir, expand_filename(self.filename_template, mappings)
         )
 
-    ## Return (alt_bottom, z_height, slice_height) for the current stage
-    # position.
     def resolve_z(self):
+        """Return (alt_bottom, z_height, slice_height) for the current stage
+        position."""
         z_height = self.z_height
         slice_height = self.slice_height
         if self.z_mode is ZMode.SAVED:
@@ -139,9 +139,12 @@ class ExperimentSpec:
             slice_height = 1e-6
         return alt_bottom, z_height, slice_height
 
-    ## Create the Experiment for the current stage position.
-    # \param mappings Values for the filename template placeholders.
     def build(self, mappings=None):
+        """Create the Experiment for the current stage position.
+
+        Args:
+            mappings: Values for the filename template placeholders.
+        """
         z_positioner = self.z_positioner
         if z_positioner is None:
             z_positioner = depot.get_sorted_stage_movers()[2][-1]
@@ -159,9 +162,9 @@ class ExperimentSpec:
         }
         return self.experiment_class(**params)
 
-    ## Build and run the experiment. Return the Experiment if it was
-    # started, None otherwise. See Experiment.run for `confirm`.
     def run(self, confirm=None, mappings=None):
+        """Build and run the experiment. Return the Experiment if it was
+        started, None otherwise. See Experiment.run for `confirm`."""
         experiment = self.build(mappings)
         if experiment.run(confirm):
             return experiment
@@ -233,10 +236,12 @@ class MultiSiteSpec:
             if not cockpit.interfaces.stage_mover.can_reach_site(site_id):
                 raise ValueError("Site %s cannot be reached." % site_id)
 
-    ## Start a MultiSiteRunner in the background and return it.
-    # \param confirm See cockpit.experiment.experiment.Experiment.run. It is
-    #        called from the runner's thread.
     def run(self, confirm=None):
+        """Start a MultiSiteRunner in the background and return it.
+        Args:
+            confirm: See cockpit.experiment.experiment.Experiment.run. It is
+                     called from the runner's thread.
+        """
         runner = multi_site_runner.MultiSiteRunner(self)
         runner.run(confirm)
         return runner

@@ -33,19 +33,26 @@ CYCLE_PHASES_TO_COLOR = [
 
 # find nuclei class
 class NucleiFinder:
-    def __init__(self, nuclei_finder, nuclei_classifier, *args, **kwargs):
+    def __init__(
+            self,
+            nuclei_finder,
+            nuclei_classifier,
+            max_sites=10,
+            timeout_seconds=10,
+            site_marker_size=50
+    ):
         # useful values form cockpit objects
         self.finder = nuclei_finder
         self.classifier = nuclei_classifier
-        self.pixel_size = wx.GetApp().objectives.GetPixelSize()
-        self.site_size = 50
-        self.camera = depot.get_device_with_name("camera")
-        self.experiment_specs = None
         self.stage_class = "S"
-        self.max_sites = 3
+        self.max_sites = max_sites
+        self.timeout_seconds = datetime.timedelta(seconds=timeout_seconds)
+        self.specs = None
+        self.site_marker_size = site_marker_size
         self.scan_start_time = None
+        self.pixel_size = wx.GetApp().objectives.get_pixel_size()
+        self.camera = depot.get_device_with_name("camera")
         self.scan_start_location = None
-        self.timeout_seconds = datetime.timedelta(seconds=10)
 
     def subscribe(self):
         # subscribe to new image event and call onImage
@@ -58,7 +65,7 @@ class NucleiFinder:
 
         crops, centers = self.finder.find(acquired_image)
 
-        # for each found circle mark a positon
+        # for each found object mark a positon
         if centers is not None:
             # loop over centers found in image
             for crop, center in zip(crops, centers):
@@ -80,7 +87,7 @@ class NucleiFinder:
                         position=site_pos,
                         group=phase,
                         color=site_color,
-                        size=self.site_size
+                        size=self.site_marker_size
                     )
                 )
 
@@ -107,15 +114,27 @@ class NucleiFinder:
         self.subscribe()
         mosaic_window.toggle_mosaic()
 
-    def run_experiment(self):
+    def run_experiment(
+        self,
+        specs = None,
+        num_cycles = 5,
+        cycle_durations = [10],
+        delay_before_starting = 0,
+        delay_before_imaging = 0,
+        optimize_order = False,
+        light_frequencies = None,
+    ):
         if self.scan_start_location is None:
             self.scan_start_location = stage_mover.get_position()
-        if cockpit.gui.dialogs.experiment.single_site_experiment.dialog is None:
-            raise Exception("Experiment dialog was not configured.")
+        if specs is None:
+            if cockpit.gui.dialogs.experiment.single_site_experiment.dialog is None:
+                raise Exception("Experiment dialog was not configured.")
 
-        self.experiment_specs = cockpit.gui.dialogs.experiment.single_site_experiment.dialog.panel.getExperimentSpec()
+            self.specs = cockpit.gui.dialogs.experiment.single_site_experiment.dialog.panel.get_experiment_spec()
+        else:
+            self.specs = specs
         all_sites = stage_mover.sites_in_group(self.stage_class)
-        sites = [s for s in all_sites[:min(len(all_sites), self.max_sites)]]
+        sites = list(all_sites[:min(len(all_sites), self.max_sites)])
         if sites:
             multi_site_spec = experiment_specs.MultiSiteSpec(
                 site_experiment = self.specs,
@@ -138,7 +157,10 @@ class NucleiFinder:
         stage_mover.go_to(self.scan_start_location)
 
     @cockpit.util.threads.call_in_new_thread
-    def run_smart(self, nr_of_iterations=5):
+    def run_smart(
+        self,
+        nr_of_iterations=5
+    ):
         for i in range(nr_of_iterations):
             print(f"Running scan iteration {i + 1} out of {nr_of_iterations}")
             self.run_scan()

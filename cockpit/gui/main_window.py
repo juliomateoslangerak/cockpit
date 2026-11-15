@@ -736,8 +736,8 @@ class StatusLights(wx.StatusBar):
         super().__init__(*args, **kwargs)
         # Maps status light names to the light field/pane index.
         self._name_to_field = {}  # type: typing.Dict[str, int]
-        self._defaultBackgroundColour = self.GetBackgroundColour()
-        self._notificationColour = wx.YELLOW
+        self._default_background_colour = self.GetBackgroundColour()
+        self._notification_colour = wx.YELLOW
 
         listener = cockpit.gui.EvtEmitter(self, events.UPDATE_STATUS_LIGHT)
         listener.Bind(cockpit.gui.EVT_COCKPIT, self._on_new_status)
@@ -772,9 +772,9 @@ class StatusLights(wx.StatusBar):
         # This changes the colour of the whole bar, not only the
         # status (see issue #565).
         if any([self.GetStatusText(i) for i in range(self.FieldsCount)]):
-            self.SetBackgroundColour(self._notificationColour)
+            self.SetBackgroundColour(self._notification_colour)
         else:
-            self.SetBackgroundColour(self._defaultBackgroundColour)
+            self.SetBackgroundColour(self._default_background_colour)
         # On Windows, we need to call Refresh() after
         # SetBackgroundColour() (see issue #654).
         self.Refresh()

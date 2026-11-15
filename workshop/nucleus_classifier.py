@@ -197,6 +197,6 @@ class Classifier:
             logits = self.ccc_model(pre_processed)  # (1, 3)
 
         class_id = logits.argmax(dim=1).item()
-        class_prob = logits[class_id]
+        class_prob = logits[0][class_id].item()
 
         return class_id, class_prob

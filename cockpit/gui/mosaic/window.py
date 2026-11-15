@@ -510,6 +510,11 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             cockpit.gui.EVT_COCKPIT,
             self._on_site_delete,
         )
+
+        # Populate the sites box with any existing sites from stage_mover.
+        for site in cockpit.interfaces.stage_mover.get_all_sites():
+            self._add_site_to_list(site, should_refresh=False)
+
         sites_sizer.Add(self.sites_box, 1, wx.EXPAND)
 
         for args in [
@@ -1283,9 +1288,13 @@ class MosaicWindow(wx.Frame, MosaicCommon):
     def _on_site_delete(self, event: wx.CommandEvent) -> None:
         """A site was deleted; remove it from our sites box."""
         site = event.EventData[0]
-        for item in self.sites_box.GetItems():
-            if site.unique_id == item:
-                self.sites_box.Delete(item)
+        label = site.unique_id
+        if type(label) is int:
+            label = "%04d" % label
+        for index in range(self.sites_box.GetCount()):
+            text = self.sites_box.GetString(index)
+            if text.startswith(str(label) + ":"):
+                self.sites_box.Delete(index)
                 break
 
     def display_mosaic_menu(self):

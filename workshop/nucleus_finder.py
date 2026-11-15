@@ -39,7 +39,7 @@ class Finder:
         centers : list[tuple[float, float]]
             (x, Y) centroid coordinates for each returned nucleus.
         """
-        _, details = self.stardist_model.predict_instances(csbdeep_normalize(image), scale=scale)
+        _, details = self.stardist_model.predict_instances(csbdeep_normalize(image), scale=self.scale)
 
         x_shape, y_shape = image.shape
         crops = []

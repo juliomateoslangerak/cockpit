@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-# Short example script of attaching to cockpit to find nuclei in DAPI images.
-# Copyright Ian Dobbie, Julio Mateos Langerak 2021
+# Short example script of attaching to cockpit to find objects of interest.
+# Julio Mateos Langerak 2026
 import datetime
 import time
 
@@ -31,23 +31,21 @@ CYCLE_PHASES_TO_COLOR = [
 ]
 
 
-# find nuclei class
-class NucleiFinder:
+class SmartFinder:
+    """Find objects of interest in images, classify them and
+    trigger experiments on them.
+    """
     def __init__(
             self,
-            nuclei_finder,
-            nuclei_classifier,
-            max_sites=10,
-            timeout_seconds=10,
-            site_marker_size=50
+            object_finder,
+            object_classifier,
+            site_marker_size=50,
     ):
-        # useful values form cockpit objects
-        self.finder = nuclei_finder
-        self.classifier = nuclei_classifier
+        self.finder = object_finder
+        self.classifier = object_classifier
         self.stage_class = "S"
-        self.max_sites = max_sites
-        self.timeout_seconds = datetime.timedelta(seconds=timeout_seconds)
-        self.specs = None
+        self.max_sites = None
+        self.timeout_seconds = None
         self.site_marker_size = site_marker_size
         self.scan_start_time = None
         self.pixel_size = wx.GetApp().objectives.get_pixel_size()
@@ -55,12 +53,15 @@ class NucleiFinder:
         self.scan_start_location = None
 
     def subscribe(self):
-        # subscribe to new image event and call onImage
+        """Subscribe to new image event and call onImage"""
         self.scan_start_time = datetime.datetime.now()
         events.subscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
 
-    ## Receive a new image and process it to find nuclei
+    def unsubscribe(self):
+        events.unsubscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
+
     def on_image(self, acquired_image, *args):
+        """Receive a new image and process it to find objects"""
         curr_stage_pos = stage_mover.get_position()
 
         crops, centers = self.finder.find(acquired_image)
@@ -97,10 +98,7 @@ class NucleiFinder:
             if mosaic_window.mosaic_thread is not None and mosaic_window.mosaic_thread.is_alive():
                 mosaic_window.toggle_mosaic()
 
-    def unsubscribe(self):
-        events.unsubscribe(events.NEW_IMAGE % self.camera.name, self.on_image)
-
-    def run_scan(self, max_sites = None, timeout_seconds = None):
+    def run_prescan(self, max_sites = None, timeout_seconds = None):
         if max_sites is not None:
             self.max_sites = max_sites
         if timeout_seconds is not None:
@@ -114,44 +112,19 @@ class NucleiFinder:
         self.subscribe()
         mosaic_window.toggle_mosaic()
 
-    def run_experiment(
+    def run_multisite_experiment(
         self,
-        specs = None,
-        num_cycles = 5,
-        cycle_durations = [10],
-        delay_before_starting = 0,
-        delay_before_imaging = 0,
-        optimize_order = False,
-        light_frequencies = None,
+        multisite_experiment_specs,
+        sites,
     ):
-        if self.scan_start_location is None:
-            self.scan_start_location = stage_mover.get_position()
-        if specs is None:
-            if cockpit.gui.dialogs.experiment.single_site_experiment.dialog is None:
-                raise Exception("Experiment dialog was not configured.")
-
-            self.specs = cockpit.gui.dialogs.experiment.single_site_experiment.dialog.panel.get_experiment_spec()
-        else:
-            self.specs = specs
-        all_sites = stage_mover.sites_in_group(self.stage_class)
-        sites = list(all_sites[:min(len(all_sites), self.max_sites)])
-        if sites:
-            multi_site_spec = experiment_specs.MultiSiteSpec(
-                site_experiment = self.specs,
-                sites = sites,
-                num_cycles = num_cycles,
-                cycle_durations = cycle_durations,
-                delay_before_starting = delay_before_starting,
-                delay_before_imaging = delay_before_imaging,
-                optimize_order = optimize_order,
-                light_frequencies = light_frequencies,
-            )
-
+        if sites is not None:
             print(f"Imaging sites: {sites}")
-            multi_site_spec.sites = sites
-            runner = multi_site_runner.MultiSiteRunner(multi_site_spec)
+            multisite_experiment_specs.sites = sites
+            runner = multi_site_runner.MultiSiteRunner(multisite_experiment_specs)
             runner.run(confirm=lambda x: True)
             runner.wait()
+        else:
+            print("No sites to image")
 
         stage_mover.delete_all_sites()
         stage_mover.go_to(self.scan_start_location)
@@ -159,13 +132,49 @@ class NucleiFinder:
     @cockpit.util.threads.call_in_new_thread
     def run_smart(
         self,
-        nr_of_iterations=5
+        nr_of_iterations=5,
+        max_sites=10,
+        timeout_seconds=10,
+        single_experiment_specs=None,
+        multisite_experiment_specs=None,
     ):
+        self.max_sites = max_sites
+        self.timeout_seconds = datetime.timedelta(seconds=timeout_seconds)
+
+        if self.scan_start_location is None:
+            self.scan_start_location = stage_mover.get_position()
+
+        if single_experiment_specs is None:
+            if cockpit.gui.dialogs.experiment.single_site_experiment.dialog is None:
+                raise Exception("Experiment dialog was not configured.")
+
+            single_experiment_specs = cockpit.gui.dialogs.experiment.single_site_experiment.dialog.panel.get_experiment_spec()
+        else:
+            single_experiment_specs = single_experiment_specs
+
+        if multisite_experiment_specs is None:
+            multisite_experiment_specs = cockpit.experiment.experiment_specs.MultiSiteSpec(
+                site_experiment=single_experiment_specs,
+                sites=[],
+                num_cycles = 5,
+                cycle_durations = [10],
+                delay_before_starting = 0,
+                delay_before_imaging = 0,
+                optimize_order = False,
+                light_frequencies = None,
+            )
+
         for i in range(nr_of_iterations):
             print(f"Running scan iteration {i + 1} out of {nr_of_iterations}")
-            self.run_scan()
+            self.run_prescan()
 
             time.sleep(1)
 
+            all_sites = stage_mover.sites_in_group(self.stage_class)
+            sites = list(all_sites[:min(len(all_sites), self.max_sites)])
+
             print("Starting experiment")
-            self.run_experiment()
+            self.run_multisite_experiment(
+                multisite_experiment_specs=multisite_experiment_specs,
+                sites=sites,
+            )

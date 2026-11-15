@@ -8,8 +8,7 @@ import wx
 
 # some imports to get at cockpit functions
 from cockpit import depot, events
-from cockpit.gui.dialogs.experiment import multiSiteExperiment
-from cockpit.experiment import multiSiteRunner, experimentSpecs
+from cockpit.experiment import multi_site_runner, experiment_specs
 import cockpit.util.threads
 from cockpit.interfaces import stage_mover
 
@@ -106,7 +105,7 @@ class NucleiFinder:
         stage_mover.delete_all_sites()
 
         self.subscribe()
-        mosaic_window.toggleMosaic()
+        mosaic_window.toggle_mosaic()
 
     def run_experiment(self):
         if self.scan_start_location is None:
@@ -119,19 +118,19 @@ class NucleiFinder:
         sites = [s for s in all_sites[:min(len(all_sites), self.max_sites)]]
         if sites:
             multi_site_spec = experiment_specs.MultiSiteSpec(
-                siteExperiment = self.experiment_specs,
+                site_experiment = self.specs,
                 sites = sites,
-                numCycles = 5,
-                cycleDurations = [10],
-                delayBeforeStarting = 0,
-                delayBeforeImaging = 0,
-                optimizeOrder = False,
-                lightFrequencies = None,
+                num_cycles = num_cycles,
+                cycle_durations = cycle_durations,
+                delay_before_starting = delay_before_starting,
+                delay_before_imaging = delay_before_imaging,
+                optimize_order = optimize_order,
+                light_frequencies = light_frequencies,
             )
 
             print(f"Imaging sites: {sites}")
             multi_site_spec.sites = sites
-            runner = multiSiteRunner.MultiSiteRunner(multi_site_spec)
+            runner = multi_site_runner.MultiSiteRunner(multi_site_spec)
             runner.run(confirm=lambda x: True)
             runner.wait()
 

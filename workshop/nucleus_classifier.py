@@ -15,7 +15,7 @@ import albumentations
 
 
 # Constants for nucleus classification
-IN_CHANNELS = 1       # 1 DAPI channel × 5 z-slices
+IN_CHANNELS = 1  # 1 DAPI channel × 5 z-slices
 LATENT_DIM = 256
 NB_CLASSES = 3
 CYCLE_PHASES = ["G1", "S", "G2/M"]
@@ -42,11 +42,15 @@ def _redefine_first_layer(model, in_channels: int) -> None:
     (same strategy as the original codebase).
     """
     orig = model.conv1.weight.data  # (64, 3, 7, 7)
-    new_conv = torch.nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    new_conv = torch.nn.Conv2d(
+        in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+    )
     if in_channels >= 3:
         new_conv.weight.data[:, :3] = orig
         mean_weights = orig.mean(dim=1, keepdim=True)  # (64, 1, 7, 7)
-        new_conv.weight.data[:, 3:] = mean_weights.expand(-1, in_channels - 3, -1, -1)
+        new_conv.weight.data[:, 3:] = mean_weights.expand(
+            -1, in_channels - 3, -1, -1
+        )
     else:
         mean_weights = orig.mean(dim=1, keepdim=True)
         new_conv.weight.data = mean_weights.expand(-1, in_channels, -1, -1)
@@ -68,8 +72,8 @@ class FucciClassifier(torch.nn.Module):
         self.fc2 = torch.nn.Linear(latent_dim, nb_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        emb = self.encoder(x)             # (B, latent_dim)
-        return self.fc2(self.fc1(emb))    # (B, nb_classes)
+        emb = self.encoder(x)  # (B, latent_dim)
+        return self.fc2(self.fc1(emb))  # (B, nb_classes)
 
 
 class _ResnetEncoder(torch.nn.Module):
@@ -90,11 +94,13 @@ class _ResnetEncoder(torch.nn.Module):
         # These names must match the saved checkpoint exactly
         self.embedding = torch.nn.Linear(feat_size, latent_dim)
         self.log_var = torch.nn.Linear(feat_size, latent_dim)
-        self.fucci = torch.nn.Sequential(torch.nn.Linear(latent_dim, 2), torch.nn.Sigmoid())
+        self.fucci = torch.nn.Sequential(
+            torch.nn.Linear(latent_dim, 2), torch.nn.Sigmoid()
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = self.conv_layers(x)           # (B, 512)
-        return self.embedding(h)          # (B, latent_dim)
+        h = self.conv_layers(x)  # (B, 512)
+        return self.embedding(h)  # (B, latent_dim)
 
 
 def _ensure_weights(models_dir: str) -> pathlib.Path:
@@ -130,28 +136,32 @@ def preprocess(array: np.ndarray, mean_std: dict) -> torch.Tensor:
 
     img = np.moveaxis(img, 0, -1)  # (H, W, Z) — albumentations expects HWC
 
-    transform = albumentations.Compose([
-        # albumentations.Normalize(
-        #     mean=mean_std["mean"],
-        #     std=mean_std["std"],
-        #     max_pixel_value=1.0,
-        #     p=1.0,
-        # ),
-        albumentations.PadIfNeeded(
-            min_height=DATA_SET_SIZE,
-            min_width=DATA_SET_SIZE,
-            border_mode=1,          # cv2.BORDER_REPLICATE
-            p=1.0,
-        ),
-        albumentations.CenterCrop(height=DATA_SET_SIZE, width=DATA_SET_SIZE, p=1.0),
-        albumentations.Resize(height=INPUT_SIZE, width=INPUT_SIZE, p=1.0),
-    ])
+    transform = albumentations.Compose(
+        [
+            # albumentations.Normalize(
+            #     mean=mean_std["mean"],
+            #     std=mean_std["std"],
+            #     max_pixel_value=1.0,
+            #     p=1.0,
+            # ),
+            albumentations.PadIfNeeded(
+                min_height=DATA_SET_SIZE,
+                min_width=DATA_SET_SIZE,
+                border_mode=1,  # cv2.BORDER_REPLICATE
+                p=1.0,
+            ),
+            albumentations.CenterCrop(
+                height=DATA_SET_SIZE, width=DATA_SET_SIZE, p=1.0
+            ),
+            albumentations.Resize(height=INPUT_SIZE, width=INPUT_SIZE, p=1.0),
+        ]
+    )
 
     img = transform(image=img)["image"]  # (INPUT_SIZE, INPUT_SIZE, Z)
     # img = np.clip(img, 0.0, 1.0)
     img = np.repeat(img[:, :, np.newaxis], repeats=IN_CHANNELS, axis=-1)
-    tensor = torch.from_numpy(img).permute(2, 0, 1).float()   # (Z, H, W)
-    return tensor.unsqueeze(0)                                # (1, Z, H, W)
+    tensor = torch.from_numpy(img).permute(2, 0, 1).float()  # (Z, H, W)
+    return tensor.unsqueeze(0)  # (1, Z, H, W)
 
 
 def load_ccc_model(ccc_models_dir: str = "models"):
@@ -164,7 +174,9 @@ def load_ccc_model(ccc_models_dir: str = "models"):
         ccc_mean_std = json.load(f)
 
     ccc_model = FucciClassifier()
-    state_dict = torch.load(ccc_model_path, map_location="cpu", weights_only=True)
+    state_dict = torch.load(
+        ccc_model_path, map_location="cpu", weights_only=True
+    )
     ccc_model.load_state_dict(state_dict)
     ccc_model.eval()
 

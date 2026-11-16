@@ -24,7 +24,10 @@ class Finder:
         self.scale = SCALE
         self.min_x_crop = 100
         self.min_y_crop = 100
-    def find(self, image: np.ndarray) -> tuple[list[np.ndarray], list[tuple[float, float]]]:
+
+    def find(
+        self, image: np.ndarray
+    ) -> tuple[list[np.ndarray], list[tuple[float, float]]]:
         """Segment nuclei in a field-of-view image and return their crops and centres.
 
         Parameters
@@ -39,22 +42,30 @@ class Finder:
         centers : list[tuple[float, float]]
             (x, Y) centroid coordinates for each returned nucleus.
         """
-        _, details = self.stardist_model.predict_instances(csbdeep_normalize(image), scale=self.scale)
+        _, details = self.stardist_model.predict_instances(
+            csbdeep_normalize(image), scale=self.scale
+        )
 
         x_shape, y_shape = image.shape
         crops = []
         centers = []
         for coord in details["coord"]:
             # Stardist swaps dimensions
-            x0, x1 = int(np.floor(coord[0].min())) - self.edge, int(np.ceil(coord[0].max())) + self.edge
-            y0, y1 = int(np.floor(coord[1].min())) - self.edge, int(np.ceil(coord[1].max())) + self.edge
+            x0, x1 = (
+                int(np.floor(coord[0].min())) - self.edge,
+                int(np.ceil(coord[0].max())) + self.edge,
+            )
+            y0, y1 = (
+                int(np.floor(coord[1].min())) - self.edge,
+                int(np.ceil(coord[1].max())) + self.edge,
+            )
             x_center = x0 + (x1 - x0) // 2
             y_center = y0 + (y1 - y0) // 2
             # skip nuclei touching the image border
             if x0 <= 0 or x1 >= x_shape or y0 <= 0 or y1 >= y_shape:
                 continue
             # skip nuclei smaller than the min crop size
-            if  x1 - x0 < self.min_x_crop or y1 - y0 < self.min_y_crop:
+            if x1 - x0 < self.min_x_crop or y1 - y0 < self.min_y_crop:
                 continue
             crops.append(image[x0:x1, y0:y1])
             centers.append((x_center, y_center))

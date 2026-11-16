@@ -159,8 +159,7 @@ class Imager:
         from cockpit.experiment import experiment
 
         if experiment.is_running():
-            print("Skipping take_image because an experiment is running.")
-            return
+            raise RuntimeError("Cannot take_image: an experiment is running.")
         elif len(self.active_cameras) == 0:
             message = "There are no cameras enabled."
             wx.MessageBox(message, caption="No cameras active")

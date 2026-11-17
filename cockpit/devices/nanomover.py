@@ -132,7 +132,7 @@ class Nanomover(Device):
         around on its bearings; check how long it's been since the stage was
         last exercised, and prompt the user if it's been more than a week."""
         last_exercise_timestamp = cockpit.util.user_config.get_value(
-            "NanomoverLastExerciseTimestamp", default=0
+            "nanomover_last_exercise_timestamp", default=0
         )
         cur_time = time.time()
         delay = cur_time - last_exercise_timestamp
@@ -166,7 +166,7 @@ class Nanomover(Device):
             print("Exercising complete. Thank you!")
 
             cockpit.util.user_config.set_value(
-                "NanomoverLastExerciseTimestamp", time.time()
+                "nanomover_last_exercise_timestamp", time.time()
             )
 
     def perform_subscriptions(self):

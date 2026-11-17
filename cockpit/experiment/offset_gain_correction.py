@@ -464,7 +464,7 @@ class ExperimentUI(wx.Panel):
     def load_settings(self):
         """Load the saved experiment settings, if any."""
         return cockpit.util.user_config.get_value(
-            self.config_key + "offset_gain_experiment_settings",
+            self.config_key + "OffsetGainExperiment_settings",
             default={
                 "correction_cosmic_ray_threshold": "10",
                 "correction_exposure_multiplier": "2",
@@ -484,5 +484,5 @@ class ExperimentUI(wx.Panel):
         if settings is None:
             settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.config_key + "offset_gain_experiment_settings", settings
+            self.config_key + "OffsetGainExperiment_settings", settings
         )

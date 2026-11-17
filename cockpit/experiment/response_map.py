@@ -532,5 +532,5 @@ class ExperimentUI(wx.Panel):
         if settings is None:
             settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.config_key + "response_map_experiment_settings", settings
+            self.config_key + "ResponseMapExperiment_settings", settings
         )

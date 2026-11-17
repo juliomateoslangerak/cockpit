@@ -316,7 +316,7 @@ class CockpitApp(wx.App):
         that would take the positions dict as argument.
         """
         positions = cockpit.util.user_config.get_value(
-            "WindowPositions", default={}
+            "window_positions", default={}
         )
         for window in wx.GetTopLevelWindows():
             if window.Title not in positions:
@@ -344,7 +344,7 @@ class CockpitApp(wx.App):
         if camera_window_title is not None:
             positions["Camera views"] = positions.pop(camera_window_title)
 
-        cockpit.util.user_config.set_value("WindowPositions", positions)
+        cockpit.util.user_config.set_value("window_positions", positions)
 
         for window in wx.GetTopLevelWindows():
             if window is wx.GetApp().GetTopWindow():

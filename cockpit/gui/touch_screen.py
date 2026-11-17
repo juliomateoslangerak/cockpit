@@ -1115,7 +1115,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         else:
             self.scalebar = 1
         # store current state for future.
-        cockpit.util.user_config.set_value("mosaicScaleBar", self.scalebar)
+        cockpit.util.user_config.set_value("mosaic_scale_bar", self.scalebar)
         self.Refresh()
 
     def mosaic_start(self):

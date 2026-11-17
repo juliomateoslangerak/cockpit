@@ -225,7 +225,7 @@ class ExperimentUI(wx.Panel):
 
     def load_settings(self):
         return cockpit.util.user_config.get_value(
-            self.config_key + "StutteredZStackSettings", default=[]
+            self.config_key + "StutteredZStack_settings", default=[]
         )
 
     def get_sample_rates(self):
@@ -238,5 +238,5 @@ class ExperimentUI(wx.Panel):
         if settings is None:
             settings = self.get_settings_dict()
         cockpit.util.user_config.set_value(
-            self.config_key + "StutteredZStackSettings", settings
+            self.config_key + "StutteredZStack_settings", settings
         )

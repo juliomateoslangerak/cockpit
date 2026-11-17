@@ -71,7 +71,7 @@ class GridSitesDialog(wx.Dialog):
 
         ## config-loaded settings for the form.
         self.settings = cockpit.util.user_config.get_value(
-            "gridSitesDialog",
+            "grid_sites_dialog",
             default={
                 "num_rows": "10",
                 "num_columns": "10",
@@ -166,7 +166,7 @@ class GridSitesDialog(wx.Dialog):
     def save_settings(self):
         """Save the user's settings to the configuration file."""
         cockpit.util.user_config.set_value(
-            "gridSitesDialog",
+            "grid_sites_dialog",
             {
                 "num_rows": self.num_rows.GetValue(),
                 "num_columns": self.num_columns.GetValue(),

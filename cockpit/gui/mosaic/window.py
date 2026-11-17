@@ -412,7 +412,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
 
         # default scale bar size is Zero
         self.scalebar = cockpit.util.user_config.get_value(
-            "mosaicScaleBar", default=0
+            "mosaic_scale_bar", default=0
         )
         ## Maps button names to wx.Button instances.
         self.name_to_button = {}
@@ -1040,7 +1040,7 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         self.display_trails = not self.display_trails
         # store current state for future.
         cockpit.util.user_config.set_value(
-            "mosaicDisplayTrails", self.display_trails
+            "mosaic_display_trails", self.display_trails
         )
         # send a mosaic update event to update touch_screen
         events.publish(events.MOSAIC_UPDATE)

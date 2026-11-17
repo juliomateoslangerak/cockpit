@@ -49,7 +49,7 @@ Some of subpackages are:
 
 And some of its modules are:
 
-- :mod:`cockpit.gui.fileViewerWindow`: displays MRC files; this code
+- :mod:`cockpit.gui.file_viewer_window`: displays MRC files; this code
   is invoked when an MRC file is dragged onto the main window.
 
 - :mod:`cockpit.gui.gui_utils`: utility functions for setting up and

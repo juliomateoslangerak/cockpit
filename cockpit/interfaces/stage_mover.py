@@ -174,9 +174,9 @@ class StageMover:
             raise ValueError("stage mover requires 3 axis: X, Y, and Z")
 
         # FIXME: we should have sensible defaults (see issue #638).
-        self._saved_top = user_config.get_value("savedTop", default=3010.0)
+        self._saved_top = user_config.get_value("saved_top", default=3010.0)
         self._saved_bottom = user_config.get_value(
-            "savedBottom", default=3000.0
+            "saved_bottom", default=3000.0
         )
 
         ## XXX: We have a single index for all axis, even though each
@@ -246,7 +246,7 @@ class StageMover:
 
     @saved_top.setter
     def saved_top(self, pos: float) -> None:
-        user_config.set_value("savedTop", pos)
+        user_config.set_value("saved_top", pos)
         self._saved_top = pos
         events.publish(events.STAGE_TOP_BOTTOM)
 
@@ -256,7 +256,7 @@ class StageMover:
 
     @saved_bottom.setter
     def saved_bottom(self, pos: float) -> None:
-        user_config.set_value("savedBottom", pos)
+        user_config.set_value("saved_bottom", pos)
         self._saved_bottom = pos
         events.publish(events.STAGE_TOP_BOTTOM)
 

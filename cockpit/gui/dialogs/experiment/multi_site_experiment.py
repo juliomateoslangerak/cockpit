@@ -95,7 +95,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
         ## User's last-used inputs.
         self.settings = cockpit.util.user_config.get_value(
-            "multiSiteExperiment",
+            "multi_site_experiment",
             default={
                 "num_cycles": "10",
                 "cycle_duration": "60",
@@ -586,7 +586,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         """Save our settings to the config."""
         light_frequencies = [l.GetValue() for l in self.light_frequencies]
         cockpit.util.user_config.set_value(
-            "multiSiteExperiment",
+            "multi_site_experiment",
             {
                 "num_cycles": self.num_cycles.GetValue(),
                 "cycle_duration": self.cycle_duration.GetValue(),

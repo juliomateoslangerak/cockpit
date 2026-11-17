@@ -354,7 +354,7 @@ class BoulderSLM(device.Device):
     def wait(self, async_result, message):
         # Wait unti the SLM has finished an aynchronous task.
         status = wx.ProgressDialog(
-            parent=wx.GetApp().MainWindow,
+            parent=wx.GetApp().main_window,
             title="Waiting for SLM",
             message=message,
         )

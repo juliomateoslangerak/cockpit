@@ -259,7 +259,7 @@ class ExecutorHandler(DeviceHandler):
                 pass
         # If we get this far, we need to create a new window.
         _window_instance = ExecutorDebugWindow(
-            self, parent=wx.GetApp().MainWindow
+            self, parent=wx.GetApp().main_window
         )
         _window_instance.Show()
 

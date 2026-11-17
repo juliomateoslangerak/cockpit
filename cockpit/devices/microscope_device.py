@@ -834,7 +834,7 @@ class MicroscopeDIO(MicroscopeBase):
     def show_debug_window(self):
         """Debugging function: display a debug window."""
         self.dio_debug_window = DIOOutputWindow(
-            self, parent=wx.GetApp().MainWindow
+            self, parent=wx.GetApp().main_window
         ).Show()
 
     def get_handlers(self):

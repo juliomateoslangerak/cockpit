@@ -600,7 +600,7 @@ class WindowsMenu(wx.Menu):
         window.Show()
 
     def on_launch_sim_intensity_profile(self, event: wx.CommandEvent) -> None:
-        window = IntensityProfilerFrame(wx.GetApp().MainWindow)
+        window = IntensityProfilerFrame(wx.GetApp().main_window)
         window.Show()
 
 

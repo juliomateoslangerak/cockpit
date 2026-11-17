@@ -375,7 +375,7 @@ class ActionsPanel(wx.Panel):
 
     def _on_marker(self, event):
         colour = self._sel_mar.GetStringSelection()
-        mosaic.window.saveSite(_SITE_COLOURS[colour])
+        mosaic.window.save_site(_SITE_COLOURS[colour])
 
     def _on_snap(self, event):
         # Check that there is at least one camera and one light source active
@@ -910,12 +910,12 @@ class MenuColumn(wx.Panel):
 
 class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
     @property
-    def selectedSites(self):
-        return mosaic.window.selectedSites
+    def selected_sites(self):
+        return mosaic.window.selected_sites
 
     @property
-    def displayTrails(self):
-        return mosaic.window.displayTrails
+    def display_trails(self):
+        return mosaic.window.display_trails
 
     @property
     def trails(self):
@@ -926,8 +926,8 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
         return mosaic.window.primitives
 
     @property
-    def focalPlaneParams(self):
-        return mosaic.window.focalPlaneParams
+    def focal_plane_params(self):
+        return mosaic.window.focal_plane_params
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1071,7 +1071,7 @@ class MosaicPanel(wx.Panel, mosaic.MosaicCommon):
                     current_target[1] + self.offset[1],
                 )
                 # stop mosaic if we are already running one
-                if mosaic.window.amGeneratingMosaic:
+                if mosaic.window.am_generating_mosaic:
                     self.master_mosaic.onAbort(mosaic.window)
                 self.go_to(new_target)
             elif event.LeftIsDown() and not event.LeftDown():

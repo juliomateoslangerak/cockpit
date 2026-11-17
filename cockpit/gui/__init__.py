@@ -57,10 +57,10 @@ And some of its modules are:
 
 - :mod:`cockpit.gui.keyboard`: binds keyboard shortcuts to windows.
 
-- :mod:`cockpit.gui.loggingWindow`: displays standard output and
+- :mod:`cockpit.gui.logging_window`: displays standard output and
   standard error.
 
-- :mod:`cockpit.gui.mainWindow`: shows exposure settings, the
+- :mod:`cockpit.gui.main_window`: shows exposure settings, the
   run-experiment buttons, and any custom UI created by device code.
 
 """

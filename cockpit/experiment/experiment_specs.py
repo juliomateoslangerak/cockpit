@@ -127,8 +127,8 @@ class ExperimentSpec:
         slice_height = self.slice_height
         if self.z_mode is ZMode.SAVED:
             mover = cockpit.interfaces.stage_mover.mover
-            alt_bottom = mover.SavedBottom
-            z_height = mover.SavedTop - alt_bottom
+            alt_bottom = mover.saved_bottom
+            z_height = mover.saved_top - alt_bottom
         else:
             alt_bottom = cockpit.interfaces.stage_mover.get_position_for_axis(2)
             if self.z_mode is ZMode.CENTER:

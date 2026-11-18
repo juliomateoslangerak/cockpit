@@ -208,9 +208,8 @@ class MultiSiteSpec:
     delay_before_imaging: float = 0
     ## Reorder the sites to minimise travel time.
     optimize_order: bool = True
-    ## Maps light handlers to (frequency, offset), see parseLightFrequency.
-    # Lights not in the mapping are used on every cycle.
-    light_frequencies: typing.Optional[dict] = None
+    # List of cycle frequencies and offsets pair tuples when Lights are to be used
+    light_frequencies_offsets: typing.Optional[list[tuple[int, int]]] = None
     ## Power off all POWER_CONTROL devices at the end.
     power_down_when_done: bool = False
 
@@ -236,12 +235,9 @@ class MultiSiteSpec:
             if not cockpit.interfaces.stage_mover.can_reach_site(site_id):
                 raise ValueError("Site %s cannot be reached." % site_id)
 
-    def run(self, confirm=None):
+    def run(self):
         """Start a MultiSiteRunner in the background and return it.
-        Args:
-            confirm: See cockpit.experiment.experiment.Experiment.run. It is
-                     called from the runner's thread.
         """
         runner = multi_site_runner.MultiSiteRunner(self)
-        runner.run(confirm)
+        runner.run()
         return runner

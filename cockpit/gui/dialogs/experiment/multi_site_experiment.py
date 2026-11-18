@@ -61,6 +61,8 @@ import cockpit.util.user_config
 from cockpit import depot, events
 from cockpit.gui import gui_utils
 from cockpit.gui.dialogs.experiment import experiment_config_panel
+from cockpit.experiment.experiment_specs import MultiSiteSpec
+from cockpit.experiment.multi_site_runner import MultiSiteRunner
 
 
 ## Minimum size of controls (counting their labels)
@@ -81,17 +83,13 @@ class MultiSiteExperimentDialog(wx.Dialog):
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
 
-        ## Whether or not we should abort the current experiment.
-        self.should_abort = False
-        events.subscribe(events.USER_ABORT, self.on_abort)
-
         ## List of all light handlers.
         self.all_lights = wx.GetApp().depot.get_handlers_of_type(
             depot.LIGHT_TOGGLE
         )
         ## List of booleans indicating which lights were active at the
         # start of the experiment.
-        self.active_lights = [None for l in self.all_lights]
+        self.active_lights = [None for _ in self.all_lights]
 
         ## User's last-used inputs.
         self.settings = cockpit.util.user_config.get_value(
@@ -103,7 +101,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 "delay_before_imaging": "0",
                 "should_customize_light_frequencies": False,
                 "should_optimize_site_order": True,
-                "light_frequencies": ["1" for l in self.all_lights],
+                "light_frequencies": ["1" for _ in self.all_lights],
             },
         )
 
@@ -391,6 +389,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 cycle_num_to_sites_list.append(sites_list)
         return (cycle_rate, cycle_num_to_sites_list)
 
+
     def sanity_check(self):
         """Run sanity checks before starting the experiment.
 
@@ -425,84 +424,27 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 return False
         return True
 
-    @cockpit.util.threads.call_in_new_thread
     def on_start(self, event=None):
-        """Run the experiment.
-
-        We spin this off to a background thread so the user can interact with
-        the UI while the experiment runs.
-        """
+        """Trigger the experiment."""
+        if not self.Validate():
+            return
         if not self.sanity_check():
             return
         self.Hide()
         self.save_config()
 
-        self.active_lights = [l.get_is_enabled() for l in self.all_lights]
+        multisite_spec = self.get_multisite_experiment_spec()
+        try:
+            multisite_spec.run()
+        except Exception:
+            cockpit.gui.ExceptionBox("Failed to run experiment.", parent=self)
+            return False
 
-        self.should_abort = False
-        delay = float(self.delay_before_starting.GetValue()) * 60
-        self.wait_for(delay)
-        if self.should_abort:
-            return
-
-        experiment_start = time.localtime()
-        cycle_duration = 0
-        if self.cycle_duration.GetValue():
-            cycle_duration = float(self.cycle_duration.GetValue())
-        cycle_period, cycle_num_to_sites_list = self.choose_site_visit_order()
-        num_cycles = int(self.num_cycles.GetValue())
-        cycle_start_time = time.time()
-        for cycle_num in range(num_cycles):
-            site_ids = cycle_num_to_sites_list[cycle_num % cycle_period]
-            if cycle_num != 0:
-                # Move to the first site.
-                cockpit.interfaces.stage_mover.wait_for_stop()
-                cockpit.interfaces.stage_mover.go_to_site(
-                    site_ids[0], should_block=True
-                )
-                # Wait for when the next cycle should start.
-                wait_time = cycle_start_time + cycle_duration - time.time()
-                if not self.wait_for(wait_time):
-                    print(
-                        f"Couldn't finish cycle in time; off by {-wait_time:.2f} seconds"
-                    )
-            print(
-                f"Starting cycle {cycle_num + 1} of {num_cycles} at {time.time():.2f}"
-            )
-            cycle_start_time = time.time()
-            if self.should_customize_light_frequencies.GetValue():
-                self.activate_lights(cycle_num)
-            for site_id in site_ids:
-                if self.should_abort:
-                    break
-                print(f"Imaging site {site_id} at {time.time():.2f}")
-                self.image_site(site_id, cycle_num, experiment_start)
-
-            if self.should_abort:
-                break
-
-        self.clean_up()
-
-    def clean_up(self):
-        """Clean up after the experiment ends."""
-        for i, should_activate in enumerate(self.active_lights):
-            self.all_lights[i].set_enabled(should_activate)
-        if (
-            self.should_power_down_when_done is not None
-            and self.should_power_down_when_done.GetValue()
-        ):
-            handlers = wx.GetApp().depot.get_handlers_of_type(
-                depot.POWER_CONTROL
-            )
-            for handler in handlers:
-                handler.disable()
-        events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
-
-    def activate_lights(self, cycleNum):
+    def get_light_frequencies_offsets(self):
         """Select the appropriate light sources for this cycle."""
+        light_frequencies_offsets = []
         for i, control in enumerate(self.light_frequencies):
             string = control.GetValue()
-            frequency = 1
             offset = 0
             if "+" in string:
                 # There's both a frequency and an offset.
@@ -510,77 +452,10 @@ class MultiSiteExperimentDialog(wx.Dialog):
             else:
                 # Just a frequency.
                 frequency = int(string)
-            # Only activate a light if it was enabled when the experiment
-            # started.
-            if self.active_lights[i]:
-                self.all_lights[i].set_enabled(cycleNum % frequency == offset)
 
-    def image_site(self, site_id, cycle_num, experiment_start):
-        """Go to the specified site and run our experiment on it."""
-        events.publish(
-            events.UPDATE_STATUS_LIGHT,
-            "device waiting",
-            "Waiting for stage motion",
-        )
-        cockpit.interfaces.stage_mover.wait_for_stop()
-        cockpit.interfaces.stage_mover.go_to_site(site_id, should_block=True)
-        self.wait_for(float(self.delay_before_imaging.GetValue()))
-        if self.should_abort:
-            return
-        # Try casting the site ID to an int, which it probably is, so that
-        # we can use %03d (fills with zeros) instead of %s (variable width,
-        # so screws with sorting).
-        try:
-            site_id = "%03d" % int(site_id)
-        except ValueError:
-            # Not actually an int.
-            pass
-        self.experiment_panel.filepath_panel.update_filename(
-            {
-                "date": time.strftime("%Y%m%d", experiment_start),
-                "time": time.strftime("%H%M", experiment_start),
-                "cycle": ("%03d" % cycle_num),
-                "site": site_id,
-            }
-        )
-        start = time.time()
-        events.execute_and_wait_for(
-            events.EXPERIMENT_COMPLETE, self.experiment_panel.run_experiment
-        )
-        print(f"Imaging took {(time.time() - start):.2f} seconds")
+            light_frequencies_offsets.append((frequency, offset))
 
-    def on_abort(self, *args):
-        """User clicked the abort button."""
-        self.should_abort = True
-
-    def wait_for(self, seconds):
-        """Wait for some time, allowing the user to abort the wait.
-
-        Return True if we were successful (i.e. handed a valid amount of time
-        to wait for).
-        """
-        if seconds <= 0:
-            return False
-        print(f"Waiting for {seconds:.2f} seconds until next cycle")
-        end_time = time.time() + seconds
-        cur_time = time.time()
-        while cur_time < end_time and not self.should_abort:
-            if int(cur_time + 0.25) != int(cur_time):
-                remaining = end_time - cur_time
-                # Advanced to a new second; update the status light.
-                display_minutes = remaining // 60
-                display_seconds = (remaining - display_minutes * 60) // 1
-                events.publish(
-                    events.UPDATE_STATUS_LIGHT,
-                    "device waiting",
-                    (
-                        "Waiting for %02d:%02d"
-                        % (display_minutes, display_seconds)
-                    ),
-                )
-            time.sleep(0.25)
-            cur_time = time.time()
-        return True
+        return light_frequencies_offsets
 
     def save_config(self):
         """Save our settings to the config."""
@@ -605,6 +480,23 @@ class MultiSiteExperimentDialog(wx.Dialog):
         dialog.Destroy()
         dialog = None
         show_dialog(parent)
+
+    def get_multisite_experiment_spec(self):
+        sites_ids, frequencies = self.sites_panel.get_sites_frequencies()
+
+        return MultiSiteSpec(
+            site_experiment=self.experiment_panel.get_experiment_spec(),
+            sites=sites_ids,
+            frequencies=frequencies,
+            num_cycles=int(self.num_cycles.GetValue()),
+            cycle_durations=[float(cd) for cd in self.cycle_duration.GetValue().split(',')],
+            delay_before_starting=float(self.delay_before_starting.GetValue()) * 60,
+            delay_before_imaging=float(self.delay_before_imaging.GetValue()),
+            optimize_order=self.should_optimize_site_order.GetValue(),
+            light_frequencies_offsets=self.get_light_frequencies_offsets(),
+            power_down_when_done=self.should_power_down_when_done is not None
+                                 and self.should_power_down_when_done.GetValue()
+        )
 
 
 ## Global singleton

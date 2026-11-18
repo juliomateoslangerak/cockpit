@@ -95,27 +95,21 @@ def filter_exposure_settings(exposure_settings, light_frequencies, cycle_num):
 class MultiSiteRunner:
     """Runs a MultiSiteSpec. Single-use, like Experiment.
     """
-    def __init__(self, spec):
+    def __init__(self, multisite_spec):
         ## The MultiSiteSpec being run.
-        self.spec = spec
+        self.multisite_spec = multisite_spec
         self.should_abort = False
-        self.confirm = None
         ## Experiment currently being run, for debugging.
         self.current_experiment = None
         self._thread = None
 
-    def run(self, confirm=None):
+    def run(self):
         """
         Start the experiment in a background thread and return immediately.
-
-        args:
-            confirm: See cockpit.experiment.experiment.Experiment.run. It is
-            called from the background thread.
         """
         if self._thread is not None:
             raise RuntimeError("This multi-site experiment was already run.")
-        self.spec.sanity_check()
-        self.confirm = confirm
+        self.multisite_spec.sanity_check()
         self.should_abort = False
         self._thread = threading.Thread(
             target=self.execute, name="MultiSiteRunner", daemon=True
@@ -150,20 +144,20 @@ class MultiSiteRunner:
             self.cleanup()
 
     def _execute(self):
-        self.wait_for(self.spec.delay_before_starting)
+        self.wait_for(self.multisite_spec.delay_before_starting)
         if self.should_abort:
             return
 
         experiment_start = time.localtime()
         cycle_num_to_sites_list = site_visit_order(
-            self.spec.sites, self.spec.frequencies, self.spec.optimize_order
+            self.multisite_spec.sites, self.multisite_spec.frequencies, self.multisite_spec.optimize_order
         )
         cycle_start_time = time.time()
-        for cycle_num in range(self.spec.num_cycles):
+        for cycle_num in range(self.multisite_spec.num_cycles):
             site_ids = cycle_num_to_sites_list[cycle_num % len(cycle_num_to_sites_list)]
             if cycle_num != 0:
-                cycle_duration = self.spec.cycle_durations[
-                    (cycle_num - 1) % len(self.spec.cycle_durations)
+                cycle_duration = self.multisite_spec.cycle_durations[
+                    (cycle_num - 1) % len(self.multisite_spec.cycle_durations)
                 ]
                 # Move to the first site.
                 if site_ids:
@@ -180,23 +174,24 @@ class MultiSiteRunner:
                     )
             if self.should_abort:
                 break
-            _logger.info(
-                "Starting cycle %d of %d", cycle_num + 1, self.spec.num_cycles
+            print(
+                "Starting cycle %d of %d", cycle_num + 1, self.multisite_spec.num_cycles
             )
             cycle_start_time = time.time()
             for site_id in site_ids:
                 if self.should_abort:
                     break
+                print(f"Imaging site {site_id} at {time.time():.2f}")
                 self.image_site(site_id, cycle_num, experiment_start)
             if self.should_abort:
                 break
 
-    ## Go to the specified site and run our experiment on it.
     def image_site(self, site_id, cycle_num, experiment_start):
-        spec = self.spec.site_experiment
-        if self.spec.light_frequencies:
+        """Go to the specified site and run our experiment on it."""
+        site_specs = self.multisite_spec.site_experiment
+        if self.multisite_spec.light_frequencies:
             exposure_settings = filter_exposure_settings(
-                spec.exposure_settings, self.spec.light_frequencies, cycle_num
+                site_specs.exposure_settings, self.multisite_spec.light_frequencies, cycle_num
             )
             if not exposure_settings:
                 _logger.info(
@@ -205,7 +200,7 @@ class MultiSiteRunner:
                     site_id,
                 )
                 return
-            spec = dataclasses.replace(spec, exposure_settings=exposure_settings)
+            site_specs.exposure_settings = exposure_settings
 
         events.publish(
             events.UPDATE_STATUS_LIGHT,
@@ -214,7 +209,7 @@ class MultiSiteRunner:
         )
         cockpit.interfaces.stage_mover.wait_for_stop()
         cockpit.interfaces.stage_mover.go_to_site(site_id, should_block=True)
-        self.wait_for(self.spec.delay_before_imaging)
+        self.wait_for(self.multisite_spec.delay_before_imaging)
         if self.should_abort:
             return
 
@@ -232,7 +227,7 @@ class MultiSiteRunner:
         }
         _logger.info("Imaging site %s", site_id)
         start = time.time()
-        self.current_experiment = spec.run(self.confirm, mappings)
+        self.current_experiment = site_specs.run(mappings=mappings)
         if self.current_experiment is None:
             _logger.warning(
                 "Experiment at site %s, cycle %d was not started",
@@ -245,7 +240,7 @@ class MultiSiteRunner:
 
     ## Clean up after the experiment ends.
     def cleanup(self):
-        if self.spec.power_down_when_done:
+        if self.multisite_spec.power_down_when_done:
             for handler in depot.get_handlers_of_type(depot.POWER_CONTROL):
                 handler.disable()
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")

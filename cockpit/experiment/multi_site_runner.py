@@ -73,14 +73,14 @@ def site_visit_order(sites, frequencies=None, optimize=True):
     return cycle_num_to_sites_list
 
 
-def filter_exposure_settings(exposure_settings, light_frequencies, cycle_num):
+def filter_exposure_settings(exposure_settings, light_frequencies_offsets, cycle_num):
     """Return exposure_settings without the lights that should not be used on
     the given cycle. Exposures left with no light at all are dropped.
     """
     def is_active(light):
-        if light not in light_frequencies:
+        if light not in light_frequencies_offsets:
             return True
-        frequency, offset = light_frequencies[light]
+        frequency, offset = light_frequencies_offsets[light]
         return cycle_num % frequency == offset
 
     result = []
@@ -189,9 +189,11 @@ class MultiSiteRunner:
     def image_site(self, site_id, cycle_num, experiment_start):
         """Go to the specified site and run our experiment on it."""
         site_specs = self.multisite_spec.site_experiment
-        if self.multisite_spec.light_frequencies:
+        if self.multisite_spec.light_frequencies_offsets:
             exposure_settings = filter_exposure_settings(
-                site_specs.exposure_settings, self.multisite_spec.light_frequencies, cycle_num
+                site_specs.exposure_settings,
+                self.multisite_spec.light_frequencies_offsets,
+                cycle_num
             )
             if not exposure_settings:
                 _logger.info(

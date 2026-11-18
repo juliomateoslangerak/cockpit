@@ -117,7 +117,7 @@ class EnumerateSitesPanel(wx.Panel):
         self.SetSizerAndFit(sizer)
 
     def get_sites_frequencies(self):
-        # Construct the input list of sites
+        """Construct the input list of sites."""
         sites_string = self.sites.GetValue()
         if sites_string == "Most recent site":
             sites = cockpit.interfaces.stage_mover.get_all_sites()

@@ -33,10 +33,10 @@ Example, from the cockpit shell::
     from cockpit.experiment import experiment_specs as specs, z_stack
     from cockpit.interfaces import stage_mover
 
-    s = spec.ExperimentSpec(
+    s = specs.ExperimentSpec(
         z-stack.ZStackExperiment,
         exposure_settings=[([camera], [(light, Decimal(50))])],
-        z_mode=spec.ZMode.CENTER,
+        z_mode=specs.ZMode.CENTER,
         z_height=5,
         slice_height=0.5,
         save_dir="/data/run1",

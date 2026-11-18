@@ -250,9 +250,10 @@ class MultiSiteRunner:
                 handler.disable()
         events.publish(events.UPDATE_STATUS_LIGHT, "device waiting", "")
 
-    ## Wait for some time, allowing the user to abort the wait. Return True
-    # if we were successful (i.e. handed a valid amount of time to wait for).
     def wait_for(self, seconds):
+        """Wait for some time, allowing the user to abort the wait. Return True
+        if we were successful (i.e. handed a valid amount of time to wait for).
+        """
         if seconds <= 0:
             return False
         _logger.info("Waiting for %.2f seconds", seconds)

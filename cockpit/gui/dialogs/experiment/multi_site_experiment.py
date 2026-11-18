@@ -388,7 +388,6 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 cycle_num_to_sites_list.append(sites_list)
         return (cycle_rate, cycle_num_to_sites_list)
 
-
     def sanity_check(self):
         """Run sanity checks before starting the experiment.
 

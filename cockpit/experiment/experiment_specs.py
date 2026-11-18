@@ -209,7 +209,7 @@ class MultiSiteSpec:
     ## Reorder the sites to minimise travel time.
     optimize_order: bool = True
     # List of cycle frequencies and offsets pair tuples when Lights are to be used
-    light_frequencies_offsets: typing.Optional[list[tuple[int, int]]] = None
+    light_frequencies_offsets: typing.Optional[dict[tuple[int, int]]] = None
     ## Power off all POWER_CONTROL devices at the end.
     power_down_when_done: bool = False
 

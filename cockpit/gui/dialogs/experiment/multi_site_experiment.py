@@ -101,7 +101,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 "delay_before_imaging": "0",
                 "should_customize_light_frequencies": False,
                 "should_optimize_site_order": True,
-                "light_frequencies": ["1" for _ in self.all_lights],
+                "light_frequencies_offsets": ["1" for _ in self.all_lights],
             },
         )
 
@@ -240,7 +240,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
         self.light_frequencies, sizer = gui_utils.make_lights_controls(
             self.light_frequencies_panel,
             [str(l.wavelength) for l in self.all_lights],
-            self.settings["light_frequencies"],
+            self.settings["light_frequencies_offsets"],
         )
         self.light_frequencies_panel.SetSizerAndFit(sizer)
         self.light_frequencies_panel.Show(
@@ -442,18 +442,18 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
     def get_light_frequencies_offsets(self):
         """Select the appropriate light sources for this cycle."""
-        light_frequencies_offsets = []
-        for i, control in enumerate(self.light_frequencies):
+        light_frequencies_offsets = {}
+        for light, control in zip(self.all_lights, self.light_frequencies):
             string = control.GetValue()
-            offset = 0
             if "+" in string:
                 # There's both a frequency and an offset.
                 frequency, offset = [int(s) for s in string.split("+")]
             else:
                 # Just a frequency.
                 frequency = int(string)
+                offset = 0
 
-            light_frequencies_offsets.append((frequency, offset))
+            light_frequencies_offsets[light] = (frequency, offset)
 
         return light_frequencies_offsets
 
@@ -469,7 +469,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 "delay_before_imaging": self.delay_before_imaging.GetValue(),
                 "should_customize_light_frequencies": self.should_customize_light_frequencies.GetValue(),
                 "should_optimize_site_order": self.should_optimize_site_order.GetValue(),
-                "light_frequencies": light_frequencies,
+                "light_frequencies_offsets": light_frequencies,
             },
         )
 

@@ -462,7 +462,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
     def save_config(self):
         """Save our settings to the config."""
-        light_frequencies = [l.GetValue() for l in self.light_frequencies]
+        light_frequencies_offsets = [l.GetValue() for l in self.light_frequencies]
         cockpit.util.user_config.set_value(
             "multi_site_experiment",
             {
@@ -472,7 +472,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
                 "delay_before_imaging": self.delay_before_imaging.GetValue(),
                 "should_customize_light_frequencies": self.should_customize_light_frequencies.GetValue(),
                 "should_optimize_site_order": self.should_optimize_site_order.GetValue(),
-                "light_frequencies_offsets": light_frequencies,
+                "light_frequencies_offsets": light_frequencies_offsets,
             },
         )
 
@@ -485,10 +485,25 @@ class MultiSiteExperimentDialog(wx.Dialog):
         show_dialog(parent)
 
     def get_multisite_experiment_spec(self):
+        """Return a MultiSiteSpec from the user's settings, or None if the
+        site experiment settings are unusable."""
+        # Keep the filename template so that each site/cycle gets its own
+        # file ({cycle}, {site}, ... are expanded by the runner).
+        site_experiment = self.experiment_panel.get_experiment_spec(
+            use_filename_template=True
+        )
+        if not isinstance(site_experiment, ExperimentSpec):
+            # get_experiment_spec returns None (or True) on invalid settings.
+            return None
+
         sites_ids, frequencies = self.sites_panel.get_sites_frequencies()
 
+        light_frequencies_offsets = None
+        if self.should_customize_light_frequencies.GetValue():
+            light_frequencies_offsets = self.get_light_frequencies_offsets()
+
         return MultiSiteSpec(
-            site_experiment=self.experiment_panel.get_experiment_spec(),
+            site_experiment=site_experiment,
             sites=sites_ids,
             frequencies=frequencies,
             num_cycles=int(self.num_cycles.GetValue()),
@@ -496,7 +511,7 @@ class MultiSiteExperimentDialog(wx.Dialog):
             delay_before_starting=float(self.delay_before_starting.GetValue()) * 60,
             delay_before_imaging=float(self.delay_before_imaging.GetValue()),
             optimize_order=self.should_optimize_site_order.GetValue(),
-            light_frequencies_offsets=self.get_light_frequencies_offsets(),
+            light_frequencies_offsets=light_frequencies_offsets,
             power_down_when_done=self.should_power_down_when_done is not None
                                  and self.should_power_down_when_done.GetValue()
         )

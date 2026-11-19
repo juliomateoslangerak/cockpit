@@ -351,7 +351,7 @@ class Experiment:
 
         self.cleanup_thread = threading.Thread(
             target=self.cleanup,
-            args=[self.run_thread, saver.save_thread],
+            args=[self.run_thread, save_thread],
             name="Experiment-cleanup",
         )
         self.cleanup_thread.start()

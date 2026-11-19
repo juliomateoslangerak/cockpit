@@ -126,8 +126,11 @@ class LoggingWindow(wx.Frame):
     def write(self, target, *args):
         """Send text to one of our output boxes, and also log that text."""
         wx.CallAfter(target.AppendText, *args)
-        # Text output reveals logging window.
-        self.Show()
+        # Text output reveals logging window. write() may be called from any
+        # thread (e.g. print() in an experiment thread), and showing a window
+        # off the main thread makes AppKit abort the process (SIGTRAP), so
+        # defer it to the main thread.
+        wx.CallAfter(self.Show)
 
         with self.cache_lock:
             self.text_cache += " ".join(map(str, args))

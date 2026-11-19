@@ -174,14 +174,14 @@ class MultiSiteRunner:
                     )
             if self.should_abort:
                 break
-            print(
+            _logger.info(
                 "Starting cycle %d of %d", cycle_num + 1, self.multisite_spec.num_cycles
             )
             cycle_start_time = time.time()
             for site_id in site_ids:
                 if self.should_abort:
                     break
-                print(f"Imaging site {site_id} at {time.time():.2f}")
+                _logger.info(f"Imaging site {site_id} at {time.time():.2f}")
                 self.image_site(site_id, cycle_num, experiment_start)
             if self.should_abort:
                 break

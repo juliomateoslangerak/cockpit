@@ -202,7 +202,11 @@ class MultiSiteRunner:
                     site_id,
                 )
                 return
-            site_specs.exposure_settings = exposure_settings
+            # Don't modify the shared spec: lights filtered out on this cycle
+            # must still be available on later cycles.
+            site_specs = dataclasses.replace(
+                site_specs, exposure_settings=exposure_settings
+            )
 
         events.publish(
             events.UPDATE_STATUS_LIGHT,

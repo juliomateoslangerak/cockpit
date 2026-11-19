@@ -165,13 +165,13 @@ class TestNanomover(unittest.TestCase):
             dev.position_cache = (1, 2, 3)
             dev.prompt_exercise_stage()
         get_value.assert_called_once_with(
-            "NanomoverLastExerciseTimestamp", default=0
+            "nanomover_last_exercise_timestamp", default=0
         )
         ask.assert_called_once()
         self.assertIn("days since", ask.call_args.args[0])
         self.assertTrue(go_to_xy.called)
         self.assertEqual(
-            set_value.call_args.args[0], "NanomoverLastExerciseTimestamp"
+            set_value.call_args.args[0], "nanomover_last_exercise_timestamp"
         )
 
     def test_prompt_exercise_stage_skips_when_recent(self):

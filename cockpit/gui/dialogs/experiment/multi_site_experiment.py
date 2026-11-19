@@ -430,10 +430,13 @@ class MultiSiteExperimentDialog(wx.Dialog):
             return
         if not self.sanity_check():
             return
+        multisite_spec = self.get_multisite_experiment_spec()
+        if multisite_spec is None:
+            # The user has already been told what is wrong.
+            return
         self.Hide()
         self.save_config()
 
-        multisite_spec = self.get_multisite_experiment_spec()
         try:
             multisite_spec.run()
         except Exception:

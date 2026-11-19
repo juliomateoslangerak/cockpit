@@ -58,11 +58,10 @@ import cockpit.gui.dialogs.enumerate_sites_panel
 import cockpit.interfaces.stage_mover
 import cockpit.util.threads
 import cockpit.util.user_config
-from cockpit import depot, events
+from cockpit import depot
 from cockpit.gui import gui_utils
 from cockpit.gui.dialogs.experiment import experiment_config_panel
-from cockpit.experiment.experiment_specs import MultiSiteSpec
-from cockpit.experiment.multi_site_runner import MultiSiteRunner
+from cockpit.experiment.experiment_specs import ExperimentSpec, MultiSiteSpec
 
 
 ## Minimum size of controls (counting their labels)

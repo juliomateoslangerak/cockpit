@@ -77,7 +77,7 @@ class FilterHandler(device.DeviceHandler):
         )
         self.cameras = cameras or []
         self.lights = lights or []
-        self.lastFilter = None
+        self.last_filter = None
 
     @property
     def filters(self):
@@ -87,8 +87,7 @@ class FilterHandler(device.DeviceHandler):
         return self.callbacks["get_position"]()
 
     def on_load_settings(self, settings):
-        filters = self.callbacks["make_selector"]()
-        for f in filters:
+        for f in self.filters:
             if f.position == settings:
                 self.set_filter(f)
 
@@ -100,16 +99,16 @@ class FilterHandler(device.DeviceHandler):
             wx.EVT_CHOICE,
             lambda evt: self.set_filter(self.filters[evt.Selection]),
         )
-        self.add_watch("lastFilter", self.set_from_name)
+        self.add_watch("last_filter", self.set_from_name)
         self.ctrl.Bind(wx.EVT_WINDOW_DESTROY, self.on_selector_destroy)
-        self.ctrl.SetSelection(self.ctrl.FindString(str(self.lastFilter)))
+        self.ctrl.SetSelection(self.ctrl.FindString(str(self.last_filter)))
         return self.ctrl
 
     def set_from_name(self, name):
         self.ctrl.SetSelection(self.ctrl.FindString(str(name)))
 
     def on_selector_destroy(self, event: wx.WindowDestroyEvent) -> None:
-        self.remove_watch("lastFilter", self.set_from_name)
+        self.remove_watch("last_filter", self.set_from_name)
         event.Skip()
 
     def make_ui(self, parent):
@@ -135,12 +134,12 @@ class FilterHandler(device.DeviceHandler):
     def update_after_move(self, *args):
         # Accept *args so that can be called directly as a Pyro callback
         # or an event handler.
-        self.lastFilter = self.current_filter()
+        self.last_filter = self.current_filter()
         # Emission filters
         for camera in self.cameras:
             h = depot.get_handler(camera, depot.CAMERA)
             if h is not None:
-                h.update_filter(self.lastFilter.label, self.lastFilter.value)
+                h.update_filter(self.last_filter.label, self.last_filter.value)
         # Excitation filters
         for h in self.lights:
             pass

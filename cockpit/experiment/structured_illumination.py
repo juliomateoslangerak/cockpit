@@ -376,9 +376,10 @@ class SIExperiment(experiment.Experiment):
         if self.angle_handler is not None:
             # Ramp down angle
             theta = self.angle_handler.indexedPosition(0)
-            motion_time, stabilization_time = (
-                self.angle_handler.get_movement_time(prev_angle, theta)
-            )
+            (
+                motion_time,
+                stabilization_time,
+            ) = self.angle_handler.get_movement_time(prev_angle, theta)
             table.add_action(cur_time + motion_time, self.angle_handler, theta)
             final_wait_time = max(
                 final_wait_time, motion_time + stabilization_time
@@ -386,9 +387,10 @@ class SIExperiment(experiment.Experiment):
         if self.phase_handler is not None:
             # Ramp down phase
             table.add_action(cur_time, self.phase_handler, prev_phase)
-            motion_time, stabilization_time = (
-                self.phase_handler.get_movement_time(prev_phase, 0)
-            )
+            (
+                motion_time,
+                stabilization_time,
+            ) = self.phase_handler.get_movement_time(prev_phase, 0)
             table.add_action(cur_time + motion_time, self.phase_handler, 0)
             final_wait_time = max(
                 final_wait_time, motion_time + stabilization_time
@@ -641,9 +643,9 @@ class BaseSIMExperimentUI(wx.Panel):
         self.save_settings()
         params["num_angles"] = 3
         params["num_phases"] = 5
-        params["collection_order"] = (
-            self.si_collection_order.GetStringSelection()
-        )
+        params[
+            "collection_order"
+        ] = self.si_collection_order.GetStringSelection()
         params["angle_handler"] = depot.get_handler_with_name("SI angle")
         params["phase_handler"] = depot.get_handler_with_name("SI phase")
         params["polarizer_handler"] = depot.get_handler_with_name(

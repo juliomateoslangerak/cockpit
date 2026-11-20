@@ -62,7 +62,9 @@ class SafeControl:
         # TODO: the GetId called here is going to be a method of the wx element
         # that SafeControl is mixed in with. It should not really be here
         if cancel or self._pending is not None:
-            event = SafeControlPendingEvent(id=self.GetId(), Value=self._pending)
+            event = SafeControlPendingEvent(
+                id=self.GetId(), Value=self._pending
+            )
         elif self.value is not None:
             event = SafeControlCommitEvent(
                 id=self.GetId(), Value=self.value, Commit=True
@@ -383,7 +385,9 @@ class SafeSpinCtrlDouble(SafeControl, wx.Panel):
 class GaugeValue:
     """Parameters used to display values on a gauge, with or without set point."""
 
-    def __init__(self, value=0, min_val=0, max_val=100, tolerance=0.01, fetch=None):
+    def __init__(
+        self, value=0, min_val=0, max_val=100, tolerance=0.01, fetch=None
+    ):
         """Create a GaugeValue
 
         Kwargs:
@@ -793,10 +797,18 @@ class SetPointGauge(SafeControl, wx.Window):
                 ]
 
         if direction is not None:
-            device_context.SetPen(wx.Pen(self.__class__.colours["on_target"], width=2))
+            device_context.SetPen(
+                wx.Pen(self.__class__.colours["on_target"], width=2)
+            )
 
-            posns = [self.range[direction == 1] - i * direction * 6 for i in range(3)]
-            [device_context.DrawLineList(f_ch(pos, direction)) for pos in posns]
+            posns = [
+                self.range[direction == 1] - i * direction * 6
+                for i in range(3)
+            ]
+            [
+                device_context.DrawLineList(f_ch(pos, direction))
+                for pos in posns
+            ]
 
     def on_timer(self, event):
         """Handle the wx.EVT_TIMER event for :class:`SetPointGauge`.
@@ -857,7 +869,9 @@ class SpinGauge(wx.Panel):
         """
         super().__init__(parent=parent, id=wx.ID_ANY)
         # Determine increment
-        increment = increment or float("%1.g" % ((max_value - min_value) / 1000))
+        increment = increment or float(
+            "%1.g" % ((max_value - min_value) / 1000)
+        )
 
         spinner = SafeSpinCtrlDouble(
             parent=self,

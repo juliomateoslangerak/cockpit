@@ -368,8 +368,7 @@ class Histogram(BaseGL):
         self.counts = None
         self.smoothing_window = 4
         self.smoothing_kernel = np.full(
-            self.smoothing_window,
-            1 / self.smoothing_window
+            self.smoothing_window, 1 / self.smoothing_window
         )
         self.bins_nb = 64
         self.fine_bins_nb = self.bins_nb * self.smoothing_window
@@ -401,20 +400,20 @@ class Histogram(BaseGL):
 
         # the histogram is computed with a fine grain and after smoothed with
         # a moving median kernel to avoid display artifacts
-        hist, _ = np.histogram(
-            data,
-            bins=self.fine_bins_nb,
-            density=density
-        )
+        hist, _ = np.histogram(data, bins=self.fine_bins_nb, density=density)
 
         # Smooth histogram
         smoothed = np.convolve(hist, self.smoothing_kernel, mode="same")
 
         # Resample to desired resolution
-        self.counts = smoothed.reshape(self.bins_nb, self.smoothing_window).mean(axis=1)
+        self.counts = smoothed.reshape(
+            self.bins_nb, self.smoothing_window
+        ).mean(axis=1)
 
         # Output bin centers
-        output_edges = np.linspace(self.lower_bound, self.upper_bound, self.bins_nb + 1)
+        output_edges = np.linspace(
+            self.lower_bound, self.upper_bound, self.bins_nb + 1
+        )
         self.bins = (output_edges[:-1] + output_edges[1:]) / 2
 
     def draw(self):

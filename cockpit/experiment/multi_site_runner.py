@@ -73,10 +73,13 @@ def site_visit_order(sites, frequencies=None, optimize=True):
     return cycle_num_to_sites_list
 
 
-def filter_exposure_settings(exposure_settings, light_frequencies_offsets, cycle_num):
+def filter_exposure_settings(
+    exposure_settings, light_frequencies_offsets, cycle_num
+):
     """Return exposure_settings without the lights that should not be used on
     the given cycle. Exposures left with no light at all are dropped.
     """
+
     def is_active(light):
         if light not in light_frequencies_offsets:
             return True
@@ -93,8 +96,8 @@ def filter_exposure_settings(exposure_settings, light_frequencies_offsets, cycle
 
 
 class MultiSiteRunner:
-    """Runs a MultiSiteSpec. Single-use, like Experiment.
-    """
+    """Runs a MultiSiteSpec. Single-use, like Experiment."""
+
     def __init__(self, multisite_spec):
         ## The MultiSiteSpec being run.
         self.multisite_spec = multisite_spec
@@ -150,11 +153,15 @@ class MultiSiteRunner:
 
         experiment_start = time.localtime()
         cycle_num_to_sites_list = site_visit_order(
-            self.multisite_spec.sites, self.multisite_spec.frequencies, self.multisite_spec.optimize_order
+            self.multisite_spec.sites,
+            self.multisite_spec.frequencies,
+            self.multisite_spec.optimize_order,
         )
         cycle_start_time = time.time()
         for cycle_num in range(self.multisite_spec.num_cycles):
-            site_ids = cycle_num_to_sites_list[cycle_num % len(cycle_num_to_sites_list)]
+            site_ids = cycle_num_to_sites_list[
+                cycle_num % len(cycle_num_to_sites_list)
+            ]
             if cycle_num != 0:
                 cycle_duration = self.multisite_spec.cycle_durations[
                     (cycle_num - 1) % len(self.multisite_spec.cycle_durations)
@@ -175,7 +182,9 @@ class MultiSiteRunner:
             if self.should_abort:
                 break
             _logger.info(
-                "Starting cycle %d of %d", cycle_num + 1, self.multisite_spec.num_cycles
+                "Starting cycle %d of %d",
+                cycle_num + 1,
+                self.multisite_spec.num_cycles,
             )
             cycle_start_time = time.time()
             for site_id in site_ids:
@@ -193,7 +202,7 @@ class MultiSiteRunner:
             exposure_settings = filter_exposure_settings(
                 site_specs.exposure_settings,
                 self.multisite_spec.light_frequencies_offsets,
-                cycle_num
+                cycle_num,
             )
             if not exposure_settings:
                 _logger.info(

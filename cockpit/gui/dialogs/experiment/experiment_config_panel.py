@@ -535,9 +535,9 @@ class ExperimentConfigPanel(wx.Panel):
         if module in self.experiment_module_to_panel:
             # Have specific parameters for this experiment type; store them
             # too.
-            settings["experiment_specific_values"] = (
-                self.experiment_module_to_panel[module].get_settings_dict()
-            )
+            settings[
+                "experiment_specific_values"
+            ] = self.experiment_module_to_panel[module].get_settings_dict()
 
         # Get the filepath to save settings to.
         dialog = wx.FileDialog(
@@ -785,9 +785,9 @@ class ExperimentConfigPanel(wx.Panel):
 
         if module in self.experiment_module_to_panel:
             # Add on the special parameters needed by this experiment type.
-            extra_params = self.experiment_module_to_panel[module].augment_params(
-                extra_params
-            )
+            extra_params = self.experiment_module_to_panel[
+                module
+            ].augment_params(extra_params)
 
         return cockpit.experiment.experiment_specs.ExperimentSpec(
             experiment_class=module.EXPERIMENT_CLASS,

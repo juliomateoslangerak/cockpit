@@ -152,10 +152,10 @@ class OffsetGainCorrectionExperiment(experiment.Experiment):
         ## Maps camera handlers to functions to record their images.
         self.cam_to_func = {}
         for camera in self.cameras:
-            self.cam_to_func[camera] = (
-                lambda image, timestamp, camera=camera: self.record_image(
-                    image, camera
-                )
+            self.cam_to_func[
+                camera
+            ] = lambda image, timestamp, camera=camera: self.record_image(
+                image, camera
             )
 
         ## Thread for tracking when we're done receiving images.

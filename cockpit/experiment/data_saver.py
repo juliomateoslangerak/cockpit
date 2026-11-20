@@ -152,9 +152,10 @@ class MrcDataSaver:
             self.max_width = max(width, self.max_width)
             self.max_height = max(height, self.max_height)
             self.camera_to_index[camera] = i
-            self.camera_to_images_kept_per_rep[camera] = (
-                self.camera_to_images_per_rep[camera]
-                - len(self.camera_to_ignored_image_indices[camera])
+            self.camera_to_images_kept_per_rep[
+                camera
+            ] = self.camera_to_images_per_rep[camera] - len(
+                self.camera_to_ignored_image_indices[camera]
             )
         ## We need this for the upper bound on the array of data we write.
         self.max_images_per_rep = max(
@@ -1084,9 +1085,10 @@ class StatusUpdateThread(threading.Thread):
             cur_count = self.images_received[i]
             max_count = self.totals[i]
             status_text.append("%s: %d/%d" % (name, cur_count, max_count))
-        if self.rep_duration > 0 and (
-            sum(self.images_received) % (max_count / self.num_reps)
-        ) == 0:
+        if (
+            self.rep_duration > 0
+            and (sum(self.images_received) % (max_count / self.num_reps)) == 0
+        ):
             # We are between reps. Negating the elapsed time before the
             # modulo gives the time left until the next multiple of
             # rep_duration, i.e. the start of the next rep.

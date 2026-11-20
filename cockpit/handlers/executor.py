@@ -506,10 +506,10 @@ class AnalogLineHandler(GenericPositionerHandler):
         self._saved_pos = None
         # Set up callbacks used by GenericPositionHandler methods.
         self.callbacks = {}
-        self.callbacks["move_absolute"] = (
-            lambda pos: analog_source.set_analog_line(
-                line, self.pos_to_native(pos)
-            )
+        self.callbacks[
+            "move_absolute"
+        ] = lambda pos: analog_source.set_analog_line(
+            line, self.pos_to_native(pos)
         )
         self.callbacks["get_position"] = lambda: self.native_to_pos(
             analog_source.get_analog_line(line)

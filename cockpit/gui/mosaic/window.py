@@ -90,7 +90,9 @@ SITE_COLORS = [
 CAMERA_TIMEOUT = 1
 
 ## Simple structure for marking potential beads.
-BeadSite = collections.namedtuple("BeadSite", ["position", "size", "intensity"])
+BeadSite = collections.namedtuple(
+    "BeadSite", ["position", "size", "intensity"]
+)
 
 
 def _pause_mosaic_loop(func):
@@ -929,9 +931,10 @@ class MosaicWindow(wx.Frame, MosaicCommon):
             # Get the scaling for the camera we're using, since they may
             # have changed.
             try:
-                min_val, max_val = (
-                    cockpit.gui.camera.window.get_camera_scaling(camera)
-                )
+                (
+                    min_val,
+                    max_val,
+                ) = cockpit.gui.camera.window.get_camera_scaling(camera)
                 # HACK: If this is the first image being acquired the
                 # viewCanvas has not yet set the scaling.  Its default
                 # of [0 1] is unlikely to be appropriate for images
@@ -1222,7 +1225,9 @@ class MosaicWindow(wx.Frame, MosaicCommon):
         if not items:
             # No selected sites.
             return
-        offset = cockpit.gui.dialogs.offset_sites_dialog.show_dialog_modal(self)
+        offset = cockpit.gui.dialogs.offset_sites_dialog.show_dialog_modal(
+            self
+        )
         if offset is not None:
             for item in items:
                 site_id = int(self.sites_box.GetString(item).split(":")[0])

@@ -356,7 +356,7 @@ class TestMicroscopeStageAxisMotion(unittest.TestCase):
             units_per_micron=10.0,
             velocity=500.0,
             settling_time=100.0,
-            stage_name="stage"
+            stage_name="stage",
         )
         self.callbacks = self.wrapper.get_handler().callbacks
 
@@ -410,7 +410,7 @@ class TestMicroscopeStageHandlers(unittest.TestCase):
                 units_per_micron=1.0,
                 velocity=500.0,
                 settling_time=100.0,
-                stage_name="stage"
+                stage_name="stage",
             )
         ]
         handlers = stage.get_handlers()

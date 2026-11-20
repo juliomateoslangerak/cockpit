@@ -262,9 +262,9 @@ class ExperimentUI(wx.Panel):
         if shouldSave:
             self.save_settings()
         params["light_to_sequence"] = self.get_light_to_sequence()
-        params["light_to_is_on_during_acquisition"] = (
-            self.get_light_to_is_on_during_acquisition()
-        )
+        params[
+            "light_to_is_on_during_acquisition"
+        ] = self.get_light_to_is_on_during_acquisition()
         return params
 
     def load_settings(self):

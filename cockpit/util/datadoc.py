@@ -116,9 +116,10 @@ class DataDoc:
         # Indexed as
         # self.extended_header_ints[wavelength, time, z, i]
         # Either may be empty, depending on how big the extended header is.
-        self.extended_header_ints, self.extended_header_floats = (
-            get_extended_header(self.image.Mrc.e, self.image_header)
-        )
+        (
+            self.extended_header_ints,
+            self.extended_header_floats,
+        ) = get_extended_header(self.image.Mrc.e, self.image_header)
         ## Datatype of our array.
         self.dtype = self.image_array.dtype.type
 

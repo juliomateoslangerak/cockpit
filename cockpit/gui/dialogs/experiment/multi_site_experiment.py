@@ -460,7 +460,9 @@ class MultiSiteExperimentDialog(wx.Dialog):
 
     def save_config(self):
         """Save our settings to the config."""
-        light_frequencies_offsets = [l.GetValue() for l in self.light_frequencies]
+        light_frequencies_offsets = [
+            l.GetValue() for l in self.light_frequencies
+        ]
         cockpit.util.user_config.set_value(
             "multi_site_experiment",
             {
@@ -505,13 +507,16 @@ class MultiSiteExperimentDialog(wx.Dialog):
             sites=sites_ids,
             frequencies=frequencies,
             num_cycles=int(self.num_cycles.GetValue()),
-            cycle_durations=[float(cd) for cd in self.cycle_duration.GetValue().split(',')],
-            delay_before_starting=float(self.delay_before_starting.GetValue()) * 60,
+            cycle_durations=[
+                float(cd) for cd in self.cycle_duration.GetValue().split(",")
+            ],
+            delay_before_starting=float(self.delay_before_starting.GetValue())
+            * 60,
             delay_before_imaging=float(self.delay_before_imaging.GetValue()),
             optimize_order=self.should_optimize_site_order.GetValue(),
             light_frequencies_offsets=light_frequencies_offsets,
             power_down_when_done=self.should_power_down_when_done is not None
-                                 and self.should_power_down_when_done.GetValue()
+            and self.should_power_down_when_done.GetValue(),
         )
 
 

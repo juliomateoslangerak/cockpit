@@ -57,7 +57,6 @@ class TestConfigTypeConversion(unittest.TestCase):
 
 
 class TestConstruction(unittest.TestCase):
-
     def test_swapaxes_and_inversion_are_applied(self):
         dev, _ = make_device({"swapaxes": "1", "invert0": "1", "invert1": "0"})
         self.assertEqual(dev.axis_mapper, {0: 2, 1: 1})

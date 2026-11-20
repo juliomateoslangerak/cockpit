@@ -243,9 +243,14 @@ class DeviceDepot:
         if not get_handlers_of_type(CAMERA):
             wavelengths = [425, 525, 604, 680]
             for i in range(4):
-                dummies.append(DummyCamera("Dummy camera %d" % (i + 1), {
-                    "wavelength": wavelengths[i],
-                }))
+                dummies.append(
+                    DummyCamera(
+                        "Dummy camera %d" % (i + 1),
+                        {
+                            "wavelength": wavelengths[i],
+                        },
+                    )
+                )
         # Dummy imager
         if not get_handlers_of_type(IMAGER):
             dummies.append(DummyDSP("imager", {}))

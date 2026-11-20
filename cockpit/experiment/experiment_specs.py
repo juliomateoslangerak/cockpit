@@ -90,8 +90,8 @@ def expand_filename(
 
 @dataclasses.dataclass
 class ExperimentSpec:
-    """Experiment subclass to instantiate, e.g. zStack.ZStackExperiment.
-    """
+    """Experiment subclass to instantiate, e.g. zStack.ZStackExperiment."""
+
     experiment_class: type
     ## List of ([cameras], [(light, exposure time)]) tuples, as expected by
     # Experiment.
@@ -130,7 +130,9 @@ class ExperimentSpec:
             alt_bottom = mover.saved_bottom
             z_height = mover.saved_top - alt_bottom
         else:
-            alt_bottom = cockpit.interfaces.stage_mover.get_position_for_axis(2)
+            alt_bottom = cockpit.interfaces.stage_mover.get_position_for_axis(
+                2
+            )
             if self.z_mode is ZMode.CENTER:
                 alt_bottom -= z_height / 2
         if z_height == 0:
@@ -236,8 +238,7 @@ class MultiSiteSpec:
                 raise ValueError("Site %s cannot be reached." % site_id)
 
     def run(self):
-        """Start a MultiSiteRunner in the background and return it.
-        """
+        """Start a MultiSiteRunner in the background and return it."""
         runner = multi_site_runner.MultiSiteRunner(self)
         runner.run()
         return runner

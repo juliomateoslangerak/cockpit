@@ -672,7 +672,7 @@ class MicroscopeStage(MicroscopeBase):
                     units_per_micron=units_per_micron,
                     velocity=velocity,
                     settling_time=settling_time,
-                    stage_name=self.name
+                    stage_name=self.name,
                 )
             )
             handled_axis_names.add(their_name)

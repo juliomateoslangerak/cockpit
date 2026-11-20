@@ -428,9 +428,10 @@ class MacroStageZ(macro_stage_base.MacroStageBase):
             glColor3f(0, 0, 0)
             glLineWidth(1)
             glBegin(GL_LINES)
-            min_y, max_y = (
-                cockpit.interfaces.stage_mover.get_hard_limits_for_axis(2)
-            )
+            (
+                min_y,
+                max_y,
+            ) = cockpit.interfaces.stage_mover.get_hard_limits_for_axis(2)
             scale_x = self.z_horiz_offset
             self.scaled_vertex(scale_x, min_y)
             self.scaled_vertex(scale_x, max_y)

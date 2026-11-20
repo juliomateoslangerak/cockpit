@@ -83,7 +83,9 @@ class SafetyMinDialog(wx.Dialog):
         position=wx.DefaultPosition,
         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
     ):
-        super().__init__(parent, -1, "Set Z motion minimum", position, size, style)
+        super().__init__(
+            parent, -1, "Set Z motion minimum", position, size, style
+        )
 
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -130,7 +132,9 @@ class SafetyMinDialog(wx.Dialog):
         )
         row_sizer.Add(dish_safety_button, 0, wx.ALL, 5)
 
-        self.main_sizer.Add(row_sizer, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3)
+        self.main_sizer.Add(
+            row_sizer, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 3
+        )
 
         buttons_box = wx.BoxSizer(wx.HORIZONTAL)
 
